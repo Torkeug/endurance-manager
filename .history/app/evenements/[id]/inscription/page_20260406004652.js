@@ -324,23 +324,22 @@ export default function Inscription({ params }) {
           <p style={{ fontSize: '0.8rem', color: 'var(--text-dim)', marginBottom: '1.25rem' }}>
             Sélectionnez une ou plusieurs classes. Les voitures ci-dessous se filtreront en conséquence.
           </p>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
-            {[...new Set(cars.map(c => c.class))].filter(Boolean).sort().map(cls => (
-                <ClassCheckbox key={cls} cls={cls}
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
+            {CLASSES.map(cls => (
+              <ClassCheckbox key={cls} cls={cls}
                 checked={preferredClasses.includes(cls)}
                 onChange={() => toggleClass(cls)} />
             ))}
-            </div>
+          </div>
         </div>
 
         {/* Preferred cars */}
         <div className="card" style={{ marginBottom: '1.25rem' }}>
           <h3 style={{ marginBottom: '0.5rem', color: 'var(--text-dim)' }}>Voitures préférées</h3>
-            <p style={{ fontSize: '0.8rem', color: 'var(--text-dim)', marginBottom: '1.25rem' }}>
+          <p style={{ fontSize: '0.8rem', color: 'var(--text-dim)', marginBottom: '1.25rem' }}>
             Optionnel — sélectionnez une ou plusieurs voitures spécifiques.
             {preferredClasses.length > 0 && ` Filtré sur : ${preferredClasses.join(', ')}.`}
-            {cars.length > 0 && ` (Voitures disponibles pour ce format d'événement)`}
-            </p>
+          </p>
           {Object.keys(carsByClass).length === 0 ? (
             <p style={{ color: 'var(--text-dim)', fontSize: '0.85rem' }}>
               Sélectionnez une classe pour afficher les voitures.

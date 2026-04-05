@@ -324,13 +324,13 @@ export default function Inscription({ params }) {
           <p style={{ fontSize: '0.8rem', color: 'var(--text-dim)', marginBottom: '1.25rem' }}>
             Sélectionnez une ou plusieurs classes. Les voitures ci-dessous se filtreront en conséquence.
           </p>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
-            {[...new Set(cars.map(c => c.class))].filter(Boolean).sort().map(cls => (
-                <ClassCheckbox key={cls} cls={cls}
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
+            {CLASSES.map(cls => (
+              <ClassCheckbox key={cls} cls={cls}
                 checked={preferredClasses.includes(cls)}
                 onChange={() => toggleClass(cls)} />
             ))}
-            </div>
+          </div>
         </div>
 
         {/* Preferred cars */}

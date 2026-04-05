@@ -16,10 +16,10 @@ function formatDatetime(dtStr) {
 export default async function VoitureDetail({ params }) {
   const { id, entryId } = await params
 
-const { data: entry, error } = await supabase
+  const { data: entry, error } = await supabase
     .from('car_entries')
     .select(`*, cars (id, name, tank_size_litres, class),
-      events (name, duration_minutes, circuits (name, pit_lane_time_seconds))`)
+      events (name, duration_hours, circuits (name, pit_lane_time_seconds))`)
     .eq('id', entryId)
     .single()
 

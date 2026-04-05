@@ -76,40 +76,24 @@ export default function Inscription({ params }) {
   const [carEntryId, setCarEntryId]             = useState('')
   const [notes, setNotes]                       = useState('')
 
-    useEffect(() => {
+  useEffect(() => {
     Promise.all([
-        supabase.from('drivers').select('id, name').eq('active', true).order('name'),
-        supabase.from('cars').select('id, name, class').order('class').order('name'),
-        supabase.from('events').select('name, format').eq('id', id).single(),
-        supabase.from('car_entries')
+      supabase.from('drivers').select('id, name').eq('active', true).order('name'),
+      supabase.from('cars').select('id, name, class').order('class').order('name'),
+      supabase.from('events').select('name').eq('id', id).single(),
+      supabase.from('car_entries')
         .select('id, crew_name, class, car_id, cars(id, name, class)')
         .eq('event_id', id).order('crew_name'),
-    ]).then(async ([{ data: driversData }, { data: carsData }, { data: evData }, { data: entriesData }]) => {
-        setDrivers(driversData || [])
-        setEventName(evData?.name || '')
-        setCarEntries(entriesData || [])
-
-        // Filter cars by event type if format is set
-        let filteredCars = carsData || []
-        if (evData?.format) {
-        const { data: eventType } = await supabase
-            .from('event_types').select('id').eq('name', evData.format).single()
-        if (eventType) {
-            const { data: allowedCars } = await supabase
-            .from('event_type_cars').select('car_id').eq('event_type_id', eventType.id)
-            if (allowedCars && allowedCars.length > 0) {
-            const allowedIds = allowedCars.map(ac => ac.car_id)
-            filteredCars = filteredCars.filter(c => allowedIds.includes(c.id))
-            }
-        }
-        }
-
-        setCars(filteredCars)
-        setFetching(false)
-        const preselect = searchParams.get('driver')
-        if (preselect) setDriverId(preselect)
+    ]).then(([{ data: driversData }, { data: carsData }, { data: evData }, { data: entriesData }]) => {
+      setDrivers(driversData || [])
+      setCars(carsData || [])
+      setEventName(evData?.name || '')
+      setCarEntries(entriesData || [])
+      setFetching(false)
+      const preselect = searchParams.get('driver')
+      if (preselect) setDriverId(preselect)
     })
-    }, [id, searchParams])
+  }, [id, searchParams])
 
   useEffect(() => {
     if (!driverId) { setExisting(null); return }
@@ -324,23 +308,22 @@ export default function Inscription({ params }) {
           <p style={{ fontSize: '0.8rem', color: 'var(--text-dim)', marginBottom: '1.25rem' }}>
             Sélectionnez une ou plusieurs classes. Les voitures ci-dessous se filtreront en conséquence.
           </p>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
-            {[...new Set(cars.map(c => c.class))].filter(Boolean).sort().map(cls => (
-                <ClassCheckbox key={cls} cls={cls}
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
+            {CLASSES.map(cls => (
+              <ClassCheckbox key={cls} cls={cls}
                 checked={preferredClasses.includes(cls)}
                 onChange={() => toggleClass(cls)} />
             ))}
-            </div>
+          </div>
         </div>
 
         {/* Preferred cars */}
         <div className="card" style={{ marginBottom: '1.25rem' }}>
           <h3 style={{ marginBottom: '0.5rem', color: 'var(--text-dim)' }}>Voitures préférées</h3>
-            <p style={{ fontSize: '0.8rem', color: 'var(--text-dim)', marginBottom: '1.25rem' }}>
+          <p style={{ fontSize: '0.8rem', color: 'var(--text-dim)', marginBottom: '1.25rem' }}>
             Optionnel — sélectionnez une ou plusieurs voitures spécifiques.
             {preferredClasses.length > 0 && ` Filtré sur : ${preferredClasses.join(', ')}.`}
-            {cars.length > 0 && ` (Voitures disponibles pour ce format d'événement)`}
-            </p>
+          </p>
           {Object.keys(carsByClass).length === 0 ? (
             <p style={{ color: 'var(--text-dim)', fontSize: '0.85rem' }}>
               Sélectionnez une classe pour afficher les voitures.
