@@ -13,11 +13,11 @@ function formatDatetime(dtStr) {
   })
 }
 
-function formatDuration(minutes) {
-  if (!minutes) return '—'
-  const h = Math.floor(minutes / 60)
-  const m = minutes % 60
-  if (m === 0) return `${h}h`
+function formatDuration(hours) {
+  if (!hours) return '—'
+  if (hours % 1 === 0) return `${hours}h`
+  const h = Math.floor(hours)
+  const m = Math.round((hours % 1) * 60)
   return `${h}h${m.toString().padStart(2, '0')}`
 }
 

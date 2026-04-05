@@ -7,12 +7,12 @@ import { supabase } from '../../../../lib/supabase'
 const FORMATS = ['NEC', 'IMSA', 'GT World Challenge', 'Fanatec', 'VCO', 'Libre']
 
 const DURATIONS = [
-  { label: '2h30', value: 150 },
-  { label: '3h',   value: 180 },
-  { label: '6h',   value: 360 },
-  { label: '8h',   value: 480 },
-  { label: '12h',  value: 720 },
-  { label: '24h',  value: 1440 },
+  { label: '2h30', value: 2.5 },
+  { label: '3h',   value: 3 },
+  { label: '6h',   value: 6 },
+  { label: '8h',   value: 8 },
+  { label: '12h',  value: 12 },
+  { label: '24h',  value: 24 },
 ]
 
 export default function ModifierEvenement({ params }) {
@@ -25,8 +25,6 @@ export default function ModifierEvenement({ params }) {
   const [loading, setLoading]   = useState(false)
   const [fetching, setFetching] = useState(true)
   const [error, setError]       = useState(null)
-  const [customH, setCustomH]   = useState('')
-  const [customM, setCustomM]   = useState('')
 
   useEffect(() => {
     Promise.all([
@@ -35,23 +33,15 @@ export default function ModifierEvenement({ params }) {
     ]).then(([{ data: circuitsData }, { data: event, error: eventError }]) => {
       setCircuits(circuitsData || [])
       if (eventError || !event) { setError('Événement introuvable.'); setFetching(false); return }
-
-      // Pre-fill custom h/m if not a preset
-      const mins = event.duration_minutes || 0
-      if (mins && !DURATIONS.some(d => d.value === mins)) {
-        setCustomH(String(Math.floor(mins / 60)))
-        setCustomM(String(mins % 60))
-      }
-
       setForm({
-        name:             event.name          || '',
-        duration_minutes: event.duration_minutes ?? '',
-        circuit_id:       event.circuit_id    || '',
-        format:           event.format        || '',
-        ig_start_time:    event.ig_start_time || '',
-        ig_sunrise:       event.ig_sunrise    || '',
-        ig_sunset:        event.ig_sunset     || '',
-        notes:            event.notes         || '',
+        name:           event.name          || '',
+        duration_hours: event.duration_hours ?? '',
+        circuit_id:     event.circuit_id    || '',
+        format:         event.format        || '',
+        ig_start_time:  event.ig_start_time || '',
+        ig_sunrise:     event.ig_sunrise    || '',
+        ig_sunset:      event.ig_sunset     || '',
+        notes:          event.notes         || '',
       })
       setFetching(false)
     })
@@ -66,37 +56,27 @@ export default function ModifierEvenement({ params }) {
   const set = (field) => (e) =>
     setForm((prev) => ({ ...prev, [field]: e.target.value }))
 
-  const setDuration = (value) => {
-    setCustomH('')
-    setCustomM('')
-    setForm((prev) => ({ ...prev, duration_minutes: value }))
-  }
-
-  const handleCustomHM = (h, m) => {
-    const total = (parseInt(h) || 0) * 60 + (parseInt(m) || 0)
-    setForm(prev => ({ ...prev, duration_minutes: total || '' }))
-  }
-
-  const isPreset = DURATIONS.some(d => d.value === form?.duration_minutes)
+  const setDuration = (value) =>
+    setForm((prev) => ({ ...prev, duration_hours: value }))
 
   const handleSubmit = async (e) => {
     e.preventDefault()
-    if (!form.name.trim())      { setError('Le nom est obligatoire.'); return }
-    if (!form.duration_minutes) { setError('La durée est obligatoire.'); return }
-    if (!form.circuit_id)       { setError('Le circuit est obligatoire.'); return }
+    if (!form.name.trim())    { setError('Le nom est obligatoire.'); return }
+    if (!form.duration_hours) { setError('La durée est obligatoire.'); return }
+    if (!form.circuit_id)     { setError('Le circuit est obligatoire.'); return }
 
     setLoading(true)
     setError(null)
 
     const payload = {
-      name:             form.name.trim(),
-      duration_minutes: parseInt(form.duration_minutes),
-      circuit_id:       form.circuit_id,
-      format:           form.format        || null,
-      ig_start_time:    form.ig_start_time || null,
-      ig_sunrise:       form.ig_sunrise    || null,
-      ig_sunset:        form.ig_sunset     || null,
-      notes:            form.notes.trim()  || null,
+      name:           form.name.trim(),
+      duration_hours: parseFloat(form.duration_hours),
+      circuit_id:     form.circuit_id,
+      format:         form.format        || null,
+      ig_start_time:  form.ig_start_time || null,
+      ig_sunrise:     form.ig_sunrise    || null,
+      ig_sunset:      form.ig_sunset     || null,
+      notes:          form.notes.trim()  || null,
     }
 
     const { error: err } = await supabase.from('events').update(payload).eq('id', id)
@@ -120,9 +100,9 @@ export default function ModifierEvenement({ params }) {
 
   const durationButtonStyle = (value) => ({
     padding: '0.45rem 1rem', borderRadius: '3px', border: '1px solid',
-    borderColor: form?.duration_minutes === value ? 'var(--accent)' : 'var(--border)',
-    background: form?.duration_minutes === value ? 'var(--accent-dim)' : 'var(--surface-2)',
-    color: form?.duration_minutes === value ? 'var(--accent)' : 'var(--text-dim)',
+    borderColor: form.duration_hours === value ? 'var(--accent)' : 'var(--border)',
+    background: form.duration_hours === value ? 'var(--accent-dim)' : 'var(--surface-2)',
+    color: form.duration_hours === value ? 'var(--accent)' : 'var(--text-dim)',
     fontFamily: 'var(--font-mono), monospace', fontWeight: 600, cursor: 'pointer',
     fontSize: '0.9rem', transition: 'all 0.15s',
   })
@@ -164,35 +144,18 @@ export default function ModifierEvenement({ params }) {
             </div>
             <div className="form-group" style={{ gridColumn: '1 / -1' }}>
               <label>Durée *</label>
-              <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '0.5rem' }}>
+              <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
                 {DURATIONS.map(({ label, value }) => (
-                  <button key={value} type="button" onClick={() => setDuration(value)}
-                    style={durationButtonStyle(value)}>
+                  <button key={value} type="button" onClick={() => setDuration(value)} style={durationButtonStyle(value)}>
                     {label}
                   </button>
                 ))}
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
-                <span style={{ fontSize: '0.8rem', color: 'var(--text-dim)' }}>Autre :</span>
-                <input type="number" min="0" max="99" value={customH}
-                  onChange={e => { setCustomH(e.target.value); handleCustomHM(e.target.value, customM) }}
-                  placeholder="h"
-                  style={{ width: '70px', padding: '0.45rem 0.5rem', background: 'var(--surface-2)',
-                    border: '1px solid', borderColor: !isPreset && form.duration_minutes ? 'var(--accent)' : 'var(--border)',
-                    borderRadius: '3px', color: 'var(--text)', fontFamily: 'var(--font-mono), monospace', fontSize: '0.9rem' }} />
-                <span style={{ color: 'var(--text-dim)' }}>h</span>
-                <input type="number" min="0" max="59" value={customM}
-                  onChange={e => { setCustomM(e.target.value); handleCustomHM(customH, e.target.value) }}
-                  placeholder="min"
-                  style={{ width: '70px', padding: '0.45rem 0.5rem', background: 'var(--surface-2)',
-                    border: '1px solid', borderColor: !isPreset && form.duration_minutes ? 'var(--accent)' : 'var(--border)',
-                    borderRadius: '3px', color: 'var(--text)', fontFamily: 'var(--font-mono), monospace', fontSize: '0.9rem' }} />
-                <span style={{ color: 'var(--text-dim)' }}>min</span>
-                {!isPreset && form.duration_minutes > 0 && (
-                  <span style={{ color: 'var(--accent)', fontFamily: 'var(--font-mono), monospace', fontSize: '0.85rem' }}>
-                    = {Math.floor(form.duration_minutes / 60)}h{(form.duration_minutes % 60).toString().padStart(2, '0')}
-                  </span>
-                )}
+                <input type="number" min="0.5" max="48" step="0.5"
+                  value={DURATIONS.some(d => d.value === form.duration_hours) ? '' : form.duration_hours}
+                  onChange={set('duration_hours')} placeholder="Autre (h)"
+                  style={{ width: '120px', padding: '0.45rem 0.75rem', background: 'var(--surface-2)',
+                    border: '1px solid var(--border)', borderRadius: '3px', color: 'var(--text)',
+                    fontFamily: 'var(--font-mono), monospace', fontSize: '0.9rem' }} />
               </div>
             </div>
             <div className="form-group" style={{ gridColumn: '1 / -1' }}>

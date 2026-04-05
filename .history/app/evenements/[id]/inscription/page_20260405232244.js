@@ -19,26 +19,7 @@ function MismatchWarning({ message }) {
   )
 }
 
-function CarCheckbox({ car, checked, onChange }) {
-
-  return (
-    <label style={{
-      display: 'flex', alignItems: 'center', gap: '0.75rem',
-      padding: '0.6rem 0.85rem',
-      background: checked ? 'var(--accent-dim)' : 'var(--surface-2)',
-      border: '1px solid',
-      borderColor: checked ? 'var(--accent)' : 'var(--border)',
-      borderRadius: '3px', cursor: 'pointer', transition: 'all 0.15s',
-      minWidth: '200px',
-    }}>
-      <input type="checkbox" checked={checked} onChange={onChange}
-        style={{ accentColor: 'var(--accent)', width: '15px', height: '15px', flexShrink: 0 }} />
-      <span style={{ fontWeight: 600, fontSize: '0.88rem' }}>{car.name}</span>
-    </label>
-  )
-}
-
-function ClassCheckbox({ cls, checked, onChange }) {
+function Checkbox({ checked, onChange, label, sub }) {
   return (
     <label style={{
       display: 'flex', alignItems: 'center', gap: '0.6rem',
@@ -50,7 +31,10 @@ function ClassCheckbox({ cls, checked, onChange }) {
     }}>
       <input type="checkbox" checked={checked} onChange={onChange}
         style={{ accentColor: 'var(--accent)', width: '15px', height: '15px' }} />
-      <span style={{ fontWeight: 600, fontSize: '0.9rem' }}>{cls}</span>
+      <div>
+        <div style={{ fontWeight: 600, fontSize: '0.9rem' }}>{label}</div>
+        {sub && <div style={{ fontSize: '0.75rem', color: 'var(--text-dim)' }}>{sub}</div>}
+      </div>
     </label>
   )
 }
@@ -71,15 +55,15 @@ export default function Inscription({ params }) {
   const [success, setSuccess]       = useState(false)
 
   const [driverId, setDriverId]               = useState('')
-  const [preferredClasses, setPreferredClasses] = useState([])
-  const [preferredCarIds, setPreferredCarIds]   = useState([])
+  const [preferredClasses, setPreferredClasses] = useState([])   // string[]
+  const [preferredCarIds, setPreferredCarIds]   = useState([])   // uuid[]
   const [carEntryId, setCarEntryId]             = useState('')
   const [notes, setNotes]                       = useState('')
 
   useEffect(() => {
     Promise.all([
       supabase.from('drivers').select('id, name').eq('active', true).order('name'),
-      supabase.from('cars').select('id, name, class').order('class').order('name'),
+      supabase.from('cars').select('*').order('class').order('name'),
       supabase.from('events').select('name').eq('id', id).single(),
       supabase.from('car_entries')
         .select('id, crew_name, class, car_id, cars(id, name, class)')
@@ -121,6 +105,17 @@ export default function Inscription({ params }) {
     setPreferredClasses(prev =>
       prev.includes(cls) ? prev.filter(c => c !== cls) : [...prev, cls]
     )
+    // Clear car selections that don't match any selected class
+    if (!preferredClasses.includes(cls)) return
+    const remaining = preferredClasses.filter(c => c !== cls)
+    if (remaining.length > 0) {
+      setPreferredCarIds(prev =>
+        prev.filter(cid => {
+          const car = cars.find(c => c.id === cid)
+          return remaining.includes(car?.class)
+        })
+      )
+    }
   }
 
   const toggleCar = (carId) => {
@@ -129,6 +124,7 @@ export default function Inscription({ params }) {
     )
   }
 
+  // Mismatch warning for selected team
   const getMismatchWarning = () => {
     if (!carEntryId) return null
     const entry = carEntries.find(e => e.id === carEntryId)
@@ -153,7 +149,9 @@ export default function Inscription({ params }) {
     e.preventDefault()
     if (!driverId) { setError('Sélectionnez votre nom.'); return }
 
-    setLoading(true); setError(null); setSuccess(false)
+    setLoading(true)
+    setError(null)
+    setSuccess(false)
 
     const payload = {
       event_id:          id,
@@ -171,26 +169,34 @@ export default function Inscription({ params }) {
       ({ error: err } = await supabase.from('signups').insert([payload]))
     }
 
-    if (err) { setError(err.message); setLoading(false); return }
-
-    setSuccess(true); setLoading(false)
-    const { data } = await supabase.from('signups')
-      .select('*, car_entries(id, crew_name, class, car_id, cars(name, class))')
-      .eq('event_id', id).eq('driver_id', driverId).single()
-    setExisting(data)
+    if (err) {
+      setError(err.message)
+      setLoading(false)
+    } else {
+      setSuccess(true)
+      setLoading(false)
+      const { data } = await supabase.from('signups')
+        .select('*, car_entries(id, crew_name, class, car_id, cars(name, class))')
+        .eq('event_id', id).eq('driver_id', driverId).single()
+      setExisting(data)
+    }
   }
 
   const handleSignOff = async () => {
     if (!existing) return
-    if (!confirm('Se désinscrire de cet événement ?')) return
+    if (!confirm('Se désinscrire de cet événement ? Cette action retirera également votre assignation à une équipe.')) return
     const { error: err } = await supabase.from('signups').delete().eq('id', existing.id)
     if (err) { setError(err.message); return }
-    setExisting(null); setPreferredClasses([]); setPreferredCarIds([])
-    setCarEntryId(''); setNotes(''); setSuccess(false)
+    setExisting(null)
+    setPreferredClasses([])
+    setPreferredCarIds([])
+    setCarEntryId('')
+    setNotes('')
+    setSuccess(false)
     router.push(`/evenements/${id}`)
   }
 
-  // Cars filtered by selected classes
+  // Cars filtered by selected classes (show all if no class selected)
   const carsByClass = cars.reduce((acc, car) => {
     if (preferredClasses.length === 0 || preferredClasses.includes(car.class)) {
       if (!acc[car.class]) acc[car.class] = []
@@ -270,7 +276,6 @@ export default function Inscription({ params }) {
                     style={{ accentColor: 'var(--accent)' }} />
                   <span style={{ color: 'var(--text-dim)', fontSize: '0.9rem' }}>Pas de préférence</span>
                 </label>
-
                 {carEntries.map(entry => {
                   const entryClass = entry.class || entry.cars?.class
                   const isSelected = carEntryId === entry.id
@@ -310,9 +315,12 @@ export default function Inscription({ params }) {
           </p>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
             {CLASSES.map(cls => (
-              <ClassCheckbox key={cls} cls={cls}
+              <Checkbox
+                key={cls}
                 checked={preferredClasses.includes(cls)}
-                onChange={() => toggleClass(cls)} />
+                onChange={() => toggleClass(cls)}
+                label={cls}
+              />
             ))}
           </div>
         </div>
@@ -329,7 +337,7 @@ export default function Inscription({ params }) {
               Sélectionnez une classe pour afficher les voitures.
             </p>
           ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
               {Object.entries(carsByClass).map(([cls, carsInClass]) => (
                 <div key={cls}>
                   <div style={{ fontSize: '0.7rem', fontWeight: 700, letterSpacing: '0.1em',
@@ -338,9 +346,13 @@ export default function Inscription({ params }) {
                   </div>
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
                     {carsInClass.map(car => (
-                      <CarCheckbox key={car.id} car={car}
+                      <Checkbox
+                        key={car.id}
                         checked={preferredCarIds.includes(car.id)}
-                        onChange={() => toggleCar(car.id)} />
+                        onChange={() => toggleCar(car.id)}
+                        label={car.name}
+                        sub={`${car.tank_size_litres}L`}
+                      />
                     ))}
                   </div>
                 </div>

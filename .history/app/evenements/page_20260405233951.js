@@ -131,7 +131,7 @@ export default async function EvenementsPage() {
                   <div style={{ display: 'flex', gap: '1.5rem', flexWrap: 'wrap', alignItems: 'center' }}>
                     <div style={{ textAlign: 'center' }}>
                       <div className="mono" style={{ fontSize: '1.1rem', color: 'var(--text)' }}>
-                        {formatDuration(ev.duration_minutes)}
+                        {formatDuration(ev.duration_hours)}
                       </div>
                       <div style={{ fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-dim)' }}>
                         Durée

@@ -3,6 +3,7 @@ import { useState, useEffect, use } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { supabase } from '../../../../lib/supabase'
+import { getManufacturerLogo } from '../../../../lib/manufacturers'
 
 const CLASSES = ['GTP', 'LMP2', 'GT3', 'GT4', 'CUP', 'TCR']
 
@@ -20,6 +21,7 @@ function MismatchWarning({ message }) {
 }
 
 function CarCheckbox({ car, checked, onChange }) {
+  const logoUrl = getManufacturerLogo(car.name)
 
   return (
     <label style={{
@@ -33,6 +35,23 @@ function CarCheckbox({ car, checked, onChange }) {
     }}>
       <input type="checkbox" checked={checked} onChange={onChange}
         style={{ accentColor: 'var(--accent)', width: '15px', height: '15px', flexShrink: 0 }} />
+      {logoUrl && (
+        <img
+          src={logoUrl}
+          alt=""
+          width={24}
+          height={24}
+            style={{
+            objectFit: 'contain',
+            flexShrink: 0,
+            width: 28,
+            height: 28,
+            filter: 'brightness(0) invert(1)',
+            opacity: 0.9,
+            }}
+          onError={e => { e.target.style.display = 'none' }}
+        />
+      )}
       <span style={{ fontWeight: 600, fontSize: '0.88rem' }}>{car.name}</span>
     </label>
   )
@@ -274,6 +293,7 @@ export default function Inscription({ params }) {
                 {carEntries.map(entry => {
                   const entryClass = entry.class || entry.cars?.class
                   const isSelected = carEntryId === entry.id
+                  const logoUrl = getManufacturerLogo(entry.cars?.name)
                   return (
                     <label key={entry.id} style={{
                       display: 'flex', alignItems: 'center', gap: '0.75rem',
@@ -287,6 +307,18 @@ export default function Inscription({ params }) {
                         checked={isSelected}
                         onChange={() => setCarEntryId(entry.id)}
                         style={{ accentColor: 'var(--accent)' }} />
+                      {logoUrl && (
+                        <img src={logoUrl} alt="" width={24} height={24}
+                          style={{
+                            objectFit: 'contain',
+                            flexShrink: 0,
+                            width: 28,
+                            height: 28,
+                            filter: 'brightness(0) invert(1)',
+                            opacity: 0.9,
+                            }}
+                          onError={e => { e.target.style.display = 'none' }} />
+                      )}
                       <div style={{ flex: 1 }}>
                         <div style={{ fontWeight: 600 }}>{entry.crew_name}</div>
                         <div style={{ fontSize: '0.8rem', color: 'var(--text-dim)' }}>
