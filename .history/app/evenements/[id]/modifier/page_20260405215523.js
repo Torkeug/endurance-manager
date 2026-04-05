@@ -33,8 +33,10 @@ export default function ModifierEvenement({ params }) {
     ]).then(([{ data: circuitsData }, { data: event, error: eventError }]) => {
       setCircuits(circuitsData || [])
       if (eventError || !event) { setError('Événement introuvable.'); setFetching(false); return }
+
       setForm({
         name:           event.name          || '',
+        date:           event.date          || '',
         duration_hours: event.duration_hours ?? '',
         circuit_id:     event.circuit_id    || '',
         format:         event.format        || '',
@@ -62,6 +64,7 @@ export default function ModifierEvenement({ params }) {
   const handleSubmit = async (e) => {
     e.preventDefault()
     if (!form.name.trim())    { setError('Le nom est obligatoire.'); return }
+    if (!form.date)           { setError('La date est obligatoire.'); return }
     if (!form.duration_hours) { setError('La durée est obligatoire.'); return }
     if (!form.circuit_id)     { setError('Le circuit est obligatoire.'); return }
 
@@ -70,6 +73,7 @@ export default function ModifierEvenement({ params }) {
 
     const payload = {
       name:           form.name.trim(),
+      date:           form.date,
       duration_hours: parseFloat(form.duration_hours),
       circuit_id:     form.circuit_id,
       format:         form.format        || null,
@@ -136,6 +140,10 @@ export default function ModifierEvenement({ params }) {
               <input id="name" type="text" value={form.name} onChange={set('name')} required />
             </div>
             <div className="form-group">
+              <label htmlFor="date">Date *</label>
+              <input id="date" type="date" value={form.date} onChange={set('date')} required />
+            </div>
+            <div className="form-group">
               <label htmlFor="format">Format</label>
               <select id="format" value={form.format} onChange={set('format')}>
                 <option value="">— Sélectionner —</option>
@@ -190,7 +198,7 @@ export default function ModifierEvenement({ params }) {
         <div className="card" style={{ marginBottom: '1.25rem' }}>
           <h3 style={{ marginBottom: '0.5rem', color: 'var(--text-dim)' }}>Horaires in-game</h3>
           <p style={{ fontSize: '0.8rem', color: 'var(--text-dim)', marginBottom: '1.25rem' }}>
-            Les horaires IRL se gèrent depuis la page de l&apos;événement. Heures en format 24h.
+            Les horaires IRL de départ se gèrent depuis la page de l&apos;événement.
           </p>
           <div className="form-grid">
             <div className="form-group">

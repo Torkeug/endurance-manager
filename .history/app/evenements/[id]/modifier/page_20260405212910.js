@@ -33,14 +33,24 @@ export default function ModifierEvenement({ params }) {
     ]).then(([{ data: circuitsData }, { data: event, error: eventError }]) => {
       setCircuits(circuitsData || [])
       if (eventError || !event) { setError('Événement introuvable.'); setFetching(false); return }
+
+      let irl_start_date = ''
+      let irl_start_time = ''
+      if (event.irl_start) {
+        const dt = new Date(event.irl_start)
+        irl_start_date = dt.toISOString().slice(0, 10)
+        irl_start_time = dt.toISOString().slice(11, 16)
+      }
+
       setForm({
         name:           event.name          || '',
+        date:           event.date          || '',
+        irl_start_date,
+        irl_start_time,
         duration_hours: event.duration_hours ?? '',
         circuit_id:     event.circuit_id    || '',
         format:         event.format        || '',
         ig_start_time:  event.ig_start_time || '',
-        ig_sunrise:     event.ig_sunrise    || '',
-        ig_sunset:      event.ig_sunset     || '',
         notes:          event.notes         || '',
       })
       setFetching(false)
@@ -62,20 +72,27 @@ export default function ModifierEvenement({ params }) {
   const handleSubmit = async (e) => {
     e.preventDefault()
     if (!form.name.trim())    { setError('Le nom est obligatoire.'); return }
+    if (!form.date)           { setError('La date est obligatoire.'); return }
     if (!form.duration_hours) { setError('La durée est obligatoire.'); return }
     if (!form.circuit_id)     { setError('Le circuit est obligatoire.'); return }
 
     setLoading(true)
     setError(null)
 
+    let irl_start = null
+    if (form.irl_start_date) {
+      const t = form.irl_start_time || '00:00'
+      irl_start = `${form.irl_start_date}T${t}:00`
+    }
+
     const payload = {
       name:           form.name.trim(),
+      date:           form.date,
       duration_hours: parseFloat(form.duration_hours),
       circuit_id:     form.circuit_id,
       format:         form.format        || null,
+      irl_start,
       ig_start_time:  form.ig_start_time || null,
-      ig_sunrise:     form.ig_sunrise    || null,
-      ig_sunset:      form.ig_sunset     || null,
       notes:          form.notes.trim()  || null,
     }
 
@@ -136,6 +153,10 @@ export default function ModifierEvenement({ params }) {
               <input id="name" type="text" value={form.name} onChange={set('name')} required />
             </div>
             <div className="form-group">
+              <label htmlFor="date">Date de l&apos;événement *</label>
+              <input id="date" type="date" value={form.date} onChange={set('date')} required />
+            </div>
+            <div className="form-group">
               <label htmlFor="format">Format</label>
               <select id="format" value={form.format} onChange={set('format')}>
                 <option value="">— Sélectionner —</option>
@@ -188,22 +209,22 @@ export default function ModifierEvenement({ params }) {
         </div>
 
         <div className="card" style={{ marginBottom: '1.25rem' }}>
-          <h3 style={{ marginBottom: '0.5rem', color: 'var(--text-dim)' }}>Horaires in-game</h3>
+          <h3 style={{ marginBottom: '0.5rem', color: 'var(--text-dim)' }}>Horaires</h3>
           <p style={{ fontSize: '0.8rem', color: 'var(--text-dim)', marginBottom: '1.25rem' }}>
-            Les horaires IRL se gèrent depuis la page de l&apos;événement. Heures en format 24h.
+            IRL = heure réelle. IG = heure dans iRacing au moment du départ. Heures en format 24h.
           </p>
           <div className="form-grid">
             <div className="form-group">
-              <label htmlFor="ig_start_time">Heure de départ IG (HH:MM)</label>
+              <label htmlFor="irl_start_date">Date de départ IRL</label>
+              <input id="irl_start_date" type="date" value={form.irl_start_date} onChange={set('irl_start_date')} />
+            </div>
+            <div className="form-group">
+              <label htmlFor="irl_start_time">Heure de départ IRL (24h)</label>
+              <input id="irl_start_time" type="time" value={form.irl_start_time} onChange={set('irl_start_time')} />
+            </div>
+            <div className="form-group">
+              <label htmlFor="ig_start_time">Heure de départ IG (24h)</label>
               <input id="ig_start_time" type="time" value={form.ig_start_time} onChange={set('ig_start_time')} />
-            </div>
-            <div className="form-group">
-              <label htmlFor="ig_sunrise">Lever de soleil IG (HH:MM)</label>
-              <input id="ig_sunrise" type="time" value={form.ig_sunrise} onChange={set('ig_sunrise')} />
-            </div>
-            <div className="form-group">
-              <label htmlFor="ig_sunset">Coucher de soleil IG (HH:MM)</label>
-              <input id="ig_sunset" type="time" value={form.ig_sunset} onChange={set('ig_sunset')} />
             </div>
           </div>
         </div>

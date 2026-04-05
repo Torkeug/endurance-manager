@@ -17,13 +17,12 @@ export default function ModifierVoiture({ params }) {
   const router          = useRouter()
   const { id, entryId } = use(params)
 
-  const [form, setForm]               = useState(null)
-  const [cars, setCars]               = useState([])
-  const [startTimes, setStartTimes]   = useState([])
+  const [form, setForm]       = useState(null)
+  const [cars, setCars]       = useState([])
   const [selectedCar, setSelectedCar] = useState(null)
-  const [loading, setLoading]         = useState(false)
-  const [fetching, setFetching]       = useState(true)
-  const [error, setError]             = useState(null)
+  const [loading, setLoading] = useState(false)
+  const [fetching, setFetching] = useState(true)
+  const [error, setError]     = useState(null)
 
   useEffect(() => {
     Promise.all([
@@ -33,21 +32,27 @@ export default function ModifierVoiture({ params }) {
       setCars(carsData || [])
       if (entryError || !entry) { setError('Voiture introuvable.'); setFetching(false); return }
 
-      // Load start times for this event
-      supabase.from('event_start_times').select('*')
-        .eq('event_id', entry.event_id).order('irl_start')
-        .then(({ data: stData }) => setStartTimes(stData || []))
+      let irl_start_date = ''
+      let irl_start_time = ''
+      if (entry.irl_start) {
+        const dt = new Date(entry.irl_start)
+        irl_start_date = dt.toISOString().slice(0, 10)
+        irl_start_time = dt.toISOString().slice(11, 16)
+      }
 
       setForm({
         crew_name:                entry.crew_name                ?? '',
         car_id:                   entry.car_id                   ?? '',
         class:                    entry.class                    ?? '',
-        start_time_id:            entry.start_time_id            ?? '',
+        irl_start_date,
+        irl_start_time,
+        sof:                      entry.sof                      ?? '',
         stream_url:               entry.stream_url               ?? '',
-        bop_power_percent:        entry.bop_power_percent        ?? '100',
-        bop_weight_kg:            entry.bop_weight_kg            ?? '0',
+        bop_percent:              entry.bop_percent              ?? '100',
         refuel_time_seconds:      entry.refuel_time_seconds      ?? '30',
         tyre_change_time_seconds: entry.tyre_change_time_seconds ?? '0',
+        ig_sunrise:               entry.ig_sunrise               ?? '',
+        ig_sunset:                entry.ig_sunset                ?? '',
       })
       setFetching(false)
     })
@@ -64,23 +69,30 @@ export default function ModifierVoiture({ params }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault()
-    if (!form.crew_name)     { setError("Le nom d'équipage est obligatoire."); return }
-    if (!form.car_id)        { setError('La voiture est obligatoire.'); return }
-    if (!form.start_time_id) { setError("L'horaire de départ est obligatoire."); return }
+    if (!form.crew_name) { setError("Le nom d'équipage est obligatoire."); return }
+    if (!form.car_id)    { setError('La voiture est obligatoire.'); return }
 
     setLoading(true)
     setError(null)
 
+    let irl_start = null
+    if (form.irl_start_date) {
+      const t = form.irl_start_time || '00:00'
+      irl_start = `${form.irl_start_date}T${t}:00`
+    }
+
     const payload = {
       crew_name:                form.crew_name,
       car_id:                   form.car_id,
-      class:                    form.class             || null,
-      start_time_id:            form.start_time_id,
+      class:                    form.class    || null,
+      irl_start,
+      sof:                      form.sof      ? parseInt(form.sof)             : null,
       stream_url:               form.stream_url.trim() || null,
-      bop_power_percent:        parseFloat(form.bop_power_percent)        || 100,
-      bop_weight_kg:            parseFloat(form.bop_weight_kg)            || 0,
-      refuel_time_seconds:      parseInt(form.refuel_time_seconds)        || 30,
-      tyre_change_time_seconds: parseInt(form.tyre_change_time_seconds)   || 0,
+      bop_percent:              parseFloat(form.bop_percent)            || 100,
+      refuel_time_seconds:      parseInt(form.refuel_time_seconds)      || 30,
+      tyre_change_time_seconds: parseInt(form.tyre_change_time_seconds) || 0,
+      ig_sunrise:               form.ig_sunrise || null,
+      ig_sunset:                form.ig_sunset  || null,
     }
 
     const { error: err } = await supabase
@@ -109,14 +121,6 @@ export default function ModifierVoiture({ params }) {
     return acc
   }, {})
 
-  const formatDatetime = (dtStr) => {
-    if (!dtStr) return ''
-    return new Date(dtStr).toLocaleString('fr-FR', {
-      day: '2-digit', month: '2-digit', year: 'numeric',
-      hour: '2-digit', minute: '2-digit', hour12: false,
-    })
-  }
-
   if (fetching) return <div className="page"><p style={{ color: 'var(--text-dim)' }}>Chargement…</p></div>
   if (!form) return (
     <div className="page">
@@ -138,7 +142,6 @@ export default function ModifierVoiture({ params }) {
       {error && <div className="alert alert-error">{error}</div>}
 
       <form onSubmit={handleSubmit}>
-
         <div className="card" style={{ marginBottom: '1.25rem' }}>
           <h3 style={{ marginBottom: '1.25rem', color: 'var(--text-dim)' }}>Équipage &amp; voiture</h3>
           <div className="form-grid">
@@ -178,6 +181,10 @@ export default function ModifierVoiture({ params }) {
               </select>
             </div>
             <div className="form-group">
+              <label htmlFor="sof">SOF</label>
+              <input id="sof" type="number" value={form.sof} onChange={set('sof')} min="0" />
+            </div>
+            <div className="form-group">
               <label htmlFor="stream_url">Lien stream</label>
               <input id="stream_url" type="url" value={form.stream_url} onChange={set('stream_url')} />
             </div>
@@ -185,50 +192,37 @@ export default function ModifierVoiture({ params }) {
         </div>
 
         <div className="card" style={{ marginBottom: '1.25rem' }}>
-          <h3 style={{ marginBottom: '1.25rem', color: 'var(--text-dim)' }}>Horaire de départ *</h3>
-          {startTimes.length === 0 ? (
-            <p style={{ color: 'var(--text-dim)', fontSize: '0.9rem' }}>
-              Aucun créneau disponible.
-            </p>
-          ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-              {startTimes.map(st => (
-                <label key={st.id} style={{
-                  display: 'flex', alignItems: 'center', gap: '0.75rem',
-                  padding: '0.75rem 1rem',
-                  background: form.start_time_id === st.id ? 'var(--accent-dim)' : 'var(--surface-2)',
-                  border: '1px solid',
-                  borderColor: form.start_time_id === st.id ? 'var(--accent)' : 'var(--border)',
-                  borderRadius: '3px', cursor: 'pointer', transition: 'all 0.15s',
-                }}>
-                  <input type="radio" name="start_time_id" value={st.id}
-                    checked={form.start_time_id === st.id}
-                    onChange={set('start_time_id')}
-                    style={{ accentColor: 'var(--accent)' }} />
-                  <div>
-                    <div style={{ fontWeight: 600, fontSize: '0.95rem' }}>{st.label}</div>
-                    <div className="mono" style={{ fontSize: '0.8rem', color: 'var(--text-dim)' }}>
-                      {formatDatetime(st.irl_start)}
-                    </div>
-                  </div>
-                </label>
-              ))}
+          <h3 style={{ marginBottom: '0.5rem', color: 'var(--text-dim)' }}>Horaires</h3>
+          <p style={{ fontSize: '0.8rem', color: 'var(--text-dim)', marginBottom: '1.25rem' }}>
+            Heures en format 24h.
+          </p>
+          <div className="form-grid">
+            <div className="form-group">
+              <label htmlFor="irl_start_date">Date de départ IRL</label>
+              <input id="irl_start_date" type="date" value={form.irl_start_date} onChange={set('irl_start_date')} />
             </div>
-          )}
+            <div className="form-group">
+              <label htmlFor="irl_start_time">Heure de départ IRL (24h)</label>
+              <input id="irl_start_time" type="time" value={form.irl_start_time} onChange={set('irl_start_time')} />
+            </div>
+            <div className="form-group">
+              <label htmlFor="ig_sunrise">Lever de soleil IG (HH:MM)</label>
+              <input id="ig_sunrise" type="time" value={form.ig_sunrise} onChange={set('ig_sunrise')} />
+            </div>
+            <div className="form-group">
+              <label htmlFor="ig_sunset">Coucher de soleil IG (HH:MM)</label>
+              <input id="ig_sunset" type="time" value={form.ig_sunset} onChange={set('ig_sunset')} />
+            </div>
+          </div>
         </div>
 
         <div className="card" style={{ marginBottom: '1.25rem' }}>
           <h3 style={{ marginBottom: '1.25rem', color: 'var(--text-dim)' }}>Paramètres stratégie</h3>
           <div className="form-grid">
             <div className="form-group">
-              <label htmlFor="bop_power_percent">BOP Puissance (%)</label>
-              <input id="bop_power_percent" type="number" value={form.bop_power_percent}
-                onChange={set('bop_power_percent')} min="50" max="150" step="0.1" />
-            </div>
-            <div className="form-group">
-              <label htmlFor="bop_weight_kg">BOP Poids (kg)</label>
-              <input id="bop_weight_kg" type="number" value={form.bop_weight_kg}
-                onChange={set('bop_weight_kg')} min="-100" max="200" step="0.5" />
+              <label htmlFor="bop_percent">BOP (%)</label>
+              <input id="bop_percent" type="number" value={form.bop_percent} onChange={set('bop_percent')}
+                min="50" max="150" step="0.1" />
             </div>
             <div className="form-group">
               <label htmlFor="refuel_time_seconds">Temps ravitaillement (sec)</label>
