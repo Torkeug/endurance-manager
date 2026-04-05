@@ -1,7 +1,6 @@
 import { supabase } from '../../../../../lib/supabase'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import DriversAssignment from './DriversAssignment'
 
 export const revalidate = 0
 
@@ -18,41 +17,35 @@ export default async function VoitureDetail({ params }) {
 
   const { data: entry, error } = await supabase
     .from('car_entries')
-    .select(`*, cars (id, name, tank_size_litres, class),
-      events (name, duration_hours, circuits (name, pit_lane_time_seconds))`)
+    .select(`
+      *,
+      cars (name, tank_size_litres, class),
+      events (name, date, duration_hours, circuits (name, pit_lane_time_seconds))
+    `)
     .eq('id', entryId)
     .single()
 
   if (error || !entry) notFound()
 
-  const { data: allSignups } = await supabase
-    .from('signups')
-    .select('*, drivers(id, name, irating), cars(id, name, class)')
-    .eq('event_id', entry.event_id)
-    .order('drivers(name)')
-
-  const assignedDrivers  = (allSignups || []).filter(s => s.car_entry_id === entryId)
-  const unassignedDrivers = (allSignups || []).filter(s => !s.car_entry_id)
-
-  const pitTime    = entry.events?.circuits?.pit_lane_time_seconds
-  const entryCarId = entry.car_id
-  const entryClass = entry.class || entry.cars?.class
+  const pitTime = entry.events?.circuits?.pit_lane_time_seconds
 
   const infoItems = [
-    { label: 'Voiture',           value: entry.cars?.name || '—' },
-    { label: 'Classe',            value: entryClass || '—' },
-    { label: 'Réservoir',         value: entry.cars?.tank_size_litres ? `${entry.cars.tank_size_litres}L` : '—' },
-    { label: 'Pit lane',          value: pitTime ? `${pitTime}s` : '—' },
-    { label: 'BOP Puissance',     value: `${entry.bop_power_percent ?? 100}%` },
-    { label: 'BOP Poids',         value: `${entry.bop_weight_kg ?? 0}kg` },
-    { label: 'Ravitaillement',    value: entry.refuel_time_seconds ? `${entry.refuel_time_seconds}s` : '—' },
-    { label: 'Chgt pneus',        value: `${entry.tyre_change_time_seconds ?? 0}s` },
-    { label: 'Lever soleil IG',   value: entry.ig_sunrise || '—' },
-    { label: 'Coucher soleil IG', value: entry.ig_sunset  || '—' },
+    { label: 'Voiture',       value: entry.cars?.name || '—' },
+    { label: 'Classe',        value: entry.class || entry.cars?.class || '—' },
+    { label: 'Réservoir',     value: entry.cars?.tank_size_litres ? `${entry.cars.tank_size_litres}L` : '—' },
+    { label: 'Pit lane',      value: pitTime ? `${pitTime}s` : '—' },
+    { label: 'Départ IRL',    value: formatDatetime(entry.irl_start) },
+    { label: 'BOP',           value: entry.bop_percent ? `${entry.bop_percent}%` : '100%' },
+    { label: 'Ravitaillement',value: entry.refuel_time_seconds ? `${entry.refuel_time_seconds}s` : '—' },
+    { label: 'Chgt pneus',    value: entry.tyre_change_time_seconds ? `${entry.tyre_change_time_seconds}s` : '0s' },
+    { label: 'Lever soleil IG', value: entry.ig_sunrise || '—' },
+    { label: 'Coucher soleil IG', value: entry.ig_sunset || '—' },
+    { label: 'SOF',           value: entry.sof ?? '—' },
   ]
 
   return (
     <div className="page">
+      {/* Header */}
       <div className="page-header">
         <div>
           <h1>{entry.crew_name}</h1>
@@ -65,13 +58,18 @@ export default async function VoitureDetail({ params }) {
           <Link href={`/evenements/${id}/voitures/${entryId}/modifier`} className="btn btn-secondary">
             Modifier
           </Link>
-          <Link href={`/evenements/${id}`} className="btn btn-secondary">← Événement</Link>
+          <Link href={`/evenements/${id}`} className="btn btn-secondary">
+            ← Événement
+          </Link>
         </div>
       </div>
 
+      {/* Info grid */}
       <div style={{
-        display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))',
-        gap: '0.75rem', marginBottom: '2rem',
+        display: 'grid',
+        gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))',
+        gap: '0.75rem',
+        marginBottom: '2rem',
       }}>
         {infoItems.map(({ label, value }) => (
           <div key={label} className="card" style={{ padding: '0.85rem' }}>
@@ -79,7 +77,9 @@ export default async function VoitureDetail({ params }) {
               textTransform: 'uppercase', color: 'var(--text-dim)', marginBottom: '0.35rem' }}>
               {label}
             </div>
-            <div className="mono" style={{ fontSize: '0.9rem', color: 'var(--text)' }}>{value}</div>
+            <div className="mono" style={{ fontSize: '0.9rem', color: 'var(--text)' }}>
+              {value}
+            </div>
           </div>
         ))}
       </div>
@@ -87,23 +87,17 @@ export default async function VoitureDetail({ params }) {
       {entry.stream_url && (
         <div className="card" style={{ marginBottom: '2rem' }}>
           <div style={{ fontSize: '0.7rem', fontWeight: 700, letterSpacing: '0.1em',
-            textTransform: 'uppercase', color: 'var(--text-dim)', marginBottom: '0.4rem' }}>Stream</div>
+            textTransform: 'uppercase', color: 'var(--text-dim)', marginBottom: '0.4rem' }}>
+            Stream
+          </div>
           <a href={entry.stream_url} target="_blank" rel="noopener noreferrer"
-            style={{ color: '#9147ff', fontSize: '0.9rem' }}>{entry.stream_url} ↗</a>
+            style={{ color: '#9147ff', fontSize: '0.9rem' }}>
+            {entry.stream_url} ↗
+          </a>
         </div>
       )}
 
-      <div style={{ marginBottom: '2rem' }}>
-        <h2 style={{ marginBottom: '1rem' }}>Pilotes assignés</h2>
-        <DriversAssignment
-          entryId={entryId}
-          entryCarId={entryCarId}
-          entryClass={entryClass}
-          assignedDrivers={assignedDrivers}
-          unassignedDrivers={unassignedDrivers}
-        />
-      </div>
-
+      {/* Placeholders for future sections */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
         {[
           { title: 'Disponibilités', desc: 'Grille de disponibilité des pilotes — à venir' },

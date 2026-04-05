@@ -5,6 +5,12 @@ import StartTimesManager from './StartTimesManager'
 
 export const revalidate = 0
 
+function formatDate(dateStr) {
+  if (!dateStr) return '—'
+  const [y, m, d] = dateStr.split('-')
+  return `${d}/${m}/${y}`
+}
+
 function formatDatetime(dtStr) {
   if (!dtStr) return '—'
   return new Date(dtStr).toLocaleString('fr-FR', {
@@ -21,13 +27,6 @@ function formatDuration(hours) {
   return `${h}h${m.toString().padStart(2, '0')}`
 }
 
-function getEarliestStart(startTimes) {
-  if (!startTimes || startTimes.length === 0) return null
-  return startTimes.reduce((earliest, st) =>
-    !earliest || new Date(st.irl_start) < new Date(earliest.irl_start) ? st : earliest
-  , null)
-}
-
 export default async function EvenementDetail({ params }) {
   const { id } = await params
 
@@ -37,33 +36,28 @@ export default async function EvenementDetail({ params }) {
       *,
       circuits (name, pit_lane_time_seconds),
       car_entries (
-        id, crew_name, class, stream_url, start_time_id,
+        id, crew_name, class,
+        start_time_id,
+        stream_url,
         cars (name),
         event_start_times (irl_start, label)
       ),
-      event_start_times (id, label, irl_start),
-      signups (
-        id, preferred_class, notes, car_entry_id,
-        drivers (id, name, irating),
-        cars (name),
-        car_entries (crew_name)
-      )
+      event_start_times (id, label, irl_start)
     `)
     .eq('id', id)
     .single()
 
   if (error || !event) notFound()
 
-  const earliest = getEarliestStart(event.event_start_times)
-
   return (
     <div className="page">
+      {/* Header */}
       <div className="page-header">
         <div>
           <h1>{event.name}</h1>
           <div className="accent-line" />
           <div style={{ marginTop: '0.5rem', color: 'var(--text-dim)', fontSize: '0.9rem' }}>
-            {earliest ? formatDatetime(earliest.irl_start) : 'Date à confirmer'}
+            {formatDate(event.date)}
           </div>
         </div>
         <div style={{ display: 'flex', gap: '0.75rem' }}>
@@ -74,18 +68,19 @@ export default async function EvenementDetail({ params }) {
 
       {/* Info grid */}
       <div style={{
-        display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))',
-        gap: '0.75rem', marginBottom: '2rem',
+        display: 'grid',
+        gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))',
+        gap: '0.75rem',
+        marginBottom: '2rem',
       }}>
         {[
-          { label: 'Circuit',        value: event.circuits?.name || '—' },
-          { label: 'Durée',          value: formatDuration(event.duration_hours) },
-          { label: 'Format',         value: event.format || '—' },
-          { label: 'Départ IG',      value: event.ig_start_time || '—' },
-          { label: 'Lever soleil',   value: event.ig_sunrise || '—' },
-          { label: 'Coucher soleil', value: event.ig_sunset  || '—' },
-          { label: 'Pit lane',       value: event.circuits?.pit_lane_time_seconds
-              ? `${event.circuits.pit_lane_time_seconds}s` : '—' },
+          { label: 'Circuit',       value: event.circuits?.name || '—' },
+          { label: 'Durée',         value: formatDuration(event.duration_hours) },
+          { label: 'Format',        value: event.format || '—' },
+          { label: 'Départ IG',     value: event.ig_start_time || '—' },
+          { label: 'Lever soleil',  value: event.ig_sunrise || '—' },
+          { label: 'Coucher soleil',value: event.ig_sunset  || '—' },
+          { label: 'Pit lane',      value: event.circuits?.pit_lane_time_seconds ? `${event.circuits.pit_lane_time_seconds}s` : '—' },
         ].map(({ label, value }) => (
           <div key={label} className="card" style={{ padding: '0.85rem' }}>
             <div style={{ fontSize: '0.7rem', fontWeight: 700, letterSpacing: '0.1em',
@@ -105,87 +100,19 @@ export default async function EvenementDetail({ params }) {
         </div>
       )}
 
-      {/* Start times */}
+      {/* Start times manager */}
       <div style={{ marginBottom: '2rem' }}>
         <h2 style={{ marginBottom: '1rem' }}>Horaires de départ</h2>
-        <StartTimesManager eventId={id} initialStartTimes={event.event_start_times || []} />
+        <StartTimesManager
+          eventId={id}
+          initialStartTimes={event.event_start_times || []}
+        />
       </div>
-
-      {/* Sign-ups */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
-        <div>
-          <h2>Inscriptions</h2>
-          <div style={{ fontSize: '0.85rem', color: 'var(--text-dim)', marginTop: '0.25rem' }}>
-            {event.signups?.length ?? 0} pilote{(event.signups?.length ?? 0) !== 1 ? 's' : ''} inscrit{(event.signups?.length ?? 0) !== 1 ? 's' : ''}
-          </div>
-        </div>
-        <Link href={`/evenements/${id}/inscription`} className="btn btn-primary">
-          + S&apos;inscrire
-        </Link>
-      </div>
-
-      {!event.signups || event.signups.length === 0 ? (
-        <div className="table-wrap" style={{ marginBottom: '2rem' }}>
-          <div className="empty">Aucun pilote inscrit pour l&apos;instant.</div>
-        </div>
-      ) : (
-        <div className="table-wrap" style={{ marginBottom: '2rem' }}>
-          <table>
-            <thead>
-              <tr>
-                <th>Pilote</th>
-                <th>iRating</th>
-                <th>Équipe</th>
-                <th>Classe préférée</th>
-                <th>Voiture préférée</th>
-                <th>Notes</th>
-                <th></th>
-              </tr>
-            </thead>
-            <tbody>
-              {(event.signups || [])
-                .sort((a, b) => (a.drivers?.name || '').localeCompare(b.drivers?.name || ''))
-                .map((s) => (
-                <tr key={s.id}>
-                  <td style={{ fontWeight: 600 }}>{s.drivers?.name || '—'}</td>
-                  <td className="mono" style={{ color: 'var(--accent)', fontSize: '0.85rem' }}>
-                    {s.drivers?.irating ?? '—'}
-                  </td>
-                  <td style={{ fontSize: '0.85rem' }}>
-                    {s.car_entries?.crew_name
-                      ? <span className="badge badge-admin">{s.car_entries.crew_name}</span>
-                      : <span style={{ color: 'var(--text-dim)' }}>—</span>}
-                  </td>
-                  <td>
-                    {s.preferred_class
-                      ? <span className="badge badge-driver">{s.preferred_class}</span>
-                      : <span style={{ color: 'var(--text-dim)', fontSize: '0.85rem' }}>—</span>}
-                  </td>
-                  <td style={{ color: 'var(--text-dim)', fontSize: '0.85rem' }}>
-                    {s.cars?.name || '—'}
-                  </td>
-                  <td style={{ color: 'var(--text-dim)', fontSize: '0.85rem', maxWidth: '160px' }}>
-                    {s.notes || '—'}
-                  </td>
-                  <td>
-                    <Link
-                      href={`/evenements/${id}/inscription?driver=${s.drivers?.id}`}
-                      className="btn btn-secondary btn-sm"
-                    >
-                      Gérer
-                    </Link>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
 
       {/* Car entries */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
         <h2>Voitures engagées</h2>
-        <Link href={`/evenements/${id}/voitures/nouveau`} className="btn btn-secondary">
+        <Link href={`/evenements/${id}/voitures/nouveau`} className="btn btn-primary">
           + Ajouter une voiture
         </Link>
       </div>

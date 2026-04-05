@@ -43,10 +43,9 @@ export default async function EvenementDetail({ params }) {
       ),
       event_start_times (id, label, irl_start),
       signups (
-        id, preferred_class, notes, car_entry_id,
+        id, preferred_class, notes,
         drivers (id, name, irating),
-        cars (name),
-        car_entries (crew_name)
+        cars (name)
       )
     `)
     .eq('id', id)
@@ -58,6 +57,7 @@ export default async function EvenementDetail({ params }) {
 
   return (
     <div className="page">
+      {/* Header */}
       <div className="page-header">
         <div>
           <h1>{event.name}</h1>
@@ -74,8 +74,10 @@ export default async function EvenementDetail({ params }) {
 
       {/* Info grid */}
       <div style={{
-        display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))',
-        gap: '0.75rem', marginBottom: '2rem',
+        display: 'grid',
+        gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))',
+        gap: '0.75rem',
+        marginBottom: '2rem',
       }}>
         {[
           { label: 'Circuit',        value: event.circuits?.name || '—' },
@@ -135,45 +137,30 @@ export default async function EvenementDetail({ params }) {
               <tr>
                 <th>Pilote</th>
                 <th>iRating</th>
-                <th>Équipe</th>
                 <th>Classe préférée</th>
                 <th>Voiture préférée</th>
                 <th>Notes</th>
-                <th></th>
               </tr>
             </thead>
             <tbody>
-              {(event.signups || [])
-                .sort((a, b) => (a.drivers?.name || '').localeCompare(b.drivers?.name || ''))
+              {event.signups
+                .sort((a, b) => a.drivers?.name?.localeCompare(b.drivers?.name))
                 .map((s) => (
                 <tr key={s.id}>
                   <td style={{ fontWeight: 600 }}>{s.drivers?.name || '—'}</td>
                   <td className="mono" style={{ color: 'var(--accent)', fontSize: '0.85rem' }}>
                     {s.drivers?.irating ?? '—'}
                   </td>
-                  <td style={{ fontSize: '0.85rem' }}>
-                    {s.car_entries?.crew_name
-                      ? <span className="badge badge-admin">{s.car_entries.crew_name}</span>
-                      : <span style={{ color: 'var(--text-dim)' }}>—</span>}
-                  </td>
                   <td>
                     {s.preferred_class
                       ? <span className="badge badge-driver">{s.preferred_class}</span>
                       : <span style={{ color: 'var(--text-dim)', fontSize: '0.85rem' }}>—</span>}
                   </td>
-                  <td style={{ color: 'var(--text-dim)', fontSize: '0.85rem' }}>
+                  <td style={{ color: 'var(--text-dim)', fontSize: '0.9rem' }}>
                     {s.cars?.name || '—'}
                   </td>
-                  <td style={{ color: 'var(--text-dim)', fontSize: '0.85rem', maxWidth: '160px' }}>
+                  <td style={{ color: 'var(--text-dim)', fontSize: '0.85rem', maxWidth: '200px' }}>
                     {s.notes || '—'}
-                  </td>
-                  <td>
-                    <Link
-                      href={`/evenements/${id}/inscription?driver=${s.drivers?.id}`}
-                      className="btn btn-secondary btn-sm"
-                    >
-                      Gérer
-                    </Link>
                   </td>
                 </tr>
               ))}
