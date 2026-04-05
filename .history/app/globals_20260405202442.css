@@ -1,13 +1,5 @@
 @import "tailwindcss";
 
-body {
-  font-family: var(--font-rajdhani), sans-serif;
-}
-
-.mono {
-  font-family: var(--font-mono), monospace;
-}
-
 :root {
   --bg:        #07070f;
   --surface:   #0e0e1c;
