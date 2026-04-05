@@ -1,12 +1,11 @@
 'use client'
-import { useState, useEffect, use } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { supabase } from '../../../../lib/supabase'
 
 export default function ModifierPilote({ params }) {
   const router = useRouter()
-  const { id } = use(params)
 
   const [form, setForm]         = useState(null)
   const [loading, setLoading]   = useState(false)
@@ -17,7 +16,7 @@ export default function ModifierPilote({ params }) {
     supabase
       .from('drivers')
       .select('*')
-      .eq('id', id)
+      .eq('id', params.id)
       .single()
       .then(({ data, error }) => {
         if (error || !data) { setError('Pilote introuvable.'); setFetching(false); return }
@@ -32,7 +31,7 @@ export default function ModifierPilote({ params }) {
         })
         setFetching(false)
       })
-  }, [id])
+  }, [params.id])
 
   const set = (field) => (e) =>
     setForm((prev) => ({ ...prev, [field]: e.target.value }))
@@ -55,7 +54,9 @@ export default function ModifierPilote({ params }) {
     }
 
     const { error: err } = await supabase
-      .from('drivers').update(payload).eq('id', id)
+      .from('drivers')
+      .update(payload)
+      .eq('id', params.id)
 
     if (err) {
       setError(err.message)
@@ -68,7 +69,7 @@ export default function ModifierPilote({ params }) {
 
   const handleDelete = async () => {
     if (!confirm('Supprimer ce pilote ? Cette action est irréversible.')) return
-    const { error: err } = await supabase.from('drivers').delete().eq('id', id)
+    const { error: err } = await supabase.from('drivers').delete().eq('id', params.id)
     if (err) { setError(err.message); return }
     router.push('/pilotes')
     router.refresh()
@@ -101,7 +102,9 @@ export default function ModifierPilote({ params }) {
 
       <form onSubmit={handleSubmit}>
         <div className="card" style={{ marginBottom: '1.5rem' }}>
-          <h3 style={{ marginBottom: '1.25rem', color: 'var(--text-dim)' }}>Informations générales</h3>
+          <h3 style={{ marginBottom: '1.25rem', color: 'var(--text-dim)' }}>
+            Informations générales
+          </h3>
           <div className="form-grid">
             <div className="form-group" style={{ gridColumn: '1 / -1' }}>
               <label htmlFor="name">Nom *</label>
@@ -126,7 +129,9 @@ export default function ModifierPilote({ params }) {
         </div>
 
         <div className="card" style={{ marginBottom: '1.5rem' }}>
-          <h3 style={{ marginBottom: '1.25rem', color: 'var(--text-dim)' }}>Réseaux sociaux</h3>
+          <h3 style={{ marginBottom: '1.25rem', color: 'var(--text-dim)' }}>
+            Réseaux sociaux
+          </h3>
           <div className="form-grid">
             <div className="form-group">
               <label htmlFor="discord">Discord</label>
@@ -150,7 +155,9 @@ export default function ModifierPilote({ params }) {
             </button>
             <Link href="/pilotes" className="btn btn-secondary">Annuler</Link>
           </div>
-          <button type="button" className="btn btn-danger" onClick={handleDelete}>Supprimer</button>
+          <button type="button" className="btn btn-danger" onClick={handleDelete}>
+            Supprimer
+          </button>
         </div>
       </form>
     </div>
