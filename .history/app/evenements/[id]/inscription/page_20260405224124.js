@@ -14,28 +14,9 @@ function MismatchWarning({ message }) {
       borderRadius: '3px', fontSize: '0.82rem', color: '#d4904a',
       display: 'flex', gap: '0.5rem', alignItems: 'flex-start',
     }}>
-      <span>⚠️</span><span>{message}</span>
+      <span>⚠️</span>
+      <span>{message}</span>
     </div>
-  )
-}
-
-function Checkbox({ checked, onChange, label, sub }) {
-  return (
-    <label style={{
-      display: 'flex', alignItems: 'center', gap: '0.6rem',
-      padding: '0.6rem 0.85rem',
-      background: checked ? 'var(--accent-dim)' : 'var(--surface-2)',
-      border: '1px solid',
-      borderColor: checked ? 'var(--accent)' : 'var(--border)',
-      borderRadius: '3px', cursor: 'pointer', transition: 'all 0.15s',
-    }}>
-      <input type="checkbox" checked={checked} onChange={onChange}
-        style={{ accentColor: 'var(--accent)', width: '15px', height: '15px' }} />
-      <div>
-        <div style={{ fontWeight: 600, fontSize: '0.9rem' }}>{label}</div>
-        {sub && <div style={{ fontSize: '0.75rem', color: 'var(--text-dim)' }}>{sub}</div>}
-      </div>
-    </label>
   )
 }
 
@@ -54,11 +35,11 @@ export default function Inscription({ params }) {
   const [error, setError]           = useState(null)
   const [success, setSuccess]       = useState(false)
 
-  const [driverId, setDriverId]               = useState('')
-  const [preferredClasses, setPreferredClasses] = useState([])   // string[]
-  const [preferredCarIds, setPreferredCarIds]   = useState([])   // uuid[]
-  const [carEntryId, setCarEntryId]             = useState('')
-  const [notes, setNotes]                       = useState('')
+  const [driverId, setDriverId]             = useState('')
+  const [preferredClass, setPreferredClass] = useState('')
+  const [preferredCarId, setPreferredCarId] = useState('')
+  const [carEntryId, setCarEntryId]         = useState('')
+  const [notes, setNotes]                   = useState('')
 
   useEffect(() => {
     Promise.all([
@@ -74,71 +55,51 @@ export default function Inscription({ params }) {
       setEventName(evData?.name || '')
       setCarEntries(entriesData || [])
       setFetching(false)
+
+      // Pre-select driver from URL param ?driver=id
       const preselect = searchParams.get('driver')
       if (preselect) setDriverId(preselect)
     })
   }, [id, searchParams])
 
+  // Load existing signup when driver changes
   useEffect(() => {
     if (!driverId) { setExisting(null); return }
     supabase.from('signups')
-      .select('*, car_entries(id, crew_name, class, car_id, cars(name, class))')
+      .select('*, cars(id, name, class), car_entries(id, crew_name, class, car_id, cars(name, class))')
       .eq('event_id', id).eq('driver_id', driverId).single()
       .then(({ data }) => {
         if (data) {
           setExisting(data)
-          setPreferredClasses(data.preferred_class || [])
-          setPreferredCarIds(data.preferred_car_ids || [])
+          setPreferredClass(data.preferred_class || '')
+          setPreferredCarId(data.preferred_car_id || '')
           setCarEntryId(data.car_entry_id || '')
           setNotes(data.notes || '')
         } else {
           setExisting(null)
-          setPreferredClasses([])
-          setPreferredCarIds([])
+          setPreferredClass('')
+          setPreferredCarId('')
           setCarEntryId('')
           setNotes('')
         }
       })
   }, [driverId, id])
 
-  const toggleClass = (cls) => {
-    setPreferredClasses(prev =>
-      prev.includes(cls) ? prev.filter(c => c !== cls) : [...prev, cls]
-    )
-    // Clear car selections that don't match any selected class
-    if (!preferredClasses.includes(cls)) return
-    const remaining = preferredClasses.filter(c => c !== cls)
-    if (remaining.length > 0) {
-      setPreferredCarIds(prev =>
-        prev.filter(cid => {
-          const car = cars.find(c => c.id === cid)
-          return remaining.includes(car?.class)
-        })
-      )
-    }
-  }
-
-  const toggleCar = (carId) => {
-    setPreferredCarIds(prev =>
-      prev.includes(carId) ? prev.filter(id => id !== carId) : [...prev, carId]
-    )
-  }
-
-  // Mismatch warning for selected team
+  // Compute mismatch warning
   const getMismatchWarning = () => {
     if (!carEntryId) return null
     const entry = carEntries.find(e => e.id === carEntryId)
     if (!entry) return null
+
     const entryClass = entry.class || entry.cars?.class
     const entryCarId = entry.car_id
 
-    if (preferredCarIds.length > 0 && entryCarId && !preferredCarIds.includes(entryCarId)) {
-      const prefCarNames = preferredCarIds
-        .map(cid => cars.find(c => c.id === cid)?.name).filter(Boolean).join(', ')
-      return `Vos voitures préférées (${prefCarNames}) ne correspondent pas à celle de cette équipe (${entry.cars?.name || '?'}).`
+    if (preferredCarId && entryCarId && preferredCarId !== entryCarId) {
+      const prefCar = cars.find(c => c.id === preferredCarId)
+      return `Votre voiture préférée (${prefCar?.name || '?'}) est différente de celle de cette équipe (${entry.cars?.name || '?'}).`
     }
-    if (preferredClasses.length > 0 && entryClass && !preferredClasses.includes(entryClass)) {
-      return `Vos classes préférées (${preferredClasses.join(', ')}) ne correspondent pas à celle de cette équipe (${entryClass}).`
+    if (preferredClass && entryClass && preferredClass !== entryClass) {
+      return `Votre classe préférée (${preferredClass}) est différente de celle de cette équipe (${entryClass}).`
     }
     return null
   }
@@ -154,12 +115,12 @@ export default function Inscription({ params }) {
     setSuccess(false)
 
     const payload = {
-      event_id:          id,
-      driver_id:         driverId,
-      preferred_class:   preferredClasses.length > 0 ? preferredClasses : null,
-      preferred_car_ids: preferredCarIds.length  > 0 ? preferredCarIds  : null,
-      car_entry_id:      carEntryId || null,
-      notes:             notes.trim() || null,
+      event_id:         id,
+      driver_id:        driverId,
+      preferred_class:  preferredClass  || null,
+      preferred_car_id: preferredCarId  || null,
+      car_entry_id:     carEntryId      || null,
+      notes:            notes.trim()    || null,
     }
 
     let err
@@ -176,7 +137,7 @@ export default function Inscription({ params }) {
       setSuccess(true)
       setLoading(false)
       const { data } = await supabase.from('signups')
-        .select('*, car_entries(id, crew_name, class, car_id, cars(name, class))')
+        .select('*, cars(id, name, class), car_entries(id, crew_name, class, car_id, cars(name, class))')
         .eq('event_id', id).eq('driver_id', driverId).single()
       setExisting(data)
     }
@@ -188,20 +149,17 @@ export default function Inscription({ params }) {
     const { error: err } = await supabase.from('signups').delete().eq('id', existing.id)
     if (err) { setError(err.message); return }
     setExisting(null)
-    setPreferredClasses([])
-    setPreferredCarIds([])
+    setPreferredClass('')
+    setPreferredCarId('')
     setCarEntryId('')
     setNotes('')
     setSuccess(false)
     router.push(`/evenements/${id}`)
   }
 
-  // Cars filtered by selected classes (show all if no class selected)
   const carsByClass = cars.reduce((acc, car) => {
-    if (preferredClasses.length === 0 || preferredClasses.includes(car.class)) {
-      if (!acc[car.class]) acc[car.class] = []
-      acc[car.class].push(car)
-    }
+    if (!acc[car.class]) acc[car.class] = []
+    acc[car.class].push(car)
     return acc
   }, {})
 
@@ -276,6 +234,7 @@ export default function Inscription({ params }) {
                     style={{ accentColor: 'var(--accent)' }} />
                   <span style={{ color: 'var(--text-dim)', fontSize: '0.9rem' }}>Pas de préférence</span>
                 </label>
+
                 {carEntries.map(entry => {
                   const entryClass = entry.class || entry.cars?.class
                   const isSelected = carEntryId === entry.id
@@ -295,7 +254,8 @@ export default function Inscription({ params }) {
                       <div style={{ flex: 1 }}>
                         <div style={{ fontWeight: 600 }}>{entry.crew_name}</div>
                         <div style={{ fontSize: '0.8rem', color: 'var(--text-dim)' }}>
-                          {entry.cars?.name || '—'}{entryClass && ` · ${entryClass}`}
+                          {entry.cars?.name || '—'}
+                          {entryClass && ` · ${entryClass}`}
                         </div>
                       </div>
                     </label>
@@ -307,66 +267,43 @@ export default function Inscription({ params }) {
           )}
         </div>
 
-        {/* Preferred classes */}
+        {/* Preferences */}
         <div className="card" style={{ marginBottom: '1.25rem' }}>
-          <h3 style={{ marginBottom: '0.5rem', color: 'var(--text-dim)' }}>Classes préférées</h3>
+          <h3 style={{ marginBottom: '0.5rem', color: 'var(--text-dim)' }}>Préférences</h3>
           <p style={{ fontSize: '0.8rem', color: 'var(--text-dim)', marginBottom: '1.25rem' }}>
-            Sélectionnez une ou plusieurs classes. Les voitures ci-dessous se filtreront en conséquence.
+            Optionnel — classe ou voiture souhaitée.
           </p>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
-            {CLASSES.map(cls => (
-              <Checkbox
-                key={cls}
-                checked={preferredClasses.includes(cls)}
-                onChange={() => toggleClass(cls)}
-                label={cls}
-              />
-            ))}
-          </div>
-        </div>
-
-        {/* Preferred cars */}
-        <div className="card" style={{ marginBottom: '1.25rem' }}>
-          <h3 style={{ marginBottom: '0.5rem', color: 'var(--text-dim)' }}>Voitures préférées</h3>
-          <p style={{ fontSize: '0.8rem', color: 'var(--text-dim)', marginBottom: '1.25rem' }}>
-            Optionnel — sélectionnez une ou plusieurs voitures spécifiques.
-            {preferredClasses.length > 0 && ` Filtré sur : ${preferredClasses.join(', ')}.`}
-          </p>
-          {Object.keys(carsByClass).length === 0 ? (
-            <p style={{ color: 'var(--text-dim)', fontSize: '0.85rem' }}>
-              Sélectionnez une classe pour afficher les voitures.
-            </p>
-          ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-              {Object.entries(carsByClass).map(([cls, carsInClass]) => (
-                <div key={cls}>
-                  <div style={{ fontSize: '0.7rem', fontWeight: 700, letterSpacing: '0.1em',
-                    textTransform: 'uppercase', color: 'var(--text-dim)', marginBottom: '0.5rem' }}>
-                    {cls}
-                  </div>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
-                    {carsInClass.map(car => (
-                      <Checkbox
-                        key={car.id}
-                        checked={preferredCarIds.includes(car.id)}
-                        onChange={() => toggleCar(car.id)}
-                        label={car.name}
-                        sub={`${car.tank_size_litres}L`}
-                      />
-                    ))}
-                  </div>
-                </div>
-              ))}
+          <div className="form-grid">
+            <div className="form-group">
+              <label htmlFor="preferred_class">Classe préférée</label>
+              <select id="preferred_class" value={preferredClass}
+                onChange={e => { setPreferredClass(e.target.value); setPreferredCarId('') }}>
+                <option value="">— Pas de préférence —</option>
+                {CLASSES.map(c => <option key={c} value={c}>{c}</option>)}
+              </select>
             </div>
-          )}
-        </div>
-
-        {/* Notes */}
-        <div className="card" style={{ marginBottom: '1.25rem' }}>
-          <h3 style={{ marginBottom: '1.25rem', color: 'var(--text-dim)' }}>Notes</h3>
-          <div className="form-group">
-            <textarea value={notes} onChange={e => setNotes(e.target.value)} rows={3}
-              placeholder="ex : disponible uniquement le samedi soir…" />
+            <div className="form-group">
+              <label htmlFor="preferred_car_id">Voiture spécifique</label>
+              <select id="preferred_car_id" value={preferredCarId}
+                onChange={e => setPreferredCarId(e.target.value)}>
+                <option value="">— Pas de préférence —</option>
+                {Object.entries(carsByClass)
+                  .filter(([cls]) => !preferredClass || cls === preferredClass)
+                  .map(([cls, carsInClass]) => (
+                    <optgroup key={cls} label={cls}>
+                      {carsInClass.map(c => (
+                        <option key={c.id} value={c.id}>{c.name}</option>
+                      ))}
+                    </optgroup>
+                  ))}
+              </select>
+            </div>
+            <div className="form-group" style={{ gridColumn: '1 / -1' }}>
+              <label htmlFor="notes">Notes</label>
+              <textarea id="notes" value={notes}
+                onChange={e => setNotes(e.target.value)} rows={3}
+                placeholder="ex : disponible uniquement le samedi soir…" />
+            </div>
           </div>
         </div>
 
@@ -377,16 +314,16 @@ export default function Inscription({ params }) {
             </button>
             <Link href={`/evenements/${id}`} className="btn btn-secondary">Annuler</Link>
           </div>
-          {existing && (
-            <div>
-              <p style={{ fontSize: '0.75rem', color: 'var(--text-dim)', marginBottom: '0.5rem' }}>
-                La désinscription ne devrait être effectuée que par le pilote concerné ou un admin.
-              </p>
-              <button type="button" className="btn btn-danger" onClick={handleSignOff}>
-                Se désinscrire
-              </button>
-            </div>
-          )}
+        {existing && (
+        <div>
+            <p style={{ fontSize: '0.75rem', color: 'var(--text-dim)', marginBottom: '0.5rem' }}>
+            La désinscription ne devrait être effectuée que par le pilote concerné ou un admin.
+            </p>
+            <button type="button" className="btn btn-danger" onClick={handleSignOff}>
+            Se désinscrire
+            </button>
+        </div>
+        )}
         </div>
       </form>
     </div>

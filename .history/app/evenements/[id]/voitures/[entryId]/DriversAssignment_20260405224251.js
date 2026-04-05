@@ -4,28 +4,29 @@ import { useRouter } from 'next/navigation'
 import { supabase } from '../../../../../lib/supabase'
 
 function MismatchBadge({ signup, entryCarId, entryClass }) {
-  const prefCarIds = signup.preferred_car_ids || []
-  const prefClasses = signup.preferred_class || []
+  const prefCarId = signup.preferred_car_id
+  const prefClass = signup.preferred_class
 
-  if (prefCarIds.length > 0 && entryCarId && !prefCarIds.includes(entryCarId)) {
+  if (prefCarId && entryCarId && prefCarId !== entryCarId) {
+    const prefCarName = signup.cars?.name || '?'
     return (
-      <span title={`Voiture préférée différente`} style={{
+      <span title={`Voiture préférée : ${prefCarName}`} style={{
         fontSize: '0.7rem', padding: '0.15rem 0.4rem',
         background: '#2a1a00', border: '1px solid #a06020',
         borderRadius: '2px', color: '#d4904a', whiteSpace: 'nowrap',
       }}>
-        ⚠️ voiture
+        ⚠️ {prefCarName}
       </span>
     )
   }
-  if (prefClasses.length > 0 && entryClass && !prefClasses.includes(entryClass)) {
+  if (prefClass && entryClass && prefClass !== entryClass) {
     return (
-      <span title={`Classe préférée : ${prefClasses.join(', ')}`} style={{
+      <span title={`Classe préférée : ${prefClass}`} style={{
         fontSize: '0.7rem', padding: '0.15rem 0.4rem',
         background: '#2a1a00', border: '1px solid #a06020',
         borderRadius: '2px', color: '#d4904a', whiteSpace: 'nowrap',
       }}>
-        ⚠️ {prefClasses.join(', ')}
+        ⚠️ {prefClass}
       </span>
     )
   }
@@ -56,15 +57,6 @@ export default function DriversAssignment({ entryId, entryCarId, entryClass, ass
     router.refresh()
   }
 
-  const hasMismatch = (signup) => {
-    const prefCarIds  = signup.preferred_car_ids || []
-    const prefClasses = signup.preferred_class   || []
-    return (
-      (prefCarIds.length  > 0 && entryCarId && !prefCarIds.includes(entryCarId)) ||
-      (prefClasses.length > 0 && entryClass && !prefClasses.includes(entryClass))
-    )
-  }
-
   return (
     <div>
       {error && <div className="alert alert-error" style={{ marginBottom: '1rem' }}>{error}</div>}
@@ -82,7 +74,7 @@ export default function DriversAssignment({ entryId, entryCarId, entryClass, ass
               <tr>
                 <th>Pilote</th>
                 <th>iRating</th>
-                <th>Préférences</th>
+                <th>Préférence</th>
                 <th>Notes</th>
                 <th></th>
               </tr>
@@ -99,17 +91,18 @@ export default function DriversAssignment({ entryId, entryCarId, entryClass, ass
                   <td className="mono" style={{ color: 'var(--accent)', fontSize: '0.85rem' }}>
                     {s.drivers?.irating ?? '—'}
                   </td>
-                  <td style={{ color: 'var(--text-dim)', fontSize: '0.82rem' }}>
-                    {[
-                      ...(s.preferred_class || []),
-                    ].join(', ') || '—'}
+                  <td style={{ color: 'var(--text-dim)', fontSize: '0.85rem' }}>
+                    {s.preferred_class || s.cars?.name || '—'}
                   </td>
                   <td style={{ color: 'var(--text-dim)', fontSize: '0.85rem', maxWidth: '180px' }}>
                     {s.notes || '—'}
                   </td>
                   <td>
-                    <button onClick={() => unassign(s)} className="btn btn-secondary btn-sm"
-                      title="Pilote concerné ou admin uniquement">
+                    <button 
+                      onClick={() => unassign(s)} 
+                      className="btn btn-secondary btn-sm"
+                      title="Pilote concerné ou admin uniquement"
+                    >
                       Retirer
                     </button>
                   </td>
@@ -128,17 +121,19 @@ export default function DriversAssignment({ entryId, entryCarId, entryClass, ass
           </div>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
             {unassigned.map(s => {
-              const mismatch = hasMismatch(s)
+              const hasMismatch =
+                (s.preferred_car_id && entryCarId && s.preferred_car_id !== entryCarId) ||
+                (s.preferred_class  && entryClass  && s.preferred_class  !== entryClass)
               return (
                 <button key={s.id} onClick={() => assign(s)}
                   className="btn btn-secondary"
-                  title={mismatch ? 'Préférence différente de cette équipe' : ''}
+                  title={hasMismatch ? 'Préférence différente de cette équipe' : ''}
                   style={{
                     display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '0.1rem',
-                    borderColor: mismatch ? '#a06020' : undefined,
+                    borderColor: hasMismatch ? '#a06020' : undefined,
                   }}>
                   <span style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                    {mismatch && <span style={{ color: '#d4904a' }}>⚠️</span>}
+                    {hasMismatch && <span style={{ color: '#d4904a' }}>⚠️</span>}
                     <span style={{ fontWeight: 600 }}>{s.drivers?.name}</span>
                   </span>
                   {s.drivers?.irating && (

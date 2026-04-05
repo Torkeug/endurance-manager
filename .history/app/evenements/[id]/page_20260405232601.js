@@ -43,8 +43,9 @@ export default async function EvenementDetail({ params }) {
       ),
       event_start_times (id, label, irl_start),
       signups (
-        id, preferred_class, preferred_car_ids, notes, car_entry_id,
+        id, preferred_class, notes, car_entry_id,
         drivers (id, name, irating),
+        cars (name),
         car_entries (crew_name)
       )
     `)
@@ -135,8 +136,8 @@ export default async function EvenementDetail({ params }) {
                 <th>Pilote</th>
                 <th>iRating</th>
                 <th>Équipe</th>
-                <th>Classes préférées</th>
-                <th>Voitures</th>
+                <th>Classe préférée</th>
+                <th>Voiture préférée</th>
                 <th>Notes</th>
                 <th></th>
               </tr>
@@ -155,18 +156,18 @@ export default async function EvenementDetail({ params }) {
                       ? <span className="badge badge-admin">{s.car_entries.crew_name}</span>
                       : <span style={{ color: 'var(--text-dim)' }}>—</span>}
                   </td>
-                  <td style={{ fontSize: '0.82rem' }}>
+                    <td style={{ fontSize: '0.82rem' }}>
                     {(s.preferred_class || []).length > 0
-                      ? (s.preferred_class || []).map(c => (
-                          <span key={c} className="badge badge-driver" style={{ marginRight: '0.25rem' }}>{c}</span>
+                        ? (s.preferred_class || []).map(c => (
+                            <span key={c} className="badge badge-driver" style={{ marginRight: '0.25rem' }}>{c}</span>
                         ))
-                      : <span style={{ color: 'var(--text-dim)' }}>—</span>}
-                  </td>
-                  <td style={{ color: 'var(--text-dim)', fontSize: '0.85rem' }}>
+                        : <span style={{ color: 'var(--text-dim)' }}>—</span>}
+                    </td>
+                    <td style={{ color: 'var(--text-dim)', fontSize: '0.85rem' }}>
                     {(s.preferred_car_ids || []).length > 0
-                      ? `${(s.preferred_car_ids || []).length} voiture(s)`
-                      : '—'}
-                  </td>
+                        ? `${(s.preferred_car_ids || []).length} voiture(s)`
+                        : '—'}
+                    </td>
                   <td style={{ color: 'var(--text-dim)', fontSize: '0.85rem', maxWidth: '160px' }}>
                     {s.notes || '—'}
                   </td>
