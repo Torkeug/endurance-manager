@@ -81,7 +81,7 @@ export default function Inscription({ params }) {
         supabase.from('drivers').select('id, name').eq('active', true).order('name'),
         supabase.from('cars').select('id, name, class').order('class').order('name'),
         supabase.from('events').select('name, format').eq('id', id).single(),
-        supabase.from('team_entries')
+        supabase.from('car_entries')
         .select('id, crew_name, class, car_id, cars(id, name, class)')
         .eq('event_id', id).order('crew_name'),
     ]).then(async ([{ data: driversData }, { data: carsData }, { data: evData }, { data: entriesData }]) => {
@@ -114,14 +114,14 @@ export default function Inscription({ params }) {
   useEffect(() => {
     if (!driverId) { setExisting(null); return }
     supabase.from('signups')
-      .select('*, team_entries(id, crew_name, class, car_id, cars(name, class))')
+      .select('*, car_entries(id, crew_name, class, car_id, cars(name, class))')
       .eq('event_id', id).eq('driver_id', driverId).single()
       .then(({ data }) => {
         if (data) {
           setExisting(data)
           setPreferredClasses(data.preferred_class || [])
           setPreferredCarIds(data.preferred_car_ids || [])
-          setCarEntryId(data.team_entry_id || '')
+          setCarEntryId(data.car_entry_id || '')
           setNotes(data.notes || '')
         } else {
           setExisting(null)
@@ -145,29 +145,23 @@ export default function Inscription({ params }) {
     )
   }
 
-    const getMismatchWarning = () => {
+  const getMismatchWarning = () => {
     if (!carEntryId) return null
     const entry = carEntries.find(e => e.id === carEntryId)
     if (!entry) return null
     const entryClass = entry.class || entry.cars?.class
     const entryCarId = entry.car_id
 
-    if (preferredCarIds.length === 0 && preferredClasses.length === 0) return null
-
-    if (preferredCarIds.length > 0) {
-        // Specific cars selected — team car must be in that list
-        if (!preferredCarIds.includes(entryCarId)) {
-        const names = preferredCarIds.map(cid => cars.find(c => c.id === cid)?.name).filter(Boolean).join(', ')
-        return `La voiture de cette équipe (${entry.cars?.name || '?'}) ne fait pas partie de vos voitures préférées (${names}).`
-        }
-    } else {
-        // Only classes selected — team car's class must match
-        if (!preferredClasses.includes(entryClass)) {
-        return `La voiture de cette équipe (${entry.cars?.name || '?'} — ${entryClass}) ne correspond pas à vos classes préférées (${preferredClasses.join(', ')}).`
-        }
+    if (preferredCarIds.length > 0 && entryCarId && !preferredCarIds.includes(entryCarId)) {
+      const prefCarNames = preferredCarIds
+        .map(cid => cars.find(c => c.id === cid)?.name).filter(Boolean).join(', ')
+      return `Vos voitures préférées (${prefCarNames}) ne correspondent pas à celle de cette équipe (${entry.cars?.name || '?'}).`
+    }
+    if (preferredClasses.length > 0 && entryClass && !preferredClasses.includes(entryClass)) {
+      return `Vos classes préférées (${preferredClasses.join(', ')}) ne correspondent pas à celle de cette équipe (${entryClass}).`
     }
     return null
-    }
+  }
 
   const mismatchWarning = getMismatchWarning()
 
@@ -182,7 +176,7 @@ export default function Inscription({ params }) {
       driver_id:         driverId,
       preferred_class:   preferredClasses.length > 0 ? preferredClasses : null,
       preferred_car_ids: preferredCarIds.length  > 0 ? preferredCarIds  : null,
-      team_entry_id:      carEntryId || null,
+      car_entry_id:      carEntryId || null,
       notes:             notes.trim() || null,
     }
 
@@ -282,7 +276,7 @@ export default function Inscription({ params }) {
                   borderColor: carEntryId === '' ? 'var(--accent)' : 'var(--border)',
                   borderRadius: '3px', cursor: 'pointer', transition: 'all 0.15s',
                 }}>
-                  <input type="radio" name="team_entry_id" value=""
+                  <input type="radio" name="car_entry_id" value=""
                     checked={carEntryId === ''}
                     onChange={() => setCarEntryId('')}
                     style={{ accentColor: 'var(--accent)' }} />
@@ -301,7 +295,7 @@ export default function Inscription({ params }) {
                       borderColor: isSelected ? 'var(--accent)' : 'var(--border)',
                       borderRadius: '3px', cursor: 'pointer', transition: 'all 0.15s',
                     }}>
-                      <input type="radio" name="team_entry_id" value={entry.id}
+                      <input type="radio" name="car_entry_id" value={entry.id}
                         checked={isSelected}
                         onChange={() => setCarEntryId(entry.id)}
                         style={{ accentColor: 'var(--accent)' }} />

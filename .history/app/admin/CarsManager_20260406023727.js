@@ -189,7 +189,7 @@ export default function CarsManager({ initialCars }) {
 
       {!adding && !editingId && (
         <button onClick={() => { setAdding(true) }} className="btn btn-secondary">
-          + Ajouter une voiture
+          + Ajouter un équipage
         </button>
       )}
     </div>

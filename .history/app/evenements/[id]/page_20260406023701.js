@@ -35,16 +35,16 @@ export default async function EvenementDetail({ params }) {
     supabase.from('events').select(`
       *,
       circuits (name, pit_lane_time_seconds),
-      team_entries (
+      car_entries (
         id, crew_name, class, stream_url, start_time_id,
         cars (name),
         event_start_times (irl_start, label)
       ),
       event_start_times (id, label, irl_start),
       signups (
-        id, preferred_class, preferred_car_ids, notes, team_entry_id,
+        id, preferred_class, preferred_car_ids, notes, car_entry_id,
         drivers (id, name, irating),
-        team_entries (crew_name)
+        car_entries (crew_name)
       )
     `).eq('id', id).single(),
     supabase.from('cars').select('id, name'),
@@ -163,8 +163,8 @@ export default async function EvenementDetail({ params }) {
                     {s.drivers?.irating ?? '—'}
                   </td>
                   <td style={{ fontSize: '0.85rem' }}>
-                    {s.team_entries?.crew_name
-                      ? <span className="badge badge-admin">{s.team_entries.crew_name}</span>
+                    {s.car_entries?.crew_name
+                      ? <span className="badge badge-admin">{s.car_entries.crew_name}</span>
                       : <span style={{ color: 'var(--text-dim)' }}>—</span>}
                   </td>
                   <td style={{ color: 'var(--text-dim)', fontSize: '0.85rem', maxWidth: '200px' }}>
@@ -192,13 +192,13 @@ export default async function EvenementDetail({ params }) {
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
         <h2>Équipages engagés</h2>
         <Link href={`/evenements/${id}/equipages/nouveau`} className="btn btn-secondary">
-          + Ajouter un équipage
+          + Ajouter une voiture
         </Link>
       </div>
 
-      {!event.team_entries || event.team_entries.length === 0 ? (
+      {!event.car_entries || event.car_entries.length === 0 ? (
         <div className="table-wrap">
-          <div className="empty">Aucun équipage engagé pour cet événement.</div>
+          <div className="empty">Aucune voiture engagée pour cet événement.</div>
         </div>
       ) : (
         <div className="table-wrap">
@@ -214,7 +214,7 @@ export default async function EvenementDetail({ params }) {
               </tr>
             </thead>
             <tbody>
-              {event.team_entries.map((entry) => (
+              {event.car_entries.map((entry) => (
                 <tr key={entry.id}>
                   <td style={{ fontWeight: 600 }}>{entry.crew_name}</td>
                   <td style={{ color: 'var(--text-dim)' }}>{entry.cars?.name || '—'}</td>

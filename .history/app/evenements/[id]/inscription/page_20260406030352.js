@@ -121,7 +121,7 @@ export default function Inscription({ params }) {
           setExisting(data)
           setPreferredClasses(data.preferred_class || [])
           setPreferredCarIds(data.preferred_car_ids || [])
-          setCarEntryId(data.team_entry_id || '')
+          setCarEntryId(data.car_entry_id || '')
           setNotes(data.notes || '')
         } else {
           setExisting(null)
@@ -182,7 +182,7 @@ export default function Inscription({ params }) {
       driver_id:         driverId,
       preferred_class:   preferredClasses.length > 0 ? preferredClasses : null,
       preferred_car_ids: preferredCarIds.length  > 0 ? preferredCarIds  : null,
-      team_entry_id:      carEntryId || null,
+      car_entry_id:      carEntryId || null,
       notes:             notes.trim() || null,
     }
 
@@ -282,7 +282,7 @@ export default function Inscription({ params }) {
                   borderColor: carEntryId === '' ? 'var(--accent)' : 'var(--border)',
                   borderRadius: '3px', cursor: 'pointer', transition: 'all 0.15s',
                 }}>
-                  <input type="radio" name="team_entry_id" value=""
+                  <input type="radio" name="car_entry_id" value=""
                     checked={carEntryId === ''}
                     onChange={() => setCarEntryId('')}
                     style={{ accentColor: 'var(--accent)' }} />
@@ -301,7 +301,7 @@ export default function Inscription({ params }) {
                       borderColor: isSelected ? 'var(--accent)' : 'var(--border)',
                       borderRadius: '3px', cursor: 'pointer', transition: 'all 0.15s',
                     }}>
-                      <input type="radio" name="team_entry_id" value={entry.id}
+                      <input type="radio" name="car_entry_id" value={entry.id}
                         checked={isSelected}
                         onChange={() => setCarEntryId(entry.id)}
                         style={{ accentColor: 'var(--accent)' }} />

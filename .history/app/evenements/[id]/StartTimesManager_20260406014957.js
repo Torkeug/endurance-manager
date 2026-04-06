@@ -166,7 +166,7 @@ export default function StartTimesManager({ eventId, initialStartTimes }) {
           {inlineForm(handleAdd, resetForm, '✓ Ajouter')}
         </div>
       ) : !editingId && (
-        <button onClick={() => { setEditingId(null); setLabel(''); setDate(''); setTime(''); setError(null); setAdding(true) }} className="btn btn-secondary">
+        <button onClick={() => { setAdding(true); resetForm() }} className="btn btn-secondary">
           + Ajouter un créneau de départ
         </button>
       )}

@@ -1,24 +1,25 @@
 'use client'
-import React, { useState } from 'react'
+import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '../../lib/supabase'
+import React from 'react'
 
 const emptyForm = { name: '', pit_lane_time_seconds: '' }
 
 export default function CircuitsManager({ initialCircuits }) {
   const router = useRouter()
-  const [circuits, setCircuits]   = useState(initialCircuits)
-  const [adding, setAdding]       = useState(false)
+  const [circuits, setCircuits] = useState(initialCircuits)
+  const [adding, setAdding]     = useState(false)
   const [editingId, setEditingId] = useState(null)
-  const [form, setForm]           = useState(emptyForm)
-  const [saving, setSaving]       = useState(false)
-  const [error, setError]         = useState(null)
+  const [form, setForm]         = useState(emptyForm)
+  const [saving, setSaving]     = useState(false)
+  const [error, setError]       = useState(null)
 
   const set = (field) => (e) => setForm(prev => ({ ...prev, [field]: e.target.value }))
 
   const validate = () => {
-    if (!form.name.trim())           { setError('Le nom est obligatoire.'); return false }
-    if (!form.pit_lane_time_seconds) { setError('Le temps pit lane est obligatoire.'); return false }
+    if (!form.name.trim())             { setError('Le nom est obligatoire.'); return false }
+    if (!form.pit_lane_time_seconds)   { setError('Le temps pit lane est obligatoire.'); return false }
     return true
   }
 
@@ -50,7 +51,7 @@ export default function CircuitsManager({ initialCircuits }) {
   }
 
   const handleDelete = async (id) => {
-    if (!confirm('Supprimer ce circuit ?')) return
+    if (!confirm('Supprimer ce circuit ? Les événements utilisant ce circuit ne seront pas supprimés.')) return
     const { error: err } = await supabase.from('circuits').delete().eq('id', id)
     if (err) { setError(err.message); return }
     setCircuits(prev => prev.filter(c => c.id !== id)); router.refresh()
@@ -62,13 +63,13 @@ export default function CircuitsManager({ initialCircuits }) {
     setAdding(false); setError(null)
   }
 
-  const editForm = (
+  const FormFields = ({ onSave, onCancel, saveLabel }) => (
     <div style={{ padding: '1rem', background: 'var(--surface-2)' }}>
       <div className="form-grid" style={{ marginBottom: '1rem' }}>
         <div className="form-group">
           <label>Nom du circuit</label>
           <input type="text" value={form.name} onChange={set('name')}
-            placeholder="ex : Spa-Francorchamps Endu" />
+            placeholder="ex : Spa-Francorchamps Endu" autoFocus />
         </div>
         <div className="form-group">
           <label>Temps pit lane (secondes)</label>
@@ -78,10 +79,10 @@ export default function CircuitsManager({ initialCircuits }) {
       </div>
       {error && <div className="alert alert-error" style={{ marginBottom: '0.75rem' }}>{error}</div>}
       <div style={{ display: 'flex', gap: '0.75rem' }}>
-        <button onClick={editingId ? handleEdit : handleAdd} className="btn btn-primary" disabled={saving}>
-          {saving ? '…' : editingId ? '✓ Enregistrer' : '✓ Ajouter'}
+        <button onClick={onSave} className="btn btn-primary" disabled={saving}>
+          {saving ? '…' : saveLabel}
         </button>
-        <button onClick={reset} className="btn btn-secondary">Annuler</button>
+        <button onClick={onCancel} className="btn btn-secondary">Annuler</button>
       </div>
     </div>
   )
@@ -103,7 +104,7 @@ export default function CircuitsManager({ initialCircuits }) {
           </thead>
           <tbody>
             {circuits.map(circuit => (
-              <React.Fragment key={circuit.id}>
+              <React.Fragment key={map.id}>
                 <tr>
                   <td style={{ fontWeight: 600 }}>{circuit.name}</td>
                   <td className="mono" style={{ color: 'var(--accent)' }}>
@@ -117,7 +118,11 @@ export default function CircuitsManager({ initialCircuits }) {
                   </td>
                 </tr>
                 {editingId === circuit.id && (
-                  <tr><td colSpan={3}>{editForm}</td></tr>
+                  <tr>
+                    <td colSpan={3}>
+                      <FormFields onSave={handleEdit} onCancel={reset} saveLabel="✓ Enregistrer" />
+                    </td>
+                  </tr>
                 )}
               </React.Fragment>
             ))}
@@ -128,15 +133,13 @@ export default function CircuitsManager({ initialCircuits }) {
         </table>
       </div>
 
-      {adding && (
+      {adding ? (
         <div className="card">
           <h3 style={{ marginBottom: '1rem', color: 'var(--text-dim)' }}>Nouveau circuit</h3>
-          {editForm}
+          <FormFields onSave={handleAdd} onCancel={reset} saveLabel="✓ Ajouter" />
         </div>
-      )}
-
-      {!adding && !editingId && (
-        <button onClick={() => setAdding(true)} className="btn btn-secondary">
+      ) : (
+        <button onClick={() => { setAdding(true); setEditingId(null) }} className="btn btn-secondary">
           + Ajouter un circuit
         </button>
       )}

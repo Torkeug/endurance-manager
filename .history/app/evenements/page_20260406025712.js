@@ -39,7 +39,7 @@ export default async function EvenementsPage() {
     .select(`
       *,
       circuits (name),
-      team_entries (id),
+      car_entries (id),
       event_start_times (id, irl_start, label)
     `)
 
@@ -139,10 +139,10 @@ export default async function EvenementsPage() {
                     </div>
                     <div style={{ textAlign: 'center' }}>
                       <div className="mono" style={{ fontSize: '1.1rem', color: 'var(--text)' }}>
-                        {ev.team_entries?.length ?? 0}
+                        {ev.car_entries?.length ?? 0}
                       </div>
                       <div style={{ fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-dim)' }}>
-                        Équipage{(ev.team_entries?.length ?? 0) !== 1 ? 's' : ''}
+                        Équipage{(ev.car_entries?.length ?? 0) !== 1 ? 's' : ''}
                       </div>
                     </div>
                     {ev.format && <span className="badge badge-admin">{ev.format}</span>}

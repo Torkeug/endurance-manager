@@ -1,5 +1,5 @@
 'use client'
-import React, { useState } from 'react'
+import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '../../../lib/supabase'
 
@@ -15,63 +15,83 @@ export default function StartTimesManager({ eventId, initialStartTimes }) {
   const router = useRouter()
   const [startTimes, setStartTimes] = useState(initialStartTimes)
   const [adding, setAdding]         = useState(false)
-  const [editingId, setEditingId]   = useState(null)
-  const [label, setLabel]           = useState('')
-  const [date, setDate]             = useState('')
-  const [time, setTime]             = useState('')
+  const [editingId, setEditingId]   = useState(null)  // id of row being edited
+  const [newLabel, setNewLabel]     = useState('')
+  const [newDate, setNewDate]       = useState('')
+  const [newTime, setNewTime]       = useState('')
   const [saving, setSaving]         = useState(false)
   const [error, setError]           = useState(null)
 
-  const resetForm = () => {
-    setAdding(false); setEditingId(null)
-    setLabel(''); setDate(''); setTime('')
+  // ── ADD ────────────────────────────────────────────────────
+  const handleAdd = async () => {
+    if (!newLabel.trim()) { setError('Le libellé est obligatoire.'); return }
+    if (!newDate)         { setError('La date est obligatoire.'); return }
+    if (!newTime)         { setError("L'heure est obligatoire."); return }
+
+    setSaving(true)
     setError(null)
+
+    const { data, error: err } = await supabase
+      .from('event_start_times')
+      .insert([{ event_id: eventId, label: newLabel.trim(), irl_start: `${newDate}T${newTime}:00` }])
+      .select().single()
+
+    if (err) { setError(err.message); setSaving(false); return }
+
+    setStartTimes(prev => [...prev, data])
+    setNewLabel(''); setNewDate(''); setNewTime('')
+    setAdding(false)
+    setSaving(false)
+    router.refresh()
   }
 
+  // ── EDIT ───────────────────────────────────────────────────
   const startEdit = (st) => {
     const dt = new Date(st.irl_start)
     setEditingId(st.id)
-    setLabel(st.label)
-    setDate(dt.toISOString().slice(0, 10))
-    setTime(dt.toISOString().slice(11, 16))
+    setNewLabel(st.label)
+    setNewDate(dt.toISOString().slice(0, 10))
+    setNewTime(dt.toISOString().slice(11, 16))
     setAdding(false)
     setError(null)
   }
 
-  const handleAdd = async () => {
-    if (!label.trim()) { setError('Le libellé est obligatoire.'); return }
-    if (!date)         { setError('La date est obligatoire.'); return }
-    if (!time)         { setError("L'heure est obligatoire."); return }
-    setSaving(true); setError(null)
-    const { data, error: err } = await supabase
-      .from('event_start_times')
-      .insert([{ event_id: eventId, label: label.trim(), irl_start: `${date}T${time}:00` }])
-      .select().single()
-    if (err) { setError(err.message); setSaving(false); return }
-    setStartTimes(prev => [...prev, data])
-    resetForm(); setSaving(false); router.refresh()
+  const cancelEdit = () => {
+    setEditingId(null)
+    setNewLabel(''); setNewDate(''); setNewTime('')
+    setError(null)
   }
 
   const handleSaveEdit = async () => {
-    if (!label.trim()) { setError('Le libellé est obligatoire.'); return }
-    if (!date)         { setError('La date est obligatoire.'); return }
-    if (!time)         { setError("L'heure est obligatoire."); return }
-    setSaving(true); setError(null)
+    if (!newLabel.trim()) { setError('Le libellé est obligatoire.'); return }
+    if (!newDate)         { setError('La date est obligatoire.'); return }
+    if (!newTime)         { setError("L'heure est obligatoire."); return }
+
+    setSaving(true)
+    setError(null)
+
     const { data, error: err } = await supabase
       .from('event_start_times')
-      .update({ label: label.trim(), irl_start: `${date}T${time}:00` })
-      .eq('id', editingId).select().single()
+      .update({ label: newLabel.trim(), irl_start: `${newDate}T${newTime}:00` })
+      .eq('id', editingId)
+      .select().single()
+
     if (err) { setError(err.message); setSaving(false); return }
+
     setStartTimes(prev => prev.map(s => s.id === editingId ? data : s))
-    resetForm(); setSaving(false); router.refresh()
+    cancelEdit()
+    setSaving(false)
+    router.refresh()
   }
 
+  // ── DELETE ─────────────────────────────────────────────────
   const handleDelete = async (stId) => {
     if (!confirm('Supprimer ce créneau de départ ?')) return
-    const { error: err } = await supabase.from('event_start_times').delete().eq('id', stId)
+    const { error: err } = await supabase
+      .from('event_start_times').delete().eq('id', stId)
     if (err) { setError(err.message); return }
     setStartTimes(prev => prev.filter(s => s.id !== stId))
-    if (editingId === stId) resetForm()
+    if (editingId === stId) cancelEdit()
     router.refresh()
   }
 
@@ -79,22 +99,22 @@ export default function StartTimesManager({ eventId, initialStartTimes }) {
     new Date(a.irl_start) - new Date(b.irl_start)
   )
 
-  // Inline form — defined here to avoid re-mount on keystroke
-  const inlineForm = (onSave, onCancel, saveLabel) => (
-    <div style={{ padding: '1rem', background: 'var(--surface-2)' }}>
+  // Shared form fields
+  const EditForm = ({ onSave, onCancel, saveLabel }) => (
+    <div>
       <div className="form-grid" style={{ marginBottom: '1rem' }}>
         <div className="form-group">
           <label>Libellé</label>
-          <input type="text" value={label} onChange={e => setLabel(e.target.value)}
-            placeholder="ex : Départ 1, 14h00 CET" autoFocus />
+          <input type="text" value={newLabel} onChange={e => setNewLabel(e.target.value)}
+            placeholder="ex : Départ 1, 14h00 CET" />
         </div>
         <div className="form-group">
           <label>Date IRL</label>
-          <input type="date" value={date} onChange={e => setDate(e.target.value)} />
+          <input type="date" value={newDate} onChange={e => setNewDate(e.target.value)} />
         </div>
         <div className="form-group">
           <label>Heure IRL (24h)</label>
-          <input type="time" value={time} onChange={e => setTime(e.target.value)} />
+          <input type="time" value={newTime} onChange={e => setNewTime(e.target.value)} />
         </div>
       </div>
       {error && <div className="alert alert-error" style={{ marginBottom: '0.75rem' }}>{error}</div>}
@@ -129,31 +149,37 @@ export default function StartTimesManager({ eventId, initialStartTimes }) {
             </thead>
             <tbody>
               {sorted.map((st) => (
-                <React.Fragment key={st.id}>
-                  <tr>
+                <>
+                  <tr key={st.id}>
                     <td style={{ fontWeight: 600 }}>{st.label}</td>
                     <td className="mono" style={{ fontSize: '0.85rem', color: 'var(--text-dim)' }}>
                       {formatDatetime(st.irl_start)}
                     </td>
                     <td>
                       <div style={{ display: 'flex', gap: '0.5rem' }}>
-                        <button onClick={() => startEdit(st)} className="btn btn-secondary btn-sm">
+                        <button onClick={() => startEdit(st)}
+                          className="btn btn-secondary btn-sm">
                           Modifier
                         </button>
-                        <button onClick={() => handleDelete(st.id)} className="btn btn-danger btn-sm">
+                        <button onClick={() => handleDelete(st.id)}
+                          className="btn btn-danger btn-sm">
                           Supprimer
                         </button>
                       </div>
                     </td>
                   </tr>
                   {editingId === st.id && (
-                    <tr>
-                      <td colSpan={3} style={{ padding: 0 }}>
-                        {inlineForm(handleSaveEdit, resetForm, '✓ Enregistrer')}
+                    <tr key={`edit-${st.id}`}>
+                      <td colSpan={3} style={{ background: 'var(--surface-2)', padding: '1rem' }}>
+                        <EditForm
+                          onSave={handleSaveEdit}
+                          onCancel={cancelEdit}
+                          saveLabel="✓ Enregistrer"
+                        />
                       </td>
                     </tr>
                   )}
-                </React.Fragment>
+                </>
               ))}
             </tbody>
           </table>
@@ -163,10 +189,14 @@ export default function StartTimesManager({ eventId, initialStartTimes }) {
       {adding ? (
         <div className="card">
           <h3 style={{ marginBottom: '1rem', color: 'var(--text-dim)' }}>Nouveau créneau</h3>
-          {inlineForm(handleAdd, resetForm, '✓ Ajouter')}
+          <EditForm
+            onSave={handleAdd}
+            onCancel={() => { setAdding(false); setError(null) }}
+            saveLabel="✓ Ajouter"
+          />
         </div>
       ) : !editingId && (
-        <button onClick={() => { setEditingId(null); setLabel(''); setDate(''); setTime(''); setError(null); setAdding(true) }} className="btn btn-secondary">
+        <button onClick={() => { setAdding(true); cancelEdit() }} className="btn btn-secondary">
           + Ajouter un créneau de départ
         </button>
       )}
