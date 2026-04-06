@@ -2,7 +2,6 @@ import { supabase } from '../../../../../lib/supabase'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import DriversAssignment from './DriversAssignment'
-import AvailabilityGrid from './AvailabilityGrid'
 
 export const revalidate = 0
 
@@ -14,24 +13,19 @@ function formatDatetime(dtStr) {
   })
 }
 
-export default async function EquipageDetail({ params }) {
+export default async function VoitureDetail({ params }) {
   const { id, entryId } = await params
 
-  const { data: entry, error } = await supabase
+const { data: entry, error } = await supabase
     .from('team_entries')
-    .select(`
-      *,
-      cars (id, name, tank_size_litres, class),
-      events (name, duration_minutes, ig_start_time, ig_sunrise, ig_sunset,
-        circuits (name, pit_lane_time_seconds)),
-      event_start_times (irl_start, label)
-    `)
+    .select(`*, cars (id, name, tank_size_litres, class),
+      events (name, duration_minutes, circuits (name, pit_lane_time_seconds))`)
     .eq('id', entryId)
     .single()
 
   if (error || !entry) notFound()
 
-  const { data: allSignups } = await supabase
+    const { data: allSignups } = await supabase
     .from('signups')
     .select('*, drivers(id, name, irating)')
     .eq('event_id', entry.event_id)
@@ -53,19 +47,18 @@ export default async function EquipageDetail({ params }) {
     { label: 'BOP Poids',         value: `${entry.bop_weight_kg ?? 0}kg` },
     { label: 'Ravitaillement',    value: entry.refuel_time_seconds ? `${entry.refuel_time_seconds}s` : '—' },
     { label: 'Chgt pneus',        value: `${entry.tyre_change_time_seconds ?? 0}s` },
-    { label: 'Lever soleil IG',   value: entry.events?.ig_sunrise || '—' },
-    { label: 'Coucher soleil IG', value: entry.events?.ig_sunset  || '—' },
+    { label: 'Lever soleil IG',   value: entry.ig_sunrise || '—' },
+    { label: 'Coucher soleil IG', value: entry.ig_sunset  || '—' },
   ]
 
   return (
     <div className="page">
-      {/* Header */}
       <div className="page-header">
         <div>
           <h1>{entry.crew_name}</h1>
           <div className="accent-line" />
           <div style={{ marginTop: '0.4rem', color: 'var(--text-dim)', fontSize: '0.85rem' }}>
-            {entry.events?.name} — {entry.cars?.name || 'Voiture à définir'}
+            {entry.events?.name} — {entry.cars?.name}
           </div>
         </div>
         <div style={{ display: 'flex', gap: '0.75rem' }}>
@@ -76,23 +69,8 @@ export default async function EquipageDetail({ params }) {
         </div>
       </div>
 
-      {/* Start time */}
-      {entry.event_start_times && (
-        <div className="card" style={{ marginBottom: '1.5rem', borderColor: 'var(--accent-dim)' }}>
-          <div style={{ fontSize: '0.7rem', fontWeight: 700, letterSpacing: '0.1em',
-            textTransform: 'uppercase', color: 'var(--text-dim)', marginBottom: '0.35rem' }}>
-            Horaire de départ
-          </div>
-          <div style={{ fontWeight: 700 }}>{entry.event_start_times.label}</div>
-          <div className="mono" style={{ color: 'var(--text-dim)', fontSize: '0.85rem' }}>
-            {formatDatetime(entry.event_start_times.irl_start)}
-          </div>
-        </div>
-      )}
-
-      {/* Info grid */}
       <div style={{
-        display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))',
+        display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))',
         gap: '0.75rem', marginBottom: '2rem',
       }}>
         {infoItems.map(({ label, value }) => (
@@ -115,7 +93,6 @@ export default async function EquipageDetail({ params }) {
         </div>
       )}
 
-      {/* Driver assignment */}
       <div style={{ marginBottom: '2rem' }}>
         <h2 style={{ marginBottom: '1rem' }}>Pilotes assignés</h2>
         <DriversAssignment
@@ -127,25 +104,11 @@ export default async function EquipageDetail({ params }) {
         />
       </div>
 
-      {/* Availability grid */}
-      <div style={{ marginBottom: '2rem' }}>
-        <h2 style={{ marginBottom: '1rem' }}>Disponibilités</h2>
-        <AvailabilityGrid
-          teamEntryId={entryId}
-          assignedDrivers={assignedDrivers}
-          irlStart={entry.event_start_times?.irl_start || null}
-          durationMinutes={entry.events?.duration_minutes || 0}
-          igStartTime={entry.events?.ig_start_time || null}
-          igSunrise={entry.events?.ig_sunrise || null}
-          igSunset={entry.events?.ig_sunset || null}
-        />
-      </div>
-
-      {/* Placeholders */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
         {[
-          { title: 'Relais',       desc: 'Grille de planification des relais — à venir' },
-          { title: 'Performances', desc: 'Données de performance par pilote — à venir' },
+          { title: 'Disponibilités', desc: 'Grille de disponibilité des pilotes — à venir' },
+          { title: 'Relais',         desc: 'Grille de planification des relais — à venir' },
+          { title: 'Performances',   desc: 'Données de performance par pilote — à venir' },
         ].map(({ title, desc }) => (
           <div key={title} className="card" style={{ opacity: 0.5 }}>
             <h3 style={{ marginBottom: '0.4rem' }}>{title}</h3>
