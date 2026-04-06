@@ -426,25 +426,11 @@ export default function StintGrid({ teamEntryId, teamEntry, assignedDrivers }) {
 
                   {/* Laps */}
                   <td style={TD}>
-                    <input type="number" min="1"
+                    <input type="number"
                       value={stint.laps_planned || ''}
                       placeholder={stint._calcLaps ? String(stint._calcLaps) : '—'}
                       onFocus={e => e.target.select()}
-                      onChange={e => {
-                        let val = e.target.value ? parseInt(e.target.value) : null
-                        if (val !== null) {
-                          val = Math.max(1, val) // minimum 1
-                          // Max laps from tank capacity
-                          const fuelPerLap = stint.rain
-                            ? (driverPerf[stint.driver_id]?.fuel_wet || driverPerf[stint.driver_id]?.fuel_dry)
-                            : (driverPerf[stint.driver_id]?.fuel_dry || driverPerf[stint.driver_id]?.fuel_wet)
-                          const tankSize = teamEntry?.cars?.tank_size_litres
-                          if (fuelPerLap && tankSize) {
-                            val = Math.min(val, Math.floor(tankSize / fuelPerLap))
-                          }
-                        }
-                        updateStint(stint.id, 'laps_planned', val)
-                      }}
+                      onChange={e => updateStint(stint.id, 'laps_planned', e.target.value ? parseInt(e.target.value) : null)}
                       style={{ ...INPUT, width: '60px' }}
                       title={stint._calcLaps ? `Calculé : ${stint._calcLaps} tours` : 'Saisissez les tours'} />
                   </td>

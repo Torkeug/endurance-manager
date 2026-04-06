@@ -62,21 +62,21 @@ function checkAvailability(availabilities, driverId, irlStart, irlEnd) {
   if (!irlStart || !irlEnd || !driverId) return null
   const start = new Date(irlStart).getTime()
   const end   = new Date(irlEnd).getTime()
+  const durationMs = end - start
+  if (durationMs < 30 * 60 * 1000) return null // less than 30 min — skip check
 
-  // For short stints: find the 30-min slot that contains the start time
-  const slotStart = new Date(start)
-  slotStart.setMinutes(Math.floor(slotStart.getMinutes() / 30) * 30, 0, 0)
-
+  // Find all slots within the window
   const windowSlots = Object.values(availabilities).filter(a => {
     if (a.driver_id !== driverId) return false
     const t = new Date(a.slot_start).getTime()
-    // Include slot if it overlaps with the stint window
-    return t < end && (t + 30 * 60 * 1000) > start
+    return t >= start && t < end
   })
 
-  if (windowSlots.length === 0) return null
+  if (windowSlots.length === 0) return null // no data at all
+
   const hasUnavailable = windowSlots.some(a => !a.available)
   const availableCount = windowSlots.filter(a => a.available).length
+
   if (hasUnavailable && availableCount === 0) return 'unavailable'
   if (availableCount === windowSlots.length && !hasUnavailable) return 'available'
   return 'partial'
@@ -100,14 +100,13 @@ function calcStint(stint, teamEntry, driverPerf, igStartTime, igSunrise, igSunse
     : (perf?.fuel_dry || perf?.fuel_wet || null)
 
   // Laps: manual override > calculated from fuel+tank
-  const calcLaps = (fuelPerLap && tankSize) ? Math.max(1, Math.floor(tankSize / fuelPerLap)) : null
-  // If we have lap time but no laps, estimate from 1h default
-  const laps = stint.laps_planned || calcLaps || (lapTimeSec ? Math.floor(3600 / lapTimeSec) : null)
+  const calcLaps = (fuelPerLap && tankSize) ? Math.floor(tankSize / fuelPerLap) : null
+  const laps = stint.laps_planned || calcLaps || null
 
   // Duration: laps × lap time > manual minutes
   const stintDurationSec = (laps && lapTimeSec)
     ? Math.round(laps * lapTimeSec)
-    : (stint.duration_minutes ? stint.duration_minutes * 60 : 3600)
+    : (stint.duration_minutes ? stint.duration_minutes * 60 : null)
 
   const fuelUsed   = (laps && fuelPerLap) ? laps * fuelPerLap : null
   const pitStopSec = pitLane + refuel + (stint.tyre_change ? tyreChange : 0)
@@ -410,42 +409,28 @@ export default function StintGrid({ teamEntryId, teamEntry, assignedDrivers }) {
 
                   {/* Duration */}
                   <td style={TD}>
-                    {stint._stintDurationSec ? (
+                    {stint._hasPerfData && !stint.laps_planned ? (
                       <span className="mono" style={{ fontSize: '0.75rem' }}>
-                        {formatDuration(stint._stintDurationSec)}
+                        {stint._stintDurationSec ? formatDuration(stint._stintDurationSec) : '—'}
                       </span>
                     ) : (
                       <input type="number" placeholder="min"
                         value={stint.duration_minutes || ''}
                         onFocus={e => e.target.select()}
                         onChange={e => updateStint(stint.id, 'duration_minutes', e.target.value ? parseInt(e.target.value) : null)}
-                        style={{ ...INPUT, width: '70px' }}
+                        style={{ ...INPUT, width: '56px' }}
                         title="Durée manuelle en minutes" />
                     )}
                   </td>
 
                   {/* Laps */}
                   <td style={TD}>
-                    <input type="number" min="1"
+                    <input type="number"
                       value={stint.laps_planned || ''}
                       placeholder={stint._calcLaps ? String(stint._calcLaps) : '—'}
                       onFocus={e => e.target.select()}
-                      onChange={e => {
-                        let val = e.target.value ? parseInt(e.target.value) : null
-                        if (val !== null) {
-                          val = Math.max(1, val) // minimum 1
-                          // Max laps from tank capacity
-                          const fuelPerLap = stint.rain
-                            ? (driverPerf[stint.driver_id]?.fuel_wet || driverPerf[stint.driver_id]?.fuel_dry)
-                            : (driverPerf[stint.driver_id]?.fuel_dry || driverPerf[stint.driver_id]?.fuel_wet)
-                          const tankSize = teamEntry?.cars?.tank_size_litres
-                          if (fuelPerLap && tankSize) {
-                            val = Math.min(val, Math.floor(tankSize / fuelPerLap))
-                          }
-                        }
-                        updateStint(stint.id, 'laps_planned', val)
-                      }}
-                      style={{ ...INPUT, width: '60px' }}
+                      onChange={e => updateStint(stint.id, 'laps_planned', e.target.value ? parseInt(e.target.value) : null)}
+                      style={{ ...INPUT, width: '44px' }}
                       title={stint._calcLaps ? `Calculé : ${stint._calcLaps} tours` : 'Saisissez les tours'} />
                   </td>
 
