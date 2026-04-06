@@ -4,7 +4,6 @@ import { notFound } from 'next/navigation'
 import DriversAssignment from './DriversAssignment'
 import AvailabilityGrid from './AvailabilityGrid'
 import PerformanceData from './PerformanceData'
-import StintGrid from './StintGrid'
 
 export const revalidate = 0
 
@@ -139,21 +138,9 @@ export default async function EquipageDetail({ params }) {
       </div>
 
       <div style={{ marginBottom: '2rem' }}>
-        <h2 style={{ marginBottom: '0.5rem' }}>Relais</h2>
-        <p style={{ fontSize: '0.85rem', color: 'var(--text-dim)', marginBottom: '1rem' }}>
-          Les temps IRL et IG sont calculés automatiquement. Les points colorés indiquent la disponibilité de chaque pilote.
-        </p>
-        <StintGrid
-          teamEntryId={entryId}
-          teamEntry={entry}
-          assignedDrivers={assignedDrivers}
-        />
-      </div>
-
-      <div style={{ marginBottom: '2rem' }}>
         <h2 style={{ marginBottom: '0.5rem' }}>Performances</h2>
         <p style={{ fontSize: '0.85rem', color: 'var(--text-dim)', marginBottom: '1rem' }}>
-          Chronos et consommations relevés lors des essais.
+          Chronos et consommations relevés lors des essais. Cliquez sur Modifier pour renseigner vos données.
         </p>
         <PerformanceData
           teamEntryId={entryId}

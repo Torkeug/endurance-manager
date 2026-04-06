@@ -260,9 +260,8 @@ export default function AvailabilityGrid({
             ? 'Cliquez ou glissez sur les créneaux pour marquer votre disponibilité.'
             : "Sélectionnez votre nom pour activer l'édition."}
         </p>
-
-        <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.75rem', flexWrap: 'wrap' }}>
-          {selectedDriverId && (
+        {selectedDriverId && (
+          <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.75rem' }}>
             <button
               onClick={async () => {
                 if (!confirm('Effacer toutes vos disponibilités ?')) return
@@ -286,13 +285,10 @@ export default function AvailabilityGrid({
             >
               Effacer mes disponibilités
             </button>
-          )}
 
-          {!selectedDriverId && (
             <button
               onClick={async () => {
-                const input = prompt('Cette action efface les disponibilités de TOUS les pilotes.\nTapez CONFIRMER pour continuer :')
-                if (input !== 'CONFIRMER') return
+                if (!confirm('Effacer TOUTES les disponibilités de tous les pilotes ?')) return
                 const updates = assignedDrivers.flatMap(d =>
                   slots.map(slot => ({
                     team_entry_id: teamEntryId,
@@ -315,10 +311,9 @@ export default function AvailabilityGrid({
             >
               Effacer toutes les disponibilités
             </button>
-          )}
-        </div>
+          </div>
+        )}        
       </div>
-
 
       {/* Grid */}
       {loading ? (

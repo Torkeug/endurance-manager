@@ -110,7 +110,7 @@ export default function AvailabilityGrid({
         const map = {}
         ;(data || []).forEach(a => {
           const key = `${a.driver_id}_${new Date(a.slot_start).toISOString()}`
-          map[key] = a
+          Map[key] = a
         })
         setAvailabilities(map)
         setLoading(false)
@@ -157,6 +157,8 @@ export default function AvailabilityGrid({
       available:     value,
       updated_at:    new Date().toISOString(),
     }))
+
+    console.log('Saving', rows.length, 'slots for driver', selectedDriverId, 'team', teamEntryId)
 
     setAvailabilities(prev => {
       const next = { ...prev }
@@ -260,65 +262,7 @@ export default function AvailabilityGrid({
             ? 'Cliquez ou glissez sur les créneaux pour marquer votre disponibilité.'
             : "Sélectionnez votre nom pour activer l'édition."}
         </p>
-
-        <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.75rem', flexWrap: 'wrap' }}>
-          {selectedDriverId && (
-            <button
-              onClick={async () => {
-                if (!confirm('Effacer toutes vos disponibilités ?')) return
-                const updates = slots.map(slot => ({
-                  team_entry_id: teamEntryId,
-                  driver_id:     selectedDriverId,
-                  slot_start:    slot.toISOString(),
-                  available:     false,
-                  updated_at:    new Date().toISOString(),
-                }))
-                setAvailabilities(prev => {
-                  const next = { ...prev }
-                  updates.forEach(u => { next[`${u.driver_id}_${u.slot_start}`] = u })
-                  return next
-                })
-                await supabase.from('availabilities').upsert(updates, {
-                  onConflict: 'team_entry_id,driver_id,slot_start'
-                })
-              }}
-              className="btn btn-secondary btn-sm"
-            >
-              Effacer mes disponibilités
-            </button>
-          )}
-
-          {!selectedDriverId && (
-            <button
-              onClick={async () => {
-                const input = prompt('Cette action efface les disponibilités de TOUS les pilotes.\nTapez CONFIRMER pour continuer :')
-                if (input !== 'CONFIRMER') return
-                const updates = assignedDrivers.flatMap(d =>
-                  slots.map(slot => ({
-                    team_entry_id: teamEntryId,
-                    driver_id:     d.drivers?.id,
-                    slot_start:    slot.toISOString(),
-                    available:     false,
-                    updated_at:    new Date().toISOString(),
-                  }))
-                )
-                setAvailabilities(prev => {
-                  const next = { ...prev }
-                  updates.forEach(u => { next[`${u.driver_id}_${u.slot_start}`] = u })
-                  return next
-                })
-                await supabase.from('availabilities').upsert(updates, {
-                  onConflict: 'team_entry_id,driver_id,slot_start'
-                })
-              }}
-              className="btn btn-danger btn-sm"
-            >
-              Effacer toutes les disponibilités
-            </button>
-          )}
-        </div>
       </div>
-
 
       {/* Grid */}
       {loading ? (
