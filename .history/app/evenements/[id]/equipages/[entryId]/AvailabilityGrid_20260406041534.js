@@ -1,7 +1,6 @@
 'use client'
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { supabase } from '../../../../../lib/supabase'
-import React from 'react'
 
 // ── Time helpers ───────────────────────────────────────────
 
@@ -304,9 +303,9 @@ export default function AvailabilityGrid({
                 const rowStyle = getRowStyle(slot)
 
                 return (
-                  <React.Fragment key={slot.toISOString()}>
+                  <>
                     {newDay && (
-                      <tr>
+                      <tr key={`day-${slot.toISOString()}`}>
                         <td colSpan={3 + assignedDrivers.length} style={{
                           background: 'var(--surface-2)',
                           padding: '0.3rem 0.75rem',
@@ -322,7 +321,7 @@ export default function AvailabilityGrid({
                         </td>
                       </tr>
                     )}
-                    <tr>
+                    <tr key={slot.toISOString()} style={rowStyle}>
 
                       {/* IRL time — sticky */}
                       <td style={{
@@ -409,7 +408,7 @@ export default function AvailabilityGrid({
                         )
                       })}
                     </tr>
-                  </React.Fragment>
+                  </>
                 )
               })}
             </tbody>

@@ -3,7 +3,6 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import DriversAssignment from './DriversAssignment'
 import AvailabilityGrid from './AvailabilityGrid'
-import PerformanceData from './PerformanceData'
 
 export const revalidate = 0
 
@@ -38,7 +37,7 @@ export default async function EquipageDetail({ params }) {
     .eq('event_id', entry.event_id)
     .order('drivers(name)')
 
-  const assignedDrivers   = (allSignups || []).filter(s => s.team_entry_id === entryId)
+  const assignedDrivers  = (allSignups || []).filter(s => s.team_entry_id === entryId)
   const unassignedDrivers = (allSignups || []).filter(s => !s.team_entry_id)
 
   const pitTime    = entry.events?.circuits?.pit_lane_time_seconds
@@ -60,6 +59,7 @@ export default async function EquipageDetail({ params }) {
 
   return (
     <div className="page">
+      {/* Header */}
       <div className="page-header">
         <div>
           <h1>{entry.crew_name}</h1>
@@ -72,10 +72,11 @@ export default async function EquipageDetail({ params }) {
           <Link href={`/evenements/${id}/equipages/${entryId}/modifier`} className="btn btn-secondary">
             Modifier
           </Link>
-          <Link href={`/evenements/${id}`} className="btn btn-secondary">Événement</Link>
+          <Link href={`/evenements/${id}`} className="btn btn-secondary">← Événement</Link>
         </div>
       </div>
 
+      {/* Start time */}
       {entry.event_start_times && (
         <div className="card" style={{ marginBottom: '1.5rem', borderColor: 'var(--accent-dim)' }}>
           <div style={{ fontSize: '0.7rem', fontWeight: 700, letterSpacing: '0.1em',
@@ -89,6 +90,7 @@ export default async function EquipageDetail({ params }) {
         </div>
       )}
 
+      {/* Info grid */}
       <div style={{
         display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))',
         gap: '0.75rem', marginBottom: '2rem',
@@ -113,6 +115,7 @@ export default async function EquipageDetail({ params }) {
         </div>
       )}
 
+      {/* Driver assignment */}
       <div style={{ marginBottom: '2rem' }}>
         <h2 style={{ marginBottom: '1rem' }}>Pilotes assignés</h2>
         <DriversAssignment
@@ -124,6 +127,7 @@ export default async function EquipageDetail({ params }) {
         />
       </div>
 
+      {/* Availability grid */}
       <div style={{ marginBottom: '2rem' }}>
         <h2 style={{ marginBottom: '1rem' }}>Disponibilités</h2>
         <AvailabilityGrid
@@ -137,15 +141,17 @@ export default async function EquipageDetail({ params }) {
         />
       </div>
 
-      <div style={{ marginBottom: '2rem' }}>
-        <h2 style={{ marginBottom: '0.5rem' }}>Performances</h2>
-        <p style={{ fontSize: '0.85rem', color: 'var(--text-dim)', marginBottom: '1rem' }}>
-          Chronos et consommations relevés lors des essais. Cliquez sur Modifier pour renseigner vos données.
-        </p>
-        <PerformanceData
-          teamEntryId={entryId}
-          assignedDrivers={assignedDrivers}
-        />
+      {/* Placeholders */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+        {[
+          { title: 'Relais',       desc: 'Grille de planification des relais — à venir' },
+          { title: 'Performances', desc: 'Données de performance par pilote — à venir' },
+        ].map(({ title, desc }) => (
+          <div key={title} className="card" style={{ opacity: 0.5 }}>
+            <h3 style={{ marginBottom: '0.4rem' }}>{title}</h3>
+            <p style={{ color: 'var(--text-dim)', fontSize: '0.85rem' }}>{desc}</p>
+          </div>
+        ))}
       </div>
     </div>
   )
