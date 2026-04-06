@@ -1,7 +1,10 @@
 import { supabase } from '../../../../../lib/supabase'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import EquipageTabs from './EquipageTabs'
+import DriversAssignment from './DriversAssignment'
+import AvailabilityGrid from './AvailabilityGrid'
+import PerformanceData from './PerformanceData'
+import StintGrid from './StintGrid'
 
 export const revalidate = 0
 
@@ -58,7 +61,6 @@ export default async function EquipageDetail({ params }) {
 
   return (
     <div className="page">
-      {/* Header */}
       <div className="page-header">
         <div>
           <h1>{entry.crew_name}</h1>
@@ -75,7 +77,6 @@ export default async function EquipageDetail({ params }) {
         </div>
       </div>
 
-      {/* Start time */}
       {entry.event_start_times && (
         <div className="card" style={{ marginBottom: '1.5rem', borderColor: 'var(--accent-dim)' }}>
           <div style={{ fontSize: '0.7rem', fontWeight: 700, letterSpacing: '0.1em',
@@ -89,7 +90,6 @@ export default async function EquipageDetail({ params }) {
         </div>
       )}
 
-      {/* Info grid */}
       <div style={{
         display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))',
         gap: '0.75rem', marginBottom: '2rem',
@@ -114,15 +114,52 @@ export default async function EquipageDetail({ params }) {
         </div>
       )}
 
-      {/* Tabbed sections */}
-      <EquipageTabs
-        entryId={entryId}
-        teamEntry={entry}
-        assignedDrivers={assignedDrivers}
-        unassignedDrivers={unassignedDrivers}
-        entryCarId={entryCarId}
-        entryClass={entryClass}
-      />
+      <div style={{ marginBottom: '2rem' }}>
+        <h2 style={{ marginBottom: '1rem' }}>Pilotes assignés</h2>
+        <DriversAssignment
+          entryId={entryId}
+          entryCarId={entryCarId}
+          entryClass={entryClass}
+          assignedDrivers={assignedDrivers}
+          unassignedDrivers={unassignedDrivers}
+        />
+      </div>
+
+      <div style={{ marginBottom: '2rem' }}>
+        <h2 style={{ marginBottom: '1rem' }}>Disponibilités</h2>
+        <AvailabilityGrid
+          teamEntryId={entryId}
+          assignedDrivers={assignedDrivers}
+          irlStart={entry.event_start_times?.irl_start || null}
+          durationMinutes={entry.events?.duration_minutes || 0}
+          igStartTime={entry.events?.ig_start_time || null}
+          igSunrise={entry.events?.ig_sunrise || null}
+          igSunset={entry.events?.ig_sunset || null}
+        />
+      </div>
+
+      <div style={{ marginBottom: '2rem' }}>
+        <h2 style={{ marginBottom: '0.5rem' }}>Relais</h2>
+        <p style={{ fontSize: '0.85rem', color: 'var(--text-dim)', marginBottom: '1rem' }}>
+          Les temps IRL et IG sont calculés automatiquement. Les points colorés indiquent la disponibilité de chaque pilote.
+        </p>
+        <StintGrid
+          teamEntryId={entryId}
+          teamEntry={entry}
+          assignedDrivers={assignedDrivers}
+        />
+      </div>
+
+      <div style={{ marginBottom: '2rem' }}>
+        <h2 style={{ marginBottom: '0.5rem' }}>Performances</h2>
+        <p style={{ fontSize: '0.85rem', color: 'var(--text-dim)', marginBottom: '1rem' }}>
+          Chronos et consommations relevés lors des essais.
+        </p>
+        <PerformanceData
+          teamEntryId={entryId}
+          assignedDrivers={assignedDrivers}
+        />
+      </div>
     </div>
   )
 }
