@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { supabase } from '../../../../../../lib/supabase'
 
+const [crewNames, setCrewNames] = useState([])
 
 const CLASSES = ['GTP', 'LMP2', 'GT3', 'GT4', 'CUP', 'TCR', 'Other']
 
@@ -18,7 +19,6 @@ export default function ModifierEquipage({ params }) {
   const [loading, setLoading]         = useState(false)
   const [fetching, setFetching]       = useState(true)
   const [error, setError]             = useState(null)
-  const [crewNames, setCrewNames] = useState([])
 
     useEffect(() => {
     Promise.all([
@@ -46,7 +46,7 @@ export default function ModifierEquipage({ params }) {
         }
         setCars(filteredCars)
         setCrewNames(crewData?.map(c => c.name) || [])
-
+        
         // Load start times
         supabase.from('event_start_times').select('*')
         .eq('event_id', entry.event_id).order('irl_start')

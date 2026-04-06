@@ -4,6 +4,12 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { supabase } from '../../../../../../lib/supabase'
 
+const CREW_NAMES = [
+  'Kronos White', 'Kronos Silver', 'Kronos Gold', 'Kronos Black',
+  'NWS White',    'NWS Silver',    'NWS Gold',    'NWS Black',
+  'Pulse White',  'Pulse Silver',  'Pulse Gold',  'Pulse Black',
+  'Kronos Family',
+]
 
 const CLASSES = ['GTP', 'LMP2', 'GT3', 'GT4', 'CUP', 'TCR', 'Other']
 
@@ -18,14 +24,12 @@ export default function ModifierEquipage({ params }) {
   const [loading, setLoading]         = useState(false)
   const [fetching, setFetching]       = useState(true)
   const [error, setError]             = useState(null)
-  const [crewNames, setCrewNames] = useState([])
 
     useEffect(() => {
     Promise.all([
-      supabase.from('cars').select('*').order('class').order('name'),
-      supabase.from('team_entries').select('*').eq('id', entryId).single(),
-      supabase.from('crew_names').select('name').order('sort_order'),
-    ]).then(async ([{ data: carsData }, { data: entry, error: entryError }, { data: crewData }]) => {
+        supabase.from('cars').select('*').order('class').order('name'),
+        supabase.from('team_entries').select('*').eq('id', entryId).single(),
+    ]).then(async ([{ data: carsData }, { data: entry, error: entryError }]) => {
         if (entryError || !entry) { setError('Voiture introuvable.'); setFetching(false); return }
 
         // Filter cars by event type if format is set
@@ -45,7 +49,6 @@ export default function ModifierEquipage({ params }) {
         }
         }
         setCars(filteredCars)
-        setCrewNames(crewData?.map(c => c.name) || [])
 
         // Load start times
         supabase.from('event_start_times').select('*')
@@ -170,7 +173,7 @@ export default function ModifierEquipage({ params }) {
               <label htmlFor="crew_name">Nom d&apos;équipage *</label>
               <select id="crew_name" value={form.crew_name} onChange={set('crew_name')} required>
                 <option value="">— Sélectionner —</option>
-                {crewNames.map(n => <option key={n} value={n}>{n}</option>)}
+                {CREW_NAMES.map(n => <option key={n} value={n}>{n}</option>)}
               </select>
             </div>
             <div className="form-group">
