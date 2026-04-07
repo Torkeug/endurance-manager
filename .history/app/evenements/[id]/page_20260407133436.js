@@ -240,7 +240,7 @@ export default async function EvenementDetail({ params }) {
                   </td>
                   <td>
                     <Link href={`/evenements/${id}/equipages/${entry.id}`} className="btn btn-secondary btn-sm">
-                      Gérer
+                      Gérer →
                     </Link>
                   </td>
                 </tr>

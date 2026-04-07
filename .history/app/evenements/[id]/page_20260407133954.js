@@ -199,7 +199,7 @@ export default async function EvenementDetail({ params }) {
       {/* Car entries */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
         <h2>Équipages engagés</h2>
-        <Link href={`/evenements/${id}/equipages/nouveau`} className="btn btn-primary">
+        <Link href={`/evenements/${id}/equipages/nouveau`} className="btn btn-">
           + Ajouter un équipage
         </Link>
       </div>
@@ -240,7 +240,7 @@ export default async function EvenementDetail({ params }) {
                   </td>
                   <td>
                     <Link href={`/evenements/${id}/equipages/${entry.id}`} className="btn btn-secondary btn-sm">
-                      Gérer
+                      Gérer →
                     </Link>
                   </td>
                 </tr>
