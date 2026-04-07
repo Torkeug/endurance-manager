@@ -114,7 +114,7 @@ export default function ModifierPilote({ params }) {
                 fontFamily: 'var(--font-mono), monospace', fontSize: '0.9rem',
                 color: 'var(--text-dim)',
               }}>
-                {form.email || '—'}
+                {driver.email || '—'}
               </div>
             </div>            
             <div className="form-group">

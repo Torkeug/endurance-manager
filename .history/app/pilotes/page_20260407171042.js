@@ -73,10 +73,7 @@ export default async function PilotesPage() {
                     ) : '—'}
                   </td>
                   <td style={{ color: 'var(--text-dim)', fontSize: '0.9rem' }}>
-                    {p.instagram
-                      ? <a href={`https://instagram.com/${p.instagram}`} target="_blank" rel="noopener noreferrer"
-                          style={{ color: '#405DE6' }}>{p.instagram}</a>
-                      : '—'}
+                    {p.instagram || '—'}
                   </td>
                   <td style={{ fontSize: '0.85rem', color: 'var(--text-dim)' }} className="mono">
                     {p.email || '—'}

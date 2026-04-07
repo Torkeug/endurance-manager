@@ -28,7 +28,6 @@ export default function ModifierPilote({ params }) {
           discord:    data.discord    || '',
           twitch:     data.twitch     || '',
           instagram:  data.instagram  || '',
-          email:      data.email || '',
         })
         setFetching(false)
       })
@@ -114,7 +113,7 @@ export default function ModifierPilote({ params }) {
                 fontFamily: 'var(--font-mono), monospace', fontSize: '0.9rem',
                 color: 'var(--text-dim)',
               }}>
-                {form.email || '—'}
+                {driver.email || '—'}
               </div>
             </div>            
             <div className="form-group">

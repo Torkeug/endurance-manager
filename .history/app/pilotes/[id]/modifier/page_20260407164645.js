@@ -28,7 +28,6 @@ export default function ModifierPilote({ params }) {
           discord:    data.discord    || '',
           twitch:     data.twitch     || '',
           instagram:  data.instagram  || '',
-          email:      data.email || '',
         })
         setFetching(false)
       })
@@ -106,17 +105,7 @@ export default function ModifierPilote({ params }) {
               <label htmlFor="name">Nom *</label>
               <input id="name" type="text" value={form.name} onChange={set('name')} required />
             </div>
-            <div className="form-group">
-              <label>Email</label>
-              <div style={{
-                background: 'var(--surface-2)', border: '1px solid var(--border)',
-                borderRadius: '3px', padding: '0.55rem 0.75rem',
-                fontFamily: 'var(--font-mono), monospace', fontSize: '0.9rem',
-                color: 'var(--text-dim)',
-              }}>
-                {form.email || '—'}
-              </div>
-            </div>            
+            
             <div className="form-group">
               <label htmlFor="iracing_id">iRacing ID</label>
               <input id="iracing_id" type="text" value={form.iracing_id} onChange={set('iracing_id')} />

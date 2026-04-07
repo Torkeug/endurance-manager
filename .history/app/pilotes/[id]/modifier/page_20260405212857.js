@@ -28,7 +28,7 @@ export default function ModifierPilote({ params }) {
           discord:    data.discord    || '',
           twitch:     data.twitch     || '',
           instagram:  data.instagram  || '',
-          email:      data.email || '',
+          role:       data.role       || 'driver',
         })
         setFetching(false)
       })
@@ -51,6 +51,7 @@ export default function ModifierPilote({ params }) {
       discord:    form.discord.trim()    || null,
       twitch:     form.twitch.trim()     || null,
       instagram:  form.instagram.trim()  || null,
+      role:       form.role,
     }
 
     const { error: err } = await supabase
@@ -107,23 +108,19 @@ export default function ModifierPilote({ params }) {
               <input id="name" type="text" value={form.name} onChange={set('name')} required />
             </div>
             <div className="form-group">
-              <label>Email</label>
-              <div style={{
-                background: 'var(--surface-2)', border: '1px solid var(--border)',
-                borderRadius: '3px', padding: '0.55rem 0.75rem',
-                fontFamily: 'var(--font-mono), monospace', fontSize: '0.9rem',
-                color: 'var(--text-dim)',
-              }}>
-                {form.email || '—'}
-              </div>
-            </div>            
-            <div className="form-group">
               <label htmlFor="iracing_id">iRacing ID</label>
               <input id="iracing_id" type="text" value={form.iracing_id} onChange={set('iracing_id')} />
             </div>
             <div className="form-group">
               <label htmlFor="irating">iRating</label>
               <input id="irating" type="number" value={form.irating} onChange={set('irating')} min="0" max="9999" />
+            </div>
+            <div className="form-group">
+              <label htmlFor="role">Rôle</label>
+              <select id="role" value={form.role} onChange={set('role')}>
+                <option value="driver">Pilote</option>
+                <option value="admin">Admin</option>
+              </select>
             </div>
           </div>
         </div>

@@ -91,11 +91,11 @@ export default async function DriverDetail({ params }) {
 
   const socials = [
     { label: 'iRacing ID', value: driver.iracing_id },
-    { label: 'Email',      value: driver.email || '—' },
-    { label: 'Discord',    value: driver.discord || '—' },
+    { label: 'Email',      value: driver.email },
+    { label: 'Discord',    value: driver.discord },
     { label: 'Twitch',     value: driver.twitch, link: driver.twitch ? `https://twitch.tv/${driver.twitch}` : null },
     { label: 'Instagram',  value: driver.instagram, link: driver.instagram ? `https://instagram.com/${driver.instagram}` : null },
-  ].filter(s => s.value || s.label === 'Email')
+  ].filter(s => s.value)
 
   return (
     <div className="page">
@@ -130,12 +130,12 @@ export default async function DriverDetail({ params }) {
                   {label}
                 </div>
                 {link ? (
-                <a href={link} target="_blank" rel="noopener noreferrer"
-                    className="mono" style={{ fontSize: '0.85rem', color: label === 'Instagram' ? '#405DE6' : label === 'Twitch' ? '#9147ff' : 'var(--accent)' }}>
+                  <a href={link} target="_blank" rel="noopener noreferrer"
+                    className="mono" style={{ fontSize: '0.85rem', color: 'var(--accent)' }}>
                     {value}
-                </a>
+                  </a>
                 ) : (
-                <span className="mono" style={{ fontSize: '0.85rem' }}>{value}</span>
+                  <span className="mono" style={{ fontSize: '0.85rem' }}>{value}</span>
                 )}
               </div>
             ))}

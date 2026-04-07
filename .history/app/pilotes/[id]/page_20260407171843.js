@@ -131,7 +131,7 @@ export default async function DriverDetail({ params }) {
                 </div>
                 {link ? (
                 <a href={link} target="_blank" rel="noopener noreferrer"
-                    className="mono" style={{ fontSize: '0.85rem', color: label === 'Instagram' ? '#405DE6' : label === 'Twitch' ? '#9147ff' : 'var(--accent)' }}>
+                    className="mono" style={{ fontSize: '0.85rem', color: label === 'Instagram' ? '#405DE6' : 'var(--accent)' }}>
                     {value}
                 </a>
                 ) : (

@@ -50,7 +50,7 @@ export default async function Home() {
           flexWrap: 'wrap',
         }}>
           <span style={{ color: 'var(--danger)', fontWeight: 600, fontSize: '0.9rem' }}>
-            ⚠️ {pendingCount} pilote{pendingCount > 1 ? 's' : ''}{' '} en attente d&apos;approbation
+            ⚠️ {pendingCount} pilote{pendingCount > 1 ? 's' : ' '} en attente d&apos;approbation
           </span>
           <Link href="/admin" className="btn btn-danger btn-sm">
             Gérer les accès →

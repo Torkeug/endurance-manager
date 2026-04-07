@@ -102,6 +102,14 @@ export default function NouveauPilote() {
                 max="9999"
               />
             </div>
+
+            <div className="form-group">
+              <label htmlFor="role">Rôle</label>
+              <select id="role" value={form.role} onChange={set('role')}>
+                <option value="driver">Pilote</option>
+                <option value="admin">Admin</option>
+              </select>
+            </div>
           </div>
         </div>
 

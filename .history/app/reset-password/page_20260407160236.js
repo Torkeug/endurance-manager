@@ -58,9 +58,9 @@ export default function ResetPasswordPage() {
             <div style={{ textAlign: 'center' }}>
               <div style={{ fontSize: '2rem', marginBottom: '1rem' }}>📧</div>
               <h2 style={{ marginBottom: '0.75rem' }}>Email envoyé</h2>
-                <p style={{ color: 'var(--text-dim)', fontSize: '0.9rem', lineHeight: 1.6 }}>
-                Si un compte existe pour <strong style={{ color: 'var(--text)' }}>{email}</strong>, un lien de réinitialisation a été envoyé. Vérifiez également vos spams.
-                </p>
+              <p style={{ color: 'var(--text-dim)', fontSize: '0.9rem', lineHeight: 1.6 }}>
+                Un lien de réinitialisation a été envoyé à <strong style={{ color: 'var(--text)' }}>{email}</strong>.
+              </p>
               <Link href="/login" className="btn btn-secondary" style={{ marginTop: '1.5rem', display: 'inline-block' }}>
                 Retour à la connexion
               </Link>
