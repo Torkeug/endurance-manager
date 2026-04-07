@@ -42,7 +42,7 @@ export default async function EvenementDetail({ params }) {
       ),
       event_start_times (id, label, irl_start),
       signups (
-        id, preferred_class, preferred_car_ids, preferred_start_time_ids, notes, team_entry_id,
+        id, preferred_class, preferred_car_ids, notes, team_entry_id,
         drivers (id, name, irating),
         team_entries (crew_name)
       )
@@ -149,7 +149,6 @@ export default async function EvenementDetail({ params }) {
                 <th>iRating</th>
                 <th>Équipe</th>
                 <th>Préférences</th>
-                <th>Créneaux</th>
                 <th>Notes</th>
                 <th></th>
               </tr>
@@ -170,13 +169,6 @@ export default async function EvenementDetail({ params }) {
                   </td>
                   <td style={{ color: 'var(--text-dim)', fontSize: '0.85rem', maxWidth: '200px' }}>
                     {formatPreferences(s)}
-                  </td>
-                  <td style={{ color: 'var(--text-dim)', fontSize: '0.85rem' }}>
-                    {(s.preferred_start_time_ids || []).length > 0
-                      ? (s.preferred_start_time_ids || [])
-                          .map(stId => event.event_start_times?.find(st => st.id === stId)?.label || '?')
-                          .join(', ')
-                      : '—'}
                   </td>
                   <td style={{ color: 'var(--text-dim)', fontSize: '0.85rem', maxWidth: '160px' }}>
                     {s.notes || '—'}

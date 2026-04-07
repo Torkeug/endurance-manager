@@ -76,9 +76,6 @@ export default function Inscription({ params }) {
   const [carEntryId, setCarEntryId]             = useState('')
   const [notes, setNotes]                       = useState('')
 
-  const [preferredStartTimeIds, setPreferredStartTimeIds] = useState([])
-  const [startTimes, setStartTimes]                       = useState([])
-
     useEffect(() => {
     Promise.all([
         supabase.from('drivers').select('id, name').eq('active', true).order('name'),
@@ -87,12 +84,10 @@ export default function Inscription({ params }) {
         supabase.from('team_entries')
         .select('id, crew_name, class, car_id, cars(id, name, class)')
         .eq('event_id', id).order('crew_name'),
-        supabase.from('event_start_times').select('*').eq('event_id', id).order('irl_start'),
-    ]).then(async ([{ data: driversData }, { data: carsData }, { data: evData }, { data: entriesData }, { data: stData }]) => {
+    ]).then(async ([{ data: driversData }, { data: carsData }, { data: evData }, { data: entriesData }]) => {
         setDrivers(driversData || [])
         setEventName(evData?.name || '')
         setCarEntries(entriesData || [])
-        setStartTimes(stData || [])
 
         // Filter cars by event type if format is set
         let filteredCars = carsData || []
@@ -126,14 +121,12 @@ export default function Inscription({ params }) {
           setExisting(data)
           setPreferredClasses(data.preferred_class || [])
           setPreferredCarIds(data.preferred_car_ids || [])
-          setPreferredStartTimeIds(data.preferred_start_time_ids || [])
           setCarEntryId(data.team_entry_id || '')
           setNotes(data.notes || '')
         } else {
           setExisting(null)
           setPreferredClasses([])
           setPreferredCarIds([])
-          setPreferredStartTimeIds([])
           setCarEntryId('')
           setNotes('')
         }
@@ -149,12 +142,6 @@ export default function Inscription({ params }) {
   const toggleCar = (carId) => {
     setPreferredCarIds(prev =>
       prev.includes(carId) ? prev.filter(id => id !== carId) : [...prev, carId]
-    )
-  }
-
-  const toggleStartTime = (id) => {
-    setPreferredStartTimeIds(prev =>
-      prev.includes(id) ? prev.filter(s => s !== id) : [...prev, id]
     )
   }
 
@@ -195,8 +182,7 @@ export default function Inscription({ params }) {
       driver_id:         driverId,
       preferred_class:   preferredClasses.length > 0 ? preferredClasses : null,
       preferred_car_ids: preferredCarIds.length  > 0 ? preferredCarIds  : null,
-      team_entry_id:     carEntryId || null,
-      preferred_start_time_ids: preferredStartTimeIds.length > 0 ? preferredStartTimeIds : null,
+      team_entry_id:      carEntryId || null,
       notes:             notes.trim() || null,
     }
 
@@ -274,42 +260,6 @@ export default function Inscription({ params }) {
             </div>
           )}
         </div>
-        
-        {/* Preferred start time */}
-        {startTimes.length > 0 && (
-          <div className="card" style={{ marginBottom: '1.25rem' }}>
-            <h3 style={{ marginBottom: '1rem', color: 'var(--text-dim)' }}>Créneaux de départ préférés</h3>
-            <p style={{ fontSize: '0.8rem', color: 'var(--text-dim)', marginBottom: '1rem' }}>
-              Optionnel — cochez les créneaux auxquels vous souhaitez participer.
-            </p>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-              {startTimes.map(st => (
-                <label key={st.id} style={{
-                  display: 'flex', alignItems: 'center', gap: '0.75rem',
-                  padding: '0.75rem 1rem',
-                  background: preferredStartTimeIds.includes(st.id) ? 'var(--accent-dim)' : 'var(--surface-2)',
-                  border: '1px solid',
-                  borderColor: preferredStartTimeIds.includes(st.id) ? 'var(--accent)' : 'var(--border)',
-                  borderRadius: '3px', cursor: 'pointer',
-                }}>
-                  <input type="checkbox"
-                    checked={preferredStartTimeIds.includes(st.id)}
-                    onChange={() => toggleStartTime(st.id)}
-                    style={{ accentColor: 'var(--accent)' }} />
-                  <div>
-                    <div style={{ fontWeight: 600 }}>{st.label}</div>
-                    <div className="mono" style={{ fontSize: '0.8rem', color: 'var(--text-dim)' }}>
-                      {new Date(st.irl_start).toLocaleString('fr-FR', {
-                        day: '2-digit', month: '2-digit', year: 'numeric',
-                        hour: '2-digit', minute: '2-digit', hour12: false,
-                      })}
-                    </div>
-                  </div>
-                </label>
-              ))}
-            </div>
-          </div>
-        )}
 
         {/* Team */}
         <div className="card" style={{ marginBottom: '1.25rem' }}>
@@ -339,8 +289,7 @@ export default function Inscription({ params }) {
                   <span style={{ color: 'var(--text-dim)', fontSize: '0.9rem' }}>Pas de préférence</span>
                 </label>
 
-                  {carEntries
-                    .map(entry => {
+                {carEntries.map(entry => {
                   const entryClass = entry.class || entry.cars?.class
                   const isSelected = carEntryId === entry.id
                   return (
