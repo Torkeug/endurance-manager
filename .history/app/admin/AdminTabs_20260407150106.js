@@ -16,9 +16,10 @@ const TABS = [
   { id: 'types',     label: "Types d'événement" },
 ]
 
-export default function AdminTabs({ circuits, cars, crewNames, carClasses, eventTypes, eventTypeCars, drivers, currentDriver }) {
+export default function AdminTabs({ circuits, cars, crewNames, carClasses, eventTypes, eventTypeCars, drivers }) {
   const [activeTab, setActiveTab] = useState('pilotes')
-  const pendingCount = (drivers || []).filter(d => !d.approved && !d.refused).length
+
+  const pendingCount = (drivers || []).filter(d => !d.approved).length
 
   return (
     <div>
@@ -37,6 +38,7 @@ export default function AdminTabs({ circuits, cars, crewNames, carClasses, event
             fontSize: '0.9rem', fontWeight: 700,
             letterSpacing: '0.06em', textTransform: 'uppercase',
             cursor: 'pointer', transition: 'color 0.15s', marginBottom: '-1px',
+            position: 'relative',
           }}>
             {tab.label}
             {tab.id === 'pilotes' && pendingCount > 0 && (
@@ -52,7 +54,7 @@ export default function AdminTabs({ circuits, cars, crewNames, carClasses, event
         ))}
       </div>
 
-      {activeTab === 'pilotes'   && <DriversManager initialDrivers={drivers || []} currentDriver={currentDriver} />}
+      {activeTab === 'pilotes'   && <DriversManager initialDrivers={drivers || []} />}
       {activeTab === 'equipages' && <CrewNamesManager initialCrewNames={crewNames} />}
       {activeTab === 'voitures'  && <CarsManager initialCars={cars} />}
       {activeTab === 'classes'   && <ClassesManager initialClasses={carClasses} initialCars={cars} />}

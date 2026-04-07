@@ -3,19 +3,6 @@ import { supabase } from '../lib/supabase'
 import { getSessionAndDriver } from '../lib/auth'
 
 export default async function Home() {
-  const { driver: currentDriver } = await getSessionAndDriver()
-  const isAdmin = currentDriver?.role === 'admin' || currentDriver?.role === 'super_admin'
- 
-  let pendingCount = 0
-  if (isAdmin) {
-    const { count } = await supabase
-      .from('drivers')
-      .select('*', { count: 'exact', head: true })
-      .eq('approved', false)
-      .eq('refused', false)
-    pendingCount = count || 0
-  }
-
   const { count: pilotesCount } = await supabase
     .from('drivers')
     .select('*', { count: 'exact', head: true })
@@ -40,23 +27,6 @@ export default async function Home() {
           Kronos SimSports — Planification courses d&apos;endurance
         </p>
       </div>
-
-      {isAdmin && pendingCount > 0 && (
-        <div style={{
-          background: 'rgba(224,85,85,0.1)', border: '1px solid var(--danger)',
-          borderRadius: '4px', padding: '0.75rem 1rem',
-          marginBottom: '1.5rem', display: 'flex',
-          alignItems: 'center', justifyContent: 'space-between', gap: '1rem',
-          flexWrap: 'wrap',
-        }}>
-          <span style={{ color: 'var(--danger)', fontWeight: 600, fontSize: '0.9rem' }}>
-            ⚠️ {pendingCount} pilote{pendingCount > 1 ? 's' : ''} en attente d&apos;approbation
-          </span>
-          <Link href="/admin" className="btn btn-danger btn-sm">
-            Gérer les accès →
-          </Link>
-        </div>
-      )}
 
       {/* Stats */}
       <div style={{

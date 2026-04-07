@@ -1,16 +1,9 @@
 import { supabase } from '../../lib/supabase'
-import { getSessionAndDriver } from '../../lib/auth'
-import { redirect } from 'next/navigation'
 import AdminTabs from './AdminTabs'
 
 export const revalidate = 0
 
 export default async function AdminPage() {
-  const { driver: currentDriver } = await getSessionAndDriver()
-  if (!currentDriver || (currentDriver.role !== 'admin' && currentDriver.role !== 'super_admin')) {
-    redirect('/')
-  }
-
   const [
     { data: circuits },
     { data: cars },
@@ -26,7 +19,7 @@ export default async function AdminPage() {
     supabase.from('car_classes').select('*').order('sort_order'),
     supabase.from('event_types').select('*').order('sort_order'),
     supabase.from('event_type_cars').select('event_type_id, car_id'),
-    supabase.from('drivers').select('id, name, email, role, approved, refused, iracing_id, discord, active').order('name'),
+    supabase.from('drivers').select('id, name, email, role, approved, iracing_id, discord, active').order('name'),
   ])
 
   return (
@@ -49,7 +42,6 @@ export default async function AdminPage() {
         eventTypes={eventTypes || []}
         eventTypeCars={eventTypeCars || []}
         drivers={drivers || []}
-        currentDriver={currentDriver}
       />
     </div>
   )

@@ -32,7 +32,6 @@ export default function ResetPasswordPage() {
     setLoading(false)
     return
     }
-  }
 
   return (
     <div style={{
