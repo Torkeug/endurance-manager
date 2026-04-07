@@ -105,14 +105,14 @@ export default function CarsManager({ initialCars }) {
       )}
 
       {adding && (
-        <div className="card" style={{ marginBottom: '0.75rem' }}>
+        <div className="card">
           <h3 style={{ marginBottom: '1rem', color: 'var(--text-dim)' }}>Nouvelle voiture</h3>
           {editForm}
         </div>
       )}
 
       {!adding && !editingId && (
-        <button onClick={() => { setAdding(true) }} className="btn btn-primary" style={{ marginBottom: '0.75rem' }}>
+        <button onClick={() => { setAdding(true) }} className="btn btn-primary">
           + Ajouter une voiture
         </button>
       )}

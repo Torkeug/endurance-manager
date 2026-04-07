@@ -89,7 +89,7 @@ export default function EventTypesManager({ initialEventTypes, initialEventTypeC
       )}
 
       {adding ? (
-        <div className="card" style={{ marginBottom: '0.75rem' }}>
+        <div className="card">
           <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'flex-end' }}>
             <div className="form-group" style={{ flex: 1 }}>
               <label>Nouveau type d&apos;événement</label>

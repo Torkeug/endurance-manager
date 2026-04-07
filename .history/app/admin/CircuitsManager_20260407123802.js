@@ -92,19 +92,6 @@ export default function CircuitsManager({ initialCircuits }) {
         <div className="alert alert-error" style={{ marginBottom: '1rem' }}>{error}</div>
       )}
 
-      {adding && (
-        <div className="card" style={{ marginBottom: '0.75rem' }}>
-          <h3 style={{ marginBottom: '1rem', color: 'var(--text-dim)' }}>Nouveau circuit</h3>
-          {editForm}
-        </div>
-      )}
-
-      {!adding && !editingId && (
-        <button onClick={() => setAdding(true)} className="btn btn-primary" style={{ marginBottom: '0.75rem' }}>
-          + Ajouter un circuit
-        </button>
-      )}
-
       <div className="table-wrap" style={{ marginBottom: '0.75rem' }}>
         <table>
           <thead>
@@ -140,6 +127,19 @@ export default function CircuitsManager({ initialCircuits }) {
           </tbody>
         </table>
       </div>
+
+      {adding && (
+        <div className="card">
+          <h3 style={{ marginBottom: '1rem', color: 'var(--text-dim)' }}>Nouveau circuit</h3>
+          {editForm}
+        </div>
+      )}
+
+      {!adding && !editingId && (
+        <button onClick={() => setAdding(true)} className="btn btn-primary">
+          + Ajouter un circuit
+        </button>
+      )}
     </div>
   )
 }

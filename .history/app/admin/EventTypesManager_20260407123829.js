@@ -88,27 +88,6 @@ export default function EventTypesManager({ initialEventTypes, initialEventTypeC
         <div className="alert alert-error" style={{ marginBottom: '1rem' }}>{error}</div>
       )}
 
-      {adding ? (
-        <div className="card" style={{ marginBottom: '0.75rem' }}>
-          <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'flex-end' }}>
-            <div className="form-group" style={{ flex: 1 }}>
-              <label>Nouveau type d&apos;événement</label>
-              <input type="text" value={newName} onChange={e => setNewName(e.target.value)}
-                placeholder="ex : Endurance Pro" autoFocus />
-            </div>
-            <button onClick={handleAdd} className="btn btn-primary" disabled={saving}>
-              {saving ? '…' : '✓ Ajouter'}
-            </button>
-            <button onClick={reset} className="btn btn-secondary">Annuler</button>
-          </div>
-          {error && <div className="alert alert-error" style={{ marginTop: '0.75rem' }}>{error}</div>}
-        </div>
-      ) : (
-        <button onClick={() => { setAdding(true); setEditingId(null) }} className="btn btn-primary" style={{ marginBottom: '0.75rem' }}>
-          + Ajouter un type d&apos;événement
-        </button>
-      )}
-
       <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginBottom: '0.75rem' }}>
         {eventTypes.map(et => {
           const allowedCarIds = getAllowedCarIds(et.id)
@@ -234,6 +213,27 @@ export default function EventTypesManager({ initialEventTypes, initialEventTypeC
           </div>
         )}
       </div>
+
+      {adding ? (
+        <div className="card">
+          <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'flex-end' }}>
+            <div className="form-group" style={{ flex: 1 }}>
+              <label>Nouveau type d&apos;événement</label>
+              <input type="text" value={newName} onChange={e => setNewName(e.target.value)}
+                placeholder="ex : Endurance Pro" autoFocus />
+            </div>
+            <button onClick={handleAdd} className="btn btn-primary" disabled={saving}>
+              {saving ? '…' : '✓ Ajouter'}
+            </button>
+            <button onClick={reset} className="btn btn-secondary">Annuler</button>
+          </div>
+          {error && <div className="alert alert-error" style={{ marginTop: '0.75rem' }}>{error}</div>}
+        </div>
+      ) : (
+        <button onClick={() => { setAdding(true); setEditingId(null) }} className="btn btn-primary">
+          + Ajouter un type d&apos;événement
+        </button>
+      )}
     </div>
   )
 }

@@ -51,7 +51,7 @@ export default function CrewNamesManager({ initialCrewNames }) {
   }
 
   const editForm = (
-    <div style={{ padding: '1rem', background: 'var(--surface-2)', marginBottom: '0.75rem' }}>
+    <div style={{ padding: '1rem', background: 'var(--surface-2)' }}>
       <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'flex-end' }}>
         <div className="form-group" style={{ flex: 1 }}>
           <label>{editingId ? 'Nom' : 'Nouveau nom d\'équipage'}</label>
@@ -71,14 +71,6 @@ export default function CrewNamesManager({ initialCrewNames }) {
     <div>
       {!adding && !editingId && error && (
         <div className="alert alert-error" style={{ marginBottom: '1rem' }}>{error}</div>
-      )}
-
-      {adding && editForm}
-
-      {!adding && !editingId && (
-        <button onClick={() => setAdding(true)} className="btn btn-primary" style={{ marginBottom: '0.75rem' }}>
-          + Ajouter un nom d&apos;équipage
-        </button>
       )}
 
       <div className="table-wrap" style={{ marginBottom: '0.75rem' }}>
@@ -112,6 +104,14 @@ export default function CrewNamesManager({ initialCrewNames }) {
           </tbody>
         </table>
       </div>
+
+      {adding && editForm}
+
+      {!adding && !editingId && (
+        <button onClick={() => setAdding(true)} className="btn btn-primary">
+          + Ajouter un nom d&apos;équipage
+        </button>
+      )}
     </div>
   )
 }

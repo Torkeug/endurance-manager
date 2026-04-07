@@ -103,7 +103,7 @@ export default function ClassesManager({ initialClasses, initialCars }) {
       )}
 
       {adding ? (
-        <div className="card" style={{ marginBottom: '0.75rem' }}>
+        <div className="card">
           <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'flex-end' }}>
             <div className="form-group" style={{ flex: 1 }}>
               <label>Nouvelle classe</label>
@@ -118,7 +118,7 @@ export default function ClassesManager({ initialClasses, initialCars }) {
           {error && <div className="alert alert-error" style={{ marginTop: '0.75rem' }}>{error}</div>}
         </div>
       ) : (
-        <button onClick={() => { setAdding(true); setEditingId(null) }} className="btn btn-primary" style={{ marginBottom: '0.75rem' }}>
+        <button onClick={() => { setAdding(true); setEditingId(null) }} className="btn btn-primary">
           + Ajouter une classe
         </button>
       )}

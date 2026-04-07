@@ -51,7 +51,7 @@ export default function CrewNamesManager({ initialCrewNames }) {
   }
 
   const editForm = (
-    <div style={{ padding: '1rem', background: 'var(--surface-2)', marginBottom: '0.75rem' }}>
+    <div style={{ padding: '1rem', background: 'var(--surface-2)' }}>
       <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'flex-end' }}>
         <div className="form-group" style={{ flex: 1 }}>
           <label>{editingId ? 'Nom' : 'Nouveau nom d\'équipage'}</label>
