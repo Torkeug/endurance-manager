@@ -58,9 +58,9 @@ export async function proxy(request) {
     return NextResponse.redirect(new URL('/pending', request.url))
   }
 
-  if (driver.refused) {
-    return NextResponse.redirect(new URL('/refused', request.url))
-  }
+    if (driver.refused) {
+      return NextResponse.redirect(new URL('/refused', request.url))
+    }
 
   return response
 }
