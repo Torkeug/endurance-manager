@@ -74,7 +74,7 @@ function checkAvailability(availabilities, driverId, irlStart, irlEnd) {
     return t < end && (t + 30 * 60 * 1000) > start
   })
 
-  if (windowSlots.length === 0) return 'unavailable'
+  if (windowSlots.length === 0) return null
   const availableCount  = windowSlots.filter(a => a.available === true).length
   const unavailableCount = windowSlots.filter(a => a.available === false).length
   const tentativeCount  = windowSlots.filter(a => a.available === null).length
@@ -82,7 +82,6 @@ function checkAvailability(availabilities, driverId, irlStart, irlEnd) {
   if (availableCount === windowSlots.length) return 'available'
   if (unavailableCount > 0 && availableCount === 0 && tentativeCount === 0) return 'unavailable'
   if (availableCount > 0) return 'partial'
-  if (tentativeCount > 0 && availableCount === 0 && unavailableCount === 0) return 'tentative'
   return 'partial'
 }
 
@@ -494,7 +493,6 @@ export default function StintGrid({ teamEntryId, teamEntry, assignedDrivers }) {
                     const color = status === 'available'   ? '#2eb460'
                                 : status === 'partial'     ? '#c9a84c'
                                 : status === 'unavailable' ? '#e05555'
-                                : status === 'tentative'   ? '#4a4a6a'
                                 : '#3a3a5a'
                     return (
                       <td key={driverId} style={{ ...TD, textAlign: 'center', padding: '0.35rem 0.2rem' }}>
@@ -537,7 +535,7 @@ export default function StintGrid({ teamEntryId, teamEntry, assignedDrivers }) {
           { color: '#2eb460', label: 'Disponible' },
           { color: '#c9a84c', label: 'Partielle' },
           { color: '#e05555', label: 'Indisponible' },
-          { color: '#4a4a6a', label: 'Incertain' },
+          { color: '#3a3a5a', label: 'Non renseigné' },
         ].map(({ color, label }) => (
           <span key={label} style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
             <span style={{ width: 8, height: 8, borderRadius: '50%', background: color, display: 'inline-block', flexShrink: 0 }} />

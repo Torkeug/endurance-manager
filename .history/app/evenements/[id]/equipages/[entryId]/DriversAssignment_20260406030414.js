@@ -37,17 +37,13 @@ export default function DriversAssignment({ entryId, entryCarId, entryClass, ass
   const [assigned, setAssigned]     = useState(assignedDrivers)
   const [unassigned, setUnassigned] = useState(unassignedDrivers)
   const [error, setError]           = useState(null)
-  const [assigning, setAssigning] = useState(null) // driver id being assigned
 
   const assign = async (signup) => {
-    if (assigning) return
-    setAssigning(signup.id)
     const { error: err } = await supabase
       .from('signups').update({ team_entry_id: entryId }).eq('id', signup.id)
-    if (err) { setError(err.message); setAssigning(null); return }
+    if (err) { setError(err.message); return }
     setAssigned(prev => [...prev, { ...signup, team_entry_id: entryId }])
     setUnassigned(prev => prev.filter(s => s.id !== signup.id))
-    setAssigning(null)
     router.refresh()
   }
 
@@ -137,12 +133,10 @@ export default function DriversAssignment({ entryId, entryCarId, entryClass, ass
               return (
                 <button key={s.id} onClick={() => assign(s)}
                   className="btn btn-secondary"
-                  disabled={!!assigning}
                   title={mismatch ? 'Préférence différente de cette équipe' : ''}
                   style={{
                     display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '0.1rem',
                     borderColor: mismatch ? '#a06020' : undefined,
-                    opacity: assigning === s.id ? 0.5 : 1,
                   }}>
                   <span style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
                     {mismatch && <span style={{ color: '#d4904a' }}>⚠️</span>}

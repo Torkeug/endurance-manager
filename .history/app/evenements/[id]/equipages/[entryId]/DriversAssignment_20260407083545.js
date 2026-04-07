@@ -137,12 +137,10 @@ export default function DriversAssignment({ entryId, entryCarId, entryClass, ass
               return (
                 <button key={s.id} onClick={() => assign(s)}
                   className="btn btn-secondary"
-                  disabled={!!assigning}
                   title={mismatch ? 'Préférence différente de cette équipe' : ''}
                   style={{
                     display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '0.1rem',
                     borderColor: mismatch ? '#a06020' : undefined,
-                    opacity: assigning === s.id ? 0.5 : 1,
                   }}>
                   <span style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
                     {mismatch && <span style={{ color: '#d4904a' }}>⚠️</span>}

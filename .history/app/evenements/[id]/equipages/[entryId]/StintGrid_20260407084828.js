@@ -537,7 +537,7 @@ export default function StintGrid({ teamEntryId, teamEntry, assignedDrivers }) {
           { color: '#2eb460', label: 'Disponible' },
           { color: '#c9a84c', label: 'Partielle' },
           { color: '#e05555', label: 'Indisponible' },
-          { color: '#4a4a6a', label: 'Incertain' },
+          { color: '#3a3a5a', label: 'Incertain' },
         ].map(({ color, label }) => (
           <span key={label} style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
             <span style={{ width: 8, height: 8, borderRadius: '50%', background: color, display: 'inline-block', flexShrink: 0 }} />
