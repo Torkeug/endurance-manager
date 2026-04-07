@@ -95,7 +95,6 @@ export default function AvailabilityGrid({
   const dragValue      = useRef(null)
   const pendingUpdates = useRef({})
   const [dragPreview, setDragPreview] = useState({})
-  const [dragMode, setDragMode] = useState('available') // 'available' | 'unavailable' | 'tentative'
 
   const slots     = irlStart ? generateSlots(irlStart, durationMinutes || 0) : []
   const raceStart = irlStart ? new Date(irlStart) : null
@@ -119,12 +118,10 @@ export default function AvailabilityGrid({
   }, [teamEntryId])
 
   const getAvail    = (driverId, slot) => availabilities[`${driverId}_${slot.toISOString()}`]
-  const getSlotState = (driverId, slot) => {
+  const isAvailable = (driverId, slot) => {
     const key = `${driverId}_${slot.toISOString()}`
     if (dragPreview[key] !== undefined) return dragPreview[key]
-    const record = getAvail(driverId, slot)
-    if (!record) return false // no row = unavailable by default
-    return record.available // true | false | null
+    return getAvail(driverId, slot)?.available || false
   }
 
   // ── Drag ──────────────────────────────────────────────────
@@ -132,9 +129,7 @@ export default function AvailabilityGrid({
   const startDrag = (slot) => {
     if (!selectedDriverId) return
     isDragging.current = true
-    dragValue.current = dragMode === 'available' ? true 
-      : dragMode === 'unavailable' ? false 
-      : null
+    dragValue.current  = !isAvailable(selectedDriverId, slot)
     pendingUpdates.current = {}
     applyDrag(slot)
   }
@@ -207,7 +202,7 @@ export default function AvailabilityGrid({
 
   const driverCounts = assignedDrivers.reduce((acc, d) => {
     const id = d.drivers?.id
-    acc[id] = slots.filter(s => getSlotState(id, s) === true).length
+    acc[id]  = slots.filter(s => isAvailable(id, s)).length
     return acc
   }, {})
 
@@ -265,35 +260,6 @@ export default function AvailabilityGrid({
             ? 'Cliquez ou glissez sur les créneaux pour marquer votre disponibilité.'
             : "Sélectionnez votre nom pour activer l'édition."}
         </p>
-
-        {selectedDriverId && (
-          <div className="card" style={{ marginBottom: '1rem' }}>
-            <div style={{ fontSize: '0.75rem', fontWeight: 700, letterSpacing: '0.08em',
-              textTransform: 'uppercase', color: 'var(--text-dim)', marginBottom: '0.5rem' }}>
-              Mode de saisie
-            </div>
-            <div style={{ display: 'flex', gap: '0.5rem' }}>
-              {[
-                { value: 'available',   label: '✓ Disponible',   color: 'var(--accent)' },
-                { value: 'unavailable', label: '✗ Indisponible',  color: 'var(--danger)' },
-                { value: 'tentative',   label: '? Incertain',     color: '#3a8080' },
-              ].map(({ value, label, color }) => (
-                <button key={value} onClick={() => setDragMode(value)}
-                  style={{
-                    padding: '0.4rem 0.85rem', borderRadius: '3px', border: '1px solid',
-                    borderColor: dragMode === value ? color : 'var(--border)',
-                    background: dragMode === value ? `${color}22` : 'var(--surface-2)',
-                    color: dragMode === value ? color : 'var(--text-dim)',
-                    fontFamily: 'var(--font-rajdhani), sans-serif',
-                    fontSize: '0.85rem', fontWeight: 700, cursor: 'pointer',
-                    transition: 'all 0.15s',
-                  }}>
-                  {label}
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
 
         <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.75rem', flexWrap: 'wrap' }}>
           {selectedDriverId && (
@@ -465,18 +431,8 @@ export default function AvailabilityGrid({
                       {/* Driver cells */}
                       {assignedDrivers.map(d => {
                         const driverId = d.drivers?.id
+                        const avail    = isAvailable(driverId, slot)
                         const isMe     = driverId === selectedDriverId
-                        const state = getSlotState(driverId, slot)
-                        const cellBg = state === true  ? 'var(--accent)'
-                                    : state === false ? '#3a1010'
-                                    : state === null  ? '#2a2a3a'
-                                    : isMe            ? 'var(--surface-2)'
-                                    : 'transparent'
-                        const cellBorder = state === true  ? 'var(--accent)'
-                                        : state === false ? 'var(--danger)'
-                                        : state === null  ? '#4a4a6a'
-                                        : isMe            ? 'var(--border)'
-                                        : 'transparent'
 
                         return (
                           <td
@@ -500,10 +456,14 @@ export default function AvailabilityGrid({
                             <div
                               data-slot={slot.toISOString()}
                               style={{
-                                width: '100%', height: '22px',
-                                border: '1px solid', borderColor: cellBorder,
-                                borderRadius: '3px', background: cellBg,
+                                width: '100%',
+                                height: '22px',
+                                border: '1px solid',
+                                borderColor: avail ? 'var(--accent)' : isMe ? 'var(--border)' : 'transparent',
+                                borderRadius: '3px',
+                                background: avail ? 'var(--accent)' : isMe ? 'var(--surface-2)' : 'transparent',
                                 cursor: isMe ? 'pointer' : 'default',
+                                opacity: avail && !isMe ? 0.65 : 1,
                                 transition: 'background 0.08s',
                               }}
                             />
@@ -526,12 +486,8 @@ export default function AvailabilityGrid({
           Disponible
         </span>
         <span style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-          <span style={{ width: 14, height: 14, background: '#2a2a3a', border: '1px solid #4a4a6a', borderRadius: 2, display: 'inline-block' }} />
-          Incertain
-        </span>
-        <span style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-          <span style={{ width: 14, height: 14, background: '#3a1010', border: '1px solid var(--danger)', borderRadius: 2, display: 'inline-block' }} />
-          Indisponible
+          <span style={{ width: 14, height: 14, background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 2, display: 'inline-block' }} />
+          Non renseigné
         </span>
         <span style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
           <Badge label="▶" bg="#2eb460" borderColor="#2eb460" />
@@ -541,7 +497,7 @@ export default function AvailabilityGrid({
           <Badge label="■" bg="var(--danger)" borderColor="var(--danger)" />
           Fin
         </span>
-        <span>Cliquez ou glissez pour appliquer le mode sélectionné.</span>
+        <span>Cliquez ou glissez pour sélectionner plusieurs créneaux.</span>
       </div>
     </div>
   )

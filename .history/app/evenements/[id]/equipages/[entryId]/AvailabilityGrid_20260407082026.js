@@ -526,11 +526,11 @@ export default function AvailabilityGrid({
           Disponible
         </span>
         <span style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-          <span style={{ width: 14, height: 14, background: '#2a2a3a', border: '1px solid #4a4a6a', borderRadius: 2, display: 'inline-block' }} />
+          <span style={{ width: 14, height: 14, background: '#1a4040', border: '1px solid #3a8080', borderRadius: 2, display: 'inline-block' }} />
           Incertain
         </span>
         <span style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-          <span style={{ width: 14, height: 14, background: '#3a1010', border: '1px solid var(--danger)', borderRadius: 2, display: 'inline-block' }} />
+          <span style={{ width: 14, height: 14, background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 2, display: 'inline-block' }} />
           Indisponible
         </span>
         <span style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>

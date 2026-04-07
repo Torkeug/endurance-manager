@@ -207,7 +207,7 @@ export default function AvailabilityGrid({
 
   const driverCounts = assignedDrivers.reduce((acc, d) => {
     const id = d.drivers?.id
-    acc[id] = slots.filter(s => getSlotState(id, s) === true).length
+    acc[id]  = slots.filter(s => isAvailable(id, s)).length
     return acc
   }, {})
 
@@ -468,13 +468,11 @@ export default function AvailabilityGrid({
                         const isMe     = driverId === selectedDriverId
                         const state = getSlotState(driverId, slot)
                         const cellBg = state === true  ? 'var(--accent)'
-                                    : state === false ? '#3a1010'
-                                    : state === null  ? '#2a2a3a'
+                                    : state === null  ? '#1a4040'
                                     : isMe            ? 'var(--surface-2)'
                                     : 'transparent'
                         const cellBorder = state === true  ? 'var(--accent)'
-                                        : state === false ? 'var(--danger)'
-                                        : state === null  ? '#4a4a6a'
+                                        : state === null  ? '#3a8080'
                                         : isMe            ? 'var(--border)'
                                         : 'transparent'
 
@@ -526,11 +524,11 @@ export default function AvailabilityGrid({
           Disponible
         </span>
         <span style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-          <span style={{ width: 14, height: 14, background: '#2a2a3a', border: '1px solid #4a4a6a', borderRadius: 2, display: 'inline-block' }} />
+          <span style={{ width: 14, height: 14, background: '#1a4040', border: '1px solid #3a8080', borderRadius: 2, display: 'inline-block' }} />
           Incertain
         </span>
         <span style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-          <span style={{ width: 14, height: 14, background: '#3a1010', border: '1px solid var(--danger)', borderRadius: 2, display: 'inline-block' }} />
+          <span style={{ width: 14, height: 14, background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 2, display: 'inline-block' }} />
           Indisponible
         </span>
         <span style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>

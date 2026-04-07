@@ -75,13 +75,10 @@ function checkAvailability(availabilities, driverId, irlStart, irlEnd) {
   })
 
   if (windowSlots.length === 0) return null
-  const availableCount  = windowSlots.filter(a => a.available === true).length
-  const unavailableCount = windowSlots.filter(a => a.available === false).length
-  const tentativeCount  = windowSlots.filter(a => a.available === null).length
-
-  if (availableCount === windowSlots.length) return 'available'
-  if (unavailableCount > 0 && availableCount === 0 && tentativeCount === 0) return 'unavailable'
-  if (availableCount > 0) return 'partial'
+  const hasUnavailable = windowSlots.some(a => !a.available)
+  const availableCount = windowSlots.filter(a => a.available).length
+  if (hasUnavailable && availableCount === 0) return 'unavailable'
+  if (availableCount === windowSlots.length && !hasUnavailable) return 'available'
   return 'partial'
 }
 
