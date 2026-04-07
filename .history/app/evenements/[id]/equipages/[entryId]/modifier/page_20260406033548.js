@@ -108,14 +108,10 @@ export default function ModifierEquipage({ params }) {
     const { error: err } = await supabase
       .from('team_entries').update(payload).eq('id', entryId)
 
-      if (err) {
-        if (err.code === '23505') {
-          setError("Cet équipage est déjà inscrit pour ce créneau de départ.")
-        } else {
-          setError(err.message)
-        }
-        setLoading(false)
-      } else {
+    if (err) {
+      setError(err.message)
+      setLoading(false)
+    } else {
       router.push(`/evenements/${id}/equipages/${entryId}`)
       router.refresh()
     }
