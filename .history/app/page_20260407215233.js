@@ -34,12 +34,13 @@ export default async function HomePage() {
   const { driver: currentDriver } = await getSessionAndDriver()
   const admin = isAdmin(currentDriver)
 
+  // Fetch all data in parallel
   const [
     { data: events },
+    { data: allDrivers },
     { data: mySignups },
     { data: myStints },
     { data: pendingDrivers },
-    { count: totalDrivers },
   ] = await Promise.all([
     supabase.from('events').select(`
       id, name, format, duration_minutes,
@@ -47,6 +48,7 @@ export default async function HomePage() {
       circuits (name),
       team_entries (id, crew_name)
     `).order('name'),
+    admin ? supabase.from('drivers').select('id', { count: 'exact', head: true }).eq('active', true) : { data: null },
     currentDriver ? supabase.from('signups').select(`
       *,
       events (id, name, duration_minutes, format, circuits(name), event_start_times(id, label, irl_start)),
@@ -56,11 +58,11 @@ export default async function HomePage() {
       *, team_entries(id, crew_name, event_id, events(name), event_start_times(label, irl_start))
     `).eq('driver_id', currentDriver.id).order('irl_start') : { data: [] },
     admin ? supabase.from('drivers').select('id').eq('approved', false).eq('refused', false) : { data: [] },
-    admin ? supabase.from('drivers').select('*', { count: 'exact', head: true }).eq('active', true) : { count: 0 },
   ])
 
   const now = new Date()
 
+  // Find next upcoming event
   const upcomingEvents = (events || [])
     .map(ev => {
       const starts = (ev.event_start_times || []).sort((a, b) =>
@@ -73,10 +75,12 @@ export default async function HomePage() {
 
   const nextEvent = upcomingEvents[0] || null
 
+  // Find my next stint
   const myNextStint = (myStints || [])
     .filter(s => s.irl_start && new Date(s.irl_start) > now)
     .sort((a, b) => new Date(a.irl_start) - new Date(b.irl_start))[0] || null
 
+  // My upcoming signups with events
   const myUpcomingSignups = (mySignups || [])
     .filter(s => {
       const starts = s.events?.event_start_times || []
@@ -90,6 +94,19 @@ export default async function HomePage() {
 
   const pendingCount = (pendingDrivers || []).length
   const totalEvents  = (events || []).length
+  const totalDrivers = allDrivers?.length || 0
+
+  const statCard = (label, value, color) => (
+    <div className="card" style={{ padding: '1rem', textAlign: 'center' }}>
+      <div className="mono" style={{ fontSize: '1.8rem', fontWeight: 700, color: color || 'var(--accent)' }}>
+        {value}
+      </div>
+      <div style={{ fontSize: '0.75rem', fontWeight: 700, letterSpacing: '0.08em',
+        textTransform: 'uppercase', color: 'var(--text-dim)', marginTop: '0.25rem' }}>
+        {label}
+      </div>
+    </div>
+  )
 
   return (
     <div className="page">
@@ -98,9 +115,9 @@ export default async function HomePage() {
       {admin && pendingCount > 0 && (
         <div style={{
           background: 'rgba(224,85,85,0.1)', border: '1px solid var(--danger)',
-          borderRadius: '4px', padding: '0.75rem 1rem', marginBottom: '1.5rem',
-          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          gap: '1rem', flexWrap: 'wrap',
+          borderRadius: '4px', padding: '0.75rem 1rem',
+          marginBottom: '1.5rem', display: 'flex',
+          alignItems: 'center', justifyContent: 'space-between', gap: '1rem', flexWrap: 'wrap',
         }}>
           <span style={{ color: 'var(--danger)', fontWeight: 600, fontSize: '0.9rem' }}>
             ⚠️ {pendingCount} pilote{pendingCount > 1 ? 's' : ''}{' '}en attente d&apos;approbation
@@ -116,8 +133,7 @@ export default async function HomePage() {
           <div className="accent-line" />
           {currentDriver && (
             <div style={{ marginTop: '0.4rem', color: 'var(--text-dim)', fontSize: '0.9rem' }}>
-              Bienvenue,{' '}
-              <span style={{ color: 'var(--text)', fontWeight: 600 }}>{currentDriver.name}</span>
+              Bienvenue, <span style={{ color: 'var(--text)', fontWeight: 600 }}>{currentDriver.name}</span>
             </div>
           )}
         </div>
@@ -125,41 +141,22 @@ export default async function HomePage() {
 
       {/* Admin stats */}
       {admin && (
-        <div style={{
-          display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))',
-          gap: '0.75rem', marginBottom: '2rem',
-        }}>
-          {[
-            { label: 'Événements', value: totalEvents, color: 'var(--accent)' },
-            { label: 'Pilotes actifs', value: totalDrivers, color: 'var(--accent)' },
-            { label: 'En attente', value: pendingCount, color: pendingCount > 0 ? 'var(--danger)' : 'var(--text-dim)' },
-          ].map(({ label, value, color }) => (
-            <div key={label} className="card" style={{ padding: '1rem', textAlign: 'center' }}>
-              <div className="mono" style={{ fontSize: '1.8rem', fontWeight: 700, color }}>
-                {value}
-              </div>
-              <div style={{ fontSize: '0.75rem', fontWeight: 700, letterSpacing: '0.08em',
-                textTransform: 'uppercase', color: 'var(--text-dim)', marginTop: '0.25rem' }}>
-                {label}
-              </div>
-            </div>
-          ))}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))',
+          gap: '0.75rem', marginBottom: '2rem' }}>
+          {statCard('Événements', totalEvents)}
+          {statCard('Pilotes actifs', totalDrivers)}
+          {statCard('En attente', pendingCount, pendingCount > 0 ? 'var(--danger)' : 'var(--text-dim)')}
         </div>
       )}
 
-      {/* Next event + next stint */}
-      <div style={{
-        display: 'grid', gridTemplateColumns: '1fr 1fr',
-        gap: '1.5rem', marginBottom: '2rem',
-        alignItems: 'stretch',
-      }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem', marginBottom: '2rem' }}>
+
         {/* Next event */}
-        <div style={{ display: 'flex', flexDirection: 'column' }}>
+        <div>
           <h2 style={{ marginBottom: '1rem' }}>Prochain événement</h2>
           {nextEvent ? (
-            <Link href={`/evenements/${nextEvent.id}`}
-              style={{ textDecoration: 'none', flex: 1, display: 'flex' }}>
-              <div className="card event-card" style={{ cursor: 'pointer', flex: 1 }}>
+            <Link href={`/evenements/${nextEvent.id}`} style={{ textDecoration: 'none' }}>
+              <div className="card event-card" style={{ cursor: 'pointer' }}>
                 <div style={{ fontWeight: 700, fontSize: '1rem', marginBottom: '0.35rem' }}>
                   {nextEvent.name}
                 </div>
@@ -171,29 +168,26 @@ export default async function HomePage() {
                 <div className="mono" style={{ fontSize: '0.85rem', color: 'var(--accent)', marginBottom: '0.25rem' }}>
                   {formatDatetime(nextEvent.nextStart.irl_start)}
                 </div>
-                <div style={{ fontSize: '0.78rem', color: 'var(--text-dim)', marginBottom: '0.5rem' }}>
+                <div style={{ fontSize: '0.78rem', color: 'var(--text-dim)' }}>
                   {timeUntil(nextEvent.nextStart.irl_start)}
                 </div>
-                <div style={{ fontSize: '0.78rem', color: 'var(--text-dim)' }}>
+                <div style={{ marginTop: '0.75rem', fontSize: '0.78rem', color: 'var(--text-dim)' }}>
                   {nextEvent.team_entries?.length || 0} équipage{(nextEvent.team_entries?.length || 0) !== 1 ? 's' : ''}
                 </div>
               </div>
             </Link>
           ) : (
-            <div className="card" style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <div className="empty">Aucun événement à venir.</div>
-            </div>
+            <div className="card"><div className="empty">Aucun événement à venir.</div></div>
           )}
         </div>
 
         {/* My next stint */}
-        <div style={{ display: 'flex', flexDirection: 'column' }}>
+        <div>
           <h2 style={{ marginBottom: '1rem' }}>Mon prochain relais</h2>
           {myNextStint ? (
-            <Link
-              href={`/evenements/${myNextStint.team_entries?.event_id}/equipages/${myNextStint.team_entry_id}`}
-              style={{ textDecoration: 'none', flex: 1, display: 'flex' }}>
-              <div className="card" style={{ flex: 1 }}>
+            <Link href={`/evenements/${myNextStint.team_entries?.event_id}/equipages/${myNextStint.team_entry_id}`}
+              style={{ textDecoration: 'none' }}>
+              <div className="card" style={{ height: '100%' }}>
                 <div style={{ fontWeight: 700, fontSize: '1rem', marginBottom: '0.35rem' }}>
                   {myNextStint.team_entries?.events?.name}
                 </div>
@@ -211,9 +205,7 @@ export default async function HomePage() {
               </div>
             </Link>
           ) : (
-            <div className="card" style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <div className="empty">Aucun relais assigné.</div>
-            </div>
+            <div className="card"><div className="empty">Aucun relais assigné.</div></div>
           )}
         </div>
       </div>
@@ -231,10 +223,8 @@ export default async function HomePage() {
               const teamEntry = signup.team_entries
 
               return (
-                <div key={signup.id} className="card" style={{
-                  display: 'flex', alignItems: 'center',
-                  justifyContent: 'space-between', gap: '1rem', flexWrap: 'wrap',
-                }}>
+                <div key={signup.id} className="card" style={{ display: 'flex',
+                  alignItems: 'center', justifyContent: 'space-between', gap: '1rem', flexWrap: 'wrap' }}>
                   <div>
                     <div style={{ fontWeight: 600 }}>{ev?.name}</div>
                     <div style={{ fontSize: '0.8rem', color: 'var(--text-dim)', marginTop: '0.2rem' }}>
@@ -242,11 +232,12 @@ export default async function HomePage() {
                       {nextStart && ` · ${formatDatetime(nextStart.irl_start)}`}
                       {nextStart && ` · ${timeUntil(nextStart.irl_start)}`}
                     </div>
-                    {teamEntry ? (
+                    {teamEntry && (
                       <div style={{ fontSize: '0.78rem', color: 'var(--accent)', marginTop: '0.2rem' }}>
                         {teamEntry.crew_name} — {teamEntry.cars?.name || 'Voiture à définir'}
                       </div>
-                    ) : (
+                    )}
+                    {!teamEntry && (
                       <div style={{ fontSize: '0.78rem', color: 'var(--text-dim)', marginTop: '0.2rem' }}>
                         Non assigné à une équipe
                       </div>
