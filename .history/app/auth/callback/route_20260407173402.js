@@ -2,27 +2,11 @@ import { NextResponse } from 'next/server'
 import { createClient } from '../../../lib/auth'
 
 export async function GET(request) {
-  const url = new URL(request.url)
-  console.log('callback URL:', request.url)
-  console.log('code:', url.searchParams.get('code'))
-  console.log('next:', url.searchParams.get('next'))
   const { searchParams, origin } = new URL(request.url)
   const code = searchParams.get('code')
 
     const next = searchParams.get('next') || '/'
     const type = searchParams.get('type')
-
-    // Handle error from Supabase (e.g. expired link)
-    const error = searchParams.get('error')
-    const errorCode = searchParams.get('error_code')
-    const errorDescription = searchParams.get('error_description')
-
-    if (error) {
-    if (errorCode === 'otp_expired') {
-        return NextResponse.redirect(`${origin}/login?error=link_expired`)
-    }
-    return NextResponse.redirect(`${origin}/login?error=${error}`)
-    }
 
     if (code) {
     const supabase = await createClient()

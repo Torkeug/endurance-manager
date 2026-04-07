@@ -1,10 +1,10 @@
 'use client'
-import { useState, Suspense } from 'react'
+import { useState } from 'react'
 import { createBrowserClient } from '@supabase/ssr'
-import { useRouter, useSearchParams } from 'next/navigation'
+import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 
-function LoginForm() {
+export default function LoginPage() {
   const [email, setEmail]     = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
@@ -69,16 +69,6 @@ function LoginForm() {
           </p>
 
           {error && <div className="alert alert-error" style={{ marginBottom: '1rem' }}>{error}</div>}
-            {urlError === 'link_expired' && (
-            <div className="alert alert-error" style={{ marginBottom: '1rem' }}>
-                Ce lien a expiré ou a déjà été utilisé. Demandez un nouveau lien.
-            </div>
-            )}
-            {urlError === 'auth' && (
-            <div className="alert alert-error" style={{ marginBottom: '1rem' }}>
-                Erreur d&apos;authentification. Réessayez ou contactez un administrateur.
-            </div>
-            )}
 
           <form onSubmit={handleSubmit}>
             <div className="form-group" style={{ marginBottom: '1rem' }}>
@@ -110,13 +100,5 @@ function LoginForm() {
         </div>
       </div>
     </div>
-  )
-}
-
-export default function LoginPage() {
-  return (
-    <Suspense>
-      <LoginForm />
-    </Suspense>
   )
 }

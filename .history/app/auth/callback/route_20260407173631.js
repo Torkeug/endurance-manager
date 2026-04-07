@@ -12,18 +12,6 @@ export async function GET(request) {
     const next = searchParams.get('next') || '/'
     const type = searchParams.get('type')
 
-    // Handle error from Supabase (e.g. expired link)
-    const error = searchParams.get('error')
-    const errorCode = searchParams.get('error_code')
-    const errorDescription = searchParams.get('error_description')
-
-    if (error) {
-    if (errorCode === 'otp_expired') {
-        return NextResponse.redirect(`${origin}/login?error=link_expired`)
-    }
-    return NextResponse.redirect(`${origin}/login?error=${error}`)
-    }
-
     if (code) {
     const supabase = await createClient()
     const { data: { user }, error } = await supabase.auth.exchangeCodeForSession(code)
