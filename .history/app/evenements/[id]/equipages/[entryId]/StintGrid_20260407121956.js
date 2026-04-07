@@ -379,7 +379,7 @@ export default function StintGrid({ teamEntryId, teamEntry, assignedDrivers }) {
               <th style={{ ...TH, minWidth: '130px' }}>Pilote</th>
               <th style={TH}>Départ IRL</th>
               <th style={TH}>Fin IRL</th>
-              <th style={{ ...TH, minWidth: '110px' }}>Fin réelle</th>
+              <th style={{ ...TH, minWidth: '150px' }}>Fin réelle</th>
               <th style={{ ...TH, width: '68px' }}>Durée</th>
               <th style={{ ...TH, width: '52px' }}>Tours</th>
               <th style={{ ...TH, width: '60px' }}>Conso</th>
@@ -459,7 +459,7 @@ export default function StintGrid({ teamEntryId, teamEntry, assignedDrivers }) {
                       {stint._irlEnd ? formatDatetime(stint._irlEnd) : '—'}
                     </span>
                   </td>
-                  <td style={{ ...TD, padding: '4px 6px', minWidth: '110px' }}>
+                  <td style={{ ...TD, padding: '4px 6px', minWidth: '150px' }}>
                     <ActualEndInput
                       plannedEnd={stint._irlEnd}
                       actualEnd={stint.irl_end_actual}

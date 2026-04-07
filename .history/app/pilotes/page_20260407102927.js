@@ -80,7 +80,6 @@ export default async function PilotesPage() {
                     </span>
                   </td>
                   <td>
-                    <div style={{ display: 'flex', gap: '0.5rem' }}>
                     <Link
                       href={`/pilotes/${p.id}/modifier`}
                       className="btn btn-secondary btn-sm"
@@ -92,7 +91,7 @@ export default async function PilotesPage() {
                       className="btn btn-primary btn-sm"
                     >
                       Voir
-                    </Link>     </div>               
+                    </Link>                    
                   </td>
                 </tr>
               ))}

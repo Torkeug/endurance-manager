@@ -1,7 +1,6 @@
 'use client'
 import { useState, useEffect } from 'react'
 import { supabase } from '../../../../../lib/supabase'
-import ActualEndInput from './ActualEndInput'
 
 // ── Helpers ────────────────────────────────────────────────
 
@@ -22,8 +21,8 @@ function formatDuration(seconds) {
   if (!seconds) return '—'
   const h = Math.floor(seconds / 3600)
   const m = Math.floor((seconds % 3600) / 60)
-  if (h > 0) return `${h}h ${String(m).padStart(2,'0')}min`
-  return `${m} min`
+  if (h > 0) return `${h}h${String(m).padStart(2,'0')}`
+  return `${m}min`
 }
 
 function getIGTime(irlTime, irlStartStr, igStartTimeStr) {
@@ -158,13 +157,7 @@ function calculateAllStints(stints, teamEntry, driverPerf, igStartTime, igSunris
   for (const stint of stints) {
     const calc = calcStint(stint, teamEntry, driverPerf, igStartTime, igSunrise, igSunset, currentTime)
     result.push(calc)
-    // Use actual end time if set, otherwise use planned end
-    const effectiveEnd = calc.irl_end_actual
-      ? new Date(calc.irl_end_actual)
-      : calc._irlEnd
-    currentTime = effectiveEnd
-      ? new Date(effectiveEnd.getTime() + calc._pitStopSec * 1000)
-      : null
+    currentTime = calc._nextStart || null
   }
 
   return result
@@ -285,17 +278,6 @@ export default function StintGrid({ teamEntryId, teamEntry, assignedDrivers }) {
     setSaving(null)
   }
 
-  const updateActualEnd = async (stintId, isoString) => {
-    setSaving(stintId)
-    setStints(prev => prev.map(s =>
-      s.id === stintId ? { ...s, irl_end_actual: isoString } : s
-    ))
-    await supabase.from('stints')
-      .update({ irl_end_actual: isoString })
-      .eq('id', stintId)
-    setSaving(null)
-  }
-
   const deleteStint = async (stintId) => {
     if (!confirm('Supprimer ce relais ?')) return
     await supabase.from('stints').delete().eq('id', stintId)
@@ -379,7 +361,6 @@ export default function StintGrid({ teamEntryId, teamEntry, assignedDrivers }) {
               <th style={{ ...TH, minWidth: '130px' }}>Pilote</th>
               <th style={TH}>Départ IRL</th>
               <th style={TH}>Fin IRL</th>
-              <th style={{ ...TH, minWidth: '110px' }}>Fin réelle</th>
               <th style={{ ...TH, width: '68px' }}>Durée</th>
               <th style={{ ...TH, width: '52px' }}>Tours</th>
               <th style={{ ...TH, width: '60px' }}>Conso</th>
@@ -451,21 +432,9 @@ export default function StintGrid({ teamEntryId, teamEntry, assignedDrivers }) {
 
                   {/* IRL End */}
                   <td style={TD}>
-                    <span className="mono" style={{
-                      fontSize: '0.75rem',
-                      textDecoration: stint.irl_end_actual ? 'line-through' : 'none',
-                      color: stint.irl_end_actual ? 'var(--text-dim)' : 'var(--text)',
-                    }}>
+                    <span className="mono" style={{ fontSize: '0.75rem' }}>
                       {stint._irlEnd ? formatDatetime(stint._irlEnd) : '—'}
                     </span>
-                  </td>
-                  <td style={{ ...TD, padding: '4px 6px', minWidth: '110px' }}>
-                    <ActualEndInput
-                      plannedEnd={stint._irlEnd}
-                      actualEnd={stint.irl_end_actual}
-                      onSave={(isoString) => updateActualEnd(stint.id, isoString)}
-                      saving={saving === stint.id}
-                    />
                   </td>
 
                   {/* Duration */}
@@ -475,11 +444,11 @@ export default function StintGrid({ teamEntryId, teamEntry, assignedDrivers }) {
                         {formatDuration(stint._stintDurationSec)}
                       </span>
                     ) : (
-                      <input type="number" placeholder="60 min"
+                      <input type="number" placeholder="60min"
                         value={stint.duration_minutes || ''}
                         onFocus={e => e.target.select()}
                         onChange={e => updateStint(stint.id, 'duration_minutes', e.target.value ? parseInt(e.target.value) : null)}
-                        style={{ ...INPUT, width: '80px' }}
+                        style={{ ...INPUT, width: '70px' }}
                         title="Durée manuelle en minutes" />
                     )}
                   </td>
