@@ -18,9 +18,11 @@ const dmMono = DM_Mono({
 
 export const metadata = {
   title: 'Kronos Endurance Planner',
-  description: "Planification des courses d'endurance Kronos SimSports",
+  description: 'Planification des courses d\'endurance Kronos SimSports',
   icons: {
-    icon: '/favicon.ico',
+    icon: [
+      '/favicon.ico',
+    ],
     apple: '/apple-touch-icon.png',
   },
 }

@@ -6,12 +6,6 @@ import { useState, useEffect } from 'react'
 export default function PendingPage() {
   const router = useRouter()
 
-  const [theme, setTheme] = useState('dark')
-    useEffect(() => {
-  const saved = localStorage.getItem('theme') || 'dark'
-  setTheme(saved)
-    }, [])
-
   const supabase = createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
@@ -48,14 +42,11 @@ export default function PendingPage() {
       minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center',
       background: 'var(--bg)', padding: '1.5rem',
     }}>
-      <div style={{ width: '100%', maxWidth: '400px' }}>
-        {/* Logo */}
-        <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
-            <img
-                src={theme === 'dark' ? '/kronos-logo-text.png' : '/kronos-logo-light.png'}
-                alt="Kronos SimSports"
-                style={{ height: '56px', objectFit: 'contain', display: 'block', margin: '0 auto' }}
-            />
+      <div style={{ width: '100%', maxWidth: '400px', textAlign: 'center' }}>
+        <div style={{ display: 'inline-flex', alignItems: 'baseline', gap: '0.5rem', marginBottom: '2rem' }}>
+          <img src="/kronos-logo.png" alt="Kronos" style={{ width: '32px', height: '32px', objectFit: 'contain' }} />
+          <span style={{ fontWeight: 700, fontSize: '1.5rem', letterSpacing: '0.12em',
+            textTransform: 'uppercase', color: 'var(--text)' }}>KRONOS</span>
         </div>
 
         <div className="card" style={{ textAlign: 'center' }}>

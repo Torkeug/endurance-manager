@@ -17,7 +17,6 @@ function LoginForm() {
     const saved = localStorage.getItem('theme') || 'dark'
     setTheme(saved)
     }, [])    
-
   const supabase = createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
@@ -55,12 +54,16 @@ function LoginForm() {
     }}>
       <div style={{ width: '100%', maxWidth: '400px' }}>
         {/* Logo */}
-        <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
+        <div style={{ textAlign: 'center', marginBottom: '2.5rem' }}>
+            <div style={{ textAlign: 'center', marginBottom: '2.5rem' }}>
             <img
                 src={theme === 'dark' ? '/kronos-logo-text.png' : '/kronos-logo-light.png'}
                 alt="Kronos SimSports"
-                style={{ height: '56px', objectFit: 'contain', display: 'block', margin: '0 auto' }}
+                style={{ height: '56px', objectFit: 'contain' }}
             />
+            </div>
+          <div style={{ color: 'var(--text-dim)', fontSize: '0.85rem', letterSpacing: '0.1em',
+            textTransform: 'uppercase' }}>Endurance Planner</div>
         </div>
 
         <div className="card">
@@ -115,6 +118,11 @@ function LoginForm() {
 }
 
 export default function LoginPage() {
+    const [theme, setTheme] = useState('dark')
+    useEffect(() => {
+    const saved = localStorage.getItem('theme') || 'dark'
+    setTheme(saved)
+    }, [])    
   return (
     <Suspense>
       <LoginForm />

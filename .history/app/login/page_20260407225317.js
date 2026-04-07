@@ -12,11 +12,6 @@ function LoginForm() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const urlError = searchParams.get('error')
-    const [theme, setTheme] = useState('dark')
-    useEffect(() => {
-    const saved = localStorage.getItem('theme') || 'dark'
-    setTheme(saved)
-    }, [])    
 
   const supabase = createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -55,12 +50,14 @@ function LoginForm() {
     }}>
       <div style={{ width: '100%', maxWidth: '400px' }}>
         {/* Logo */}
-        <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
-            <img
-                src={theme === 'dark' ? '/kronos-logo-text.png' : '/kronos-logo-light.png'}
-                alt="Kronos SimSports"
-                style={{ height: '56px', objectFit: 'contain', display: 'block', margin: '0 auto' }}
-            />
+        <div style={{ textAlign: 'center', marginBottom: '2.5rem' }}>
+          <div style={{ display: 'inline-flex', alignItems: 'baseline', gap: '0.5rem', marginBottom: '0.5rem' }}>
+            <img src="/kronos-logo.png" alt="Kronos" style={{ width: '32px', height: '32px', objectFit: 'contain' }} />
+            <span style={{ fontWeight: 700, fontSize: '1.5rem', letterSpacing: '0.12em',
+              textTransform: 'uppercase', color: 'var(--text)' }}>KRONOS</span>
+          </div>
+          <div style={{ color: 'var(--text-dim)', fontSize: '0.85rem', letterSpacing: '0.1em',
+            textTransform: 'uppercase' }}>Endurance Planner</div>
         </div>
 
         <div className="card">
@@ -115,6 +112,11 @@ function LoginForm() {
 }
 
 export default function LoginPage() {
+    const [theme, setTheme] = useState('dark')
+    useEffect(() => {
+    const saved = localStorage.getItem('theme') || 'dark'
+    setTheme(saved)
+    }, [])    
   return (
     <Suspense>
       <LoginForm />

@@ -6,12 +6,6 @@ import { useState, useEffect } from 'react'
 export default function PendingPage() {
   const router = useRouter()
 
-  const [theme, setTheme] = useState('dark')
-    useEffect(() => {
-  const saved = localStorage.getItem('theme') || 'dark'
-  setTheme(saved)
-    }, [])
-
   const supabase = createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY

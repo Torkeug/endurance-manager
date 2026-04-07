@@ -56,11 +56,11 @@ function LoginForm() {
       <div style={{ width: '100%', maxWidth: '400px' }}>
         {/* Logo */}
         <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
-            <img
-                src={theme === 'dark' ? '/kronos-logo-text.png' : '/kronos-logo-light.png'}
-                alt="Kronos SimSports"
-                style={{ height: '56px', objectFit: 'contain', display: 'block', margin: '0 auto' }}
-            />
+        <img
+            src={theme === 'dark' ? '/kronos-logo-text.png' : '/kronos-logo-light.png'}
+            alt="Kronos SimSports"
+            style={{ height: '56px', objectFit: 'contain' }}
+        />
         </div>
 
         <div className="card">

@@ -1,5 +1,5 @@
 'use client'
-import { useState, Suspense, useEffect } from 'react'
+import { useState, Suspense } from 'react'
 import { useRouter } from 'next/navigation'
 import { createBrowserClient } from '@supabase/ssr'
 import Link from 'next/link'
@@ -7,12 +7,6 @@ import Link from 'next/link'
 function RegisterForm() {
   const router = useRouter()
 
-  const [theme, setTheme] = useState('dark')
-  useEffect(() => {
-    const saved = localStorage.getItem('theme') || 'dark'
-    setTheme(saved)
-  }, [])
-  
   const [form, setForm] = useState({
     name:       '',
     email:      '',
@@ -127,13 +121,13 @@ function RegisterForm() {
       background: 'var(--bg)', padding: '1.5rem',
     }}>
       <div style={{ width: '100%', maxWidth: '480px' }}>
-        {/* Logo */}
         <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
-            <img
-                src={theme === 'dark' ? '/kronos-logo-text.png' : '/kronos-logo-light.png'}
-                alt="Kronos SimSports"
-                style={{ height: '56px', objectFit: 'contain', display: 'block', margin: '0 auto' }}
-            />
+          <div style={{ display: 'inline-flex', alignItems: 'baseline', gap: '0.5rem', marginBottom: '0.5rem' }}>
+            <span style={{ background: 'var(--accent)', color: '#000', fontWeight: 700,
+              fontSize: '1.5rem', padding: '0.15rem 0.5rem' }}>K</span>
+            <img src="/kronos-logo.png" alt="Kronos" style={{ width: '32px', height: '32px', objectFit: 'contain' }} />
+          </div>
+          <div style={{ color: 'var(--text-dim)', fontSize: '0.85rem' }}>Créer un compte</div>
         </div>
 
         <div className="card">

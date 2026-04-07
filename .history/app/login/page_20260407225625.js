@@ -55,12 +55,18 @@ function LoginForm() {
     }}>
       <div style={{ width: '100%', maxWidth: '400px' }}>
         {/* Logo */}
-        <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
-            <img
-                src={theme === 'dark' ? '/kronos-logo-text.png' : '/kronos-logo-light.png'}
-                alt="Kronos SimSports"
-                style={{ height: '56px', objectFit: 'contain', display: 'block', margin: '0 auto' }}
-            />
+        <div style={{ textAlign: 'center', marginBottom: '2.5rem' }}>
+          <div style={{ display: 'inline-flex', alignItems: 'baseline', gap: '0.5rem', marginBottom: '0.5rem' }}>
+            <div style={{ textAlign: 'center', marginBottom: '2.5rem' }}>
+                <img
+                    src={theme === 'dark' ? '/kronos-logo-text.png' : '/kronos-logo-light.png'}
+                    alt="Kronos SimSports"
+                    style={{ height: '56px', objectFit: 'contain' }}
+                />
+                </div>
+            </div>
+          <div style={{ color: 'var(--text-dim)', fontSize: '0.85rem', letterSpacing: '0.1em',
+            textTransform: 'uppercase' }}>Endurance Planner</div>
         </div>
 
         <div className="card">

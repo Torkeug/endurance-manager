@@ -32,8 +32,10 @@ export default function Nav() {
     supabase.auth.getUser().then(async ({ data: { user } }) => {
       if (!user) return
       const { data } = await supabase
-        .from('drivers').select('id, name, role')
-        .eq('auth_user_id', user.id).single()
+        .from('drivers')
+        .select('id, name, role')
+        .eq('auth_user_id', user.id)
+        .single()
       if (data) setDriver(data)
     })
   }, [])
@@ -52,8 +54,6 @@ export default function Nav() {
 
   const isAdmin = driver?.role === 'admin' || driver?.role === 'super_admin'
 
-  const logoSrc = theme === 'dark' ? '/kronos-logo-text.png' : '/kronos-logo-light.png'
-
   return (
     <nav style={{
       background: 'var(--surface)',
@@ -65,38 +65,36 @@ export default function Nav() {
         display: 'flex', alignItems: 'center', gap: '1.5rem', height: '56px',
       }}>
         {/* Brand */}
-        <Link href="/" style={{ textDecoration: 'none', flexShrink: 0 }}>
-          <img src={logoSrc} alt="Kronos SimSports"
-            style={{ height: '34px', objectFit: 'contain', display: 'block' }} />
+        <Link href="/" style={{ textDecoration: 'none', display: 'flex', alignItems: 'baseline', gap: '0.5rem', flexShrink: 0 }}>
+          <img src="/kronos-logo.png" alt="Kronos" style={{ width: '32px', height: '32px', objectFit: 'contain' }} />
+          <span style={{ color: 'var(--text)', fontWeight: 700, fontSize: '1rem', letterSpacing: '0.12em', textTransform: 'uppercase' }}>KRONOS</span>
+          <span style={{ color: 'var(--text-dim)', fontWeight: 500, fontSize: '0.75rem', letterSpacing: '0.1em', textTransform: 'uppercase' }}>ENDURANCE</span>
         </Link>
 
-        {/* Links — only when logged in */}
-        {driver ? (
-          <div style={{ display: 'flex', gap: '0.25rem', flex: 1 }}>
-            {links
-              .filter(l => l.href !== '/admin' || isAdmin)
-              .map(({ href, label }) => {
-                const active = pathname === href || (href !== '/' && pathname.startsWith(href))
-                return (
-                  <Link key={href} href={href} style={{
-                    textDecoration: 'none', padding: '0.4rem 0.85rem', borderRadius: '3px',
-                    fontSize: '0.85rem', fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase',
-                    color: active ? 'var(--accent)' : 'var(--text-dim)',
-                    background: active ? 'var(--surface-2)' : 'transparent',
-                    borderBottom: active ? '2px solid var(--accent)' : '2px solid transparent',
-                    transition: 'color 0.15s', whiteSpace: 'nowrap',
-                  }}>
-                    {label}
-                  </Link>
-                )
-              })}
-          </div>
-        ) : (
-          <div style={{ flex: 1 }} />
-        )}
+        {/* Links */}
+        <div style={{ display: 'flex', gap: '0.25rem', flex: 1 }}>
+          {links
+            .filter(l => l.href !== '/admin' || isAdmin)
+            .map(({ href, label }) => {
+              const active = pathname === href || (href !== '/' && pathname.startsWith(href))
+              return (
+                <Link key={href} href={href} style={{
+                  textDecoration: 'none', padding: '0.4rem 0.85rem', borderRadius: '3px',
+                  fontSize: '0.85rem', fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase',
+                  color: active ? 'var(--accent)' : 'var(--text-dim)',
+                  background: active ? 'var(--surface-2)' : 'transparent',
+                  borderBottom: active ? '2px solid var(--accent)' : '2px solid transparent',
+                  transition: 'color 0.15s', whiteSpace: 'nowrap',
+                }}>
+                  {label}
+                </Link>
+              )
+            })}
+        </div>
 
         {/* Right side */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexShrink: 0 }}>
+          {/* Driver name */}
           {driver && (
             <Link href={`/pilotes/${driver.id}`} style={{
               textDecoration: 'none', fontSize: '0.82rem', fontWeight: 600,
@@ -112,11 +110,13 @@ export default function Nav() {
             </Link>
           )}
 
+          {/* Theme toggle */}
           <button onClick={toggleTheme} className="theme-toggle"
             title={theme === 'dark' ? 'Mode clair' : 'Mode sombre'}>
             {theme === 'dark' ? '☀️' : '🌙'}
           </button>
 
+          {/* Logout */}
           {driver && (
             <button onClick={handleLogout} className="btn btn-secondary btn-sm">
               Déconnexion
