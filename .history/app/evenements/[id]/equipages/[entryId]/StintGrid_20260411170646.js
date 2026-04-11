@@ -375,56 +375,6 @@ export default function StintGrid({ teamEntryId, teamEntry, assignedDrivers }) {
         ))}
       </div>
 
-      {/* Fair share */}
-      {assignedDrivers.length > 0 && calculated.length > 0 && (() => {
-        const totalLaps = calculated.reduce((sum, s) => sum + (s._laps || 0), 0)
-        const equalShare = totalLaps / assignedDrivers.length
-        const fairShareMin = Math.ceil(equalShare * 0.25)
-
-        const lapsByDriver = {}
-        assignedDrivers.forEach(d => {
-          if (d.drivers?.id) lapsByDriver[d.drivers.id] = 0
-        })
-        calculated.forEach(s => {
-          if (s.driver_id && s._laps) {
-            lapsByDriver[s.driver_id] = (lapsByDriver[s.driver_id] || 0) + s._laps
-          }
-        })
-
-        return (
-          <div style={{ marginBottom: '1rem' }}>
-            <div style={{ fontSize: '0.72rem', fontWeight: 700, letterSpacing: '0.08em',
-              textTransform: 'uppercase', color: 'var(--text-dim)', marginBottom: '0.5rem' }}>
-              Fair Share — minimum {fairShareMin} tours ({Math.round(equalShare)} part égale)
-            </div>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
-              {assignedDrivers.map(d => {
-                const driverId = d.drivers?.id
-                const name = d.drivers?.name || '—'
-                const laps = lapsByDriver[driverId] || 0
-                const ok = laps >= fairShareMin
-                return (
-                  <div key={driverId} style={{
-                    background: 'var(--surface-2)', border: '1px solid',
-                    borderColor: ok ? '#2eb460' : totalLaps === 0 ? 'var(--border)' : 'var(--danger)',
-                    borderRadius: '3px', padding: '0.4rem 0.75rem',
-                    display: 'flex', alignItems: 'center', gap: '0.5rem',
-                  }}>
-                    <span style={{ fontSize: totalLaps === 0 ? '0.8rem' : '0.9rem' }}>
-                      {totalLaps === 0 ? '—' : ok ? '✅' : '❌'}
-                    </span>
-                    <span style={{ fontSize: '0.82rem', fontWeight: 600 }}>{name}</span>
-                    <span className="mono" style={{ fontSize: '0.75rem', color: 'var(--text-dim)' }}>
-                      {laps} tours
-                    </span>
-                  </div>
-                )
-              })}
-            </div>
-          </div>
-        )
-      })()}
-
       {/* Grid */}
       <div style={{ overflowX: 'auto', border: '1px solid var(--border)', borderRadius: '4px', marginBottom: '1rem' }}>
         <table style={{ borderCollapse: 'collapse', width: '100%', minWidth: `${680 + assignedDrivers.length * 26}px` }}>
