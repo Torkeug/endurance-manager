@@ -62,7 +62,7 @@ export default function ModifierEquipage({ params }) {
         }
         }
         setCars(filteredCars)
-        setCrewNames(crewData?.map(c => c.name).sort((a, b) => a.localeCompare(b)) || [])
+        setCrewNames(crewData?.map(c => c.name) || [])
 
         // Load start times
         supabase.from('event_start_times').select('*')

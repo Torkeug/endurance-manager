@@ -121,7 +121,7 @@ export default async function DriverDetail({ params }) {
             <Link href={`/pilotes/${id}/modifier`} className="btn btn-secondary">Modifier</Link>
           )}
           {currentDriver?.id === id && (
-            <Link href="/change-password" className="btn btn-danger btn-sm">
+            <Link href="/update-password" className="btn btn-danger btn-sm">
               Changer mot de passe
             </Link>
           )}

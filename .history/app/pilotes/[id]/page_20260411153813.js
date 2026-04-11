@@ -1,7 +1,6 @@
 import { supabaseServer as supabase } from '../../../lib/supabase-server'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { getSessionAndDriver, isAdmin } from '../../../lib/auth'
 
 export const revalidate = 0
 
@@ -22,8 +21,6 @@ function formatDuration(minutes) {
 
 export default async function DriverDetail({ params }) {
   const { id } = await params
-  const { driver: currentDriver } = await getSessionAndDriver()
-  const admin = isAdmin(currentDriver)
 
   // Fetch driver
   const { data: driver, error } = await supabase
@@ -117,14 +114,7 @@ export default async function DriverDetail({ params }) {
           </div>
         </div>
         <div style={{ display: 'flex', gap: '0.75rem' }}>
-          {(admin || currentDriver?.id === id) && (
-            <Link href={`/pilotes/${id}/modifier`} className="btn btn-secondary">Modifier</Link>
-          )}
-          {currentDriver?.id === id && (
-            <Link href="/change-password" className="btn btn-danger btn-sm">
-              Changer mot de passe
-            </Link>
-          )}
+          <Link href={`/pilotes/${id}/modifier`} className="btn btn-secondary">Modifier</Link>
           <Link href="/pilotes" className="btn btn-secondary">← Pilotes</Link>
         </div>
       </div>

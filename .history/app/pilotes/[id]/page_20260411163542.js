@@ -21,6 +21,8 @@ function formatDuration(minutes) {
 }
 
 export default async function DriverDetail({ params }) {
+  const { data: { user } } = await supabase.auth.getUser()
+console.log('user:', user?.email)
   const { id } = await params
   const { driver: currentDriver } = await getSessionAndDriver()
   const admin = isAdmin(currentDriver)

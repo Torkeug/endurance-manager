@@ -22,6 +22,7 @@ function formatDuration(minutes) {
 
 export default async function DriverDetail({ params }) {
   const { id } = await params
+  const { id } = await params
   const { driver: currentDriver } = await getSessionAndDriver()
   const admin = isAdmin(currentDriver)
 
@@ -117,14 +118,7 @@ export default async function DriverDetail({ params }) {
           </div>
         </div>
         <div style={{ display: 'flex', gap: '0.75rem' }}>
-          {(admin || currentDriver?.id === id) && (
-            <Link href={`/pilotes/${id}/modifier`} className="btn btn-secondary">Modifier</Link>
-          )}
-          {currentDriver?.id === id && (
-            <Link href="/change-password" className="btn btn-danger btn-sm">
-              Changer mot de passe
-            </Link>
-          )}
+          <Link href={`/pilotes/${id}/modifier`} className="btn btn-secondary">Modifier</Link>
           <Link href="/pilotes" className="btn btn-secondary">← Pilotes</Link>
         </div>
       </div>

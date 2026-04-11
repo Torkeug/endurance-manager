@@ -35,8 +35,8 @@ export default async function PilotesPage() {
           </div>
         </div>
       ) : (
-        <div className="table-wrap" style={{ overflowX: 'auto' }}>
-          <table style={{ minWidth: '900px' }}>
+        <div className="table-wrap">
+          <table>
             <thead>
               <tr>
                 <th>Nom</th>
@@ -92,7 +92,7 @@ export default async function PilotesPage() {
                       {p.role === 'super_admin' ? 'Super Admin' : p.role === 'admin' ? 'Admin' : 'Pilote'}
                     </span>
                   </td>
-                  <td>
+                  <td style={{ minWidth: '500px' }}>
                     <div style={{ display: 'flex', gap: '0.5rem' }}>
                       <Link href={`/pilotes/${p.id}`} className="btn btn-primary btn-sm">Voir</Link>
                       {(admin || currentDriver?.id === p.id) && (

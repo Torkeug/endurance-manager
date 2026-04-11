@@ -321,7 +321,7 @@ export default function AvailabilityGrid({
                   onConflict: 'team_entry_id,driver_id,slot_start'
                 })
               }}
-              className="btn btn-danger btn-sm"
+              className="btn btn-secondary btn-sm"
             >
               Effacer mes disponibilités
             </button>

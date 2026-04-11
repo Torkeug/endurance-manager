@@ -116,17 +116,7 @@ export default function Inscription({ params }) {
         setCars(filteredCars)
         setFetching(false)
         const preselect = searchParams.get('driver')
-        if (preselect) {
-          setDriverId(preselect)
-        } else {
-          // Default to logged-in user
-          supabase.auth.getUser().then(async ({ data: { user } }) => {
-            if (!user) return
-            const { data: driver } = await supabase
-              .from('drivers').select('id').eq('auth_user_id', user.id).single()
-            if (driver) setDriverId(driver.id)
-          })
-        }
+        if (preselect) setDriverId(preselect)
     })
     }, [id, searchParams])
 
