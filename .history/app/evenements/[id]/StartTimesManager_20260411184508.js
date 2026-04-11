@@ -116,9 +116,6 @@ export default function StartTimesManager({ eventId, initialStartTimes, timezone
 
   return (
     <div>
-    {error && !adding && !editingId && (
-      <div className="alert alert-error" style={{ marginBottom: '0.75rem' }}>{error}</div>
-    )}
       {sorted.length === 0 && !adding && (
         <div className="card" style={{ marginBottom: '0.75rem' }}>
           <div className="empty" style={{ padding: '1.5rem' }}>

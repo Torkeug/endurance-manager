@@ -69,14 +69,7 @@ export default function StartTimesManager({ eventId, initialStartTimes, timezone
   const handleDelete = async (stId) => {
     if (!confirm('Supprimer ce créneau de départ ?')) return
     const { error: err } = await supabase.from('event_start_times').delete().eq('id', stId)
-    if (err) {
-      if (err.code === '23503') {
-        setError('Ce créneau est utilisé par un ou plusieurs équipages et ne peut pas être supprimé.')
-      } else {
-        setError(err.message)
-      }
-      return
-    }
+    if (err) { setError(err.message); return }
     setStartTimes(prev => prev.filter(s => s.id !== stId))
     if (editingId === stId) resetForm()
     router.refresh()
@@ -116,9 +109,6 @@ export default function StartTimesManager({ eventId, initialStartTimes, timezone
 
   return (
     <div>
-    {error && !adding && !editingId && (
-      <div className="alert alert-error" style={{ marginBottom: '0.75rem' }}>{error}</div>
-    )}
       {sorted.length === 0 && !adding && (
         <div className="card" style={{ marginBottom: '0.75rem' }}>
           <div className="empty" style={{ padding: '1.5rem' }}>
