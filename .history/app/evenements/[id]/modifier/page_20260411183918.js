@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { createBrowserClient } from '@supabase/ssr'
 import { TIMEZONES } from '../../../../lib/timezone'
 
+const FORMATS = ['NEC', 'IMSA', 'GT World Challenge', 'Fanatec', 'VCO', 'Libre']
 
 const DURATIONS = [
   { label: '2h30', value: 150 },
@@ -18,7 +19,6 @@ const DURATIONS = [
 export default function ModifierEvenement({ params }) {
   const router  = useRouter()
   const { id }  = use(params)
-  const [eventTypes, setEventTypes] = useState([])
 
   const supabase = createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -82,11 +82,6 @@ export default function ModifierEvenement({ params }) {
     const c = circuits.find(c => c.id === form.circuit_id)
     setPitTime(c ? c.pit_lane_time_seconds : null)
   }, [form?.circuit_id, circuits])
-
-  useEffect(() => {
-    supabase.from('event_types').select('name').order('sort_order')
-      .then(({ data }) => setEventTypes(data?.map(t => t.name) || []))
-  }, [])
 
   const set = (field) => (e) =>
     setForm((prev) => ({ ...prev, [field]: e.target.value }))
@@ -191,7 +186,7 @@ export default function ModifierEvenement({ params }) {
               <label htmlFor="format">Format</label>
               <select id="format" value={form.format} onChange={set('format')}>
                 <option value="">— Sélectionner —</option>
-                {eventTypes.map(f => <option key={f} value={f}>{f}</option>)}
+                {FORMATS.map(f => <option key={f} value={f}>{f}</option>)}
               </select>
             </div>
             <div className="form-group" style={{ gridColumn: '1 / -1' }}>

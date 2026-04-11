@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { createBrowserClient } from '@supabase/ssr'
 import { TIMEZONES } from '../../../../lib/timezone'
 
+const [eventTypes, setEventTypes] = useState([])
 
 const DURATIONS = [
   { label: '2h30', value: 150 },
@@ -18,7 +19,6 @@ const DURATIONS = [
 export default function ModifierEvenement({ params }) {
   const router  = useRouter()
   const { id }  = use(params)
-  const [eventTypes, setEventTypes] = useState([])
 
   const supabase = createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -191,7 +191,7 @@ export default function ModifierEvenement({ params }) {
               <label htmlFor="format">Format</label>
               <select id="format" value={form.format} onChange={set('format')}>
                 <option value="">— Sélectionner —</option>
-                {eventTypes.map(f => <option key={f} value={f}>{f}</option>)}
+                {FORMATS.map(f => <option key={f} value={f}>{f}</option>)}
               </select>
             </div>
             <div className="form-group" style={{ gridColumn: '1 / -1' }}>

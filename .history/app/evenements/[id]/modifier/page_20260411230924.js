@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { createBrowserClient } from '@supabase/ssr'
 import { TIMEZONES } from '../../../../lib/timezone'
 
+const [eventTypes, setEventTypes] = useState([])
 
 const DURATIONS = [
   { label: '2h30', value: 150 },
@@ -18,7 +19,6 @@ const DURATIONS = [
 export default function ModifierEvenement({ params }) {
   const router  = useRouter()
   const { id }  = use(params)
-  const [eventTypes, setEventTypes] = useState([])
 
   const supabase = createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL,
