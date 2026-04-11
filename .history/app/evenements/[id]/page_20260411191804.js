@@ -3,7 +3,7 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import StartTimesManager from './StartTimesManager'
 import { getSessionAndDriver, isAdmin } from '../../../lib/auth'
-import { formatInZone, formatDateInZone, formatTimeInZone } from '../../../lib/timezone'
+import { formatInZone, formatDateInZone } from '../../../lib/timezone'
 
 export const revalidate = 0
 
@@ -258,15 +258,10 @@ export default async function EvenementDetail({ params }) {
                       )}
                     </div>
                   </td>
-                  <td>
-                    {entry.event_start_times ? (
-                      <>
-                        <div style={{ fontWeight: 600 }}>{entry.event_start_times.label}</div>
-                        <div className="mono" style={{ fontSize: '0.82rem', color: 'var(--accent)', marginTop: '0.1rem' }}>
-                          Départ à {formatTimeInZone(entry.event_start_times.irl_start, event.timezone || 'Europe/Paris')}
-                        </div>
-                      </>
-                    ) : '—'}
+                  <td className="mono" style={{ fontSize: '0.85rem', color: 'var(--text-dim)' }}>
+                    {entry.event_start_times
+                      ? `${entry.event_start_times.label} — ${formatInZone(entry.event_start_times.irl_start, event.timezone || 'Europe/Paris')}`
+                      : '—'}
                   </td>
                   <td>
                     {entry.stream_url

@@ -2,9 +2,8 @@
 import React, { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createBrowserClient } from '@supabase/ssr'
-import { localToUTC, utcToInputValues, formatInZone, utcToLocal, formatTimeInZone } from '../../../lib/timezone'
+import { localToUTC, utcToInputValues, formatInZone, utcToLocal } from '../../../lib/timezone'
 import { DateTime } from 'luxon'
-
 
 function generateLabel(date, time, tz) {
   const dt = DateTime.fromISO(`${date}T${time}:00`, { zone: tz }).setLocale('fr')
@@ -142,16 +141,20 @@ export default function StartTimesManager({ eventId, initialStartTimes, timezone
               {sorted.map((st) => (
                 <React.Fragment key={st.id}>
                   <tr>
-                    <td>
+                    <td colSpan={2}>
                       <div style={{ fontWeight: 600 }}>{st.label}</div>
                       <div className="mono" style={{ fontSize: '0.82rem', color: 'var(--accent)', marginTop: '0.1rem' }}>
                         Départ à {formatTimeInZone(st.irl_start, timezone)}
                       </div>
                     </td>
-                    <td style={{ textAlign: 'right' }}>
-                      <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
-                        <button onClick={() => startEdit(st)} className="btn btn-secondary btn-sm">Modifier</button>
-                        <button onClick={() => handleDelete(st.id)} className="btn btn-danger btn-sm">Supprimer</button>
+                    <td>
+                      <div style={{ display: 'flex', gap: '0.5rem' }}>
+                        <button onClick={() => startEdit(st)} className="btn btn-secondary btn-sm">
+                          Modifier
+                        </button>
+                        <button onClick={() => handleDelete(st.id)} className="btn btn-danger btn-sm">
+                          Supprimer
+                        </button>
                       </div>
                     </td>
                   </tr>

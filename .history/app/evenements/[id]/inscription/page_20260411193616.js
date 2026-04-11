@@ -97,7 +97,6 @@ export default function Inscription({ params }) {
     ]).then(async ([{ data: driversData }, { data: carsData }, { data: evData }, { data: entriesData }, { data: stData }]) => {
         setDrivers(driversData || [])
         setEventName(evData?.name || '')
-        setEventTimezone(evData?.timezone || 'Europe/Paris')
         setCarEntries(entriesData || [])
         setStartTimes(stData || [])
 

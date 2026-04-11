@@ -3,7 +3,7 @@ import { useState, useEffect, use } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createBrowserClient } from '@supabase/ssr'
-import { formatInZone, formatTimeInZone } from '../../../../../lib/timezone'
+import { formatInZone } from '../../../../../lib/timezone'
 
 const CLASSES_FALLBACK = ['GTP', 'LMP2', 'GT3', 'GT4', 'CUP', 'TCR', 'Other']
 
@@ -239,10 +239,10 @@ export default function NouvelEquipage({ params }) {
                     onChange={set('start_time_id')}
                     style={{ accentColor: 'var(--accent)' }} />
                   <div>
-                  <div style={{ fontWeight: 600, fontSize: '0.95rem' }}>{st.label}</div>
-                  <div className="mono" style={{ fontSize: '0.8rem', color: 'var(--accent)', marginTop: '0.1rem' }}>
-                    Départ à {formatTimeInZone(st.irl_start, eventTimezone)}
-                  </div>
+                    <div style={{ fontWeight: 600, fontSize: '0.95rem' }}>{st.label}</div>
+                    <div className="mono" style={{ fontSize: '0.8rem', color: 'var(--text-dim)' }}>
+                      {formatInZone(st.irl_start, eventTimezone)}
+                    </div>
                   </div>
                 </label>
               ))}

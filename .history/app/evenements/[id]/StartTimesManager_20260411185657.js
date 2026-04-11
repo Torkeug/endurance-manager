@@ -2,9 +2,8 @@
 import React, { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createBrowserClient } from '@supabase/ssr'
-import { localToUTC, utcToInputValues, formatInZone, utcToLocal, formatTimeInZone } from '../../../lib/timezone'
+import { localToUTC, utcToInputValues, formatInZone, utcToLocal } from '../../../lib/timezone'
 import { DateTime } from 'luxon'
-
 
 function generateLabel(date, time, tz) {
   const dt = DateTime.fromISO(`${date}T${time}:00`, { zone: tz }).setLocale('fr')
@@ -34,7 +33,7 @@ export default function StartTimesManager({ eventId, initialStartTimes, timezone
 
   const resetForm = () => {
     setAdding(false); setEditingId(null)
-    setDate(''); setTime('')
+    setLabel(''); setDate(''); setTime('')
     setError(null)
   }
 
@@ -48,6 +47,7 @@ export default function StartTimesManager({ eventId, initialStartTimes, timezone
   }
 
   const handleAdd = async () => {
+    if (!label.trim()) { setError('Le libellé est obligatoire.'); return }
     if (!date)         { setError('La date est obligatoire.'); return }
     if (!time)         { setError("L'heure est obligatoire."); return }
     setSaving(true); setError(null)
@@ -61,6 +61,7 @@ export default function StartTimesManager({ eventId, initialStartTimes, timezone
   }
 
   const handleSaveEdit = async () => {
+    if (!label.trim()) { setError('Le libellé est obligatoire.'); return }
     if (!date)         { setError('La date est obligatoire.'); return }
     if (!time)         { setError("L'heure est obligatoire."); return }
     setSaving(true); setError(null)
@@ -134,7 +135,8 @@ export default function StartTimesManager({ eventId, initialStartTimes, timezone
           <table>
             <thead>
               <tr>
-                <th>Créneau de départ</th>
+                <th>Libellé</th>
+                <th>Date et heure IRL</th>
                 <th></th>
               </tr>
             </thead>
@@ -142,16 +144,18 @@ export default function StartTimesManager({ eventId, initialStartTimes, timezone
               {sorted.map((st) => (
                 <React.Fragment key={st.id}>
                   <tr>
-                    <td>
-                      <div style={{ fontWeight: 600 }}>{st.label}</div>
-                      <div className="mono" style={{ fontSize: '0.82rem', color: 'var(--accent)', marginTop: '0.1rem' }}>
-                        Départ à {formatTimeInZone(st.irl_start, timezone)}
-                      </div>
+                    <td style={{ fontWeight: 600 }}>{st.label}</td>
+                    <td className="mono" style={{ fontSize: '0.85rem', color: 'var(--text-dim)' }}>
+                      {formatDatetime(st.irl_start)}
                     </td>
-                    <td style={{ textAlign: 'right' }}>
-                      <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
-                        <button onClick={() => startEdit(st)} className="btn btn-secondary btn-sm">Modifier</button>
-                        <button onClick={() => handleDelete(st.id)} className="btn btn-danger btn-sm">Supprimer</button>
+                    <td>
+                      <div style={{ display: 'flex', gap: '0.5rem' }}>
+                        <button onClick={() => startEdit(st)} className="btn btn-secondary btn-sm">
+                          Modifier
+                        </button>
+                        <button onClick={() => handleDelete(st.id)} className="btn btn-danger btn-sm">
+                          Supprimer
+                        </button>
                       </div>
                     </td>
                   </tr>
@@ -175,7 +179,7 @@ export default function StartTimesManager({ eventId, initialStartTimes, timezone
           {inlineForm(handleAdd, resetForm, '✓ Ajouter')}
         </div>
       ) : !editingId && (
-        <button onClick={() => { setEditingId(null); setDate(''); setTime(''); setError(null); setAdding(true) }} className="btn btn-secondary">
+        <button onClick={() => { setEditingId(null); setLabel(''); setDate(''); setTime(''); setError(null); setAdding(true) }} className="btn btn-secondary">
           + Ajouter un créneau de départ
         </button>
       )}

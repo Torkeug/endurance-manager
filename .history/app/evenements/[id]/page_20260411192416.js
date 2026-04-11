@@ -3,7 +3,7 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import StartTimesManager from './StartTimesManager'
 import { getSessionAndDriver, isAdmin } from '../../../lib/auth'
-import { formatInZone, formatDateInZone, formatTimeInZone } from '../../../lib/timezone'
+import { formatInZone, formatDateInZone } from '../../../lib/timezone'
 
 export const revalidate = 0
 

@@ -3,7 +3,7 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import EquipageTabs from './EquipageTabs'
 import { getSessionAndDriver } from '../../../../../lib/auth'
-import { formatInZone, formatTimeInZone } from '../../../../../lib/timezone'
+import { formatInZone } from '../../../../../lib/timezone'
 
 export const revalidate = 0
 
@@ -80,9 +80,7 @@ export default async function EquipageDetail({ params }) {
           </div>
           <div style={{ fontWeight: 700 }}>{entry.event_start_times.label}</div>
           <div className="mono" style={{ color: 'var(--text-dim)', fontSize: '0.85rem' }}>
-          <div className="mono" style={{ color: 'var(--accent)', fontSize: '0.85rem' }}>
-            Départ à {formatTimeInZone(entry.event_start_times.irl_start, entry.events?.timezone || 'Europe/Paris')}
-          </div>
+            {formatInZone(entry.event_start_times.irl_start, entry.events?.timezone || 'Europe/Paris')}
           </div>
         </div>
       )}

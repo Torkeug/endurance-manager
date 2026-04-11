@@ -3,7 +3,6 @@ import { useState, useEffect, use } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { createBrowserClient } from '@supabase/ssr'
-import { formatTimeInZone } from '../../../../lib/timezone'
 
 const CLASSES = ['GTP', 'LMP2', 'GT3', 'GT4', 'CUP', 'TCR']
 
@@ -97,7 +96,6 @@ export default function Inscription({ params }) {
     ]).then(async ([{ data: driversData }, { data: carsData }, { data: evData }, { data: entriesData }, { data: stData }]) => {
         setDrivers(driversData || [])
         setEventName(evData?.name || '')
-        setEventTimezone(evData?.timezone || 'Europe/Paris')
         setCarEntries(entriesData || [])
         setStartTimes(stData || [])
 

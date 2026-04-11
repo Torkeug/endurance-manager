@@ -148,8 +148,8 @@ export default function StartTimesManager({ eventId, initialStartTimes, timezone
                         Départ à {formatTimeInZone(st.irl_start, timezone)}
                       </div>
                     </td>
-                    <td style={{ textAlign: 'right' }}>
-                      <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
+                    <td>
+                      <div style={{ display: 'flex', gap: '0.5rem' }}>
                         <button onClick={() => startEdit(st)} className="btn btn-secondary btn-sm">Modifier</button>
                         <button onClick={() => handleDelete(st.id)} className="btn btn-danger btn-sm">Supprimer</button>
                       </div>

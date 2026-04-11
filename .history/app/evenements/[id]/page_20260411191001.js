@@ -3,7 +3,7 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import StartTimesManager from './StartTimesManager'
 import { getSessionAndDriver, isAdmin } from '../../../lib/auth'
-import { formatInZone, formatDateInZone, formatTimeInZone } from '../../../lib/timezone'
+import { formatInZone, formatDateInZone } from '../../../lib/timezone'
 
 export const revalidate = 0
 
@@ -35,11 +35,7 @@ export default async function EvenementDetail({ params }) {
       team_entries (
         id, crew_name, class, stream_url, start_time_id,
         cars (name),
-        event_start_times (irl_start, label),
-        signups (
-          team_entry_id,
-          drivers (id, name)
-        )
+        event_start_times (irl_start, label)
       ),
       event_start_times (id, label, irl_start),
       signups (
@@ -238,35 +234,10 @@ export default async function EvenementDetail({ params }) {
                   <td style={{ fontWeight: 600 }}>{entry.crew_name}</td>
                   <td style={{ color: 'var(--text-dim)' }}>{entry.cars?.name || '—'}</td>
                   <td>{entry.class && <span className="badge badge-driver">{entry.class}</span>}</td>
-                  <td>
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.25rem' }}>
-                      {(entry.signups || [])
-                        .filter(s => s.drivers)
-                        .map(s => (
-                          <span key={s.drivers.id} style={{
-                            fontSize: '0.75rem', padding: '0.1rem 0.4rem',
-                            background: 'var(--surface-2)', border: '1px solid var(--border)',
-                            borderRadius: '2px', color: 'var(--text-dim)',
-                            whiteSpace: 'nowrap',
-                          }}>
-                            {s.drivers.name}
-                          </span>
-                        ))
-                      }
-                      {(entry.signups || []).filter(s => s.drivers).length === 0 && (
-                        <span style={{ color: 'var(--text-dim)', fontSize: '0.85rem' }}>—</span>
-                      )}
-                    </div>
-                  </td>
-                  <td>
-                    {entry.event_start_times ? (
-                      <>
-                        <div style={{ fontWeight: 600 }}>{entry.event_start_times.label}</div>
-                        <div className="mono" style={{ fontSize: '0.82rem', color: 'var(--accent)', marginTop: '0.1rem' }}>
-                          Départ à {formatTimeInZone(entry.event_start_times.irl_start, event.timezone || 'Europe/Paris')}
-                        </div>
-                      </>
-                    ) : '—'}
+                  <td className="mono" style={{ fontSize: '0.85rem', color: 'var(--text-dim)' }}>
+                    {entry.event_start_times
+                      ? `${entry.event_start_times.label} — ${formatInZone(entry.event_start_times.irl_start, event.timezone || 'Europe/Paris')}`
+                      : '—'}
                   </td>
                   <td>
                     {entry.stream_url

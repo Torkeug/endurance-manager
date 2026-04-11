@@ -80,9 +80,7 @@ export default async function EquipageDetail({ params }) {
           </div>
           <div style={{ fontWeight: 700 }}>{entry.event_start_times.label}</div>
           <div className="mono" style={{ color: 'var(--text-dim)', fontSize: '0.85rem' }}>
-          <div className="mono" style={{ color: 'var(--accent)', fontSize: '0.85rem' }}>
-            Départ à {formatTimeInZone(entry.event_start_times.irl_start, entry.events?.timezone || 'Europe/Paris')}
-          </div>
+            {formatInZone(entry.event_start_times.irl_start, entry.events?.timezone || 'Europe/Paris')}
           </div>
         </div>
       )}

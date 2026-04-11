@@ -3,7 +3,6 @@ import { useState, useEffect, use } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { createBrowserClient } from '@supabase/ssr'
-import { formatTimeInZone } from '../../../../lib/timezone'
 
 const CLASSES = ['GTP', 'LMP2', 'GT3', 'GT4', 'CUP', 'TCR']
 
@@ -57,7 +56,6 @@ function ClassCheckbox({ cls, checked, onChange }) {
 }
 
 export default function Inscription({ params }) {
-  const [eventTimezone, setEventTimezone] = useState('Europe/Paris')
   const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
@@ -89,7 +87,7 @@ export default function Inscription({ params }) {
     Promise.all([
         supabase.from('drivers').select('id, name').eq('active', true).order('name'),
         supabase.from('cars').select('id, name, class').order('class').order('name'),
-        supabase.from('events').select('name, format, timezone').eq('id', id).single(),
+        supabase.from('events').select('name, format').eq('id', id).single(),
         supabase.from('team_entries')
         .select('id, crew_name, class, car_id, cars(id, name, class)')
         .eq('event_id', id).order('crew_name'),
@@ -97,7 +95,6 @@ export default function Inscription({ params }) {
     ]).then(async ([{ data: driversData }, { data: carsData }, { data: evData }, { data: entriesData }, { data: stData }]) => {
         setDrivers(driversData || [])
         setEventName(evData?.name || '')
-        setEventTimezone(evData?.timezone || 'Europe/Paris')
         setCarEntries(entriesData || [])
         setStartTimes(stData || [])
 
@@ -315,8 +312,11 @@ export default function Inscription({ params }) {
                     style={{ accentColor: 'var(--accent)' }} />
                   <div>
                     <div style={{ fontWeight: 600 }}>{st.label}</div>
-                    <div className="mono" style={{ fontSize: '0.8rem', color: 'var(--accent)', marginTop: '0.1rem' }}>
-                      Départ à {formatTimeInZone(st.irl_start, eventTimezone)}
+                    <div className="mono" style={{ fontSize: '0.8rem', color: 'var(--text-dim)' }}>
+                      {new Date(st.irl_start).toLocaleString('fr-FR', {
+                        day: '2-digit', month: '2-digit', year: 'numeric',
+                        hour: '2-digit', minute: '2-digit', hour12: false,
+                      })}
                     </div>
                   </div>
                 </label>

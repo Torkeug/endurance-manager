@@ -3,7 +3,6 @@ import { useState, useEffect, use } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { createBrowserClient } from '@supabase/ssr'
-import { formatTimeInZone } from '../../../../lib/timezone'
 
 const CLASSES = ['GTP', 'LMP2', 'GT3', 'GT4', 'CUP', 'TCR']
 
@@ -89,7 +88,7 @@ export default function Inscription({ params }) {
     Promise.all([
         supabase.from('drivers').select('id, name').eq('active', true).order('name'),
         supabase.from('cars').select('id, name, class').order('class').order('name'),
-        supabase.from('events').select('name, format, timezone').eq('id', id).single(),
+        supabase.from('events').select('name, format').eq('id', id).single(),
         supabase.from('team_entries')
         .select('id, crew_name, class, car_id, cars(id, name, class)')
         .eq('event_id', id).order('crew_name'),
@@ -97,7 +96,6 @@ export default function Inscription({ params }) {
     ]).then(async ([{ data: driversData }, { data: carsData }, { data: evData }, { data: entriesData }, { data: stData }]) => {
         setDrivers(driversData || [])
         setEventName(evData?.name || '')
-        setEventTimezone(evData?.timezone || 'Europe/Paris')
         setCarEntries(entriesData || [])
         setStartTimes(stData || [])
 

@@ -2,18 +2,7 @@
 import React, { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createBrowserClient } from '@supabase/ssr'
-import { localToUTC, utcToInputValues, formatInZone, utcToLocal, formatTimeInZone } from '../../../lib/timezone'
-import { DateTime } from 'luxon'
-
-
-function generateLabel(date, time, tz) {
-  const dt = DateTime.fromISO(`${date}T${time}:00`, { zone: tz }).setLocale('fr')
-  const dayName = dt.toFormat('EEEE')
-  const dayNum  = dt.toFormat('d')
-  const month   = dt.toFormat('MMMM yyyy')
-  const label   = `${dayName.charAt(0).toUpperCase() + dayName.slice(1)} ${dayNum} ${month}`
-  return label
-}
+import { localToUTC, utcToInputValues, formatInZone } from '../../../lib/timezone'
 
 export default function StartTimesManager({ eventId, initialStartTimes, timezone = 'Europe/Paris' }) {
   function formatDatetime(dtStr) {
@@ -27,6 +16,7 @@ export default function StartTimesManager({ eventId, initialStartTimes, timezone
   const [startTimes, setStartTimes] = useState(initialStartTimes)
   const [adding, setAdding]         = useState(false)
   const [editingId, setEditingId]   = useState(null)
+  const [label, setLabel]           = useState('')
   const [date, setDate]             = useState('')
   const [time, setTime]             = useState('')
   const [saving, setSaving]         = useState(false)
@@ -34,13 +24,14 @@ export default function StartTimesManager({ eventId, initialStartTimes, timezone
 
   const resetForm = () => {
     setAdding(false); setEditingId(null)
-    setDate(''); setTime('')
+    setLabel(''); setDate(''); setTime('')
     setError(null)
   }
 
   const startEdit = (st) => {
     const { date: d, time: t } = utcToInputValues(st.irl_start, timezone)
     setEditingId(st.id)
+    setLabel(st.label)
     setDate(d)
     setTime(t)
     setAdding(false)
@@ -48,12 +39,13 @@ export default function StartTimesManager({ eventId, initialStartTimes, timezone
   }
 
   const handleAdd = async () => {
+    if (!label.trim()) { setError('Le libellé est obligatoire.'); return }
     if (!date)         { setError('La date est obligatoire.'); return }
     if (!time)         { setError("L'heure est obligatoire."); return }
     setSaving(true); setError(null)
     const { data, error: err } = await supabase
       .from('event_start_times')
-      .insert([{ event_id: eventId, label: generateLabel(date, time, timezone), irl_start: localToUTC(date, time, timezone) }])
+      .insert([{ event_id: eventId, label: label.trim(), irl_start: localToUTC(date, time, timezone) }])
       .select().single()
     if (err) { setError(err.message); setSaving(false); return }
     setStartTimes(prev => [...prev, data])
@@ -61,12 +53,13 @@ export default function StartTimesManager({ eventId, initialStartTimes, timezone
   }
 
   const handleSaveEdit = async () => {
+    if (!label.trim()) { setError('Le libellé est obligatoire.'); return }
     if (!date)         { setError('La date est obligatoire.'); return }
     if (!time)         { setError("L'heure est obligatoire."); return }
     setSaving(true); setError(null)
     const { data, error: err } = await supabase
       .from('event_start_times')
-      .update({ label: generateLabel(date, time, timezone), irl_start: localToUTC(date, time, timezone) })
+      .update({ label: label.trim(), irl_start: localToUTC(date, time, timezone) })
       .eq('id', editingId).select().single()
     if (err) { setError(err.message); setSaving(false); return }
     setStartTimes(prev => prev.map(s => s.id === editingId ? data : s))
@@ -97,6 +90,11 @@ export default function StartTimesManager({ eventId, initialStartTimes, timezone
   const inlineForm = (onSave, onCancel, saveLabel) => (
     <div style={{ padding: '1rem', background: 'var(--surface-2)' }}>
       <div className="form-grid" style={{ marginBottom: '1rem' }}>
+        <div className="form-group">
+          <label>Libellé</label>
+          <input type="text" value={label} onChange={e => setLabel(e.target.value)}
+            placeholder="ex : Départ 1, 14h00 CET" autoFocus />
+        </div>
         <div className="form-group">
           <label>Date IRL</label>
           <input type="date" value={date} onChange={e => setDate(e.target.value)} />
@@ -134,7 +132,8 @@ export default function StartTimesManager({ eventId, initialStartTimes, timezone
           <table>
             <thead>
               <tr>
-                <th>Créneau de départ</th>
+                <th>Libellé</th>
+                <th>Date et heure IRL</th>
                 <th></th>
               </tr>
             </thead>
@@ -142,16 +141,18 @@ export default function StartTimesManager({ eventId, initialStartTimes, timezone
               {sorted.map((st) => (
                 <React.Fragment key={st.id}>
                   <tr>
-                    <td>
-                      <div style={{ fontWeight: 600 }}>{st.label}</div>
-                      <div className="mono" style={{ fontSize: '0.82rem', color: 'var(--accent)', marginTop: '0.1rem' }}>
-                        Départ à {formatTimeInZone(st.irl_start, timezone)}
-                      </div>
+                    <td style={{ fontWeight: 600 }}>{st.label}</td>
+                    <td className="mono" style={{ fontSize: '0.85rem', color: 'var(--text-dim)' }}>
+                      {formatDatetime(st.irl_start)}
                     </td>
-                    <td style={{ textAlign: 'right' }}>
-                      <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
-                        <button onClick={() => startEdit(st)} className="btn btn-secondary btn-sm">Modifier</button>
-                        <button onClick={() => handleDelete(st.id)} className="btn btn-danger btn-sm">Supprimer</button>
+                    <td>
+                      <div style={{ display: 'flex', gap: '0.5rem' }}>
+                        <button onClick={() => startEdit(st)} className="btn btn-secondary btn-sm">
+                          Modifier
+                        </button>
+                        <button onClick={() => handleDelete(st.id)} className="btn btn-danger btn-sm">
+                          Supprimer
+                        </button>
                       </div>
                     </td>
                   </tr>
@@ -175,7 +176,7 @@ export default function StartTimesManager({ eventId, initialStartTimes, timezone
           {inlineForm(handleAdd, resetForm, '✓ Ajouter')}
         </div>
       ) : !editingId && (
-        <button onClick={() => { setEditingId(null); setDate(''); setTime(''); setError(null); setAdding(true) }} className="btn btn-secondary">
+        <button onClick={() => { setEditingId(null); setLabel(''); setDate(''); setTime(''); setError(null); setAdding(true) }} className="btn btn-secondary">
           + Ajouter un créneau de départ
         </button>
       )}
