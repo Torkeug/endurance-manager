@@ -147,8 +147,8 @@ export default async function DriverDetail({ params, searchParams }) {
                 </div>
                 {link ? (
                 <a href={link} target="_blank" rel="noopener noreferrer"
-                    className="mono" style={{ fontSize: '0.85rem', color: label === 'Instagram' ? '#405DE6' : label === 'Twitch' ? '#9147ff' : label === 'iRacing ID' ? 'var(--text-dim)' : 'var(--accent)', textDecoration: label === 'iRacing ID' ? 'underline' : 'none' }}>
-                    {value}{label === 'iRacing ID' ? ' ↗' : ''}
+                    className="mono" style={{ fontSize: '0.85rem', color: label === 'Instagram' ? '#405DE6' : label === 'Twitch' ? '#9147ff' : 'var(--accent)' }}>
+                    {value}
                 </a>
                 ) : (
                 <span className="mono" style={{ fontSize: '0.85rem' }}>{value}</span>

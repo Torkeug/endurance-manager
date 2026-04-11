@@ -13,9 +13,8 @@ function formatDuration(minutes) {
   return m === 0 ? `${h}h` : `${h}h${String(m).padStart(2, '0')}`
 }
 
-export default async function DriverDetail({ params, searchParams }) {
+export default async function DriverDetail({ params }) {
   const { id } = await params
-  const { iracing_linked } = await searchParams
   const { driver: currentDriver } = await getSessionAndDriver()
   const admin = isAdmin(currentDriver)
 
@@ -87,7 +86,7 @@ export default async function DriverDetail({ params, searchParams }) {
   })
 
   const socials = [
-    { label: 'iRacing ID', value: driver.iracing_id, link: driver.iracing_id ? `https://members-ng.iracing.com/web/racing/profile?cust_id=${driver.iracing_id}&tab=licenses` : null },
+    { label: 'iRacing ID', value: driver.iracing_id },
     { label: 'Email',      value: driver.email || '—' },
     { label: 'Discord',    value: driver.discord || '—' },
     { label: 'Twitch',     value: driver.twitch, link: driver.twitch ? `https://twitch.tv/${driver.twitch}` : null },
@@ -120,20 +119,13 @@ export default async function DriverDetail({ params, searchParams }) {
             </Link>
           )}
           {currentDriver?.id === id && (
-            <a href="/auth/iracing" className="btn btn-primary btn-sm">
+            <a href="/auth/iracing" className="btn btn-secondary btn-sm">
               🏎️ {driver.iracing_id ? 'Relier iRacing' : 'Lier iRacing'}
             </a>
           )}
           <Link href="/pilotes" className="btn btn-secondary">← Pilotes</Link>
         </div>
       </div>
-
-      {/* iRacing link success */}
-      {iracing_linked === 'true' && (
-        <div className="alert alert-success" style={{ marginBottom: '1rem' }}>
-          ✓ Compte iRacing lié avec succès.
-        </div>
-      )}
 
       {/* Driver info */}
       {socials.length > 0 && (
@@ -147,8 +139,8 @@ export default async function DriverDetail({ params, searchParams }) {
                 </div>
                 {link ? (
                 <a href={link} target="_blank" rel="noopener noreferrer"
-                    className="mono" style={{ fontSize: '0.85rem', color: label === 'Instagram' ? '#405DE6' : label === 'Twitch' ? '#9147ff' : label === 'iRacing ID' ? 'var(--text-dim)' : 'var(--accent)', textDecoration: label === 'iRacing ID' ? 'underline' : 'none' }}>
-                    {value}{label === 'iRacing ID' ? ' ↗' : ''}
+                    className="mono" style={{ fontSize: '0.85rem', color: label === 'Instagram' ? '#405DE6' : label === 'Twitch' ? '#9147ff' : 'var(--accent)' }}>
+                    {value}
                 </a>
                 ) : (
                 <span className="mono" style={{ fontSize: '0.85rem' }}>{value}</span>

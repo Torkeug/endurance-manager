@@ -56,11 +56,11 @@ export default async function PilotesPage() {
                   <td style={{ fontWeight: 600 }}>{p.name}</td>
                   <td className="mono" style={{ fontSize: '0.85rem' }}>
                     {p.iracing_id ? (
-                    <a href={`https://members-ng.iracing.com/web/racing/profile?cust_id=${p.iracing_id}&tab=licenses`}
-                      target="_blank" rel="noopener noreferrer"
-                      style={{ color: 'var(--text-dim)', textDecoration: 'underline' }}>
-                      {p.iracing_id} ↗
-                    </a>
+                      <a href={`https://members-ng.iracing.com/web/racing/profile?cust_id=${p.iracing_id}&tab=licenses`}
+                        target="_blank" rel="noopener noreferrer"
+                        style={{ color: 'var(--accent)', textDecoration: 'underline' }}>
+                        {p.iracing_id} ↗
+                      </a>
                     ) : '—'}
                   </td>
                   <td className="mono" style={{ color: 'var(--accent)' }}>

@@ -87,7 +87,7 @@ export default async function DriverDetail({ params, searchParams }) {
   })
 
   const socials = [
-    { label: 'iRacing ID', value: driver.iracing_id, link: driver.iracing_id ? `https://members-ng.iracing.com/web/racing/profile?cust_id=${driver.iracing_id}&tab=licenses` : null },
+    { label: 'iRacing ID', value: driver.iracing_id, link: driver.iracing_id ? `https://members.iracing.com/membersite/member/CareerStats.do?custid=${driver.iracing_id}` : null },
     { label: 'Email',      value: driver.email || '—' },
     { label: 'Discord',    value: driver.discord || '—' },
     { label: 'Twitch',     value: driver.twitch, link: driver.twitch ? `https://twitch.tv/${driver.twitch}` : null },
@@ -147,8 +147,8 @@ export default async function DriverDetail({ params, searchParams }) {
                 </div>
                 {link ? (
                 <a href={link} target="_blank" rel="noopener noreferrer"
-                    className="mono" style={{ fontSize: '0.85rem', color: label === 'Instagram' ? '#405DE6' : label === 'Twitch' ? '#9147ff' : label === 'iRacing ID' ? 'var(--text-dim)' : 'var(--accent)', textDecoration: label === 'iRacing ID' ? 'underline' : 'none' }}>
-                    {value}{label === 'iRacing ID' ? ' ↗' : ''}
+                    className="mono" style={{ fontSize: '0.85rem', color: label === 'Instagram' ? '#405DE6' : label === 'Twitch' ? '#9147ff' : 'var(--accent)' }}>
+                    {value}
                 </a>
                 ) : (
                 <span className="mono" style={{ fontSize: '0.85rem' }}>{value}</span>
