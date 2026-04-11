@@ -553,7 +553,7 @@ export default function StintGrid({ teamEntryId, teamEntry, assignedDrivers }) {
                           const fuelPerLap = stint.rain
                             ? (driverPerf[stint.driver_id]?.fuel_wet || driverPerf[stint.driver_id]?.fuel_dry)
                             : (driverPerf[stint.driver_id]?.fuel_dry || driverPerf[stint.driver_id]?.fuel_wet)
-                          const tankSize = teamEntry?.bop_tank_size_litres || teamEntry?.cars?.tank_size_litres
+                          const tankSize = teamEntry?.cars?.tank_size_litres
                           if (fuelPerLap && tankSize) {
                             val = Math.min(val, Math.floor(tankSize / fuelPerLap))
                           }

@@ -42,9 +42,7 @@ export default async function EquipageDetail({ params }) {
   const infoItems = [
     { label: 'Voiture',           value: entry.cars?.name || '—' },
     { label: 'Classe',            value: entryClass || '—' },
-    { label: 'Réservoir', value: entry.bop_tank_size_percent
-      ? `${(entry.cars?.tank_size_litres * entry.bop_tank_size_percent / 100).toFixed(1)}L (${entry.bop_tank_size_percent}% BoP)`
-      : entry.cars?.tank_size_litres ? `${entry.cars.tank_size_litres}L` : '—' },
+    { label: 'Réservoir',         value: entry.bop_tank_size_litres   ? `${entry.bop_tank_size_litres}L (BoP)`  : entry.cars?.tank_size_litres ? `${entry.cars.tank_size_litres}L` : '—' },
     { label: 'Pit lane',          value: pitTime ? `${pitTime}s` : '—' },
     { label: 'BOP Puissance',     value: `${entry.bop_power_percent ?? 100}%` },
     { label: 'BOP Poids',         value: `${entry.bop_weight_kg ?? 0}kg` },

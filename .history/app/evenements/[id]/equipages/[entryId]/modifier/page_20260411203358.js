@@ -80,7 +80,7 @@ export default function ModifierEquipage({ params }) {
         stream_url:               entry.stream_url               ?? '',
         bop_power_percent:        entry.bop_power_percent        ?? '100',
         bop_weight_kg:            entry.bop_weight_kg            ?? '0',
-        bop_tank_size_percent:    entry.bop_tank_size_percent    ?? '',
+        bop_tank_size_litres:     entry.bop_tank_size_litres     ?? '',
         refuel_time_seconds:      entry.refuel_time_seconds      ?? '30',
         tyre_change_time_seconds: entry.tyre_change_time_seconds ?? '0',
         })
@@ -122,7 +122,7 @@ export default function ModifierEquipage({ params }) {
       stream_url:               form.stream_url.trim() || null,
       bop_power_percent:        parseFloat(form.bop_power_percent)        || 100,
       bop_weight_kg:            parseFloat(form.bop_weight_kg)            || 0,
-      bop_tank_size_percent:    form.bop_tank_size_percent ? parseFloat(form.bop_tank_size_percent) : null,
+      bop_tank_size_litres:     form.bop_tank_size_litres ? parseFloat(form.bop_tank_size_litres) : null,
       refuel_time_seconds:      parseInt(form.refuel_time_seconds)        || 30,
       tyre_change_time_seconds: parseInt(form.tyre_change_time_seconds)   || 0,
     }

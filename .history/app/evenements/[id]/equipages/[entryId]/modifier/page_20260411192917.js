@@ -80,7 +80,6 @@ export default function ModifierEquipage({ params }) {
         stream_url:               entry.stream_url               ?? '',
         bop_power_percent:        entry.bop_power_percent        ?? '100',
         bop_weight_kg:            entry.bop_weight_kg            ?? '0',
-        bop_tank_size_percent:    entry.bop_tank_size_percent    ?? '',
         refuel_time_seconds:      entry.refuel_time_seconds      ?? '30',
         tyre_change_time_seconds: entry.tyre_change_time_seconds ?? '0',
         })
@@ -122,7 +121,6 @@ export default function ModifierEquipage({ params }) {
       stream_url:               form.stream_url.trim() || null,
       bop_power_percent:        parseFloat(form.bop_power_percent)        || 100,
       bop_weight_kg:            parseFloat(form.bop_weight_kg)            || 0,
-      bop_tank_size_percent:    form.bop_tank_size_percent ? parseFloat(form.bop_tank_size_percent) : null,
       refuel_time_seconds:      parseInt(form.refuel_time_seconds)        || 30,
       tyre_change_time_seconds: parseInt(form.tyre_change_time_seconds)   || 0,
     }
@@ -279,12 +277,6 @@ export default function ModifierEquipage({ params }) {
               <label htmlFor="bop_weight_kg">BOP Poids (kg)</label>
               <input id="bop_weight_kg" type="number" value={form.bop_weight_kg}
                 onChange={set('bop_weight_kg')} min="-100" max="200" step="0.5" />
-            </div>
-            <div className="form-group">
-              <label htmlFor="bop_tank_size_percent">BOP Réservoir (%)</label>
-              <input id="bop_tank_size_percent" type="number" value={form.bop_tank_size_percent}
-                onChange={set('bop_tank_size_percent')} min="50" max="150" step="0.1"
-                placeholder="100" />
             </div>
             <div className="form-group">
               <label htmlFor="refuel_time_seconds">Temps ravitaillement (sec)</label>
