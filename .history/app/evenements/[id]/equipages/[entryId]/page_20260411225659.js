@@ -81,7 +81,6 @@ export default async function EquipageDetail({ params }) {
       </div>
 
       <CollapsibleSummary
-        entryId={entryId}
         startTime={entry.event_start_times 
           ? formatTimeInZone(entry.event_start_times.irl_start, entry.events?.timezone || 'Europe/Paris')
           : null}

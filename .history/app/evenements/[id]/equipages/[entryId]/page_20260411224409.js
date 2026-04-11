@@ -80,15 +80,44 @@ export default async function EquipageDetail({ params }) {
         </div>
       </div>
 
-      <CollapsibleSummary
-        entryId={entryId}
-        startTime={entry.event_start_times 
-          ? formatTimeInZone(entry.event_start_times.irl_start, entry.events?.timezone || 'Europe/Paris')
-          : null}
-        startLabel={entry.event_start_times?.label}
-        streamUrl={entry.stream_url}
-        infoItems={infoItems}
-      />
+      {/* Start time */}
+      {entry.event_start_times && (
+        <div className="card" style={{ marginBottom: '1.5rem', borderColor: 'var(--accent-dim)' }}>
+          <div style={{ fontSize: '0.7rem', fontWeight: 700, letterSpacing: '0.1em',
+            textTransform: 'uppercase', color: 'var(--text-dim)', marginBottom: '0.35rem' }}>
+            Horaire de départ
+          </div>
+          <div style={{ fontWeight: 700 }}>{entry.event_start_times.label}</div>
+          <div className="mono" style={{ color: 'var(--accent)', fontSize: '0.85rem' }}>
+            Départ à {formatTimeInZone(entry.event_start_times.irl_start, entry.events?.timezone || 'Europe/Paris')}
+          </div>
+        </div>
+      )}
+
+      {/* Info grid */}
+      <div style={{
+        display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))',
+        gap: '0.75rem', marginBottom: '2rem',
+      }}>
+        {infoItems.map(({ label, value }) => (
+          <div key={label} className="card" style={{ padding: '0.85rem' }}>
+            <div style={{ fontSize: '0.7rem', fontWeight: 700, letterSpacing: '0.1em',
+              textTransform: 'uppercase', color: 'var(--text-dim)', marginBottom: '0.35rem' }}>
+              {label}
+            </div>
+            <div className="mono" style={{ fontSize: '0.9rem', color: 'var(--text)' }}>{value}</div>
+          </div>
+        ))}
+      </div>
+
+      {entry.stream_url && (
+        <div className="card" style={{ marginBottom: '2rem' }}>
+          <div style={{ fontSize: '0.7rem', fontWeight: 700, letterSpacing: '0.1em',
+            textTransform: 'uppercase', color: 'var(--text-dim)', marginBottom: '0.4rem' }}>Stream</div>
+          <a href={entry.stream_url} target="_blank" rel="noopener noreferrer"
+            style={{ color: '#9147ff', fontSize: '0.9rem' }}>{entry.stream_url} ↗</a>
+        </div>
+      )}
 
       {/* Tabbed sections */}
       <EquipageTabs
