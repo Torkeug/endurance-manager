@@ -27,11 +27,7 @@ export default function EquipageTabs({
     <div style={{
       display: 'flex', gap: '0.25rem',
       borderBottom: '1px solid var(--border)',
-      marginBottom: '1.5rem',
-      overflowX: 'auto',
-      WebkitOverflowScrolling: 'touch',
-      scrollbarWidth: 'none',
-      msOverflowStyle: 'none',
+      marginBottom: '1.5rem', flexWrap: 'wrap',
     }}>
       {TABS.map(tab => (
         <button key={tab.id} onClick={() => setActiveTab(tab.id)} style={{
