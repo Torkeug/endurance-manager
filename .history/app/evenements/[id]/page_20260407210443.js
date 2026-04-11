@@ -1,4 +1,4 @@
-import { supabaseServer as supabase } from '../../../lib/supabase-server'
+import { supabase } from '../../../lib/supabase'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import StartTimesManager from './StartTimesManager'

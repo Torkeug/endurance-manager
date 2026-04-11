@@ -2,7 +2,7 @@
 import { useState, useEffect, use } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
-import { createBrowserClient } from '@supabase/ssr'
+import { supabase } from '../../../../lib/supabase'
 
 const CLASSES = ['GTP', 'LMP2', 'GT3', 'GT4', 'CUP', 'TCR']
 
@@ -56,10 +56,6 @@ function ClassCheckbox({ cls, checked, onChange }) {
 }
 
 export default function Inscription({ params }) {
-  const supabase = createBrowserClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-  )
   const router       = useRouter()
   const searchParams = useSearchParams()
   const { id }       = use(params)

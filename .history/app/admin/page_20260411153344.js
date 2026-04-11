@@ -1,4 +1,4 @@
-import { supabaseServer as supabase } from '../../lib/supabase-server'
+import { supabaseServer as supabase } from '../lib/supabase-server'
 import { getSessionAndDriver } from '../../lib/auth'
 import { redirect } from 'next/navigation'
 import AdminTabs from './AdminTabs'

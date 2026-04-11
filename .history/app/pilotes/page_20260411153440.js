@@ -1,4 +1,4 @@
-import { supabaseServer as supabase } from '../../lib/supabase-server'
+import { supabaseServer as supabase } from '../lib/supabase-server'
 import Link from 'next/link'
 import { getSessionAndDriver, isAdmin } from '../../lib/auth'
 

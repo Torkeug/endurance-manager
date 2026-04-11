@@ -1,7 +1,7 @@
 'use client'
 import React, { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { createBrowserClient } from '@supabase/ssr'
+import { supabase } from '../../../lib/supabase'
 
 function formatDatetime(dtStr) {
   if (!dtStr) return '—'
@@ -12,10 +12,6 @@ function formatDatetime(dtStr) {
 }
 
 export default function StartTimesManager({ eventId, initialStartTimes }) {
-  const supabase = createBrowserClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-  )
   const router = useRouter()
   const [startTimes, setStartTimes] = useState(initialStartTimes)
   const [adding, setAdding]         = useState(false)
