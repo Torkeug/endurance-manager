@@ -473,12 +473,12 @@ export default function AvailabilityGrid({
                         const state = getSlotState(driverId, slot)
                         const cellBg = state === true  ? '#1a3a1a'
                                     : state === false ? '#3a1010'
-                                    : state === null  ? 'rgba(212, 144, 74, 0.15)'
+                                    : state === null  ? '#2a1a00'
                                     : isMe            ? 'var(--surface-2)'
                                     : 'transparent'
-                        const cellBorder = state === true  ? '#2eb460'
+                        const cellBorder = state === true  ? 'var(--accent)'
                                         : state === false ? 'var(--danger)'
-                                        : state === null  ? '#d4904a'
+                                        : state === null  ? '#4a4a6a'
                                         : isMe            ? 'var(--border)'
                                         : 'transparent'
 
@@ -526,11 +526,11 @@ export default function AvailabilityGrid({
       {/* Legend */}
       <div style={{ display: 'flex', gap: '1.25rem', marginTop: '0.75rem', fontSize: '0.78rem', color: 'var(--text-dim)', flexWrap: 'wrap', alignItems: 'center' }}>
         <span style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-          <span style={{ width: 14, height: 14, background: '#1a3a1a', border: '1px solid #2eb460', borderRadius: 2, display: 'inline-block' }} />
+          <span style={{ width: 14, height: 14, background: 'var(--accent)', borderRadius: 2, display: 'inline-block' }} />
           Disponible
         </span>
         <span style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-          <span style={{ width: 14, height: 14, background: 'rgba(212, 144, 74, 0.15)', border: '1px solid #d4904a', borderRadius: 2, display: 'inline-block' }} />
+          <span style={{ width: 14, height: 14, background: '#2a2a3a', border: '1px solid #4a4a6a', borderRadius: 2, display: 'inline-block' }} />
           Incertain
         </span>
         <span style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>

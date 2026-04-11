@@ -530,7 +530,7 @@ export default function AvailabilityGrid({
           Disponible
         </span>
         <span style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-          <span style={{ width: 14, height: 14, background: 'rgba(212, 144, 74, 0.15)', border: '1px solid #d4904a', borderRadius: 2, display: 'inline-block' }} />
+          <span style={{ width: 14, height: 14, background: '#2a1500', border: '1px solid #d4904a', borderRadius: 2, display: 'inline-block' }} />
           Incertain
         </span>
         <span style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>

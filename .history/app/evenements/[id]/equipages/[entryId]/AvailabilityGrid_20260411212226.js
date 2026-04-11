@@ -473,7 +473,7 @@ export default function AvailabilityGrid({
                         const state = getSlotState(driverId, slot)
                         const cellBg = state === true  ? '#1a3a1a'
                                     : state === false ? '#3a1010'
-                                    : state === null  ? 'rgba(212, 144, 74, 0.15)'
+                                    : state === null  ? '#2a1500'
                                     : isMe            ? 'var(--surface-2)'
                                     : 'transparent'
                         const cellBorder = state === true  ? '#2eb460'
@@ -530,7 +530,7 @@ export default function AvailabilityGrid({
           Disponible
         </span>
         <span style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-          <span style={{ width: 14, height: 14, background: 'rgba(212, 144, 74, 0.15)', border: '1px solid #d4904a', borderRadius: 2, display: 'inline-block' }} />
+          <span style={{ width: 14, height: 14, background: '#2a1500', border: '1px solid #d4904a', borderRadius: 2, display: 'inline-block' }} />
           Incertain
         </span>
         <span style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
