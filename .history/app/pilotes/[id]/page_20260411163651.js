@@ -2,9 +2,16 @@ import { supabaseServer as supabase } from '../../../lib/supabase-server'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { getSessionAndDriver, isAdmin } from '../../../lib/auth'
-import { formatInZone } from '../../../lib/timezone'
 
 export const revalidate = 0
+
+function formatDatetime(dtStr) {
+  if (!dtStr) return '—'
+  return new Date(dtStr).toLocaleString('fr-FR', {
+    day: '2-digit', month: '2-digit', year: 'numeric',
+    hour: '2-digit', minute: '2-digit', hour12: false,
+  })
+}
 
 function formatDuration(minutes) {
   if (!minutes) return '—'
@@ -57,7 +64,7 @@ export default async function DriverDetail({ params }) {
   // Fetch assigned stints
   const { data: stints } = teamEntryIds.length > 0
     ? await supabase.from('stints')
-        .select('*, team_entries(crew_name, events(name, timezone))')
+        .select('*, team_entries(crew_name, events(name))')
         .eq('driver_id', id)
         .in('team_entry_id', teamEntryIds)
         .order('stint_number')
@@ -183,7 +190,7 @@ export default async function DriverDetail({ params }) {
                   <div>
                     <div style={{ fontWeight: 700, fontSize: '1rem' }}>{event?.name || '—'}</div>
                     <div style={{ fontSize: '0.8rem', color: 'var(--text-dim)', marginTop: '0.2rem' }}>
-                      {earliest ? formatInZone(earliest.irl_start, signup.events?.timezone || 'Europe/Paris') : 'Date à confirmer'}
+                      {earliest ? formatDatetime(earliest.irl_start) : 'Date à confirmer'}
                       {event?.circuits?.name && ` · ${event.circuits.name}`}
                       {event?.format && ` · ${event.format}`}
                       {event?.duration_minutes && ` · ${formatDuration(event.duration_minutes)}`}
@@ -297,7 +304,10 @@ export default async function DriverDetail({ params }) {
                                 <span style={{ color: 'var(--accent)' }}>Relais #{stint.stint_number}</span>
                                 {stint.irl_start && (
                                 <span style={{ color: 'var(--text-dim)' }}>
-                                    {formatInZone(stint.irl_start, stint.team_entries?.events?.timezone || 'Europe/Paris')}
+                                    {new Date(stint.irl_start).toLocaleString('fr-FR', {
+                                    day: '2-digit', month: '2-digit',
+                                    hour: '2-digit', minute: '2-digit', hour12: false,
+                                    })}
                                 </span>
                                 )}
                                 {stint.rain && <span>💧</span>}

@@ -42,11 +42,11 @@ export default async function HomePage() {
     `).order('name'),
     currentDriver ? supabase.from('signups').select(`
       *,
-      events (id, name, duration_minutes, format, timezone, circuits(name), event_start_times(id, label, irl_start)),
+      events (id, name, duration_minutes, format, circuits(name), event_start_times(id, label, irl_start)),
       team_entries (id, crew_name, cars(name), event_start_times(label, irl_start))
     `).eq('driver_id', currentDriver.id) : { data: [] },
     currentDriver ? supabase.from('stints').select(`
-      *, team_entries(id, crew_name, event_id, events(name, timezone), event_start_times(label, irl_start))
+      *, team_entries(id, crew_name, event_id, events(name), event_start_times(label, irl_start))
     `).eq('driver_id', currentDriver.id).order('irl_start') : { data: [] },
     admin ? supabase.from('drivers').select('id').eq('approved', false).eq('refused', false) : { data: [] },
     admin ? supabase.from('drivers').select('*', { count: 'exact', head: true }).eq('active', true) : { count: 0 },
@@ -162,7 +162,7 @@ export default async function HomePage() {
                   {nextEvent.duration_minutes && ` · ${formatDuration(nextEvent.duration_minutes)}`}
                 </div>
                 <div className="mono" style={{ fontSize: '0.85rem', color: 'var(--accent)', marginBottom: '0.25rem' }}>
-                  {formatInZone(nextEvent.nextStart.irl_start, nextEvent.timezone || 'Europe/Paris')}
+                  {formatDatetime(nextEvent.nextStart.irl_start)}
                 </div>
                 <div style={{ fontSize: '0.78rem', color: 'var(--text-dim)', marginBottom: '0.5rem' }}>
                   {timeUntil(nextEvent.nextStart.irl_start)}
@@ -196,7 +196,7 @@ export default async function HomePage() {
                   {myNextStint.tyre_change && ' 🛞'}
                 </div>
                 <div className="mono" style={{ fontSize: '0.85rem', color: 'var(--accent)', marginBottom: '0.25rem' }}>
-                  {formatInZone(myNextStint.irl_start, myNextStint.team_entries?.events?.timezone || 'Europe/Paris')}
+                  {formatDatetime(myNextStint.irl_start)}
                 </div>
                 <div style={{ fontSize: '0.78rem', color: 'var(--text-dim)' }}>
                   {timeUntil(myNextStint.irl_start)}
@@ -232,7 +232,7 @@ export default async function HomePage() {
                     <div style={{ fontWeight: 600 }}>{ev?.name}</div>
                     <div style={{ fontSize: '0.8rem', color: 'var(--text-dim)', marginTop: '0.2rem' }}>
                       {ev?.circuits?.name}
-                      {nextStart && ` · ${formatInZone(nextStart.irl_start, signup.events?.timezone || 'Europe/Paris')}`}
+                      {nextStart && ` · ${formatDatetime(nextStart.irl_start)}`}
                       {nextStart && ` · ${timeUntil(nextStart.irl_start)}`}
                     </div>
                     {teamEntry ? (

@@ -42,7 +42,7 @@ export default async function HomePage() {
     `).order('name'),
     currentDriver ? supabase.from('signups').select(`
       *,
-      events (id, name, duration_minutes, format, timezone, circuits(name), event_start_times(id, label, irl_start)),
+      events (id, name, duration_minutes, format, circuits(name), event_start_times(id, label, irl_start)),
       team_entries (id, crew_name, cars(name), event_start_times(label, irl_start))
     `).eq('driver_id', currentDriver.id) : { data: [] },
     currentDriver ? supabase.from('stints').select(`

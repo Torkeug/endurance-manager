@@ -4,10 +4,11 @@ import { useRouter } from 'next/navigation'
 import { createBrowserClient } from '@supabase/ssr'
 import { localToUTC, utcToInputValues, formatInZone } from '../../../lib/timezone'
 
+function formatDatetime(dtStr) {
+  return formatInZone(dtStr, timezone)
+}
+
 export default function StartTimesManager({ eventId, initialStartTimes, timezone = 'Europe/Paris' }) {
-  function formatDatetime(dtStr) {
-    return formatInZone(dtStr, timezone)
-  }
   const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
@@ -29,11 +30,11 @@ export default function StartTimesManager({ eventId, initialStartTimes, timezone
   }
 
   const startEdit = (st) => {
-    const { date: d, time: t } = utcToInputValues(st.irl_start, timezone)
+    const dt = new Date(st.irl_start)
     setEditingId(st.id)
     setLabel(st.label)
-    setDate(d)
-    setTime(t)
+    setDate(dt.toISOString().slice(0, 10))
+    setTime(dt.toISOString().slice(11, 16))
     setAdding(false)
     setError(null)
   }
@@ -45,7 +46,7 @@ export default function StartTimesManager({ eventId, initialStartTimes, timezone
     setSaving(true); setError(null)
     const { data, error: err } = await supabase
       .from('event_start_times')
-      .insert([{ event_id: eventId, label: label.trim(), irl_start: localToUTC(date, time, timezone) }])
+      .insert([{ event_id: eventId, label: label.trim(), irl_start: `${date}T${time}:00` }])
       .select().single()
     if (err) { setError(err.message); setSaving(false); return }
     setStartTimes(prev => [...prev, data])
@@ -59,7 +60,7 @@ export default function StartTimesManager({ eventId, initialStartTimes, timezone
     setSaving(true); setError(null)
     const { data, error: err } = await supabase
       .from('event_start_times')
-      .update({ label: label.trim(), irl_start: localToUTC(date, time, timezone) })
+      .update({ label: label.trim(), irl_start: `${date}T${time}:00` })
       .eq('id', editingId).select().single()
     if (err) { setError(err.message); setSaving(false); return }
     setStartTimes(prev => prev.map(s => s.id === editingId ? data : s))

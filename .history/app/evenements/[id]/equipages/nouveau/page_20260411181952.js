@@ -129,6 +129,14 @@ export default function NouvelEquipage({ params }) {
   // Available classes from filtered cars
   const availableClasses = [...new Set(cars.map(c => c.class))].filter(Boolean).sort()
 
+  const formatDatetime = (dtStr) => {
+    if (!dtStr) return ''
+    return new Date(dtStr).toLocaleString('fr-FR', {
+      day: '2-digit', month: '2-digit', year: 'numeric',
+      hour: '2-digit', minute: '2-digit', hour12: false,
+    })
+  }
+
   return (
     <div className="page">
       <div className="page-header">

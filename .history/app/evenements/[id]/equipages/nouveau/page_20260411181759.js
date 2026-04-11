@@ -42,12 +42,11 @@ export default function NouvelEquipage({ params }) {
     Promise.all([
       supabase.from('cars').select('*').order('class').order('name'),
       supabase.from('event_start_times').select('*').eq('event_id', id).order('irl_start'),
-      supabase.from('events').select('name, format, timezone').eq('id', id).single(),
+      supabase.from('events').select('name, format, timezone').eq('id', id).single()
       supabase.from('crew_names').select('name').order('sort_order'),
     ]).then(async ([{ data: carsData }, { data: stData }, { data: evData }, { data: crewData }]) => {
       setStartTimes(stData || [])
       setEventName(evData?.name || '')
-      setEventTimezone(evData?.timezone || 'Europe/Paris')
       setCrewNames(crewData?.map(c => c.name).sort((a, b) => a.localeCompare(b)) || [])
 
       // Filter cars by event type
@@ -128,6 +127,14 @@ export default function NouvelEquipage({ params }) {
 
   // Available classes from filtered cars
   const availableClasses = [...new Set(cars.map(c => c.class))].filter(Boolean).sort()
+
+  const formatDatetime = (dtStr) => {
+    if (!dtStr) return ''
+    return new Date(dtStr).toLocaleString('fr-FR', {
+      day: '2-digit', month: '2-digit', year: 'numeric',
+      hour: '2-digit', minute: '2-digit', hour12: false,
+    })
+  }
 
   return (
     <div className="page">
@@ -241,7 +248,7 @@ export default function NouvelEquipage({ params }) {
                   <div>
                     <div style={{ fontWeight: 600, fontSize: '0.95rem' }}>{st.label}</div>
                     <div className="mono" style={{ fontSize: '0.8rem', color: 'var(--text-dim)' }}>
-                      {formatInZone(st.irl_start, eventTimezone)}
+                      {formatDatetime(st.irl_start)}
                     </div>
                   </div>
                 </label>

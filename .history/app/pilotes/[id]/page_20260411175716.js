@@ -32,7 +32,7 @@ export default async function DriverDetail({ params }) {
       events (
         id, name, duration_minutes, format,
         circuits (name),
-        event_start_times (id, label, irl_start)
+        event_start_times (id, label, irl_start, timezone)
       ),
       team_entries (
         id, crew_name, class,
@@ -297,7 +297,10 @@ export default async function DriverDetail({ params }) {
                                 <span style={{ color: 'var(--accent)' }}>Relais #{stint.stint_number}</span>
                                 {stint.irl_start && (
                                 <span style={{ color: 'var(--text-dim)' }}>
-                                    {formatInZone(stint.irl_start, stint.team_entries?.events?.timezone || 'Europe/Paris')}
+                                    {new Date(stint.irl_start).toLocaleString('fr-FR', {
+                                    day: '2-digit', month: '2-digit',
+                                    hour: '2-digit', minute: '2-digit', hour12: false,
+                                    })}
                                 </span>
                                 )}
                                 {stint.rain && <span>💧</span>}

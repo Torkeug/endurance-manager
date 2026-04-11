@@ -101,13 +101,13 @@ export default async function EvenementsPage() {
                     {earliest ? (
                       <>
                         <div className="mono" style={{ fontSize: '1.4rem', fontWeight: 500, color: 'var(--accent)', lineHeight: 1 }}>
-                          {getDay(earliest.irl_start, ev.timezone || 'Europe/Paris')}
+                          {getDay(earliest.irl_start)}
                         </div>
                         <div style={{ fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-dim)' }}>
-                          {getMonth(earliest.irl_start, ev.timezone || 'Europe/Paris')}
+                          {getMonth(earliest.irl_start)}
                         </div>
                         <div style={{ fontSize: '0.7rem', color: 'var(--text-dim)' }}>
-                          {getYear(earliest.irl_start, ev.timezone || 'Europe/Paris')}
+                          {getYear(earliest.irl_start)}
                         </div>
                       </>
                     ) : (

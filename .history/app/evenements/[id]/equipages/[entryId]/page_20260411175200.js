@@ -3,9 +3,16 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import EquipageTabs from './EquipageTabs'
 import { getSessionAndDriver } from '../../../../../lib/auth'
-import { formatInZone } from '../../../../../lib/timezone'
 
 export const revalidate = 0
+
+function formatDatetime(dtStr) {
+  if (!dtStr) return '—'
+  return new Date(dtStr).toLocaleString('fr-FR', {
+    day: '2-digit', month: '2-digit', year: 'numeric',
+    hour: '2-digit', minute: '2-digit', hour12: false,
+  })
+}
 
 export default async function EquipageDetail({ params }) {
   const { id, entryId } = await params
@@ -80,7 +87,7 @@ export default async function EquipageDetail({ params }) {
           </div>
           <div style={{ fontWeight: 700 }}>{entry.event_start_times.label}</div>
           <div className="mono" style={{ color: 'var(--text-dim)', fontSize: '0.85rem' }}>
-            {formatInZone(entry.event_start_times.irl_start, entry.events?.timezone || 'Europe/Paris')}
+            {formatDatetime(entry.event_start_times.irl_start)}
           </div>
         </div>
       )}

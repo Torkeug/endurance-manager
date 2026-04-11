@@ -42,8 +42,7 @@ export default async function EvenementDetail({ params }) {
         id, preferred_class, preferred_car_ids, preferred_start_time_ids, notes, team_entry_id,
         drivers (id, name, irating),
         team_entries (crew_name)
-      ),
-      timezone
+      )
     `).eq('id', id).single(),
     supabase.from('cars').select('id, name'),
   ])

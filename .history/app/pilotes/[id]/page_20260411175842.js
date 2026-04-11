@@ -32,12 +32,12 @@ export default async function DriverDetail({ params }) {
       events (
         id, name, duration_minutes, format,
         circuits (name),
-        event_start_times (id, label, irl_start)
+        event_start_times (id, label, irl_start, timezone)
       ),
       team_entries (
         id, crew_name, class,
         cars (name),
-        event_start_times (label, irl_start)
+        event_start_times (label, irl_start, timezone)
       )
     `)
     .eq('driver_id', id)

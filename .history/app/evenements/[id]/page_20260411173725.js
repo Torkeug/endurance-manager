@@ -3,9 +3,17 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import StartTimesManager from './StartTimesManager'
 import { getSessionAndDriver, isAdmin } from '../../../lib/auth'
-import { formatInZone, formatDateInZone } from '../../../lib/timezone'
+import { formatDateInZone } from '../../../lib/timezone'
 
 export const revalidate = 0
+
+function formatDatetime(dtStr) {
+  if (!dtStr) return '—'
+  return new Date(dtStr).toLocaleString('fr-FR', {
+    day: '2-digit', month: '2-digit', year: 'numeric',
+    hour: '2-digit', minute: '2-digit', hour12: false,
+  })
+}
 
 function formatDuration(minutes) {
   if (!minutes) return '—'
@@ -42,8 +50,7 @@ export default async function EvenementDetail({ params }) {
         id, preferred_class, preferred_car_ids, preferred_start_time_ids, notes, team_entry_id,
         drivers (id, name, irating),
         team_entries (crew_name)
-      ),
-      timezone
+      )
     `).eq('id', id).single(),
     supabase.from('cars').select('id, name'),
   ])
@@ -73,7 +80,7 @@ export default async function EvenementDetail({ params }) {
           <h1>{event.name}</h1>
           <div className="accent-line" />
           <div style={{ marginTop: '0.5rem', color: 'var(--text-dim)', fontSize: '0.9rem' }}>
-            {earliest ? formatInZone(earliest.irl_start, event.timezone || 'Europe/Paris') : 'Date à confirmer'}
+            {earliest ? formatDatetime(earliest.irl_start) : 'Date à confirmer'}
           </div>
         </div>
         <div style={{ display: 'flex', gap: '0.75rem' }}>
@@ -122,7 +129,7 @@ export default async function EvenementDetail({ params }) {
         <h2 style={{ marginBottom: '1rem' }}>Horaires de départ</h2>
         <StartTimesManager 
           eventId={id} 
-          initialStartTimes={event.event_start_times || []}
+          initialStartTimes={startTimes}
           timezone={event.timezone || 'Europe/Paris'}
         />
       </div>
@@ -235,7 +242,7 @@ export default async function EvenementDetail({ params }) {
                   <td>{entry.class && <span className="badge badge-driver">{entry.class}</span>}</td>
                   <td className="mono" style={{ fontSize: '0.85rem', color: 'var(--text-dim)' }}>
                     {entry.event_start_times
-                      ? `${entry.event_start_times.label} — ${formatInZone(entry.event_start_times.irl_start, event.timezone || 'Europe/Paris')}`
+                      ? `${entry.event_start_times.label} — ${formatDatetime(entry.event_start_times.irl_start)}`
                       : '—'}
                   </td>
                   <td>

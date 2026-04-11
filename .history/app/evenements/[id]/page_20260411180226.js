@@ -42,8 +42,7 @@ export default async function EvenementDetail({ params }) {
         id, preferred_class, preferred_car_ids, preferred_start_time_ids, notes, team_entry_id,
         drivers (id, name, irating),
         team_entries (crew_name)
-      ),
-      timezone
+      )
     `).eq('id', id).single(),
     supabase.from('cars').select('id, name'),
   ])
@@ -235,7 +234,7 @@ export default async function EvenementDetail({ params }) {
                   <td>{entry.class && <span className="badge badge-driver">{entry.class}</span>}</td>
                   <td className="mono" style={{ fontSize: '0.85rem', color: 'var(--text-dim)' }}>
                     {entry.event_start_times
-                      ? `${entry.event_start_times.label} — ${formatInZone(entry.event_start_times.irl_start, event.timezone || 'Europe/Paris')}`
+                      ? `${entry.event_start_times.label} — ${formatDatetime(entry.event_start_times.irl_start)}`
                       : '—'}
                   </td>
                   <td>

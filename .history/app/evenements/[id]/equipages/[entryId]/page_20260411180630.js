@@ -3,9 +3,16 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import EquipageTabs from './EquipageTabs'
 import { getSessionAndDriver } from '../../../../../lib/auth'
-import { formatInZone } from '../../../../../lib/timezone'
 
 export const revalidate = 0
+
+function formatDatetime(dtStr) {
+  if (!dtStr) return '—'
+  return new Date(dtStr).toLocaleString('fr-FR', {
+    day: '2-digit', month: '2-digit', year: 'numeric',
+    hour: '2-digit', minute: '2-digit', hour12: false,
+  })
+}
 
 export default async function EquipageDetail({ params }) {
   const { id, entryId } = await params

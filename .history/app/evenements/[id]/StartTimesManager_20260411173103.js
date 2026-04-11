@@ -4,10 +4,11 @@ import { useRouter } from 'next/navigation'
 import { createBrowserClient } from '@supabase/ssr'
 import { localToUTC, utcToInputValues, formatInZone } from '../../../lib/timezone'
 
+function formatDatetime(dtStr) {
+  return formatInZone(dtStr, timezone)
+}
+
 export default function StartTimesManager({ eventId, initialStartTimes, timezone = 'Europe/Paris' }) {
-  function formatDatetime(dtStr) {
-    return formatInZone(dtStr, timezone)
-  }
   const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY

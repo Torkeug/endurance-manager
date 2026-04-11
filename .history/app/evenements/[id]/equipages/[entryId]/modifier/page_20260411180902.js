@@ -5,68 +5,85 @@ import Link from 'next/link'
 import { createBrowserClient } from '@supabase/ssr'
 import { formatInZone } from '../../../../../lib/timezone'
 
-const CLASSES_FALLBACK = ['GTP', 'LMP2', 'GT3', 'GT4', 'CUP', 'TCR', 'Other']
 
-const emptyForm = {
-  crew_name:                '',
-  car_id:                   '',
-  class:                    '',
-  start_time_id:            '',
-  stream_url:               '',
-  bop_power_percent:        '100',
-  bop_weight_kg:            '0',
-  refuel_time_seconds:      '30',
-  tyre_change_time_seconds: '0',
-}
+const CLASSES = ['GTP', 'LMP2', 'GT3', 'GT4', 'CUP', 'TCR', 'Other']
 
-export default function NouvelEquipage({ params }) {
-  const [eventTimezone, setEventTimezone] = useState('Europe/Paris')
-  const router  = useRouter()
-  const { id }  = use(params)
-
-  const [form, setForm]             = useState(emptyForm)
-  const [cars, setCars]             = useState([])
-  const [startTimes, setStartTimes] = useState([])
-  const [crewNames, setCrewNames]   = useState([])
-  const [selectedCar, setSelectedCar] = useState(null)
-  const [eventName, setEventName]   = useState('')
-  const [loading, setLoading]       = useState(false)
-  const [error, setError]           = useState(null)
+export default function ModifierEquipage({ params }) {
+  const router          = useRouter()
+  const { id, entryId } = use(params)
 
   const supabase = createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
   )
-  
+
+  const [form, setForm]               = useState(null)
+  const [cars, setCars]               = useState([])
+  const [startTimes, setStartTimes]   = useState([])
+  const [selectedCar, setSelectedCar] = useState(null)
+  const [loading, setLoading]         = useState(false)
+  const [fetching, setFetching]       = useState(true)
+  const [error, setError]             = useState(null)
+  const [crewNames, setCrewNames]     = useState([])
+
+  const [currentIsAdmin, setCurrentIsAdmin] = useState(false)
+
   useEffect(() => {
+    supabase.auth.getUser().then(async ({ data: { user } }) => {
+      if (!user) { router.push('/login'); return }
+      const { data: driver } = await supabase
+        .from('drivers').select('role').eq('auth_user_id', user.id).single()
+      if (!driver) { router.push('/'); return }
+      setCurrentIsAdmin(driver.role === 'admin' || driver.role === 'super_admin')
+    })
+  }, [])
+
+    useEffect(() => {
     Promise.all([
       supabase.from('cars').select('*').order('class').order('name'),
-      supabase.from('event_start_times').select('*').eq('event_id', id).order('irl_start'),
-      supabase.from('events').select('name, format, timezone').eq('id', id).single(),
+      supabase.from('team_entries').select('*').eq('id', entryId).single(),
       supabase.from('crew_names').select('name').order('sort_order'),
-    ]).then(async ([{ data: carsData }, { data: stData }, { data: evData }, { data: crewData }]) => {
-      setStartTimes(stData || [])
-      setEventName(evData?.name || '')
-      setEventTimezone(evData?.timezone || 'Europe/Paris')
-      setCrewNames(crewData?.map(c => c.name).sort((a, b) => a.localeCompare(b)) || [])
+    ]).then(async ([{ data: carsData }, { data: entry, error: entryError }, { data: crewData }]) => {
+        if (entryError || !entry) { setError('Voiture introuvable.'); setFetching(false); return }
 
-      // Filter cars by event type
-      let filteredCars = carsData || []
-      if (evData?.format) {
+        // Filter cars by event type if format is set
+        let filteredCars = carsData || []
+        const { data: evData } = await supabase
+        .from('events').select('format').eq('id', entry.event_id).single()
+        if (evData?.format) {
         const { data: eventType } = await supabase
-          .from('event_types').select('id').eq('name', evData.format).single()
+            .from('event_types').select('id').eq('name', evData.format).single()
         if (eventType) {
-          const { data: allowedCars } = await supabase
+            const { data: allowedCars } = await supabase
             .from('event_type_cars').select('car_id').eq('event_type_id', eventType.id)
-          if (allowedCars && allowedCars.length > 0) {
+            if (allowedCars && allowedCars.length > 0) {
             const allowedIds = allowedCars.map(ac => ac.car_id)
             filteredCars = filteredCars.filter(c => allowedIds.includes(c.id))
-          }
+            }
         }
-      }
-      setCars(filteredCars)
+        }
+        setCars(filteredCars)
+        setCrewNames(crewData?.map(c => c.name).sort((a, b) => a.localeCompare(b)) || [])
+
+        // Load start times
+        supabase.from('event_start_times').select('*')
+        .eq('event_id', entry.event_id).order('irl_start')
+        .then(({ data: stData }) => setStartTimes(stData || []))
+
+        setForm({
+        crew_name:                entry.crew_name                ?? '',
+        car_id:                   entry.car_id                   ?? '',
+        class:                    entry.class                    ?? '',
+        start_time_id:            entry.start_time_id            ?? '',
+        stream_url:               entry.stream_url               ?? '',
+        bop_power_percent:        entry.bop_power_percent        ?? '100',
+        bop_weight_kg:            entry.bop_weight_kg            ?? '0',
+        refuel_time_seconds:      entry.refuel_time_seconds      ?? '30',
+        tyre_change_time_seconds: entry.tyre_change_time_seconds ?? '0',
+        })
+        setFetching(false)
     })
-  }, [id])
+    }, [entryId])
 
   useEffect(() => {
     if (!form?.car_id || cars.length === 0) {
@@ -87,37 +104,47 @@ export default function NouvelEquipage({ params }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault()
-    if (!form.crew_name)    { setError("Le nom d'équipage est obligatoire."); return }
-    if (!form.class)        { setError('La classe est obligatoire.'); return }
-    if (!form.start_time_id){ setError("L'horaire de départ est obligatoire."); return }
+    if (!form.crew_name)     { setError("Le nom d'équipage est obligatoire."); return }
+    if (!form.class) { setError('La classe est obligatoire.'); return }
+    if (!form.start_time_id) { setError("L'horaire de départ est obligatoire."); return }
 
-    setLoading(true); setError(null)
+    setLoading(true)
+    setError(null)
 
     const payload = {
-      event_id:                 id,
       crew_name:                form.crew_name,
-      car_id:                   form.car_id             || null,            
-      class:                    form.class              || null,
+      car_id:                   form.car_id            || null,
+      class:                    form.class             || null,
       start_time_id:            form.start_time_id,
-      stream_url:               form.stream_url.trim()  || null,
+      stream_url:               form.stream_url.trim() || null,
       bop_power_percent:        parseFloat(form.bop_power_percent)        || 100,
       bop_weight_kg:            parseFloat(form.bop_weight_kg)            || 0,
       refuel_time_seconds:      parseInt(form.refuel_time_seconds)        || 30,
       tyre_change_time_seconds: parseInt(form.tyre_change_time_seconds)   || 0,
     }
 
-    const { data, error: err } = await supabase
-      .from('team_entries').insert([payload]).select().single()
+    const { error: err } = await supabase
+      .from('team_entries').update(payload).eq('id', entryId)
 
-    if (err) {
-      if (err.code === '23505') {
-        setError("Cet équipage est déjà inscrit pour ce créneau de départ.")
+      if (err) {
+        if (err.code === '23505') {
+          setError("Cet équipage est déjà inscrit pour ce créneau de départ.")
+        } else {
+          setError(err.message)
+        }
+        setLoading(false)
       } else {
-        setError(err.message)
-      }
-      setLoading(false)
+      router.push(`/evenements/${id}/equipages/${entryId}`)
+      router.refresh()
     }
-    else { router.push(`/evenements/${id}/equipages/${data.id}`); router.refresh() }
+  }
+
+  const handleDelete = async () => {
+    if (!confirm('Supprimer cet équipage ? Toutes les données associées (relais, disponibilités) seront supprimées.')) return
+    const { error: err } = await supabase.from('team_entries').delete().eq('id', entryId)
+    if (err) { setError(err.message); return }
+    router.push(`/evenements/${id}`)
+    router.refresh()
   }
 
   const carsByClass = cars.reduce((acc, car) => {
@@ -126,38 +153,30 @@ export default function NouvelEquipage({ params }) {
     return acc
   }, {})
 
-  // Available classes from filtered cars
   const availableClasses = [...new Set(cars.map(c => c.class))].filter(Boolean).sort()
+
+  if (fetching) return <div className="page"><p style={{ color: 'var(--text-dim)' }}>Chargement…</p></div>
+  if (!form) return (
+    <div className="page">
+      <div className="alert alert-error">{error}</div>
+      <Link href={`/evenements/${id}`} className="btn btn-secondary">← Retour</Link>
+    </div>
+  )
 
   return (
     <div className="page">
       <div className="page-header">
         <div>
-          <h1>Nouvel équipage</h1>
+          <h1>Modifier l'équipage</h1>
           <div className="accent-line" />
-          {eventName && (
-            <div style={{ marginTop: '0.4rem', color: 'var(--text-dim)', fontSize: '0.85rem' }}>
-              {eventName}
-            </div>
-          )}
         </div>
-        <Link href={`/evenements/${id}`} className="btn btn-secondary">← Retour</Link>
+        <Link href={`/evenements/${id}/equipages/${entryId}`} className="btn btn-secondary">← Retour</Link>
       </div>
 
       {error && <div className="alert alert-error">{error}</div>}
 
-      {startTimes.length === 0 && (
-        <div className="alert alert-error" style={{ marginBottom: '1.5rem' }}>
-          Aucun horaire de départ configuré pour cet événement.{' '}
-          <Link href={`/evenements/${id}`} style={{ color: 'inherit', fontWeight: 700 }}>
-            Ajoutez-en un d&apos;abord →
-          </Link>
-        </div>
-      )}
-
       <form onSubmit={handleSubmit}>
 
-        {/* Équipage & voiture */}
         <div className="card" style={{ marginBottom: '1.25rem' }}>
           <h3 style={{ marginBottom: '1.25rem', color: 'var(--text-dim)' }}>Équipage &amp; voiture</h3>
           <div className="form-grid">
@@ -168,7 +187,6 @@ export default function NouvelEquipage({ params }) {
                 {crewNames.map(n => <option key={n} value={n}>{n}</option>)}
               </select>
             </div>
-
             <div className="form-group">
               <label htmlFor="car_id">Voiture *</label>
               <select id="car_id" value={form.car_id} onChange={set('car_id')}>
@@ -180,7 +198,6 @@ export default function NouvelEquipage({ params }) {
                 ))}
               </select>
             </div>
-
             {selectedCar && (
               <div className="form-group">
                 <label>Réservoir (auto-rempli)</label>
@@ -191,7 +208,6 @@ export default function NouvelEquipage({ params }) {
                 </div>
               </div>
             )}
-
             <div className="form-group">
               <label htmlFor="class">Classe *</label>
               {selectedCar ? (
@@ -207,21 +223,18 @@ export default function NouvelEquipage({ params }) {
                 </select>
               )}
             </div>
-
             <div className="form-group">
-              <label htmlFor="stream_url">Lien stream (Twitch)</label>
-              <input id="stream_url" type="url" value={form.stream_url} onChange={set('stream_url')}
-                placeholder="https://twitch.tv/..." />
+              <label htmlFor="stream_url">Lien stream</label>
+              <input id="stream_url" type="url" value={form.stream_url} onChange={set('stream_url')} />
             </div>
           </div>
         </div>
 
-        {/* Horaire de départ */}
         <div className="card" style={{ marginBottom: '1.25rem' }}>
           <h3 style={{ marginBottom: '1.25rem', color: 'var(--text-dim)' }}>Horaire de départ *</h3>
           {startTimes.length === 0 ? (
             <p style={{ color: 'var(--text-dim)', fontSize: '0.9rem' }}>
-              Aucun créneau disponible — configurez les horaires depuis la page de l&apos;événement.
+              Aucun créneau disponible.
             </p>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
@@ -241,7 +254,7 @@ export default function NouvelEquipage({ params }) {
                   <div>
                     <div style={{ fontWeight: 600, fontSize: '0.95rem' }}>{st.label}</div>
                     <div className="mono" style={{ fontSize: '0.8rem', color: 'var(--text-dim)' }}>
-                      {formatInZone(st.irl_start, eventTimezone)}
+                      {formatInZone(st.irl_start, form.timezone || 'Europe/Paris')}
                     </div>
                   </div>
                 </label>
@@ -250,7 +263,6 @@ export default function NouvelEquipage({ params }) {
           )}
         </div>
 
-        {/* Stratégie */}
         <div className="card" style={{ marginBottom: '1.25rem' }}>
           <h3 style={{ marginBottom: '1.25rem', color: 'var(--text-dim)' }}>Paramètres stratégie</h3>
           <div className="form-grid">
@@ -277,11 +289,18 @@ export default function NouvelEquipage({ params }) {
           </div>
         </div>
 
-        <div style={{ display: 'flex', gap: '0.75rem' }}>
-          <button type="submit" className="btn btn-primary" disabled={loading || startTimes.length === 0}>
-            {loading ? 'Enregistrement…' : "✓ Ajouter l'équipage"}
-          </button>
-          <Link href={`/evenements/${id}`} className="btn btn-secondary">Annuler</Link>
+        <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'space-between', flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', gap: '0.75rem' }}>
+            <button type="submit" className="btn btn-primary" disabled={loading}>
+              {loading ? 'Enregistrement…' : '✓ Enregistrer'}
+            </button>
+            <Link href={`/evenements/${id}/equipages/${entryId}`} className="btn btn-secondary">Annuler</Link>
+          </div>
+          {currentIsAdmin && (
+            <button type="button" className="btn btn-danger" onClick={handleDelete}>
+              Supprimer l'équipage
+            </button>
+          )}
         </div>
       </form>
     </div>
