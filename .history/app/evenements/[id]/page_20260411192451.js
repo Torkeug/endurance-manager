@@ -38,7 +38,7 @@ export default async function EvenementDetail({ params }) {
         event_start_times (irl_start, label),
         signups (
           team_entry_id,
-          drivers (id, name, irating)
+          drivers (id, name)
         )
       ),
       event_start_times (id, label, irl_start),
@@ -227,7 +227,6 @@ export default async function EvenementDetail({ params }) {
                 <th>Voiture</th>
                 <th>Classe</th>
                 <th>Pilotes</th>
-                <th>SoF</th>
                 <th>Départ IRL</th>
                 <th>Stream</th>
                 <th></th>
@@ -259,13 +258,6 @@ export default async function EvenementDetail({ params }) {
                       )}
                     </div>
                   </td>
-                  <td className="mono" style={{ fontSize: '0.85rem', color: 'var(--accent)' }}>
-                    {(() => {
-                      const drivers = (entry.signups || []).filter(s => s.drivers?.irating)
-                      if (drivers.length === 0) return '—'
-                      return Math.round(drivers.reduce((sum, s) => sum + s.drivers.irating, 0) / drivers.length) + ' iR'
-                    })()}
-                  </td>                  
                   <td>
                     {entry.event_start_times ? (
                       <>

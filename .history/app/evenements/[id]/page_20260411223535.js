@@ -38,7 +38,7 @@ export default async function EvenementDetail({ params }) {
         event_start_times (irl_start, label),
         signups (
           team_entry_id,
-          drivers (id, name, irating)
+          drivers (id, name)
         )
       ),
       event_start_times (id, label, irl_start),

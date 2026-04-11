@@ -39,15 +39,9 @@ export default async function EquipageDetail({ params }) {
   const entryCarId = entry.car_id
   const entryClass = entry.class || entry.cars?.class
 
-  const driversWithIrating = assignedDrivers.filter(d => d.drivers?.irating)
-  const avgIrating = driversWithIrating.length > 0
-    ? Math.round(driversWithIrating.reduce((sum, d) => sum + d.drivers.irating, 0) / driversWithIrating.length)
-    : null
-
   const infoItems = [
     { label: 'Voiture',           value: entry.cars?.name || '—' },
     { label: 'Classe',            value: entryClass || '—' },
-    { label: 'SoF', value: avgIrating ? `${avgIrating} iR` : '—' },
     { label: 'Réservoir', value: entry.bop_tank_size_percent
       ? `${(entry.cars?.tank_size_litres * entry.bop_tank_size_percent / 100).toFixed(1)}L (${entry.bop_tank_size_percent}% BoP)`
       : entry.cars?.tank_size_litres ? `${entry.cars.tank_size_litres}L` : '—' },

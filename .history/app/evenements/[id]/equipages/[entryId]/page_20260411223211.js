@@ -39,11 +39,6 @@ export default async function EquipageDetail({ params }) {
   const entryCarId = entry.car_id
   const entryClass = entry.class || entry.cars?.class
 
-  const driversWithIrating = assignedDrivers.filter(d => d.drivers?.irating)
-  const avgIrating = driversWithIrating.length > 0
-    ? Math.round(driversWithIrating.reduce((sum, d) => sum + d.drivers.irating, 0) / driversWithIrating.length)
-    : null
-
   const infoItems = [
     { label: 'Voiture',           value: entry.cars?.name || '—' },
     { label: 'Classe',            value: entryClass || '—' },
@@ -59,6 +54,11 @@ export default async function EquipageDetail({ params }) {
     { label: 'Lever soleil IG',   value: entry.events?.ig_sunrise || '—' },
     { label: 'Coucher soleil IG', value: entry.events?.ig_sunset  || '—' },
   ]
+
+  const driversWithIrating = assignedDrivers.filter(d => d.drivers?.irating)
+  const avgIrating = driversWithIrating.length > 0
+    ? Math.round(driversWithIrating.reduce((sum, d) => sum + d.drivers.irating, 0) / driversWithIrating.length)
+    : null
 
   return (
     <div className="page">
