@@ -175,7 +175,7 @@ export default function Inscription({ params }) {
     )
   }
 
-  const getMismatchWarning = () => {
+    const getMismatchWarning = () => {
     if (!carEntryId) return null
     const entry = carEntries.find(e => e.id === carEntryId)
     if (!entry) return null
@@ -184,25 +184,20 @@ export default function Inscription({ params }) {
 
     if (preferredCarIds.length === 0 && preferredClasses.length === 0) return null
 
-    // If any preferred car matches the team's car — no warning
-    if (preferredCarIds.length > 0 && preferredCarIds.includes(entryCarId)) return null
-
-    // If any preferred class matches the team's car class — no warning
-    if (preferredClasses.length > 0 && preferredClasses.includes(entryClass)) return null
-
-    // If both cars and classes are selected — no warning if either matches
-    if (preferredCarIds.length > 0 && preferredClasses.length > 0) {
-      if (preferredCarIds.includes(entryCarId) || preferredClasses.includes(entryClass)) return null
-    }
-
-    // Build warning message
     if (preferredCarIds.length > 0) {
-      const names = preferredCarIds.map(cid => cars.find(c => c.id === cid)?.name).filter(Boolean).join(', ')
-      return `La voiture de cette équipe (${entry.cars?.name || '?'}) ne correspond pas à vos préférences (${names}).`
+        // Specific cars selected — team car must be in that list
+        if (!preferredCarIds.includes(entryCarId)) {
+        const names = preferredCarIds.map(cid => cars.find(c => c.id === cid)?.name).filter(Boolean).join(', ')
+        return `La voiture de cette équipe (${entry.cars?.name || '?'}) ne fait pas partie de vos voitures préférées (${names}).`
+        }
+    } else {
+        // Only classes selected — team car's class must match
+        if (!preferredClasses.includes(entryClass)) {
+        return `La voiture de cette équipe (${entry.cars?.name || '?'} — ${entryClass}) ne correspond pas à vos classes préférées (${preferredClasses.join(', ')}).`
+        }
     }
-
-    return `La voiture de cette équipe (${entry.cars?.name || '?'} — ${entryClass}) ne correspond pas à vos classes préférées (${preferredClasses.join(', ')}).`
-  }
+    return null
+    }
 
   const mismatchWarning = getMismatchWarning()
 
