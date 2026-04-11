@@ -215,8 +215,8 @@ export default function DriversManager({ initialDrivers, currentDriver }) {
                   <th style={TH}>Nom</th>
                   <th style={TH}>Email</th>
                   <th style={TH}>Rôle</th>
-                  <th style={{TH, textAlign: 'center'}}>Cotisation</th>
-                  <th style={{TH, textAlign: 'center'}}>Test</th>
+                  <th style={TH}>Cotisation</th>
+                  <th style={TH}>Test</th>
                   <th style={TH}></th>
                 </tr>
               </thead>
@@ -257,25 +257,9 @@ export default function DriversManager({ initialDrivers, currentDriver }) {
                           </span>
                         )}
                       </td>
-                      <td style={{ ...TD, textAlign: 'center' }}>
-                        <input type="checkbox"
-                          checked={d.membership_ok || false}
-                          onChange={e => toggleMembership(d.id, e.target.checked)}
-                          disabled={saving === d.id}
-                          style={{ accentColor: 'var(--accent)', width: '16px', height: '16px', cursor: 'pointer' }}
-                        />
-                      </td>
-                      <td style={{ ...TD, textAlign: 'center' }}>
-                        <input type="checkbox"
-                          checked={d.test_driver || false}
-                          onChange={e => toggleTestDriver(d.id, e.target.checked)}
-                          disabled={saving === d.id}
-                          style={{ accentColor: 'var(--accent)', width: '16px', height: '16px', cursor: 'pointer' }}
-                        />
-                      </td>
-                      <td style={{ ...TD, textAlign: 'right' }}>
+                      <td style={TD}>
                         {canAct && (
-                          <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
+                          <div style={{ display: 'flex', gap: '0.5rem' }}>
                             <button onClick={() => revoke(d.id)}
                               className="btn btn-secondary btn-sm" disabled={saving === d.id}>
                               Révoquer

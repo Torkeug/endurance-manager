@@ -24,35 +24,13 @@ export default function Nav() {
 
   const [pendingCount, setPendingCount] = useState(0)
 
-  // Realtime subscription — only runs once when driver is set
   useEffect(() => {
-    if (!driver?.id) return
-    if (driver.role !== 'admin' && driver.role !== 'super_admin') return
-
-    const fetchCount = () => supabase.from('drivers')
-      .select('*', { count: 'exact', head: true })
-      .eq('approved', false).eq('refused', false)
-      .then(({ count }) => setPendingCount(count || 0))
-
-    const channel = supabase.channel('drivers-pending')
-      .on('postgres_changes', 
-        { event: '*', schema: 'public', table: 'drivers' },
-        () => fetchCount()
-      )
-      .subscribe()
-
-    return () => supabase.removeChannel(channel)
-  }, [driver?.id])
-
-  // Re-fetch on navigation
-  useEffect(() => {
-    if (!driver?.id) return
-    if (driver.role !== 'admin' && driver.role !== 'super_admin') return
+    if (!driver || (driver.role !== 'admin' && driver.role !== 'super_admin')) return
     supabase.from('drivers')
       .select('*', { count: 'exact', head: true })
       .eq('approved', false).eq('refused', false)
       .then(({ count }) => setPendingCount(count || 0))
-  }, [pathname, driver?.id])
+  }, [driver])
 
   useEffect(() => {
     const saved = localStorage.getItem('theme') || 'dark'

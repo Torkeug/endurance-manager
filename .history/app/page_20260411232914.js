@@ -33,8 +33,6 @@ export default async function HomePage() {
     { data: myStints },
     { data: pendingDrivers },
     { count: totalDrivers },
-    { count: testDrivers },
-    { count: overdueMembers },
     { data: teamEntries },
   ] = await Promise.all([
     supabase.from('events').select(`
@@ -138,11 +136,9 @@ export default async function HomePage() {
           gap: '0.75rem', marginBottom: '2rem',
         }}>
           {[
-            { label: totalEvents > 1 ? 'Événements' : 'Événement', value: totalEvents, color: 'var(--accent)' },
-            { label: totalDrivers > 1 ? 'Pilotes actifs' : 'Pilote actif', value: totalDrivers, color: 'var(--accent)' },
-            { label: pendingCount > 1 ? 'En attente' : 'En attente', value: pendingCount, color: pendingCount > 0 ? 'var(--danger)' : 'var(--text-dim)' },
-            { label: (testDrivers || 0) > 1 ? 'Pilotes test' : 'Pilote test', value: testDrivers || 0, color: 'var(--text-dim)' },
-            { label: (overdueMembers || 0) > 1 ? 'Cotisations expirées' : 'Cotisation expirée', value: overdueMembers || 0, color: overdueMembers > 0 ? 'var(--danger)' : 'var(--text-dim)' },
+            { label: 'Événements', value: totalEvents, color: 'var(--accent)' },
+            { label: 'Pilotes actifs', value: totalDrivers, color: 'var(--accent)' },
+            { label: 'En attente', value: pendingCount, color: pendingCount > 0 ? 'var(--danger)' : 'var(--text-dim)' },
           ].map(({ label, value, color }) => (
             <div key={label} className="card" style={{ padding: '1rem', textAlign: 'center' }}>
               <div className="mono" style={{ fontSize: '1.8rem', fontWeight: 700, color }}>

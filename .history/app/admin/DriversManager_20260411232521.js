@@ -273,9 +273,9 @@ export default function DriversManager({ initialDrivers, currentDriver }) {
                           style={{ accentColor: 'var(--accent)', width: '16px', height: '16px', cursor: 'pointer' }}
                         />
                       </td>
-                      <td style={{ ...TD, textAlign: 'right' }}>
+                      <td style={TD}>
                         {canAct && (
-                          <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
+                          <div style={{ display: 'flex', gap: '0.5rem' }}>
                             <button onClick={() => revoke(d.id)}
                               className="btn btn-secondary btn-sm" disabled={saving === d.id}>
                               Révoquer
