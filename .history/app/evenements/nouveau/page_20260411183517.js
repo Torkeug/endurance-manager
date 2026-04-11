@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createBrowserClient } from '@supabase/ssr'
-import { TIMEZONES } from '../../../lib/timezone'
+import { TIMEZONES } from '../../lib/timezone'
 
 const FORMATS = ['NEC', 'IMSA', 'GT World Challenge', 'Fanatec', 'VCO', 'Libre']
 
@@ -215,15 +215,6 @@ export default function NouvelEvenement() {
               </div>
             </div>
 
-            <div className="form-group">
-              <label htmlFor="timezone">Fuseau horaire</label>
-              <select id="timezone" value={form.timezone} onChange={set('timezone')}>
-                {TIMEZONES.map(tz => (
-                  <option key={tz.value} value={tz.value}>{tz.label}</option>
-                ))}
-              </select>
-            </div>
-            
             <div className="form-group" style={{ gridColumn: '1 / -1' }}>
               <label htmlFor="notes">Notes</label>
               <textarea id="notes" value={form.notes} onChange={set('notes')} rows={2}

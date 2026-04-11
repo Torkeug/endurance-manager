@@ -213,17 +213,16 @@ export default function NouvelEvenement() {
                   </span>
                 )}
               </div>
+              <div className="form-group">
+                <label htmlFor="timezone">Fuseau horaire</label>
+                <select id="timezone" value={form.timezone} onChange={set('timezone')}>
+                  {TIMEZONES.map(tz => (
+                    <option key={tz.value} value={tz.value}>{tz.label}</option>
+                  ))}
+                </select>
+              </div>
             </div>
 
-            <div className="form-group">
-              <label htmlFor="timezone">Fuseau horaire</label>
-              <select id="timezone" value={form.timezone} onChange={set('timezone')}>
-                {TIMEZONES.map(tz => (
-                  <option key={tz.value} value={tz.value}>{tz.label}</option>
-                ))}
-              </select>
-            </div>
-            
             <div className="form-group" style={{ gridColumn: '1 / -1' }}>
               <label htmlFor="notes">Notes</label>
               <textarea id="notes" value={form.notes} onChange={set('notes')} rows={2}
