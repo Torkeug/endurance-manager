@@ -69,10 +69,8 @@ export default function CarsManager({ initialCars }) {
     if (err) {
       if (err.code === '23503') {
         setError('Cette voiture est utilisée par un ou plusieurs équipages et ne peut pas être supprimée.')
-      } else {
-        setError(err.message)
       }
-      return
+      return 
     }
     setCars(prev => prev.filter(c => c.id !== id)); router.refresh()
   }

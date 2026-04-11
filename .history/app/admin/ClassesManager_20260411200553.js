@@ -102,14 +102,7 @@ export default function ClassesManager({ initialClasses, initialCars }) {
     if (!confirm(msg)) return
 
     const { error: err } = await supabase.from('car_classes').delete().eq('id', id)
-    if (err) {
-      if (err.code === '23503') {
-        setError('Cette classe est utilisée et ne peut pas être supprimée.')
-      } else {
-        setError(err.message)
-      }
-      return
-    }
+    if (err) { setError(err.message); return }
 
     // Unclass all cars in this class
     if (carsInClass.length > 0) {

@@ -46,7 +46,6 @@ export default function NouveauPilote() {
     if (!form.name.trim()) { setError('Le nom est obligatoire.'); return }
 
     setLoading(true)
-    
     // Check duplicate name
     const { data: sameName } = await supabase
       .from('drivers').select('id').ilike('name', form.name.trim()).single()
@@ -58,14 +57,6 @@ export default function NouveauPilote() {
         .from('drivers').select('id, name').eq('iracing_id', form.iracing_id.trim()).single()
       if (sameId) { setError(`Cet iRacing ID est déjà utilisé par ${sameId.name}.`); setLoading(false); return }
     }
-
-    // Check duplicate email
-    if (form.email?.trim()) {
-      const { data: sameEmail } = await supabase
-        .from('drivers').select('id, name').eq('email', form.email.trim()).single()
-      if (sameEmail) { setError(`Cette adresse email est déjà utilisée par ${sameEmail.name}.`); setLoading(false); return }
-    }
-
     setError(null)
 
     const payload = {

@@ -65,16 +65,16 @@ export default function CircuitsManager({ initialCircuits }) {
 
   const handleDelete = async (id) => {
     if (!confirm('Supprimer ce circuit ?')) return
-    const { error: err } = await supabase.from('circuits').delete().eq('id', id)
+    const { error: err } = await supabase.from('crew_names').delete().eq('id', id)
     if (err) {
       if (err.code === '23503') {
-        setError('Ce circuit est utilisé par un ou plusieurs événements et ne peut pas être supprimé.')
+        setError('Ce nom est utilisé par un ou plusieurs équipages et ne peut pas être supprimé.')
       } else {
         setError(err.message)
       }
       return
     }
-    setCircuits(prev => prev.filter(c => c.id !== id)); router.refresh()
+    setItems(prev => prev.filter(i => i.id !== id)); router.refresh()
   }
 
   const startEdit = (circuit) => {

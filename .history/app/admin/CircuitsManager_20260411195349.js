@@ -53,12 +53,7 @@ export default function CircuitsManager({ initialCircuits }) {
     const { data, error: err } = await supabase.from('circuits')
       .update({ name: form.name.trim(), pit_lane_time_seconds: parseInt(form.pit_lane_time_seconds) })
       .eq('id', editingId).select().single()
-    if (err) {
-      if (err.code === '23505') {
-        setError('Ce nom existe déjà.')
-      } else {
-        setError(err.message)
-      } setSaving(false); return }
+    if (err) { setError(err.message); setSaving(false); return }
     setCircuits(prev => prev.map(c => c.id === editingId ? data : c))
     reset(); setSaving(false); router.refresh()
   }
@@ -66,14 +61,7 @@ export default function CircuitsManager({ initialCircuits }) {
   const handleDelete = async (id) => {
     if (!confirm('Supprimer ce circuit ?')) return
     const { error: err } = await supabase.from('circuits').delete().eq('id', id)
-    if (err) {
-      if (err.code === '23503') {
-        setError('Ce circuit est utilisé par un ou plusieurs événements et ne peut pas être supprimé.')
-      } else {
-        setError(err.message)
-      }
-      return
-    }
+    if (err) { setError(err.message); return }
     setCircuits(prev => prev.filter(c => c.id !== id)); router.refresh()
   }
 

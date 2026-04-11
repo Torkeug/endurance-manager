@@ -63,8 +63,6 @@ export default function EventTypesManager({ initialEventTypes, initialEventTypeC
     if (err) {
       if (err.code === '23503') {
         setError('Ce type d\'événement est utilisé par un ou plusieurs événements et ne peut pas être supprimé.')
-      } else {
-        setError(err.message)
       }
       return
     }

@@ -42,12 +42,7 @@ export default function CrewNamesManager({ initialCrewNames }) {
     setSaving(true)
     const { data, error: err } = await supabase.from('crew_names')
       .update({ name: newName.trim() }).eq('id', editingId).select().single()
-    if (err) {
-      if (err.code === '23505') {
-        setError('Ce nom existe déjà.')
-      } else {
-        setError(err.message)
-      } setSaving(false); return }
+    if (err) { setError(err.message); setSaving(false); return }
     setItems(prev => prev.map(i => i.id === editingId ? data : i))
     reset(); setSaving(false); router.refresh()
   }
@@ -55,14 +50,7 @@ export default function CrewNamesManager({ initialCrewNames }) {
   const handleDelete = async (id) => {
     if (!confirm('Supprimer ce nom d\'équipage ?')) return
     const { error: err } = await supabase.from('crew_names').delete().eq('id', id)
-    if (err) {
-      if (err.code === '23503') {
-        setError('Ce nom est utilisé par un ou plusieurs équipages et ne peut pas être supprimé.')
-      } else {
-        setError(err.message)
-      }
-      return
-    }
+    if (err) { setError(err.message); return }
     setItems(prev => prev.filter(i => i.id !== id)); router.refresh()
   }
 

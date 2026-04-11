@@ -55,14 +55,7 @@ export default function CrewNamesManager({ initialCrewNames }) {
   const handleDelete = async (id) => {
     if (!confirm('Supprimer ce nom d\'équipage ?')) return
     const { error: err } = await supabase.from('crew_names').delete().eq('id', id)
-    if (err) {
-      if (err.code === '23503') {
-        setError('Ce nom est utilisé par un ou plusieurs équipages et ne peut pas être supprimé.')
-      } else {
-        setError(err.message)
-      }
-      return
-    }
+    if (err) { setError(err.message); return }
     setItems(prev => prev.filter(i => i.id !== id)); router.refresh()
   }
 

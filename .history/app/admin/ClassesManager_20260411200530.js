@@ -75,13 +75,7 @@ export default function ClassesManager({ initialClasses, initialCars }) {
     setSaving(true)
     const { data, error: err } = await supabase.from('car_classes')
       .update({ name: newName.trim() }).eq('id', editingId).select().single()
-    if (err) {
-      if (err.code === '23505') {
-        setError('Ce nom existe déjà.')
-      } else {
-        setError(err.message)
-      } 
-      setSaving(false); return }
+    if (err) { setError(err.message); setSaving(false); return }
 
     // Update cars that had the old class name
     if (oldClass && oldClass.name !== newName.trim()) {
@@ -102,14 +96,7 @@ export default function ClassesManager({ initialClasses, initialCars }) {
     if (!confirm(msg)) return
 
     const { error: err } = await supabase.from('car_classes').delete().eq('id', id)
-    if (err) {
-      if (err.code === '23503') {
-        setError('Cette classe est utilisée et ne peut pas être supprimée.')
-      } else {
-        setError(err.message)
-      }
-      return
-    }
+    if (err) { setError(err.message); return }
 
     // Unclass all cars in this class
     if (carsInClass.length > 0) {

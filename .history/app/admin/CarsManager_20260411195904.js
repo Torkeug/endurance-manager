@@ -37,12 +37,7 @@ export default function CarsManager({ initialCars }) {
     const { data, error: err } = await supabase.from('cars')
       .insert([{ name: form.name.trim(), tank_size_litres: parseFloat(form.tank_size_litres) }])
       .select().single()
-      if (err) {
-        if (err.code === '23505') {
-          setError('Ce nom existe déjà.')
-        } else {
-          setError(err.message)
-        } setSaving(false); return }
+    if (err) { setError(err.message); setSaving(false); return }
     setCars(prev => [...prev, data].sort((a, b) => a.name.localeCompare(b.name)))
     reset(); setSaving(false); router.refresh()
   }
@@ -53,12 +48,7 @@ export default function CarsManager({ initialCars }) {
     const { data, error: err } = await supabase.from('cars')
       .update({ name: form.name.trim(), tank_size_litres: parseFloat(form.tank_size_litres) })
       .eq('id', editingId).select().single()
-      if (err) {
-        if (err.code === '23505') {
-          setError('Ce nom existe déjà.')
-        } else {
-          setError(err.message)
-        } setSaving(false); return }
+    if (err) { setError(err.message); setSaving(false); return }
     setCars(prev => prev.map(c => c.id === editingId ? data : c))
     reset(); setSaving(false); router.refresh()
   }
@@ -67,12 +57,10 @@ export default function CarsManager({ initialCars }) {
     if (!confirm('Supprimer cette voiture ?')) return
     const { error: err } = await supabase.from('cars').delete().eq('id', id)
     if (err) {
-      if (err.code === '23503') {
+       if (err.code === '23503') {
         setError('Cette voiture est utilisée par un ou plusieurs équipages et ne peut pas être supprimée.')
-      } else {
-        setError(err.message)
-      }
-      return
+        }
+      return 
     }
     setCars(prev => prev.filter(c => c.id !== id)); router.refresh()
   }

@@ -65,19 +65,6 @@ export default function ModifierPilote({ params }) {
     if (!form.name.trim()) { setError('Le nom est obligatoire.'); return }
 
     setLoading(true)
-
-    // Check duplicate name (exclude current driver)
-    const { data: sameName } = await supabase
-      .from('drivers').select('id').ilike('name', form.name.trim()).neq('id', id).single()
-    if (sameName) { setError(`Un pilote nommé "${form.name.trim()}" existe déjà.`); setLoading(false); return }
-
-    // Check duplicate iRacing ID (exclude current driver)
-    if (form.iracing_id.trim()) {
-      const { data: sameId } = await supabase
-        .from('drivers').select('id, name').eq('iracing_id', form.iracing_id.trim()).neq('id', id).single()
-      if (sameId) { setError(`Cet iRacing ID est déjà utilisé par ${sameId.name}.`); setLoading(false); return }
-    }
-    
     setError(null)
 
     const payload = {
