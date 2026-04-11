@@ -46,10 +46,10 @@ export default async function EquipageDetail({ params }) {
     : null
 
   const infoItems = [
-    { label: 'Voiture',           value: entry.car_name_snapshot || entry.cars?.name || '—' },
+    { label: 'Voiture', value: entry.car_name_snapshot || entry.cars?.name || '—' },
     { label: 'Classe',            value: entryClass || '—' },
-    { label: 'SoF',               value: avgIrating ? `${avgIrating} iR` : '—' },
-    { label: 'Réservoir',         value: entry.bop_tank_size_percent
+    { label: 'SoF', value: avgIrating ? `${avgIrating} iR` : '—' },
+    { label: 'Réservoir', value: entry.bop_tank_size_percent
       ? `${(entry.cars?.tank_size_litres * entry.bop_tank_size_percent / 100).toFixed(1)}L (${entry.bop_tank_size_percent}% BoP)`
       : entry.cars?.tank_size_litres ? `${entry.cars.tank_size_litres}L` : '—' },
     { label: 'Pit lane',          value: pitTime ? `${pitTime}s` : '—' },
@@ -69,7 +69,7 @@ export default async function EquipageDetail({ params }) {
           <h1>{entry.crew_name}</h1>
           <div className="accent-line" />
           <div style={{ marginTop: '0.4rem', color: 'var(--text-dim)', fontSize: '0.85rem' }}>
-            {entry.events?.name} — {entry.car_name_snapshot || entry.cars?.name || 'Voiture à définir'}
+            {entry.events?.name} — {entry.cars?.name || 'Voiture à définir'}
           </div>
         </div>
         <div style={{ display: 'flex', gap: '0.75rem' }}>

@@ -48,7 +48,6 @@ export default async function EvenementDetail({ params }) {
       event_start_times (id, label, irl_start),
       signups (
         id, preferred_class, preferred_car_ids, preferred_start_time_ids, notes, team_entry_id,
-        driver_name_snapshot,
         drivers (id, name, irating),
         team_entries (crew_name)
       ),
@@ -188,7 +187,7 @@ export default async function EvenementDetail({ params }) {
                 .sort((a, b) => (a.drivers?.name || '').localeCompare(b.drivers?.name || ''))
                 .map((s) => (
                 <tr key={s.id}>
-                  <td style={{ fontWeight: 600 }}>{s.driver_name_snapshot || s.drivers?.name || '—'}</td>
+                  <td style={{ fontWeight: 600 }}>{s.drivers?.name || '—'}</td>
                   <td className="mono" style={{ color: 'var(--accent)', fontSize: '0.85rem' }}>
                     {s.drivers?.irating ?? '—'}
                   </td>
@@ -211,7 +210,7 @@ export default async function EvenementDetail({ params }) {
                     {s.notes || '—'}
                   </td>
                   <td>
-                    {(admin || currentDriver?.id === s.drivers?.id) && s.drivers?.id && (
+                    {(admin || currentDriver?.id === s.drivers?.id) && (
                       <Link
                         href={`/evenements/${id}/inscription?driver=${s.drivers?.id}`}
                         className="btn btn-secondary btn-sm"
@@ -258,24 +257,24 @@ export default async function EvenementDetail({ params }) {
               {event.team_entries.map((entry) => (
                 <tr key={entry.id}>
                   <td style={{ fontWeight: 600 }}>{entry.crew_name}</td>
-                  <td style={{ color: 'var(--text-dim)' }}>{entry.car_name_snapshot || entry.cars?.name || '—'}</td>
+                  <td style={{ color: 'var(--text-dim)' }}>{entry.cars?.name || '—'}</td>
                   <td>{entry.class && <span className="badge badge-driver">{entry.class}</span>}</td>
                   <td>
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.25rem' }}>
                       {(entry.signups || [])
-                        .filter(s => s.drivers || s.driver_name_snapshot)
+                        .filter(s => s.drivers)
                         .map(s => (
-                          <span key={s.drivers?.id || s.driver_name_snapshot} style={{
+                          <span key={s.drivers.id} style={{
                             fontSize: '0.75rem', padding: '0.1rem 0.4rem',
                             background: 'var(--surface-2)', border: '1px solid var(--border)',
                             borderRadius: '2px', color: 'var(--text-dim)',
                             whiteSpace: 'nowrap',
                           }}>
-                            {s.driver_name_snapshot || s.drivers?.name}
+                            {s.drivers.name}
                           </span>
                         ))
                       }
-                      {(entry.signups || []).filter(s => s.drivers || s.driver_name_snapshot).length === 0 && (
+                      {(entry.signups || []).filter(s => s.drivers).length === 0 && (
                         <span style={{ color: 'var(--text-dim)', fontSize: '0.85rem' }}>—</span>
                       )}
                     </div>

@@ -211,7 +211,7 @@ export default async function EvenementDetail({ params }) {
                     {s.notes || '—'}
                   </td>
                   <td>
-                    {(admin || currentDriver?.id === s.drivers?.id) && s.drivers?.id && (
+                    {(admin || currentDriver?.id === s.drivers?.id) && (
                       <Link
                         href={`/evenements/${id}/inscription?driver=${s.drivers?.id}`}
                         className="btn btn-secondary btn-sm"
@@ -263,19 +263,19 @@ export default async function EvenementDetail({ params }) {
                   <td>
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.25rem' }}>
                       {(entry.signups || [])
-                        .filter(s => s.drivers || s.driver_name_snapshot)
+                        .filter(s => s.drivers)
                         .map(s => (
-                          <span key={s.drivers?.id || s.driver_name_snapshot} style={{
+                          <span key={s.drivers.id} style={{
                             fontSize: '0.75rem', padding: '0.1rem 0.4rem',
                             background: 'var(--surface-2)', border: '1px solid var(--border)',
                             borderRadius: '2px', color: 'var(--text-dim)',
                             whiteSpace: 'nowrap',
                           }}>
-                            {s.driver_name_snapshot || s.drivers?.name}
+                            {s.drivers.name}
                           </span>
                         ))
                       }
-                      {(entry.signups || []).filter(s => s.drivers || s.driver_name_snapshot).length === 0 && (
+                      {(entry.signups || []).filter(s => s.drivers).length === 0 && (
                         <span style={{ color: 'var(--text-dim)', fontSize: '0.85rem' }}>—</span>
                       )}
                     </div>

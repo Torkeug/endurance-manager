@@ -211,7 +211,7 @@ export default async function EvenementDetail({ params }) {
                     {s.notes || '—'}
                   </td>
                   <td>
-                    {(admin || currentDriver?.id === s.drivers?.id) && s.drivers?.id && (
+                    {(admin || currentDriver?.id === s.drivers?.id) && (
                       <Link
                         href={`/evenements/${id}/inscription?driver=${s.drivers?.id}`}
                         className="btn btn-secondary btn-sm"

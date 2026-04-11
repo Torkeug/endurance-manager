@@ -69,7 +69,7 @@ export default async function EquipageDetail({ params }) {
           <h1>{entry.crew_name}</h1>
           <div className="accent-line" />
           <div style={{ marginTop: '0.4rem', color: 'var(--text-dim)', fontSize: '0.85rem' }}>
-            {entry.events?.name} — {entry.car_name_snapshot || entry.cars?.name || 'Voiture à définir'}
+            {entry.events?.name} — {entry.cars?.name || 'Voiture à définir'}
           </div>
         </div>
         <div style={{ display: 'flex', gap: '0.75rem' }}>
