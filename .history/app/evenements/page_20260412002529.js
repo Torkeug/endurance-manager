@@ -2,7 +2,6 @@ import { supabaseServer as supabase } from '../../lib/supabase-server'
 import Link from 'next/link'
 import { getSessionAndDriver, isAdmin } from '../../lib/auth'
 import { formatDateInZone } from '../../lib/timezone'
-import ArchivedEvents from './ArchivedEvents'
 
 export const revalidate = 0
 
@@ -59,26 +58,14 @@ export default async function EvenementsPage() {
 
   // Sort by earliest start time, events with no start times go to end
   const sorted = [...(evenements || [])].sort((a, b) => {
+    const activeEvents   = sorted.filter(ev => !ev.archived)
+    const archivedEvents = sorted.filter(ev => ev.archived)
     const aStart = getEarliestStart(a.event_start_times)
     const bStart = getEarliestStart(b.event_start_times)
     if (!aStart && !bStart) return 0
     if (!aStart) return 1
     if (!bStart) return -1
     return new Date(bStart.irl_start) - new Date(aStart.irl_start)
-  })
-
-  const activeEvents   = sorted.filter(ev => !ev.archived)
-  const archivedEvents = sorted.filter(ev => ev.archived)
-  const archivedData = archivedEvents.map(ev => {
-  const earliest = getEarliestStart(ev.event_start_times)
-    return {
-      id:        ev.id,
-      name:      ev.name,
-      format:    ev.format,
-      circuit:   ev.circuits?.name || '—',
-      timezone:  ev.timezone || 'Europe/Paris',
-      irl_start: earliest?.irl_start || null,
-    }
   })
 
   return (
@@ -93,14 +80,13 @@ export default async function EvenementsPage() {
           )}
       </div>
 
-      {/* Active events */}
-      {activeEvents.length === 0 ? (
+      {sorted.length === 0 ? (
         <div className="table-wrap">
-          <div className="empty">Aucun événement actif.</div>
+          <div className="empty">Aucun événement créé. Commencez par en créer un.</div>
         </div>
       ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginBottom: '2rem' }}>
-          {activeEvents.map((ev) => {
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+          {sorted.map((ev) => {
             const earliest = getEarliestStart(ev.event_start_times)
             return (
               <Link key={ev.id} href={`/evenements/${ev.id}`}
@@ -177,11 +163,8 @@ export default async function EvenementsPage() {
         </div>
       )}
 
-      {admin && <ArchivedEvents events={archivedData} />}
-
       <div style={{ marginTop: '1rem', color: 'var(--text-dim)', fontSize: '0.8rem' }}>
-        {activeEvents.length} événement{activeEvents.length !== 1 ? 's' : ''}
-        {admin && archivedEvents.length > 0 && ` · ${archivedEvents.length} archivé${archivedEvents.length !== 1 ? 's' : ''}`}
+        {sorted.length} événement{sorted.length !== 1 ? 's' : ''}
       </div>
     </div>
   )

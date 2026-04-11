@@ -4,8 +4,6 @@ import { notFound } from 'next/navigation'
 import StartTimesManager from './StartTimesManager'
 import { getSessionAndDriver, isAdmin } from '../../../lib/auth'
 import { formatInZone, formatDateInZone, formatTimeInZone } from '../../../lib/timezone'
-import ArchiveToggle from './ArchiveToggle'
-import DeleteEventButton from './DeleteEventButton'
 
 export const revalidate = 0
 

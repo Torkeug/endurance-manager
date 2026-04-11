@@ -4,8 +4,6 @@ import { notFound } from 'next/navigation'
 import StartTimesManager from './StartTimesManager'
 import { getSessionAndDriver, isAdmin } from '../../../lib/auth'
 import { formatInZone, formatDateInZone, formatTimeInZone } from '../../../lib/timezone'
-import ArchiveToggle from './ArchiveToggle'
-import DeleteEventButton from './DeleteEventButton'
 
 export const revalidate = 0
 
@@ -76,31 +74,15 @@ export default async function EvenementDetail({ params }) {
     <div className="page">
       <div className="page-header">
         <div>
-          <h1 style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-            {event.name}
-            {event.archived && (
-              <span style={{ fontSize: '0.7rem', fontWeight: 700, letterSpacing: '0.08em',
-                textTransform: 'uppercase', padding: '0.2rem 0.5rem',
-                background: 'rgba(224,85,85,0.1)', border: '1px solid var(--danger)',
-                borderRadius: '3px', color: 'var(--danger)' }}>
-                Archivé
-              </span>
-            )}
-          </h1>
+          <h1>{event.name}</h1>
           <div className="accent-line" />
           <div style={{ marginTop: '0.5rem', color: 'var(--text-dim)', fontSize: '0.9rem' }}>
             {earliest ? formatInZone(earliest.irl_start, event.timezone || 'Europe/Paris') : 'Date à confirmer'}
           </div>
         </div>
         <div style={{ display: 'flex', gap: '0.75rem' }}>
-          {admin && !event.archived && (
-            <Link href={`/evenements/${id}/modifier`} className="btn btn-secondary">Modifier</Link>
-          )}
           {admin && (
-            <ArchiveToggle eventId={id} archived={event.archived} />
-          )}
-          {admin && event.archived && (
-            <DeleteEventButton eventId={id} />
+            <Link href={`/evenements/${id}/modifier`} className="btn btn-secondary">Modifier</Link>
           )}
           <Link href="/evenements" className="btn btn-secondary">← Retour</Link>
         </div>
