@@ -33,7 +33,6 @@ export default async function HomePage() {
     { data: myStints },
     { data: pendingDrivers },
     { count: totalDrivers },
-    { data: teamEntries },
   ] = await Promise.all([
     supabase.from('events').select(`
       id, name, format, duration_minutes,
@@ -55,14 +54,14 @@ export default async function HomePage() {
       id, crew_name, event_id,
       events (name),
       signups (id),
-      stints (id, driver_id)
+      stints (id)
     `).order('crew_name') : { data: [] },
   ])
 
   const now = new Date()
 
   const incompleteEntries = admin ? (teamEntries || []).filter(te => 
-    (te.signups || []).length === 0 || (te.stints || []).filter(s => s.driver_id).length === 0
+    (te.signups || []).length === 0 || (te.stints || []).length === 0
   ) : []
 
   const upcomingEvents = (events || [])
@@ -150,72 +149,6 @@ export default async function HomePage() {
           ))}
         </div>
       )}
-
-      {admin && (() => {
-        const noDrivers = (teamEntries || []).filter(te => (te.signups || []).length === 0)
-        const noStints = (teamEntries || []).filter(te => 
-          (te.signups || []).length > 0 && 
-          (te.stints || []).filter(s => s.driver_id).length === 0
-        )
-
-        return (
-          <>
-            {noDrivers.length > 0 && (
-              <div style={{ marginBottom: '2rem' }}>
-                <h2 style={{ marginBottom: '1rem' }}>Équipages sans pilotes</h2>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                  {noDrivers.map(te => (
-                    <Link key={te.id} href={`/evenements/${te.event_id}/equipages/${te.id}`}
-                      style={{ textDecoration: 'none' }}>
-                      <div className="card event-card" style={{
-                        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                        gap: '1rem', cursor: 'pointer', padding: '0.75rem 1rem'
-                      }}>
-                        <div>
-                          <div style={{ fontWeight: 600 }}>{te.crew_name}</div>
-                          <div style={{ fontSize: '0.8rem', color: 'var(--text-dim)' }}>{te.events?.name}</div>
-                        </div>
-                        <span style={{ fontSize: '0.72rem', padding: '0.15rem 0.4rem',
-                          background: 'rgba(224,85,85,0.1)', border: '1px solid var(--danger)',
-                          borderRadius: '2px', color: 'var(--danger)' }}>
-                          Aucun pilote
-                        </span>
-                      </div>
-                    </Link>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {noStints.length > 0 && (
-              <div style={{ marginBottom: '2rem' }}>
-                <h2 style={{ marginBottom: '1rem' }}>Équipages sans relais planifiés</h2>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                  {noStints.map(te => (
-                    <Link key={te.id} href={`/evenements/${te.event_id}/equipages/${te.id}`}
-                      style={{ textDecoration: 'none' }}>
-                      <div className="card event-card" style={{
-                        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                        gap: '1rem', cursor: 'pointer', padding: '0.75rem 1rem'
-                      }}>
-                        <div>
-                          <div style={{ fontWeight: 600 }}>{te.crew_name}</div>
-                          <div style={{ fontSize: '0.8rem', color: 'var(--text-dim)' }}>{te.events?.name}</div>
-                        </div>
-                        <span style={{ fontSize: '0.72rem', padding: '0.15rem 0.4rem',
-                          background: 'rgba(224,85,85,0.1)', border: '1px solid var(--danger)',
-                          borderRadius: '2px', color: 'var(--danger)' }}>
-                          Aucun relais
-                        </span>
-                      </div>
-                    </Link>
-                  ))}
-                </div>
-              </div>
-            )}
-          </>
-        )
-      })()}    
 
       {/* Next event + next stint */}
       <div style={{
