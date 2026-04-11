@@ -18,7 +18,7 @@ const TABS = [
   { id: 'parametres', label: 'Paramètres' },
 ]
 
-export default function AdminTabs({ circuits, cars, crewNames, carClasses, eventTypes, eventTypeCars, drivers, currentDriver, settings, durationPresets }) {
+export default function AdminTabs({ circuits, cars, crewNames, carClasses, eventTypes, eventTypeCars, drivers, currentDriver, settings }) {
   const [activeTab, setActiveTab] = useState('pilotes')
   const pendingCount = (drivers || []).filter(d => !d.approved && !d.refused).length
 
@@ -71,12 +71,7 @@ export default function AdminTabs({ circuits, cars, crewNames, carClasses, event
           carClasses={carClasses}
         />
       )}
-      {activeTab === 'parametres' && (
-        <SettingsManager
-          initialPresets={durationPresets}
-          initialDefaultDuration={parseInt(settings?.default_event_duration_minutes || '160')}
-        />
-      )}
+      {activeTab === 'parametres' && <SettingsManager initialSettings={settings} />}
     </div>
   )
 }

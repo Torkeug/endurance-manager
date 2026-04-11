@@ -20,7 +20,6 @@ export default async function AdminPage() {
     { data: eventTypeCars },
     { data: drivers },
     { data: settingsData },
-    { data: durationPresets },
   ] = await Promise.all([
     supabase.from('circuits').select('*').order('name'),
     supabase.from('cars').select('*').order('class').order('name'),
@@ -30,10 +29,7 @@ export default async function AdminPage() {
     supabase.from('event_type_cars').select('event_type_id, car_id'),
     supabase.from('drivers').select('id, name, email, role, approved, refused, iracing_id, discord, active, membership_ok, test_driver').order('name'),
     supabase.from('settings').select('key, value'),
-    supabase.from('event_duration_presets').select('*').order('minutes'),
   ])
-
-  const settings = Object.fromEntries((settingsData || []).map(s => [s.key, s.value]))
 
   return (
     <div className="page">
@@ -56,8 +52,6 @@ export default async function AdminPage() {
         eventTypeCars={eventTypeCars || []}
         drivers={drivers || []}
         currentDriver={currentDriver}
-        settings={settings}
-        durationPresets={durationPresets || []}
       />
     </div>
   )

@@ -20,7 +20,6 @@ export default async function AdminPage() {
     { data: eventTypeCars },
     { data: drivers },
     { data: settingsData },
-    { data: durationPresets },
   ] = await Promise.all([
     supabase.from('circuits').select('*').order('name'),
     supabase.from('cars').select('*').order('class').order('name'),
@@ -57,7 +56,6 @@ export default async function AdminPage() {
         drivers={drivers || []}
         currentDriver={currentDriver}
         settings={settings}
-        durationPresets={durationPresets || []}
       />
     </div>
   )

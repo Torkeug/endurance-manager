@@ -71,12 +71,7 @@ export default function AdminTabs({ circuits, cars, crewNames, carClasses, event
           carClasses={carClasses}
         />
       )}
-      {activeTab === 'parametres' && (
-        <SettingsManager
-          initialPresets={durationPresets}
-          initialDefaultDuration={parseInt(settings?.default_event_duration_minutes || '160')}
-        />
-      )}
+      {activeTab === 'parametres' && <SettingsManager initialSettings={settings} />}
     </div>
   )
 }

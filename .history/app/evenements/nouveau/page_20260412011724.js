@@ -5,11 +5,6 @@ import Link from 'next/link'
 import { createBrowserClient } from '@supabase/ssr'
 import { TIMEZONES } from '../../../lib/timezone'
 
-function formatDuration(minutes) {
-  const h = Math.floor(minutes / 60)
-  const m = minutes % 60
-  return m === 0 ? `${h}h` : `${h}h${String(m).padStart(2, '0')}`
-}
 
 const emptyForm = {
   name:             '',

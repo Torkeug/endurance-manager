@@ -5,11 +5,7 @@ import Link from 'next/link'
 import { createBrowserClient } from '@supabase/ssr'
 import { TIMEZONES } from '../../../lib/timezone'
 
-function formatDuration(minutes) {
-  const h = Math.floor(minutes / 60)
-  const m = minutes % 60
-  return m === 0 ? `${h}h` : `${h}h${String(m).padStart(2, '0')}`
-}
+const [durations, setDurations] = useState([])
 
 const emptyForm = {
   name:             '',
@@ -32,7 +28,6 @@ export default function NouvelEvenement() {
   const [error, setError]       = useState(null)
   const [customMinutes, setCustomMinutes] = useState('')
   const [eventTypes, setEventTypes] = useState([])
-  const [durations, setDurations] = useState([])
 
   const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -99,7 +94,7 @@ export default function NouvelEvenement() {
     setForm(prev => ({ ...prev, duration_minutes: total || '' }))
   }
 
-  const isPreset = durations.some(d => d.minutes === form.duration_minutes)
+  const isPreset = DURATIONS.some(d => d.value === form.duration_minutes)
 
   const handleSubmit = async (e) => {
     e.preventDefault()
