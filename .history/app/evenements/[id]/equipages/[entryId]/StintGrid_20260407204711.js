@@ -361,7 +361,7 @@ export default function StintGrid({ teamEntryId, teamEntry, assignedDrivers }) {
           {
             label: 'Fin prévue', value: projectedFinish ? formatDatetime(projectedFinish) : '—',
             color: raceEndTime && projectedFinish
-              ? (projectedFinish >= raceEndTime ? '#2eb460' : 'var(--danger)') : null
+              ? (projectedFinish > raceEndTime ? 'var(--danger)' : '#2eb460') : null
           },
         ].map(({ label, value, color }) => (
           <div key={label} style={{

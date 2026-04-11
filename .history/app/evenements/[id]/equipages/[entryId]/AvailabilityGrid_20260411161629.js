@@ -304,11 +304,12 @@ export default function AvailabilityGrid({
           {selectedDriverId && (
             <button
               onClick={async () => {
+                if (!confirm('Effacer toutes vos disponibilités ?')) return
                 const updates = slots.map(slot => ({
                   team_entry_id: teamEntryId,
                   driver_id:     selectedDriverId,
                   slot_start:    slot.toISOString(),
-                  available:     true,
+                  available:     false,
                   updated_at:    new Date().toISOString(),
                 }))
                 setAvailabilities(prev => {
@@ -320,9 +321,9 @@ export default function AvailabilityGrid({
                   onConflict: 'team_entry_id,driver_id,slot_start'
                 })
               }}
-              className="btn btn-primary btn-sm"
+              className="btn btn-danger btn-sm"
             >
-              Tout marquer disponible
+              Effacer mes disponibilités
             </button>
           )}
 
