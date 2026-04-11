@@ -171,16 +171,13 @@ function calculateAllStints(stints, teamEntry, driverPerf, igStartTime, igSunris
       : null
   }
 
-  // Mark the stint that covers the race end
+  // Mark last stint and calculate adjusted duration
   if (result.length > 0 && raceEnd) {
-    // Find first stint that ends at or after race end
-    const lastRaceStint = result.find(s => s._irlEnd && s._irlEnd >= raceEnd)
-      || result[result.length - 1] // fallback to last if none cover race end
-
-    lastRaceStint._isLastStint = true
-    if (lastRaceStint._irlStart) {
-      const remainingSecs = (raceEnd - lastRaceStint._irlStart) / 1000
-      lastRaceStint._adjustedDurationSec = Math.max(0, Math.min(lastRaceStint._stintDurationSec || 0, remainingSecs))
+    const last = result[result.length - 1]
+    last._isLastStint = true
+    if (last._irlStart) {
+      const remainingSecs = (raceEnd - last._irlStart) / 1000
+      last._adjustedDurationSec = Math.max(0, Math.min(last._stintDurationSec || 0, remainingSecs))
     }
   }
 
@@ -191,18 +188,19 @@ function calculateAllStints(stints, teamEntry, driverPerf, igStartTime, igSunris
 
 function estimateStintCount(teamEntry, driverPerf, assignedDrivers) {
   const durationMinutes = teamEntry?.events?.duration_minutes
-  const carTankSize     = teamEntry?.cars?.tank_size_litres
-  const tankSize        = teamEntry?.bop_tank_size_percent
-    ? carTankSize * (teamEntry.bop_tank_size_percent / 100)
-    : carTankSize
+  const tankSize        = teamEntry?.cars?.tank_size_litres
   if (!durationMinutes) return 1
+
   const driverIds = assignedDrivers.map(d => d.drivers?.id).filter(Boolean)
   const perfs = driverIds.map(id => driverPerf[id]).filter(p => p?.lap_time_dry && p?.fuel_dry)
+
   if (perfs.length === 0) return Math.max(1, Math.ceil(durationMinutes / 60))
-  const avgLapSec    = perfs.reduce((s, p) => s + p.lap_time_dry, 0) / perfs.length
-  const avgFuel      = perfs.reduce((s, p) => s + p.fuel_dry,     0) / perfs.length
+
+  const avgLapSec  = perfs.reduce((s, p) => s + p.lap_time_dry, 0) / perfs.length
+  const avgFuel    = perfs.reduce((s, p) => s + p.fuel_dry,     0) / perfs.length
   const lapsPerStint = tankSize ? Math.floor(tankSize / avgFuel) : Math.ceil(60 * 60 / avgLapSec)
   const stintDurMin  = Math.round((lapsPerStint * avgLapSec) / 60)
+
   return Math.max(1, Math.ceil(durationMinutes / stintDurMin))
 }
 
@@ -482,7 +480,6 @@ export default function StintGrid({ teamEntryId, teamEntry, assignedDrivers }) {
                 <tr key={stint.id} style={{
                   background: i % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.02)',
                   opacity: isSaving ? 0.6 : 1,
-                  borderLeft: stint._isLastStint ? '3px solid #2eb460' : '3px solid transparent',
                 }}>
                   {/* # */}
                   <td style={{ ...TD, textAlign: 'center' }}>
@@ -542,23 +539,12 @@ export default function StintGrid({ teamEntryId, teamEntry, assignedDrivers }) {
 
                   {/* Duration */}
                   <td style={TD}>
-                    {stint._isLastStint && stint._adjustedDurationSec ? (
-                      <div>
-                        <div className="mono" style={{ fontSize: '0.75rem', color: '#2eb460' }}>
-                          🏁 {formatDuration(stint._adjustedDurationSec)}
-                        </div>
-                        {stint._adjustedDurationSec !== stint._stintDurationSec && (
-                          <div className="mono" style={{ fontSize: '0.7rem', color: 'var(--text-dim)', textDecoration: 'line-through' }}>
-                            {formatDuration(stint._stintDurationSec)}
-                          </div>
-                        )}
-                      </div>
-                    ) : stint._durationFromPerf ? (
+                    {stint._durationFromPerf ? (
                       <span className="mono" style={{ fontSize: '0.75rem' }}>
                         {formatDuration(stint._stintDurationSec)}
                       </span>
                     ) : (
-                      <input type="number" placeholder="60"
+                      <input type="number" placeholder="60 min"
                         value={stint.duration_minutes || ''}
                         onFocus={e => e.target.select()}
                         onChange={e => updateStint(stint.id, 'duration_minutes', e.target.value ? parseInt(e.target.value) : null)}
@@ -662,22 +648,11 @@ export default function StintGrid({ teamEntryId, teamEntry, assignedDrivers }) {
       </div>
 
       {/* Actions */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-        {projectedFinish && raceEndTime && projectedFinish >= raceEndTime && (
-          <div style={{
-            fontSize: '0.82rem', color: '#d4904a', padding: '0.5rem 0.75rem',
-            background: '#2a1a00', border: '1px solid #a06020',
-            borderRadius: '3px',
-          }}>
-            ⚠️ La course est déjà couverte par les relais planifiés.
-          </div>
+      <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', alignItems: 'center' }}>
+        <button onClick={addStint} className="btn btn-secondary">+ Ajouter un relais</button>
+        {stints.length > 0 && (
+          <button onClick={clearAllStints} className="btn btn-danger btn-sm">Tout supprimer</button>
         )}
-        <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', alignItems: 'center' }}>
-          <button onClick={addStint} className="btn btn-secondary">+ Ajouter un relais</button>
-          {stints.length > 0 && (
-            <button onClick={clearAllStints} className="btn btn-danger btn-sm">Tout supprimer</button>
-          )}
-        </div>
       </div>
 
       {/* Legend */}

@@ -191,18 +191,19 @@ function calculateAllStints(stints, teamEntry, driverPerf, igStartTime, igSunris
 
 function estimateStintCount(teamEntry, driverPerf, assignedDrivers) {
   const durationMinutes = teamEntry?.events?.duration_minutes
-  const carTankSize     = teamEntry?.cars?.tank_size_litres
-  const tankSize        = teamEntry?.bop_tank_size_percent
-    ? carTankSize * (teamEntry.bop_tank_size_percent / 100)
-    : carTankSize
+  const tankSize        = teamEntry?.cars?.tank_size_litres
   if (!durationMinutes) return 1
+
   const driverIds = assignedDrivers.map(d => d.drivers?.id).filter(Boolean)
   const perfs = driverIds.map(id => driverPerf[id]).filter(p => p?.lap_time_dry && p?.fuel_dry)
+
   if (perfs.length === 0) return Math.max(1, Math.ceil(durationMinutes / 60))
-  const avgLapSec    = perfs.reduce((s, p) => s + p.lap_time_dry, 0) / perfs.length
-  const avgFuel      = perfs.reduce((s, p) => s + p.fuel_dry,     0) / perfs.length
+
+  const avgLapSec  = perfs.reduce((s, p) => s + p.lap_time_dry, 0) / perfs.length
+  const avgFuel    = perfs.reduce((s, p) => s + p.fuel_dry,     0) / perfs.length
   const lapsPerStint = tankSize ? Math.floor(tankSize / avgFuel) : Math.ceil(60 * 60 / avgLapSec)
   const stintDurMin  = Math.round((lapsPerStint * avgLapSec) / 60)
+
   return Math.max(1, Math.ceil(durationMinutes / stintDurMin))
 }
 
@@ -662,22 +663,11 @@ export default function StintGrid({ teamEntryId, teamEntry, assignedDrivers }) {
       </div>
 
       {/* Actions */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-        {projectedFinish && raceEndTime && projectedFinish >= raceEndTime && (
-          <div style={{
-            fontSize: '0.82rem', color: '#d4904a', padding: '0.5rem 0.75rem',
-            background: '#2a1a00', border: '1px solid #a06020',
-            borderRadius: '3px',
-          }}>
-            ⚠️ La course est déjà couverte par les relais planifiés.
-          </div>
+      <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', alignItems: 'center' }}>
+        <button onClick={addStint} className="btn btn-secondary">+ Ajouter un relais</button>
+        {stints.length > 0 && (
+          <button onClick={clearAllStints} className="btn btn-danger btn-sm">Tout supprimer</button>
         )}
-        <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', alignItems: 'center' }}>
-          <button onClick={addStint} className="btn btn-secondary">+ Ajouter un relais</button>
-          {stints.length > 0 && (
-            <button onClick={clearAllStints} className="btn btn-danger btn-sm">Tout supprimer</button>
-          )}
-        </div>
       </div>
 
       {/* Legend */}
