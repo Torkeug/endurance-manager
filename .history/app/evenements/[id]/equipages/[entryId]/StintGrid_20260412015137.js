@@ -206,22 +206,6 @@ function estimateStintCount(teamEntry, driverPerf, assignedDrivers) {
   return Math.max(1, Math.ceil(durationMinutes / stintDurMin))
 }
 
-// ── Overlap Detection ──────────────────────────────────────────
-
-function hasConflict(calc, otherStints) {
-  if (!calc._irlStart || !calc._irlEnd) return null
-  for (const other of otherStints) {
-    if (!other.irl_start || !other.irl_end_planned) continue
-    if (calc.driver_id !== other.driver_id) continue
-    const aStart = calc._irlStart
-    const aEnd   = calc._irlEnd
-    const bStart = new Date(other.irl_start)
-    const bEnd   = new Date(other.irl_end_planned)
-    if (aStart < bEnd && bStart < aEnd) return other
-  }
-  return null
-}
-
 // ── Main component ─────────────────────────────────────────
 
 export default function StintGrid({ teamEntryId, teamEntry, assignedDrivers }) {
@@ -237,7 +221,6 @@ export default function StintGrid({ teamEntryId, teamEntry, assignedDrivers }) {
   const igStartTime = event?.ig_start_time
   const igSunrise   = event?.ig_sunrise
   const igSunset    = event?.ig_sunset
-  const driverIds   = assignedDrivers.map(d => d.drivers?.id).filter(Boolean)
 
   const supabase = createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -286,9 +269,9 @@ export default function StintGrid({ teamEntryId, teamEntry, assignedDrivers }) {
         supabase.from('stints').insert(rows).select()
           .then(({ data }) => { if (data) setStints(data) })
       }
-    setConflictStints(otherStints || [])
     })
-  }, [teamEntryId, JSON.stringify(driverIds)])
+    setConflictStints(otherStints || [])
+  }, [teamEntryId])
 
   const calculated = calculateAllStints(stints, teamEntry, driverPerf, igStartTime, igSunrise, igSunset)
 
@@ -512,22 +495,9 @@ export default function StintGrid({ teamEntryId, teamEntry, assignedDrivers }) {
                 }}>
                   {/* # */}
                   <td style={{ ...TD, textAlign: 'center' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.3rem' }}>
-                      <span className="mono" style={{ color: 'var(--text-dim)', fontSize: '0.72rem' }}>
-                        {stint.stint_number}
-                      </span>
-                      {(() => {
-                        const conflict = hasConflict(stint, conflictStints)
-                        if (!conflict) return null
-                        return (
-                          <span
-                            title={`Conflit avec ${conflict.team_entries?.crew_name || '?'} — ${conflict.team_entries?.events?.name || '?'}`}
-                            style={{ fontSize: '0.75rem', cursor: 'help' }}>
-                            ⚠️
-                          </span>
-                        )
-                      })()}
-                    </div>
+                    <span className="mono" style={{ color: 'var(--text-dim)', fontSize: '0.72rem' }}>
+                      {stint.stint_number}
+                    </span>
                   </td>
 
                   {/* Driver */}

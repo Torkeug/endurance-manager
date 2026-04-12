@@ -237,7 +237,6 @@ export default function StintGrid({ teamEntryId, teamEntry, assignedDrivers }) {
   const igStartTime = event?.ig_start_time
   const igSunrise   = event?.ig_sunrise
   const igSunset    = event?.ig_sunset
-  const driverIds   = assignedDrivers.map(d => d.drivers?.id).filter(Boolean)
 
   const supabase = createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL,

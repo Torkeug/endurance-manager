@@ -237,7 +237,6 @@ export default function StintGrid({ teamEntryId, teamEntry, assignedDrivers }) {
   const igStartTime = event?.ig_start_time
   const igSunrise   = event?.ig_sunrise
   const igSunset    = event?.ig_sunset
-  const driverIds   = assignedDrivers.map(d => d.drivers?.id).filter(Boolean)
 
   const supabase = createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -286,9 +285,9 @@ export default function StintGrid({ teamEntryId, teamEntry, assignedDrivers }) {
         supabase.from('stints').insert(rows).select()
           .then(({ data }) => { if (data) setStints(data) })
       }
-    setConflictStints(otherStints || [])
     })
-  }, [teamEntryId, JSON.stringify(driverIds)])
+    setConflictStints(otherStints || [])
+  }, [teamEntryId])
 
   const calculated = calculateAllStints(stints, teamEntry, driverPerf, igStartTime, igSunrise, igSunset)
 
@@ -512,22 +511,9 @@ export default function StintGrid({ teamEntryId, teamEntry, assignedDrivers }) {
                 }}>
                   {/* # */}
                   <td style={{ ...TD, textAlign: 'center' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.3rem' }}>
-                      <span className="mono" style={{ color: 'var(--text-dim)', fontSize: '0.72rem' }}>
-                        {stint.stint_number}
-                      </span>
-                      {(() => {
-                        const conflict = hasConflict(stint, conflictStints)
-                        if (!conflict) return null
-                        return (
-                          <span
-                            title={`Conflit avec ${conflict.team_entries?.crew_name || '?'} — ${conflict.team_entries?.events?.name || '?'}`}
-                            style={{ fontSize: '0.75rem', cursor: 'help' }}>
-                            ⚠️
-                          </span>
-                        )
-                      })()}
-                    </div>
+                    <span className="mono" style={{ color: 'var(--text-dim)', fontSize: '0.72rem' }}>
+                      {stint.stint_number}
+                    </span>
                   </td>
 
                   {/* Driver */}

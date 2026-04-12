@@ -450,28 +450,25 @@ function InscriptionPage({ params }) {
                           <div style={{ fontWeight: 600 }}>
                             {signup.team_entries?.crew_name || 'Sans équipe assignée'}
                           </div>
-                          {(() => {
-                            const entry = carEntries.find(e => e.id === signup.team_entry_id)
-                            const st = entry ? startTimes.find(s => s.id === entry.start_time_id) : null
-                            if (st) return (
-                              <div className="mono" style={{ fontSize: '0.75rem', color: 'var(--accent)', marginTop: '0.15rem' }}>
-                                {st.label} · Départ à {formatTimeInZone(st.irl_start, eventTimezone)}
-                              </div>
-                            )
-                            const prefTimes = (signup.preferred_start_time_ids || [])
-                              .map(sid => startTimes.find(s => s.id === sid))
-                              .filter(Boolean)
-                            if (prefTimes.length === 0) return null
-                            return (
-                              <div style={{ marginTop: '0.15rem' }}>
-                                {prefTimes.map(s => (
-                                  <div key={s.id} className="mono" style={{ fontSize: '0.75rem', color: 'var(--accent)' }}>
-                                    {s.label} · Départ à {formatTimeInZone(s.irl_start, eventTimezone)}
-                                  </div>
-                                ))}
-                              </div>
-                            )
-                          })()}
+{(() => {
+  const entry = carEntries.find(e => e.id === signup.team_entry_id)
+  const st = entry ? startTimes.find(s => s.id === entry.start_time_id) : null
+  if (st) return (
+    <div className="mono" style={{ fontSize: '0.75rem', color: 'var(--accent)', marginTop: '0.15rem' }}>
+      {st.label} · Départ à {formatTimeInZone(st.irl_start, eventTimezone)}
+    </div>
+  )
+  // No team — show preferred start times
+  const prefTimes = (signup.preferred_start_time_ids || [])
+    .map(sid => startTimes.find(s => s.id === sid))
+    .filter(Boolean)
+  if (prefTimes.length === 0) return null
+  return (
+    <div className="mono" style={{ fontSize: '0.75rem', color: 'var(--text-dim)', marginTop: '0.15rem' }}>
+      Créneaux préférés : {prefTimes.map(s => s.label).join(', ')}
+    </div>
+  )
+})()}
                           {signup.notes && (
                             <div style={{ fontSize: '0.78rem', color: 'var(--text-dim)', marginTop: '0.2rem', fontStyle: 'italic' }}>
                               {signup.notes}

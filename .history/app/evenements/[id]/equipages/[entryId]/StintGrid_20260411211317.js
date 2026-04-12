@@ -206,22 +206,6 @@ function estimateStintCount(teamEntry, driverPerf, assignedDrivers) {
   return Math.max(1, Math.ceil(durationMinutes / stintDurMin))
 }
 
-// ── Overlap Detection ──────────────────────────────────────────
-
-function hasConflict(calc, otherStints) {
-  if (!calc._irlStart || !calc._irlEnd) return null
-  for (const other of otherStints) {
-    if (!other.irl_start || !other.irl_end_planned) continue
-    if (calc.driver_id !== other.driver_id) continue
-    const aStart = calc._irlStart
-    const aEnd   = calc._irlEnd
-    const bStart = new Date(other.irl_start)
-    const bEnd   = new Date(other.irl_end_planned)
-    if (aStart < bEnd && bStart < aEnd) return other
-  }
-  return null
-}
-
 // ── Main component ─────────────────────────────────────────
 
 export default function StintGrid({ teamEntryId, teamEntry, assignedDrivers }) {
@@ -231,13 +215,11 @@ export default function StintGrid({ teamEntryId, teamEntry, assignedDrivers }) {
   const [loading, setLoading]       = useState(true)
   const [saving, setSaving]         = useState(null)
   const [autoGenDone, setAutoGenDone] = useState(false)
-  const [conflictStints, setConflictStints] = useState([])
 
   const event       = teamEntry?.events
   const igStartTime = event?.ig_start_time
   const igSunrise   = event?.ig_sunrise
   const igSunset    = event?.ig_sunset
-  const driverIds   = assignedDrivers.map(d => d.drivers?.id).filter(Boolean)
 
   const supabase = createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -250,14 +232,7 @@ export default function StintGrid({ teamEntryId, teamEntry, assignedDrivers }) {
       supabase.from('stints').select('*').eq('team_entry_id', teamEntryId).order('stint_number'),
       supabase.from('driver_performance').select('*').eq('team_entry_id', teamEntryId),
       supabase.from('availabilities').select('*').eq('team_entry_id', teamEntryId),
-      driverIds.length > 0
-        ? supabase.from('stints')
-            .select('*, team_entries(crew_name, events(name))')
-            .in('driver_id', driverIds)
-            .neq('team_entry_id', teamEntryId)
-        : Promise.resolve({ data: [] }),
-    ]).then(([{ data: stintsData }, { data: perfData }, { data: availData }, { data: otherStints }]) => {
-
+    ]).then(([{ data: stintsData }, { data: perfData }, { data: availData }]) => {
       const perfMap = {}
       ;(perfData || []).forEach(p => { perfMap[p.driver_id] = p })
       setDriverPerf(perfMap)
@@ -286,9 +261,8 @@ export default function StintGrid({ teamEntryId, teamEntry, assignedDrivers }) {
         supabase.from('stints').insert(rows).select()
           .then(({ data }) => { if (data) setStints(data) })
       }
-    setConflictStints(otherStints || [])
     })
-  }, [teamEntryId, JSON.stringify(driverIds)])
+  }, [teamEntryId])
 
   const calculated = calculateAllStints(stints, teamEntry, driverPerf, igStartTime, igSunrise, igSunset)
 
@@ -512,22 +486,9 @@ export default function StintGrid({ teamEntryId, teamEntry, assignedDrivers }) {
                 }}>
                   {/* # */}
                   <td style={{ ...TD, textAlign: 'center' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.3rem' }}>
-                      <span className="mono" style={{ color: 'var(--text-dim)', fontSize: '0.72rem' }}>
-                        {stint.stint_number}
-                      </span>
-                      {(() => {
-                        const conflict = hasConflict(stint, conflictStints)
-                        if (!conflict) return null
-                        return (
-                          <span
-                            title={`Conflit avec ${conflict.team_entries?.crew_name || '?'} — ${conflict.team_entries?.events?.name || '?'}`}
-                            style={{ fontSize: '0.75rem', cursor: 'help' }}>
-                            ⚠️
-                          </span>
-                        )
-                      })()}
-                    </div>
+                    <span className="mono" style={{ color: 'var(--text-dim)', fontSize: '0.72rem' }}>
+                      {stint.stint_number}
+                    </span>
                   </td>
 
                   {/* Driver */}

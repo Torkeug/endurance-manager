@@ -200,20 +200,12 @@ export default async function EvenementDetail({ params }) {
                   <td style={{ color: 'var(--text-dim)', fontSize: '0.85rem', maxWidth: '200px' }}>
                     {formatPreferences(s)}
                   </td>
-                  <td style={{ fontSize: '0.85rem' }}>
+                  <td style={{ color: 'var(--text-dim)', fontSize: '0.85rem' }}>
                     {(s.preferred_start_time_ids || []).length > 0
                       ? (s.preferred_start_time_ids || [])
-                          .map(stId => event.event_start_times?.find(st => st.id === stId))
-                          .filter(Boolean)
-                          .map(st => (
-                            <div key={st.id}>
-                              <div style={{ fontWeight: 600 }}>{st.label}</div>
-                              <div className="mono" style={{ fontSize: '0.78rem', color: 'var(--accent)' }}>
-                                Départ à {formatTimeInZone(st.irl_start, event.timezone || 'Europe/Paris')}
-                              </div>
-                            </div>
-                          ))
-                      : <span style={{ color: 'var(--text-dim)' }}>—</span>}
+                          .map(stId => event.event_start_times?.find(st => st.id === stId)?.label || '?')
+                          .join(', ')
+                      : '—'}
                   </td>
                   <td style={{ color: 'var(--text-dim)', fontSize: '0.85rem', maxWidth: '160px' }}>
                     {s.notes || '—'}

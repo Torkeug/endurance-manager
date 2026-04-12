@@ -465,7 +465,7 @@ function InscriptionPage({ params }) {
                             return (
                               <div style={{ marginTop: '0.15rem' }}>
                                 {prefTimes.map(s => (
-                                  <div key={s.id} className="mono" style={{ fontSize: '0.75rem', color: 'var(--accent)' }}>
+                                  <div key={s.id} className="mono" style={{ fontSize: '0.75rem', color: 'var(--text-dim)' }}>
                                     {s.label} · Départ à {formatTimeInZone(s.irl_start, eventTimezone)}
                                   </div>
                                 ))}
