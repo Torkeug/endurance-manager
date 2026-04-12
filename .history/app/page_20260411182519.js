@@ -1,0 +1,277 @@
+import { supabaseServer as supabase } from '../lib/supabase-server'
+import { getSessionAndDriver, isAdmin } from '../lib/auth'
+import Link from 'next/link'
+import { formatInZone } from '../lib/timezone'
+
+export const revalidate = 0
+
+function formatDuration(minutes) {
+  if (!minutes) return '—'
+  const h = Math.floor(minutes / 60)
+  const m = minutes % 60
+  return m === 0 ? `${h}h` : `${h}h${String(m).padStart(2, '0')}`
+}
+
+function timeUntil(dtStr) {
+  if (!dtStr) return null
+  const diff = new Date(dtStr) - new Date()
+  if (diff < 0) return null
+  const days  = Math.floor(diff / (1000 * 60 * 60 * 24))
+  const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60))
+  if (days > 0) return `dans ${days}j ${hours}h`
+  if (hours > 0) return `dans ${hours}h`
+  return 'imminent'
+}
+
+export default async function HomePage() {
+  const { driver: currentDriver } = await getSessionAndDriver()
+  const admin = isAdmin(currentDriver)
+
+  const [
+    { data: events },
+    { data: mySignups },
+    { data: myStints },
+    { data: pendingDrivers },
+    { count: totalDrivers },
+  ] = await Promise.all([
+    supabase.from('events').select(`
+      id, name, format, duration_minutes,
+      event_start_times (id, label, irl_start),
+      circuits (name),
+      team_entries (id, crew_name), timezone
+    `).order('name'),
+    currentDriver ? supabase.from('signups').select(`
+      *,
+      events (id, name, duration_minutes, format, timezone, circuits(name), event_start_times(id, label, irl_start)),
+      team_entries (id, crew_name, cars(name), event_start_times(label, irl_start))
+    `).eq('driver_id', currentDriver.id) : { data: [] },
+    currentDriver ? supabase.from('stints').select(`
+      *, team_entries(id, crew_name, event_id, events(name, timezone), event_start_times(label, irl_start))
+    `).eq('driver_id', currentDriver.id).order('irl_start') : { data: [] },
+    admin ? supabase.from('drivers').select('id').eq('approved', false).eq('refused', false) : { data: [] },
+    admin ? supabase.from('drivers').select('*', { count: 'exact', head: true }).eq('active', true) : { count: 0 },
+  ])
+
+  const now = new Date()
+
+  const upcomingEvents = (events || [])
+    .map(ev => {
+      const starts = (ev.event_start_times || []).sort((a, b) =>
+        new Date(a.irl_start) - new Date(b.irl_start))
+      const next = starts.find(s => new Date(s.irl_start) > now)
+      return { ...ev, nextStart: next }
+    })
+    .filter(ev => ev.nextStart)
+    .sort((a, b) => new Date(a.nextStart.irl_start) - new Date(b.nextStart.irl_start))
+
+  const nextEvent = upcomingEvents[0] || null
+
+  const myNextStint = (myStints || [])
+    .filter(s => s.irl_start && new Date(s.irl_start) > now)
+    .sort((a, b) => new Date(a.irl_start) - new Date(b.irl_start))[0] || null
+
+  const myUpcomingSignups = (mySignups || [])
+    .filter(s => {
+      const starts = s.events?.event_start_times || []
+      return starts.some(st => new Date(st.irl_start) > now)
+    })
+    .sort((a, b) => {
+      const aStart = Math.min(...(a.events?.event_start_times || []).map(st => new Date(st.irl_start)))
+      const bStart = Math.min(...(b.events?.event_start_times || []).map(st => new Date(st.irl_start)))
+      return aStart - bStart
+    })
+
+  const pendingCount = (pendingDrivers || []).length
+  const totalEvents  = (events || []).length
+
+  return (
+    <div className="page">
+
+      {/* Pending warning */}
+      {admin && pendingCount > 0 && (
+        <div style={{
+          background: 'rgba(224,85,85,0.1)', border: '1px solid var(--danger)',
+          borderRadius: '4px', padding: '0.75rem 1rem', marginBottom: '1.5rem',
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          gap: '1rem', flexWrap: 'wrap',
+        }}>
+          <span style={{ color: 'var(--danger)', fontWeight: 600, fontSize: '0.9rem' }}>
+            ⚠️ {pendingCount} pilote{pendingCount > 1 ? 's' : ''}{' '}en attente d&apos;approbation
+          </span>
+          <Link href="/admin" className="btn btn-danger btn-sm">Gérer les accès →</Link>
+        </div>
+      )}
+
+      {/* Header */}
+      <div className="page-header">
+        <div>
+          <h1>Tableau de bord</h1>
+          <div className="accent-line" />
+          {currentDriver && (
+            <div style={{ marginTop: '0.4rem', color: 'var(--text-dim)', fontSize: '0.9rem' }}>
+              Bienvenue,{' '}
+              <span style={{ color: 'var(--text)', fontWeight: 600 }}>{currentDriver.name}</span>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Admin stats */}
+      {admin && (
+        <div style={{
+          display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))',
+          gap: '0.75rem', marginBottom: '2rem',
+        }}>
+          {[
+            { label: 'Événements', value: totalEvents, color: 'var(--accent)' },
+            { label: 'Pilotes actifs', value: totalDrivers, color: 'var(--accent)' },
+            { label: 'En attente', value: pendingCount, color: pendingCount > 0 ? 'var(--danger)' : 'var(--text-dim)' },
+          ].map(({ label, value, color }) => (
+            <div key={label} className="card" style={{ padding: '1rem', textAlign: 'center' }}>
+              <div className="mono" style={{ fontSize: '1.8rem', fontWeight: 700, color }}>
+                {value}
+              </div>
+              <div style={{ fontSize: '0.75rem', fontWeight: 700, letterSpacing: '0.08em',
+                textTransform: 'uppercase', color: 'var(--text-dim)', marginTop: '0.25rem' }}>
+                {label}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Next event + next stint */}
+      <div style={{
+        display: 'grid', gridTemplateColumns: '1fr 1fr',
+        gap: '1.5rem', marginBottom: '2rem',
+        alignItems: 'stretch',
+      }}>
+        {/* Next event */}
+        <div style={{ display: 'flex', flexDirection: 'column' }}>
+          <h2 style={{ marginBottom: '1rem' }}>Prochain événement</h2>
+          {nextEvent ? (
+            <Link href={`/evenements/${nextEvent.id}`}
+              style={{ textDecoration: 'none', flex: 1, display: 'flex' }}>
+              <div className="card event-card" style={{ cursor: 'pointer', flex: 1 }}>
+                <div style={{ fontWeight: 700, fontSize: '1rem', marginBottom: '0.35rem' }}>
+                  {nextEvent.name}
+                </div>
+                <div style={{ fontSize: '0.82rem', color: 'var(--text-dim)', marginBottom: '0.5rem' }}>
+                  {nextEvent.circuits?.name}
+                  {nextEvent.format && ` · ${nextEvent.format}`}
+                  {nextEvent.duration_minutes && ` · ${formatDuration(nextEvent.duration_minutes)}`}
+                </div>
+                <div className="mono" style={{ fontSize: '0.85rem', color: 'var(--accent)', marginBottom: '0.25rem' }}>
+                  {formatInZone(nextEvent.nextStart.irl_start, nextEvent.timezone || 'Europe/Paris')}
+                </div>
+                <div style={{ fontSize: '0.78rem', color: 'var(--text-dim)', marginBottom: '0.5rem' }}>
+                  {timeUntil(nextEvent.nextStart.irl_start)}
+                </div>
+                <div style={{ fontSize: '0.78rem', color: 'var(--text-dim)' }}>
+                  {nextEvent.team_entries?.length || 0} équipage{(nextEvent.team_entries?.length || 0) !== 1 ? 's' : ''}
+                </div>
+              </div>
+            </Link>
+          ) : (
+            <div className="card" style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <div className="empty">Aucun événement à venir.</div>
+            </div>
+          )}
+        </div>
+
+        {/* My next stint */}
+        <div style={{ display: 'flex', flexDirection: 'column' }}>
+          <h2 style={{ marginBottom: '1rem' }}>Mon prochain relais</h2>
+          {myNextStint ? (
+            <Link
+              href={`/evenements/${myNextStint.team_entries?.event_id}/equipages/${myNextStint.team_entry_id}`}
+              style={{ textDecoration: 'none', flex: 1, display: 'flex' }}>
+              <div className="card" style={{ flex: 1 }}>
+                <div style={{ fontWeight: 700, fontSize: '1rem', marginBottom: '0.35rem' }}>
+                  {myNextStint.team_entries?.events?.name}
+                </div>
+                <div style={{ fontSize: '0.82rem', color: 'var(--text-dim)', marginBottom: '0.5rem' }}>
+                  {myNextStint.team_entries?.crew_name} · Relais #{myNextStint.stint_number}
+                  {myNextStint.rain && ' 💧'}
+                  {myNextStint.tyre_change && ' 🛞'}
+                </div>
+                <div className="mono" style={{ fontSize: '0.85rem', color: 'var(--accent)', marginBottom: '0.25rem' }}>
+                  {formatInZone(myNextStint.irl_start, myNextStint.team_entries?.events?.timezone || 'Europe/Paris')}
+                </div>
+                <div style={{ fontSize: '0.78rem', color: 'var(--text-dim)' }}>
+                  {timeUntil(myNextStint.irl_start)}
+                </div>
+              </div>
+            </Link>
+          ) : (
+            <div className="card" style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <div className="empty">Aucun relais assigné.</div>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* My upcoming events */}
+      {myUpcomingSignups.length > 0 && (
+        <div style={{ marginBottom: '2rem' }}>
+          <h2 style={{ marginBottom: '1rem' }}>Mes événements à venir</h2>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+            {myUpcomingSignups.map(signup => {
+              const ev = signup.events
+              const starts = (ev?.event_start_times || []).sort((a, b) =>
+                new Date(a.irl_start) - new Date(b.irl_start))
+              const nextStart = starts.find(s => new Date(s.irl_start) > now)
+              const teamEntry = signup.team_entries
+
+              return (
+                <div key={signup.id} className="card" style={{
+                  display: 'flex', alignItems: 'center',
+                  justifyContent: 'space-between', gap: '1rem', flexWrap: 'wrap',
+                }}>
+                  <div>
+                    <div style={{ fontWeight: 600 }}>{ev?.name}</div>
+                    <div style={{ fontSize: '0.8rem', color: 'var(--text-dim)', marginTop: '0.2rem' }}>
+                      {ev?.circuits?.name}
+                      {nextStart && ` · ${formatInZone(nextStart.irl_start, signup.events?.timezone || 'Europe/Paris')}`}
+                      {nextStart && ` · ${timeUntil(nextStart.irl_start)}`}
+                    </div>
+                    {teamEntry ? (
+                      <div style={{ fontSize: '0.78rem', color: 'var(--accent)', marginTop: '0.2rem' }}>
+                        {teamEntry.crew_name} — {teamEntry.cars?.name || 'Voiture à définir'}
+                      </div>
+                    ) : (
+                      <div style={{ fontSize: '0.78rem', color: 'var(--text-dim)', marginTop: '0.2rem' }}>
+                        Non assigné à une équipe
+                      </div>
+                    )}
+                  </div>
+                  <Link href={`/evenements/${ev?.id}`} className="btn btn-secondary btn-sm">
+                    Voir →
+                  </Link>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Actions rapides */}
+      <div>
+        <h2 style={{ marginBottom: '1rem' }}>Actions rapides</h2>
+        <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+          {admin && (
+            <>
+              <Link href="/pilotes/nouveau" className="btn btn-primary">+ Ajouter un pilote</Link>
+              <Link href="/evenements/nouveau" className="btn btn-primary">+ Créer un événement</Link>
+            </>
+          )}
+          <Link href="/evenements" className="btn btn-secondary">Voir les événements</Link>
+          {currentDriver && (
+            <Link href={`/pilotes/${currentDriver.id}`} className="btn btn-secondary">Mon profil</Link>
+          )}
+        </div>
+      </div>
+
+    </div>
+  )
+}
