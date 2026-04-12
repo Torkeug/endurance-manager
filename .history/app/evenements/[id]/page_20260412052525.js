@@ -250,11 +250,9 @@ export default async function EvenementDetail({ params }) {
       {/* Car entries */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
         <h2>Équipages engagés</h2>
-        {admin && !event.archived && (
-          <Link href={`/evenements/${id}/equipages/nouveau`} className="btn btn-primary">
-            + Ajouter un équipage
-          </Link>
-        )}
+        <Link href={`/evenements/${id}/equipages/nouveau`} className="btn btn-primary">
+          + Ajouter un équipage
+        </Link>
       </div>
 
       {!event.team_entries || event.team_entries.length === 0 ? (

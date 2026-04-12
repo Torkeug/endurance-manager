@@ -93,12 +93,6 @@ export default async function EvenementDetail({ params }) {
             )}
           </h1>
           <div className="accent-line" />
-          {event.championships && (
-            <div style={{ fontSize: '0.82rem', color: 'var(--text-dim)', marginTop: '0.2rem' }}>
-              {event.championships.name}
-              {event.round_number && ` · Manche ${event.round_number}`}
-            </div>
-          )}
           <div style={{ marginTop: '0.5rem', color: 'var(--text-dim)', fontSize: '0.9rem' }}>
             {earliest ? formatInZone(earliest.irl_start, event.timezone || 'Europe/Paris') : 'Date à confirmer'}
           </div>
@@ -169,11 +163,9 @@ export default async function EvenementDetail({ params }) {
             {event.signups?.length ?? 0} pilote{(event.signups?.length ?? 0) !== 1 ? 's' : ''} inscrit{(event.signups?.length ?? 0) !== 1 ? 's' : ''}
           </div>
         </div>
-        {!event.archived && (
-          <Link href={`/evenements/${id}/inscription`} className="btn btn-primary">
-            + S&apos;inscrire
-          </Link>
-        )}
+        <Link href={`/evenements/${id}/inscription`} className="btn btn-primary">
+          + S&apos;inscrire
+        </Link>
       </div>
 
       {!event.signups || event.signups.length === 0 ? (
@@ -250,11 +242,9 @@ export default async function EvenementDetail({ params }) {
       {/* Car entries */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
         <h2>Équipages engagés</h2>
-        {admin && !event.archived && (
-          <Link href={`/evenements/${id}/equipages/nouveau`} className="btn btn-primary">
-            + Ajouter un équipage
-          </Link>
-        )}
+        <Link href={`/evenements/${id}/equipages/nouveau`} className="btn btn-primary">
+          + Ajouter un équipage
+        </Link>
       </div>
 
       {!event.team_entries || event.team_entries.length === 0 ? (
