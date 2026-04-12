@@ -28,10 +28,9 @@ export async function GET(request) {
     const token_hash = searchParams.get('token_hash')
     if (token_hash && type === 'recovery') {
       const supabase = await createClient()
-      console.log('token_hash:', token_hash)
-      const { data, error: verifyErr } = await supabase.auth.exchangeCodeForSession(token_hash)
-      console.log('exchange result:', { data, error: verifyErr })
+      const { error: verifyErr } = await supabase.auth.exchangeCodeForSession(token_hash)
       if (verifyErr) {
+        console.log('exchange error:', verifyErr)
         return NextResponse.redirect(`${origin}/login?error=link_expired`)
       }
       return NextResponse.redirect(`${origin}/update-password`)

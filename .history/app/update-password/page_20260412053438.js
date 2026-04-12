@@ -77,8 +77,7 @@ export default function UpdatePasswordPage() {
                   <label>Confirmer le mot de passe</label>
                   <input type="password" value={confirm}
                     onChange={e => setConfirm(e.target.value)}
-                    placeholder="••••••••" required
-                    autoComplete="new-password" />
+                    placeholder="••••••••" required />
                 </div>
                 <button type="submit" className="btn btn-primary"
                   disabled={loading} style={{ width: '100%' }}>
