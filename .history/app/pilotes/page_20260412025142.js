@@ -94,8 +94,8 @@ export default async function PilotesPage() {
                   </td>
                   <td>
                     <span className="badge badge-driver" style={{
-                      color: p.role === 'super_admin' ? '#e05555' : p.role === 'admin' ? 'var(--accent)' : p.role === 'external' ? '#9147ff' : 'var(--text-dim)',
-                      borderColor: p.role === 'super_admin' ? '#e05555' : p.role === 'admin' ? 'var(--accent)' : p.role === 'external' ? '#9147ff' : 'var(--border)',
+                      color: p.role === 'super_admin' ? '#e05555' : p.role === 'admin' ? 'var(--accent)' : 'var(--text-dim)',
+                      borderColor: p.role === 'super_admin' ? '#e05555' : p.role === 'admin' ? 'var(--accent)' : 'var(--border)',
                     }}>
                       {p.role === 'super_admin' ? 'Super Admin' : p.role === 'admin' ? 'Admin' : p.role === 'external' ? 'Externe' : 'Pilote'}
                     </span>
