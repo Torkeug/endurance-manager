@@ -186,7 +186,6 @@ export default async function EvenementDetail({ params }) {
             </thead>
             <tbody>
               {(event.signups || [])
-                .filter(s => !isExternal || s.drivers?.id === currentDriver?.id)
                 .sort((a, b) => (a.drivers?.name || '').localeCompare(b.drivers?.name || ''))
                 .map((s) => (
                 <tr key={s.id}>
@@ -265,9 +264,7 @@ export default async function EvenementDetail({ params }) {
               </tr>
             </thead>
             <tbody>
-              {event.team_entries
-              .filter(entry => !isExternal || (entry.signups || []).some(s => s.drivers?.id === currentDriver?.id))
-              .map((entry) => (
+              {event.team_entries.map((entry) => (
                 <tr key={entry.id}>
                   <td style={{ fontWeight: 600 }}>{entry.crew_name}</td>
                   <td style={{ color: 'var(--text-dim)' }}>{entry.car_name_snapshot || entry.cars?.name || '—'}</td>
