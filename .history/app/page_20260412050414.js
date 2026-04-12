@@ -98,7 +98,7 @@ export default async function HomePage() {
     `).order('crew_name') : { data: [] },
 
     // Championships for name lookup in badges
-    supabase.from('championships').select('id, name, archived').order('name'),
+    admin ? supabase.from('championships').select('id, name').order('name') : { data: [] },
   ])
 
   // ── Derived data ───────────────────────────────────────────────────────────

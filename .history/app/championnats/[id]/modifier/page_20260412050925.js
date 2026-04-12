@@ -68,16 +68,13 @@ export default function ModifierChampionnat({ params }) {
     }
 
     const handleDelete = async () => {
-    if (!confirm('Supprimer définitivement ce championnat ? Toutes les manches seront également supprimées.')) return
+    if (!confirm('Supprimer définitivement ce championnat ? Les manches seront supprimées.')) return
     
-    // Delete all rounds first
-    const { error: roundsErr } = await supabase.from('events').delete().eq('championship_id', id)
-    if (roundsErr) { setError(roundsErr.message); return }
+    // Archive all rounds before deleting the championship
+    await supabase.from('events').update({ archived: true }).eq('championship_id', id)
     
-    // Then delete the championship
     const { error: err } = await supabase.from('championships').delete().eq('id', id)
     if (err) { setError(err.message); return }
-    
     router.push('/evenements')
     router.refresh()
     }

@@ -67,20 +67,13 @@ export default function ModifierChampionnat({ params }) {
     router.refresh()
     }
 
-    const handleDelete = async () => {
-    if (!confirm('Supprimer définitivement ce championnat ? Toutes les manches seront également supprimées.')) return
-    
-    // Delete all rounds first
-    const { error: roundsErr } = await supabase.from('events').delete().eq('championship_id', id)
-    if (roundsErr) { setError(roundsErr.message); return }
-    
-    // Then delete the championship
+  const handleDelete = async () => {
+    if (!confirm('Supprimer définitivement ce championnat ? Les manches ne seront pas supprimées mais seront détachées du championnat.')) return
     const { error: err } = await supabase.from('championships').delete().eq('id', id)
     if (err) { setError(err.message); return }
-    
     router.push('/evenements')
     router.refresh()
-    }
+  }
 
   if (fetching) return <div className="page"><p style={{ color: 'var(--text-dim)' }}>Chargement…</p></div>
   if (!authChecked) return <div className="page"><p style={{ color: 'var(--text-dim)' }}>Vérification des droits…</p></div>

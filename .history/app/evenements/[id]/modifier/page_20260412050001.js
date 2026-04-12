@@ -147,9 +147,6 @@ export default function ModifierEvenement({ params }) {
             .from('special_event_start_times').select('*').order('day_of_week').order('hour').order('minute')
           
           if (specialStartTimes?.length > 0) {
-            // Null out start_time_id on team entries first (FK constraint)
-            await supabase.from('team_entries').update({ start_time_id: null }).eq('event_id', id)
-
             // Delete existing start times
             const { error: deleteErr } = await supabase.from('event_start_times').delete().eq('event_id', id)
             if (deleteErr) { setError(`Erreur suppression horaires: ${deleteErr.message}`); setLoading(false); return }

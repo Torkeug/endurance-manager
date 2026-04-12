@@ -98,7 +98,7 @@ export default async function HomePage() {
     `).order('crew_name') : { data: [] },
 
     // Championships for name lookup in badges
-    supabase.from('championships').select('id, name, archived').order('name'),
+    admin ? supabase.from('championships').select('id, name').order('name') : { data: [] },
   ])
 
   // ── Derived data ───────────────────────────────────────────────────────────
@@ -117,7 +117,6 @@ export default async function HomePage() {
 
   // Find next upcoming event (earliest future start time across all non-archived events)
   const upcomingEvents = (events || [])
-    .filter(ev => !ev.championship_id || !archivedChampionshipIds.has(ev.championship_id))
     .map(ev => {
       const starts = (ev.event_start_times || []).sort((a, b) =>
         new Date(a.irl_start) - new Date(b.irl_start))
@@ -136,7 +135,6 @@ export default async function HomePage() {
 
   // Driver's upcoming signups (events with at least one future start time)
   const myUpcomingSignups = (mySignups || [])
-    .filter(s => !s.events?.championship_id || !archivedChampionshipIds.has(s.events.championship_id))
     .filter(s => {
       const starts = s.events?.event_start_times || []
       return starts.some(st => new Date(st.irl_start) > now)

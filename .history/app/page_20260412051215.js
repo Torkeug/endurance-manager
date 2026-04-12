@@ -128,6 +128,7 @@ export default async function HomePage() {
     .sort((a, b) => new Date(a.nextStart.irl_start) - new Date(b.nextStart.irl_start))
 
   const nextEvent = upcomingEvents[0] || null
+  console.log('upcomingEvents:', upcomingEvents.map(e => ({ name: e.name, is_special: e.is_special, nextStart: e.nextStart?.irl_start })))
 
   // Driver's next planned stint (future, sorted by IRL start)
   const myNextStint = (myStints || [])

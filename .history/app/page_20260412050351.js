@@ -98,7 +98,7 @@ export default async function HomePage() {
     `).order('crew_name') : { data: [] },
 
     // Championships for name lookup in badges
-    supabase.from('championships').select('id, name, archived').order('name'),
+    admin ? supabase.from('championships').select('id, name').order('name') : { data: [] },
   ])
 
   // ── Derived data ───────────────────────────────────────────────────────────
@@ -136,7 +136,6 @@ export default async function HomePage() {
 
   // Driver's upcoming signups (events with at least one future start time)
   const myUpcomingSignups = (mySignups || [])
-    .filter(s => !s.events?.championship_id || !archivedChampionshipIds.has(s.events.championship_id))
     .filter(s => {
       const starts = s.events?.event_start_times || []
       return starts.some(st => new Date(st.irl_start) > now)
