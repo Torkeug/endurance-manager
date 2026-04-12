@@ -149,12 +149,10 @@ export default function StartTimesManager({ eventId, initialStartTimes, timezone
                       </div>
                     </td>
                     <td style={{ textAlign: 'right' }}>
-                      {!isSpecial && (
-                        <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
-                          <button onClick={() => startEdit(st)} className="btn btn-secondary btn-sm">Modifier</button>
-                          <button onClick={() => handleDelete(st.id)} className="btn btn-danger btn-sm">Supprimer</button>
-                        </div>
-                      )}
+                      <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
+                        <button onClick={() => startEdit(st)} className="btn btn-secondary btn-sm">Modifier</button>
+                        <button onClick={() => handleDelete(st.id)} className="btn btn-danger btn-sm">Supprimer</button>
+                      </div>
                     </td>
                   </tr>
                   {editingId === st.id && (
@@ -176,7 +174,7 @@ export default function StartTimesManager({ eventId, initialStartTimes, timezone
           <h3 style={{ marginBottom: '1rem', color: 'var(--text-dim)' }}>Nouveau créneau</h3>
           {inlineForm(handleAdd, resetForm, '✓ Ajouter')}
         </div>
-      ) : !editingId && !isSpecial && (
+      ) : !editingId && (
         <button onClick={() => { setEditingId(null); setDate(''); setTime(''); setError(null); setAdding(true) }} className="btn btn-secondary">
           + Ajouter un créneau de départ
         </button>

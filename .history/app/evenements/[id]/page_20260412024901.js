@@ -150,7 +150,6 @@ export default async function EvenementDetail({ params }) {
           eventId={id} 
           initialStartTimes={event.event_start_times || []}
           timezone={event.timezone || 'Europe/Paris'}
-          isSpecial={event.is_special}
         />
       </div>
 

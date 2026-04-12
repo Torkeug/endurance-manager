@@ -72,14 +72,9 @@ export default function NouvelEvenement() {
       .then(({ data }) => setEventTypes(data?.map(t => t.name) || []))
   }, [])
 
-  useEffect(() => {
+ useEffect(() => {
     supabase.from('event_duration_presets').select('*').order('minutes')
       .then(({ data }) => setDurations(data || []))
-  }, [])
-
-  useEffect(() => {
-    supabase.from('special_event_start_times').select('*').order('day_of_week').order('hour').order('minute')
-      .then(({ data }) => setSpecialStartTimes(data || []))
   }, [])
 
   const set = (field) => (e) =>
@@ -128,8 +123,6 @@ export default function NouvelEvenement() {
       ig_sunrise:       form.ig_sunrise    || null,
       ig_sunset:        form.ig_sunset     || null,
       notes:            form.notes.trim()  || null,
-      is_special:          isSpecial,
-      weekend_start_date:  isSpecial && weekendStartDate ? weekendStartDate : null,
     }
 
     const { data, error: err } = await supabase
@@ -139,21 +132,6 @@ export default function NouvelEvenement() {
       setError(err.message)
       setLoading(false)
     } else {
-      // Auto-generate start times for special events
-      if (isSpecial && weekendStartDate && specialStartTimes.length > 0) {
-        const { DateTime } = await import('luxon')
-        const friday = DateTime.fromISO(weekendStartDate, { zone: form.timezone })
-        const startTimeRows = specialStartTimes.map(st => {
-          const dayOffset = { vendredi: 0, samedi: 1, dimanche: 2 }[st.day_of_week] || 0
-          const dt = friday.plus({ days: dayOffset }).set({ hour: st.hour, minute: st.minute, second: 0, millisecond: 0 })
-          return {
-            event_id:  data.id,
-            label:     `${st.day_of_week.charAt(0).toUpperCase() + st.day_of_week.slice(1)} ${dt.toFormat('d MMMM yyyy', { locale: 'fr' })}`,
-            irl_start: dt.toUTC().toISO(),
-          }
-        })
-        await supabase.from('event_start_times').insert(startTimeRows)
-      }
       router.push(`/evenements/${data.id}`)
       router.refresh()
     }
@@ -203,42 +181,6 @@ export default function NouvelEvenement() {
               <input id="name" type="text" value={form.name} onChange={set('name')}
                 placeholder="ex : Nürburgring 24h 2025" required />
             </div>
-            <div className="form-group" style={{ gridColumn: '1 / -1' }}>
-              <label style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', cursor: 'pointer' }}>
-                <input type="checkbox" checked={isSpecial} onChange={e => setIsSpecial(e.target.checked)}
-                  style={{ accentColor: 'var(--accent)', width: '16px', height: '16px' }} />
-                <span>Événement spécial (horaires de départ prédéfinis)</span>
-              </label>
-            </div>
-
-            {isSpecial && (
-              <div className="form-group">
-                <label htmlFor="weekend_start_date">Date du weekend (vendredi) *</label>
-                <input id="weekend_start_date" type="date" value={weekendStartDate}
-                  onChange={e => setWeekendStartDate(e.target.value)} />
-                {specialStartTimes.length === 0 && (
-                  <div style={{ fontSize: '0.8rem', color: 'var(--danger)', marginTop: '0.5rem' }}>
-                    Aucun horaire prédéfini configuré — ajoutez-en dans Admin → Paramètres.
-                  </div>
-                )}
-                {weekendStartDate && specialStartTimes.length > 0 && (
-                  <div style={{ marginTop: '0.75rem', fontSize: '0.82rem', color: 'var(--text-dim)' }}>
-                    Les créneaux suivants seront générés automatiquement après création :
-                    {specialStartTimes.map(st => {
-                      const dayOffset = { vendredi: 0, samedi: 1, dimanche: 2 }[st.day_of_week] || 0
-                      const date = new Date(weekendStartDate)
-                      date.setDate(date.getDate() + dayOffset)
-                      const dateStr = date.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })
-                      return (
-                        <div key={st.id} style={{ color: 'var(--accent)', fontFamily: 'var(--font-mono), monospace' }}>
-                          {dateStr} à {String(st.hour).padStart(2,'0')}:{String(st.minute).padStart(2,'0')}
-                        </div>
-                      )
-                    })}
-                  </div>
-                )}
-              </div>
-            )}
             <div className="form-group">
               <label htmlFor="format">Format</label>
               <select id="format" value={form.format} onChange={set('format')}>

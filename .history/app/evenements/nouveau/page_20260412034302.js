@@ -139,21 +139,6 @@ export default function NouvelEvenement() {
       setError(err.message)
       setLoading(false)
     } else {
-      // Auto-generate start times for special events
-      if (isSpecial && weekendStartDate && specialStartTimes.length > 0) {
-        const { DateTime } = await import('luxon')
-        const friday = DateTime.fromISO(weekendStartDate, { zone: form.timezone })
-        const startTimeRows = specialStartTimes.map(st => {
-          const dayOffset = { vendredi: 0, samedi: 1, dimanche: 2 }[st.day_of_week] || 0
-          const dt = friday.plus({ days: dayOffset }).set({ hour: st.hour, minute: st.minute, second: 0, millisecond: 0 })
-          return {
-            event_id:  data.id,
-            label:     `${st.day_of_week.charAt(0).toUpperCase() + st.day_of_week.slice(1)} ${dt.toFormat('d MMMM yyyy', { locale: 'fr' })}`,
-            irl_start: dt.toUTC().toISO(),
-          }
-        })
-        await supabase.from('event_start_times').insert(startTimeRows)
-      }
       router.push(`/evenements/${data.id}`)
       router.refresh()
     }
