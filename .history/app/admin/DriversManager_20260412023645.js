@@ -21,16 +21,20 @@ const ROLE_COLORS = {
 function getAllowedRoles(currentRole, targetRole, targetId, currentDriverId) {
   // Can't change own role
   if (targetId === currentDriverId) return null
+
   if (currentRole === 'super_admin') {
     // Super admin can promote/demote anyone except other super_admins
     if (targetRole === 'super_admin') return null
-    return ['driver', 'external', 'admin']
+    return ['driver', 'admin']
   }
+
   if (currentRole === 'admin') {
-    // Admin can promote drivers/externals, cannot touch other admins or super_admins
+    // Admin can only promote drivers to admin
+    // Cannot touch admins or super_admins
     if (targetRole === 'admin' || targetRole === 'super_admin') return null
-    return ['driver', 'external']
+    return ['driver', 'admin']
   }
+
   return null
 }
 

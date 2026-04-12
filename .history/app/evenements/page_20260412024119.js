@@ -40,29 +40,15 @@ export default async function EvenementsPage() {
   const { driver: currentDriver } = await getSessionAndDriver()
   const admin = isAdmin(currentDriver)
   const isExternal = currentDriver?.role === 'external'
-  let query = supabase.from('events').select(`
-    *,
-    circuits (name),
-    team_entries (id),
-    event_start_times (id, irl_start, label),
-    timezone
-  `).order('name')
-
-  if (isExternal) {
-    // Get events where this driver is registered
-    const { data: mySignups } = await supabase
-      .from('signups')
-      .select('event_id')
-      .eq('driver_id', currentDriver.id)
-    const registeredEventIds = (mySignups || []).map(s => s.event_id)
-    if (registeredEventIds.length > 0) {
-      query = query.in('id', registeredEventIds)
-    } else {
-      query = query.eq('id', '00000000-0000-0000-0000-000000000000') // no results
-    }
-  }
-
-  const { data: evenements, error } = await query
+  const { data: evenements, error } = await supabase
+    .from('events')
+    .select(`
+      *,
+      circuits (name),
+      team_entries (id),
+      event_start_times (id, irl_start, label),
+      timezone
+    `)
 
   if (error) {
     return (

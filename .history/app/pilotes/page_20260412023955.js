@@ -8,11 +8,10 @@ export default async function PilotesPage() {
   const { driver: currentDriver } = await getSessionAndDriver()
   const admin = isAdmin(currentDriver)
   const isExternal = currentDriver?.role === 'external'
-  let query = supabase.from('drivers').select('*').order('name')
-  if (isExternal) {
-    query = query.eq('id', currentDriver.id)
-  }
-  const { data: pilotes, error } = await query
+  const { data: pilotes, error } = await supabase
+    .from('drivers')
+    .select('*')
+    .order('name')
 
   return (
     <div className="page">

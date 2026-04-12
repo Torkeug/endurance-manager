@@ -135,7 +135,7 @@ export default function DriversAssignment({ entryId, entryCarId, entryClass, ass
         </div>
       )}
 
-      {unassigned.length > 0 && !isExternal && (
+      {unassigned.length > 0 && (
         <div>
           <div style={{ fontSize: '0.75rem', fontWeight: 700, letterSpacing: '0.1em',
             textTransform: 'uppercase', color: 'var(--text-dim)', marginBottom: '0.75rem' }}>

@@ -121,7 +121,7 @@ export default function DriversAssignment({ entryId, entryCarId, entryClass, ass
                     {s.notes || '—'}
                   </td>
                   <td>
-                    {!isExternal && (isAdmin || s.drivers?.id === currentDriver?.id) && (
+                    {(isAdmin || s.drivers?.id === currentDriver?.id) && (
                       <button onClick={() => unassign(s)} className="btn btn-secondary btn-sm"
                         title="Pilote concerné ou admin uniquement">
                         Retirer
@@ -135,7 +135,7 @@ export default function DriversAssignment({ entryId, entryCarId, entryClass, ass
         </div>
       )}
 
-      {unassigned.length > 0 && !isExternal && (
+      {unassigned.length > 0 && (
         <div>
           <div style={{ fontSize: '0.75rem', fontWeight: 700, letterSpacing: '0.1em',
             textTransform: 'uppercase', color: 'var(--text-dim)', marginBottom: '0.75rem' }}>
