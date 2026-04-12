@@ -1,0 +1,179 @@
+"use client";
+import { useState, Suspense, useEffect } from "react";
+import { supabaseBrowser as supabase } from "../../lib/supabase-browser";
+import { useRouter, useSearchParams } from "next/navigation";
+import Link from "next/link";
+
+function LoginForm() {
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  // Error params are set by auth/callback when a redirect fails —
+  // e.g. link_expired when a magic link or reset token is stale.
+  const urlError = searchParams.get("error");
+  const [theme, setTheme] = useState("dark");
+  // Read theme from localStorage in useEffect to avoid SSR hydration mismatch.
+  useEffect(() => {
+    const saved = localStorage.getItem("theme") || "dark";
+    setTheme(saved);
+  }, []);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!email.trim() || !password) {
+      setError("Email et mot de passe requis.");
+      return;
+    }
+    setLoading(true);
+    setError(null);
+
+    const { error: err } = await supabase.auth.signInWithPassword({
+      email: email.trim(),
+      password,
+    });
+
+    if (err) {
+      if (err.message.includes("Invalid login credentials")) {
+        setError("Email ou mot de passe incorrect.");
+      } else if (err.message.includes("Email not confirmed")) {
+        setError(
+          "Vérifiez votre email — un lien de confirmation vous a été envoyé.",
+        );
+      } else {
+        setError(err.message);
+      }
+      setLoading(false);
+      return;
+    }
+
+    // Use window.location.href instead of router.push to force a full page reload —
+    // this ensures the auth session cookie is picked up by the middleware immediately.
+    window.location.href = "/";
+  };
+
+  return (
+    <div
+      style={{
+        minHeight: "100vh",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        background: "var(--bg)",
+        padding: "1.5rem",
+      }}
+    >
+      <div style={{ width: "100%", maxWidth: "400px" }}>
+        {/* Logo */}
+        <div style={{ textAlign: "center", marginBottom: "2rem" }}>
+          <img
+            src={
+              theme === "dark"
+                ? "/kronos-logo-text.png"
+                : "/kronos-logo-light.png"
+            }
+            alt="Kronos SimSports"
+            style={{
+              height: "56px",
+              objectFit: "contain",
+              display: "block",
+              margin: "0 auto",
+            }}
+          />
+        </div>
+
+        <div className="card">
+          <h2 style={{ marginBottom: "0.5rem" }}>Connexion</h2>
+          <p
+            style={{
+              color: "var(--text-dim)",
+              fontSize: "0.85rem",
+              marginBottom: "1.5rem",
+            }}
+          >
+            Connectez-vous avec votre email et mot de passe.
+          </p>
+
+          {error && (
+            <div className="alert alert-error" style={{ marginBottom: "1rem" }}>
+              {error}
+            </div>
+          )}
+          {urlError === "link_expired" && (
+            <div className="alert alert-error" style={{ marginBottom: "1rem" }}>
+              Ce lien a expiré ou a déjà été utilisé. Demandez un nouveau lien.
+            </div>
+          )}
+          {urlError === "auth" && (
+            <div className="alert alert-error" style={{ marginBottom: "1rem" }}>
+              Erreur d&apos;authentification. Réessayez ou contactez un
+              administrateur.
+            </div>
+          )}
+
+          <form onSubmit={handleSubmit}>
+            <div className="form-group" style={{ marginBottom: "1rem" }}>
+              <label htmlFor="email">Email</label>
+              <input
+                id="email"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="votre@email.com"
+                autoFocus
+                required
+                autoComplete="email"
+              />
+            </div>
+            <div className="form-group" style={{ marginBottom: "1.5rem" }}>
+              <label htmlFor="password">Mot de passe</label>
+              <input
+                id="password"
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="••••••••"
+                required
+                autoComplete="current-password"
+              />
+            </div>
+            <button
+              type="submit"
+              className="btn btn-primary"
+              disabled={loading}
+              style={{ width: "100%", marginBottom: "1rem" }}
+            >
+              {loading ? "Connexion…" : "Se connecter"}
+            </button>
+          </form>
+
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              fontSize: "0.82rem",
+            }}
+          >
+            <Link href="/register" style={{ color: "var(--text-dim)" }}>
+              Créer un compte
+            </Link>
+            <Link href="/reset-password" style={{ color: "var(--text-dim)" }}>
+              Mot de passe oublié ?
+            </Link>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// useSearchParams() requires a Suspense boundary in Next.js app router.
+export default function LoginPage() {
+  return (
+    <Suspense>
+      <LoginForm />
+    </Suspense>
+  );
+}

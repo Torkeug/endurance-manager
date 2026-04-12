@@ -1,0 +1,102 @@
+import { supabase } from '../../lib/supabase'
+import Link from 'next/link'
+
+export const revalidate = 0
+
+export default async function PilotesPage() {
+  const { data: pilotes, error } = await supabase
+    .from('drivers')
+    .select('*')
+    .order('name')
+
+  return (
+    <div className="page">
+      <div className="page-header">
+        <div>
+          <h1>Pilotes</h1>
+          <div className="accent-line" />
+        </div>
+        <Link href="/pilotes/nouveau" className="btn btn-primary">
+          + Ajouter un pilote
+        </Link>
+      </div>
+
+      {error && (
+        <div className="alert alert-error">Erreur : {error.message}</div>
+      )}
+
+      {!pilotes || pilotes.length === 0 ? (
+        <div className="table-wrap">
+          <div className="empty">
+            Aucun pilote enregistré. Commencez par en ajouter un.
+          </div>
+        </div>
+      ) : (
+        <div className="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Nom</th>
+                <th>iRacing ID</th>
+                <th>iRating</th>
+                <th>Discord</th>
+                <th>Twitch</th>
+                <th>Instagram</th>
+                <th>Rôle</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              {pilotes.map((p) => (
+                <tr key={p.id}>
+                  <td style={{ fontWeight: 600 }}>{p.name}</td>
+                  <td className="mono" style={{ color: 'var(--text-dim)', fontSize: '0.85rem' }}>
+                    {p.iracing_id || '—'}
+                  </td>
+                  <td className="mono" style={{ color: 'var(--accent)' }}>
+                    {p.irating ?? '—'}
+                  </td>
+                  <td style={{ color: 'var(--text-dim)', fontSize: '0.9rem' }}>
+                    {p.discord || '—'}
+                  </td>
+                  <td style={{ color: 'var(--text-dim)', fontSize: '0.9rem' }}>
+                    {p.twitch ? (
+                      <a
+                        href={`https://twitch.tv/${p.twitch}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{ color: '#9147ff', textDecoration: 'none' }}
+                      >
+                        {p.twitch}
+                      </a>
+                    ) : '—'}
+                  </td>
+                  <td style={{ color: 'var(--text-dim)', fontSize: '0.9rem' }}>
+                    {p.instagram || '—'}
+                  </td>
+                  <td>
+                    <span className={`badge badge-${p.role}`}>
+                      {p.role === 'admin' ? 'Admin' : 'Pilote'}
+                    </span>
+                  </td>
+                  <td>
+                    <Link
+                      href={`/pilotes/${p.id}/modifier`}
+                      className="btn btn-secondary btn-sm"
+                    >
+                      Modifier
+                    </Link>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      <div style={{ marginTop: '1rem', color: 'var(--text-dim)', fontSize: '0.8rem' }}>
+        {pilotes?.length ?? 0} pilote{(pilotes?.length ?? 0) !== 1 ? 's' : ''}
+      </div>
+    </div>
+  )
+}

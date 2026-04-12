@@ -1,0 +1,206 @@
+'use client'
+import React, { useState } from 'react'
+import { useRouter } from 'next/navigation'
+import { createBrowserClient } from '@supabase/ssr'
+
+const emptyForm = { name: '', tank_size_litres: '' }
+
+export default function CarsManager({ initialCars }) {
+  const supabase = createBrowserClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+  )
+  const router = useRouter()
+  const [cars, setCars]           = useState(initialCars)
+  const [adding, setAdding]       = useState(false)
+  const [editingId, setEditingId] = useState(null)
+  const [form, setForm]           = useState(emptyForm)
+  const [saving, setSaving]       = useState(false)
+  const [error, setError]         = useState(null)
+
+  const set = (field) => (e) => setForm(prev => ({ ...prev, [field]: e.target.value }))
+
+  const validate = () => {
+    if (!form.name.trim())      { setError('Le nom est obligatoire.'); return false }
+    if (!form.tank_size_litres) { setError('La taille du réservoir est obligatoire.'); return false }
+    return true
+  }
+
+  const reset = () => {
+    setAdding(false); setEditingId(null)
+    setForm(emptyForm); setError(null)
+  }
+
+  const handleAdd = async () => {
+    if (!validate()) return
+    setSaving(true)
+    const { data, error: err } = await supabase.from('cars')
+      .insert([{ name: form.name.trim(), tank_size_litres: parseFloat(form.tank_size_litres) }])
+      .select().single()
+    if (err) { setError(err.message); setSaving(false); return }
+    setCars(prev => [...prev, data].sort((a, b) => a.name.localeCompare(b.name)))
+    reset(); setSaving(false); router.refresh()
+  }
+
+  const handleEdit = async () => {
+    if (!validate()) return
+    setSaving(true)
+    const { data, error: err } = await supabase.from('cars')
+      .update({ name: form.name.trim(), tank_size_litres: parseFloat(form.tank_size_litres) })
+      .eq('id', editingId).select().single()
+    if (err) { setError(err.message); setSaving(false); return }
+    setCars(prev => prev.map(c => c.id === editingId ? data : c))
+    reset(); setSaving(false); router.refresh()
+  }
+
+  const handleDelete = async (id) => {
+    if (!confirm('Supprimer cette voiture ?')) return
+    const { error: err } = await supabase.from('cars').delete().eq('id', id)
+    if (err) {
+      if (err.code === '23503') {
+        setError('Cette voiture est utilisée par un ou plusieurs équipages et ne peut pas être supprimée.')
+      }
+      return 
+    }
+    setCars(prev => prev.filter(c => c.id !== id)); router.refresh()
+  }
+
+  const startEdit = (car) => {
+    setEditingId(car.id)
+    setForm({ name: car.name, tank_size_litres: String(car.tank_size_litres) })
+    setAdding(false); setError(null)
+  }
+
+  const withClass    = cars.filter(c => c.class)
+  const withoutClass = cars.filter(c => !c.class)
+
+  const carsByClass = withClass.reduce((acc, car) => {
+    if (!acc[car.class]) acc[car.class] = []
+    acc[car.class].push(car)
+    return acc
+  }, {})
+
+  const editForm = (
+    <div style={{ padding: '1rem', background: 'var(--surface-2)' }}>
+      <div className="form-grid" style={{ marginBottom: '1rem' }}>
+        <div className="form-group" style={{ gridColumn: '1 / -1' }}>
+          <label>Nom</label>
+          <input type="text" value={form.name} onChange={set('name')}
+            placeholder="ex : Porsche 911 GT3 R (992)" />
+        </div>
+        <div className="form-group">
+          <label>Réservoir (litres)</label>
+          <input type="number" value={form.tank_size_litres} onChange={set('tank_size_litres')}
+            placeholder="ex : 99" min="0" max="999" step="0.1" />
+        </div>
+      </div>
+      <p style={{ fontSize: '0.78rem', color: 'var(--text-dim)', marginBottom: '1rem' }}>
+        💡 La classe s&apos;assigne depuis l&apos;onglet <strong>Classes</strong>.
+      </p>
+      {error && <div className="alert alert-error" style={{ marginBottom: '0.75rem' }}>{error}</div>}
+      <div style={{ display: 'flex', gap: '0.75rem' }}>
+        <button onClick={editingId ? handleEdit : handleAdd} className="btn btn-primary" disabled={saving}>
+          {saving ? '…' : editingId ? '✓ Enregistrer' : '✓ Ajouter'}
+        </button>
+        <button onClick={reset} className="btn btn-secondary">Annuler</button>
+      </div>
+    </div>
+  )
+
+  return (
+    <div>
+      {!adding && !editingId && error && (
+        <div className="alert alert-error" style={{ marginBottom: '1rem' }}>{error}</div>
+      )}
+
+      {adding && (
+        <div className="card" style={{ marginBottom: '0.75rem' }}>
+          <h3 style={{ marginBottom: '1rem', color: 'var(--text-dim)' }}>Nouvelle voiture</h3>
+          {editForm}
+        </div>
+      )}
+
+      {!adding && !editingId && (
+        <button onClick={() => { setAdding(true) }} className="btn btn-primary" style={{ marginBottom: '0.75rem' }}>
+          + Ajouter une voiture
+        </button>
+      )}
+
+      <div className="table-wrap" style={{ marginBottom: '0.75rem' }}>
+        <table>
+          <thead>
+            <tr>
+              <th>Voiture</th>
+              <th>Classe</th>
+              <th>Réservoir</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            {Object.entries(carsByClass).map(([cls, carsInClass]) => (
+              <React.Fragment key={`class-${cls}`}>
+                <tr style={{ background: 'var(--surface-2)' }}>
+                  <td colSpan={4} style={{ fontSize: '0.72rem', fontWeight: 700, letterSpacing: '0.1em',
+                    textTransform: 'uppercase', color: 'var(--text-dim)', padding: '0.4rem 1rem' }}>
+                    {cls}
+                  </td>
+                </tr>
+                {carsInClass.map(car => (
+                  <React.Fragment key={car.id}>
+                    <tr>
+                      <td style={{ fontWeight: 600 }}>{car.name}</td>
+                      <td><span className="badge badge-driver">{car.class}</span></td>
+                      <td className="mono" style={{ color: 'var(--accent)' }}>{car.tank_size_litres}L</td>
+                      <td>
+                        <div style={{ display: 'flex', gap: '0.5rem' }}>
+                          <button onClick={() => startEdit(car)} className="btn btn-secondary btn-sm">Modifier</button>
+                          <button onClick={() => handleDelete(car.id)} className="btn btn-danger btn-sm">Supprimer</button>
+                        </div>
+                      </td>
+                    </tr>
+                    {editingId === car.id && (
+                      <tr><td colSpan={4}>{editForm}</td></tr>
+                    )}
+                  </React.Fragment>
+                ))}
+              </React.Fragment>
+            ))}
+
+            {withoutClass.length > 0 && (
+              <React.Fragment key="unclassed">
+                <tr style={{ background: 'var(--surface-2)' }}>
+                  <td colSpan={4} style={{ fontSize: '0.72rem', fontWeight: 700, letterSpacing: '0.1em',
+                    textTransform: 'uppercase', color: 'var(--danger)', padding: '0.4rem 1rem' }}>
+                    ⚠️ Non classées
+                  </td>
+                </tr>
+                {withoutClass.map(car => (
+                  <React.Fragment key={car.id}>
+                    <tr>
+                      <td style={{ fontWeight: 600 }}>{car.name}</td>
+                      <td><span style={{ color: 'var(--text-dim)', fontSize: '0.78rem' }}>Non classée</span></td>
+                      <td className="mono" style={{ color: 'var(--accent)' }}>{car.tank_size_litres}L</td>
+                      <td>
+                        <div style={{ display: 'flex', gap: '0.5rem' }}>
+                          <button onClick={() => startEdit(car)} className="btn btn-secondary btn-sm">Modifier</button>
+                          <button onClick={() => handleDelete(car.id)} className="btn btn-danger btn-sm">Supprimer</button>
+                        </div>
+                      </td>
+                    </tr>
+                    {editingId === car.id && (
+                      <tr><td colSpan={4}>{editForm}</td></tr>
+                    )}
+                  </React.Fragment>
+                ))}
+              </React.Fragment>
+            )}
+
+            {cars.length === 0 && (
+              <tr><td colSpan={4} className="empty">Aucune voiture.</td></tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  )
+}
