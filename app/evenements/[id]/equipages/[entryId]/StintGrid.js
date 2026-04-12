@@ -194,26 +194,31 @@ function calculateAllStints(stints, teamEntry, driverPerf, igStartTime, igSunris
   if (result.length > 0 && raceEnd) {
     const coveringStint = result.find(s => s._irlEnd && s._irlEnd >= raceEnd)
     if (coveringStint) {
-      // Stint reaches or passes race end — adjust duration and laps to race end
       coveringStint._isLastStint = true
-      // Adjusted IRL end = race end time (used for FIN IRL display)
-      coveringStint._adjustedIrlEnd = raceEnd
-      if (coveringStint._irlStart) {
+      if (coveringStint._irlStart && coveringStint._lapTimeSec) {
         const remainingSecs = (raceEnd - coveringStint._irlStart) / 1000
-        // Adjusted duration = time from stint start to race end
-        coveringStint._adjustedDurationSec = Math.max(0, Math.min(coveringStint._stintDurationSec || 0, remainingSecs))
-        // Recalculate laps based on remaining time, not full tank
-        if (coveringStint._lapTimeSec && coveringStint._adjustedDurationSec) {
-          coveringStint._laps = Math.floor(coveringStint._adjustedDurationSec / coveringStint._lapTimeSec)
-          // Sync _calcLaps so the laps input placeholder shows adjusted value
-          coveringStint._calcLaps = coveringStint._laps
-          // Recalculate fuel based on adjusted laps
-          const perf = driverPerf[coveringStint.driver_id]
-          const fuelPerLap = coveringStint.rain
-            ? (perf?.fuel_wet || perf?.fuel_dry)
-            : (perf?.fuel_dry || perf?.fuel_wet)
-          if (fuelPerLap) coveringStint._fuelUsed = coveringStint._laps * fuelPerLap
-        }
+        // Always store the optimal (minimum to cross finish line) for display hints
+        coveringStint._optimalLaps = Math.ceil(remainingSecs / coveringStint._lapTimeSec)
+        // If user manually entered laps, respect that — otherwise use optimal
+        coveringStint._laps = coveringStint.laps_planned
+          ? coveringStint.laps_planned
+          : coveringStint._optimalLaps
+        // Derive optimal duration and end time for hint display
+        coveringStint._optimalDurationSec = coveringStint._optimalLaps * coveringStint._lapTimeSec
+        coveringStint._optimalIrlEnd = new Date(coveringStint._irlStart.getTime() + coveringStint._optimalDurationSec * 1000)
+        coveringStint._calcLaps = coveringStint._laps
+        // Derive real duration and end time from actual lap count
+        coveringStint._stintDurationSec = coveringStint._laps * coveringStint._lapTimeSec
+        coveringStint._irlEnd = new Date(coveringStint._irlStart.getTime() + coveringStint._stintDurationSec * 1000)
+        // _adjustedIrlEnd = real crossing time (≥ race end), used for FIN IRL display
+        coveringStint._adjustedIrlEnd = coveringStint._irlEnd
+        coveringStint._adjustedDurationSec = coveringStint._stintDurationSec
+        // Recalculate fuel based on adjusted laps
+        const perf = driverPerf[coveringStint.driver_id]
+        const fuelPerLap = coveringStint.rain
+          ? (perf?.fuel_wet || perf?.fuel_dry)
+          : (perf?.fuel_dry || perf?.fuel_wet)
+        if (fuelPerLap) coveringStint._fuelUsed = coveringStint._laps * fuelPerLap
       }
     } else {
       // No stint reaches race end — mark last stint, show real end, flag warning
@@ -446,7 +451,8 @@ export default function StintGrid({ teamEntryId, teamEntry, assignedDrivers }) {
     : null
 
   const lastCalc       = calculated[calculated.length - 1]
-  const projectedFinish = lastCalc?._irlEnd
+  // Use adjusted end (real crossing time) for last stint, fall back to calculated end
+  const projectedFinish = lastCalc?._adjustedIrlEnd || lastCalc?._irlEnd
 
   // ── Render ─────────────────────────────────────────────────────────────────
 
@@ -628,7 +634,7 @@ export default function StintGrid({ teamEntryId, teamEntry, assignedDrivers }) {
                     </span>
                   </td>
 
-                  {/* IRL end — shows race end time for last stint, strikethrough if actual end set */}
+                  {/* IRL end — shows real crossing time, with optimal hint if user entered custom laps */}
                   <td style={TD}>
                     <span className="mono" style={{
                       fontSize: '0.75rem',
@@ -637,6 +643,12 @@ export default function StintGrid({ teamEntryId, teamEntry, assignedDrivers }) {
                     }}>
                       {displayIrlEnd ? formatDatetime(displayIrlEnd) : '—'}
                     </span>
+                    {/* Show optimal crossing time when user has entered custom laps */}
+                    {stint._isLastStint && stint._optimalIrlEnd && stint.laps_planned && stint.laps_planned !== stint._optimalLaps && (
+                      <div className="mono" style={{ fontSize: '0.68rem', color: 'var(--accent)', marginTop: '0.1rem' }}>
+                        opt: {formatDatetime(stint._optimalIrlEnd)}
+                      </div>
+                    )}
                   </td>
 
                   {/* Actual end input (live race use) */}
@@ -656,10 +668,10 @@ export default function StintGrid({ teamEntryId, teamEntry, assignedDrivers }) {
                         <div className="mono" style={{ fontSize: '0.75rem', color: '#2eb460' }}>
                           🏁 {formatDuration(stint._adjustedDurationSec)}
                         </div>
-                        {/* Show original (strikethrough) if it differs from adjusted */}
-                        {stint._adjustedDurationSec !== stint._stintDurationSec && (
-                          <div className="mono" style={{ fontSize: '0.7rem', color: 'var(--text-dim)', textDecoration: 'line-through' }}>
-                            {formatDuration(stint._stintDurationSec)}
+                        {/* Show optimal duration hint when user has entered custom laps */}
+                        {stint._optimalDurationSec && stint.laps_planned && stint.laps_planned !== stint._optimalLaps && (
+                          <div className="mono" style={{ fontSize: '0.68rem', color: 'var(--accent)', marginTop: '0.1rem' }}>
+                            opt: {formatDuration(stint._optimalDurationSec)}
                           </div>
                         )}
                       </div>
@@ -699,6 +711,12 @@ export default function StintGrid({ teamEntryId, teamEntry, assignedDrivers }) {
                       }}
                       style={{ ...INPUT, width: '60px' }}
                       title={stint._calcLaps ? `Calculé : ${stint._calcLaps} tours` : 'Saisissez les tours'} />
+                      {/* Show optimal laps hint when user has entered a different value */}
+                      {stint._isLastStint && stint._optimalLaps && stint.laps_planned && stint.laps_planned !== stint._optimalLaps && (
+                        <div className="mono" style={{ fontSize: '0.68rem', color: 'var(--accent)', marginTop: '0.1rem' }}>
+                          opt: {stint._optimalLaps}
+                        </div>
+                      )}
                   </td>
 
                   {/* Fuel consumption */}
