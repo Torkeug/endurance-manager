@@ -4,8 +4,6 @@ import { useRouter } from 'next/navigation'
 import { createBrowserClient } from '@supabase/ssr'
 import React from 'react'
 
-const DAY_ORDER = { vendredi: 0, samedi: 1, dimanche: 2 }
-
 function formatDuration(minutes) {
   if (!minutes) return '—'
   const h = Math.floor(minutes / 60)
@@ -101,28 +99,9 @@ export default function SettingsManager({ initialPresets, initialDefaultDuration
         .select().single()
     if (err) { setError(err.message); setSavingSpecial(null); return }
     setSpecialTimes(prev => [...prev, data].sort((a, b) => 
-        (DAY_ORDER[a.day_of_week] - DAY_ORDER[b.day_of_week]) || 
-        (a.hour * 60 + a.minute) - (b.hour * 60 + b.minute)))
+        a.day_of_week.localeCompare(b.day_of_week) || a.hour * 60 + a.minute - (b.hour * 60 + b.minute)))
     setNewStH(''); setNewStM(''); setNewStDay('vendredi'); setAddingSpecial(false)
     setSavingSpecial(null); router.refresh()
-    }
-
-    const handleEditSpecialTime = async () => {
-    const h = parseInt(editStH)
-    const m = parseInt(editStM) || 0
-    if (isNaN(h) || h < 0 || h > 23) { setError('Heure invalide.'); return }
-    setSavingSpecial(editingSpecialId); setError(null)
-    const label = `${editStDay.charAt(0).toUpperCase() + editStDay.slice(1)} à ${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`
-    const { data, error: err } = await supabase
-        .from('special_event_start_times')
-        .update({ label, hour: h, minute: m, day_of_week: editStDay })
-        .eq('id', editingSpecialId).select().single()
-    if (err) { setError(err.message); setSavingSpecial(null); return }
-    setSpecialTimes(prev => prev.map(s => s.id === editingSpecialId ? data : s)
-        .sort((a, b) => 
-            (DAY_ORDER[a.day_of_week] - DAY_ORDER[b.day_of_week]) || 
-            (a.hour * 60 + a.minute) - (b.hour * 60 + b.minute)))
-    setEditingSpecialId(null); setSavingSpecial(null); router.refresh()
     }
 
     const handleDeleteSpecialTime = async (id) => {
@@ -132,6 +111,21 @@ export default function SettingsManager({ initialPresets, initialDefaultDuration
     if (err) { setError(err.message); setSavingSpecial(null); return }
     setSpecialTimes(prev => prev.filter(s => s.id !== id))
     setSavingSpecial(null); router.refresh()
+    }
+
+    const handleEditSpecialTime = async () => {
+    const h = parseInt(editStH)
+    const m = parseInt(editStM) || 0
+    if (isNaN(h) || h < 0 || h > 23) { setError('Heure invalide.'); return }
+    setSavingSpecial(editingSpecialId); setError(null)
+    const { data, error: err } = await supabase
+        .from('special_event_start_times')
+        .update({ label: editStLabel.trim() || `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`, hour: h, minute: m })
+        .eq('id', editingSpecialId).select().single()
+    if (err) { setError(err.message); setSavingSpecial(null); return }
+    setSpecialTimes(prev => prev.map(s => s.id === editingSpecialId ? data : s)
+        .sort((a, b) => a.hour * 60 + a.minute - (b.hour * 60 + b.minute)))
+    setEditingSpecialId(null); setSavingSpecial(null); router.refresh()
     }
 
   const newTotal = (parseInt(newH) || 0) * 60 + (parseInt(newM) || 0)
@@ -290,6 +284,7 @@ export default function SettingsManager({ initialPresets, initialDefaultDuration
                 <thead>
                 <tr>
                     <th style={TH}>Horaire</th>
+                    <th style={TH}>Libellé</th>
                     <th style={TH}></th>
                 </tr>
                 </thead>

@@ -18,7 +18,7 @@ const TABS = [
   { id: 'parametres', label: 'Paramètres' },
 ]
 
-export default function AdminTabs({ circuits, cars, crewNames, carClasses, eventTypes, eventTypeCars, drivers, currentDriver, settings, durationPresets, specialStartTimes }) {
+export default function AdminTabs({ circuits, cars, crewNames, carClasses, eventTypes, eventTypeCars, drivers, currentDriver, settings, durationPresets }) {
   const [activeTab, setActiveTab] = useState('pilotes')
   const pendingCount = (drivers || []).filter(d => !d.approved && !d.refused).length
 

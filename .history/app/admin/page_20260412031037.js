@@ -60,7 +60,6 @@ export default async function AdminPage() {
         currentDriver={currentDriver}
         settings={settings}
         durationPresets={durationPresets || []}
-        specialStartTimes={specialStartTimes || []}
       />
     </div>
   )

@@ -4,8 +4,6 @@ import { useRouter } from 'next/navigation'
 import { createBrowserClient } from '@supabase/ssr'
 import React from 'react'
 
-const DAY_ORDER = { vendredi: 0, samedi: 1, dimanche: 2 }
-
 function formatDuration(minutes) {
   if (!minutes) return '—'
   const h = Math.floor(minutes / 60)
@@ -101,8 +99,7 @@ export default function SettingsManager({ initialPresets, initialDefaultDuration
         .select().single()
     if (err) { setError(err.message); setSavingSpecial(null); return }
     setSpecialTimes(prev => [...prev, data].sort((a, b) => 
-        (DAY_ORDER[a.day_of_week] - DAY_ORDER[b.day_of_week]) || 
-        (a.hour * 60 + a.minute) - (b.hour * 60 + b.minute)))
+        a.day_of_week.localeCompare(b.day_of_week) || a.hour * 60 + a.minute - (b.hour * 60 + b.minute)))
     setNewStH(''); setNewStM(''); setNewStDay('vendredi'); setAddingSpecial(false)
     setSavingSpecial(null); router.refresh()
     }
@@ -119,9 +116,7 @@ export default function SettingsManager({ initialPresets, initialDefaultDuration
         .eq('id', editingSpecialId).select().single()
     if (err) { setError(err.message); setSavingSpecial(null); return }
     setSpecialTimes(prev => prev.map(s => s.id === editingSpecialId ? data : s)
-        .sort((a, b) => 
-            (DAY_ORDER[a.day_of_week] - DAY_ORDER[b.day_of_week]) || 
-            (a.hour * 60 + a.minute) - (b.hour * 60 + b.minute)))
+        .sort((a, b) => a.day_of_week.localeCompare(b.day_of_week) || a.hour * 60 + a.minute - (b.hour * 60 + b.minute)))
     setEditingSpecialId(null); setSavingSpecial(null); router.refresh()
     }
 

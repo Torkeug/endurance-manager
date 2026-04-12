@@ -4,8 +4,6 @@ import { useRouter } from 'next/navigation'
 import { createBrowserClient } from '@supabase/ssr'
 import React from 'react'
 
-const DAY_ORDER = { vendredi: 0, samedi: 1, dimanche: 2 }
-
 function formatDuration(minutes) {
   if (!minutes) return '—'
   const h = Math.floor(minutes / 60)
@@ -25,13 +23,13 @@ export default function SettingsManager({ initialPresets, initialDefaultDuration
   const [addingSpecial, setAddingSpecial] = useState(false)
   const [newStH, setNewStH]               = useState('')
   const [newStM, setNewStM]               = useState('')
-  const [newStDay, setNewStDay]     = useState('vendredi')
+  const [newStLabel, setNewStLabel]       = useState('')
   const [savingSpecial, setSavingSpecial] = useState(null)
   const [successSpecial, setSuccessSpecial] = useState(false)
   const [editingSpecialId, setEditingSpecialId] = useState(null)
   const [editStH, setEditStH]                   = useState('')
   const [editStM, setEditStM]                   = useState('')
-  const [editStDay, setEditStDay]   = useState('vendredi')
+  const [editStLabel, setEditStLabel]           = useState('')
 
   // Default duration state
   const [defaultDuration, setDefaultDuration] = useState(initialDefaultDuration || 160)
@@ -94,35 +92,14 @@ export default function SettingsManager({ initialPresets, initialDefaultDuration
     if (isNaN(h) || h < 0 || h > 23) { setError('Heure invalide.'); return }
     if (m < 0 || m > 59) { setError('Minutes invalides.'); return }
     setSavingSpecial('new'); setError(null)
-    const label = `${newStDay.charAt(0).toUpperCase() + newStDay.slice(1)} à ${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`
     const { data, error: err } = await supabase
         .from('special_event_start_times')
-        .insert([{ label, hour: h, minute: m, day_of_week: newStDay }])
+        .insert([{ label: newStLabel.trim() || `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`, hour: h, minute: m }])
         .select().single()
     if (err) { setError(err.message); setSavingSpecial(null); return }
-    setSpecialTimes(prev => [...prev, data].sort((a, b) => 
-        (DAY_ORDER[a.day_of_week] - DAY_ORDER[b.day_of_week]) || 
-        (a.hour * 60 + a.minute) - (b.hour * 60 + b.minute)))
-    setNewStH(''); setNewStM(''); setNewStDay('vendredi'); setAddingSpecial(false)
+    setSpecialTimes(prev => [...prev, data].sort((a, b) => a.hour * 60 + a.minute - (b.hour * 60 + b.minute)))
+    setNewStH(''); setNewStM(''); setNewStLabel(''); setAddingSpecial(false)
     setSavingSpecial(null); router.refresh()
-    }
-
-    const handleEditSpecialTime = async () => {
-    const h = parseInt(editStH)
-    const m = parseInt(editStM) || 0
-    if (isNaN(h) || h < 0 || h > 23) { setError('Heure invalide.'); return }
-    setSavingSpecial(editingSpecialId); setError(null)
-    const label = `${editStDay.charAt(0).toUpperCase() + editStDay.slice(1)} à ${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`
-    const { data, error: err } = await supabase
-        .from('special_event_start_times')
-        .update({ label, hour: h, minute: m, day_of_week: editStDay })
-        .eq('id', editingSpecialId).select().single()
-    if (err) { setError(err.message); setSavingSpecial(null); return }
-    setSpecialTimes(prev => prev.map(s => s.id === editingSpecialId ? data : s)
-        .sort((a, b) => 
-            (DAY_ORDER[a.day_of_week] - DAY_ORDER[b.day_of_week]) || 
-            (a.hour * 60 + a.minute) - (b.hour * 60 + b.minute)))
-    setEditingSpecialId(null); setSavingSpecial(null); router.refresh()
     }
 
     const handleDeleteSpecialTime = async (id) => {
@@ -132,6 +109,21 @@ export default function SettingsManager({ initialPresets, initialDefaultDuration
     if (err) { setError(err.message); setSavingSpecial(null); return }
     setSpecialTimes(prev => prev.filter(s => s.id !== id))
     setSavingSpecial(null); router.refresh()
+    }
+
+    const handleEditSpecialTime = async () => {
+    const h = parseInt(editStH)
+    const m = parseInt(editStM) || 0
+    if (isNaN(h) || h < 0 || h > 23) { setError('Heure invalide.'); return }
+    setSavingSpecial(editingSpecialId); setError(null)
+    const { data, error: err } = await supabase
+        .from('special_event_start_times')
+        .update({ label: editStLabel.trim() || `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`, hour: h, minute: m })
+        .eq('id', editingSpecialId).select().single()
+    if (err) { setError(err.message); setSavingSpecial(null); return }
+    setSpecialTimes(prev => prev.map(s => s.id === editingSpecialId ? data : s)
+        .sort((a, b) => a.hour * 60 + a.minute - (b.hour * 60 + b.minute)))
+    setEditingSpecialId(null); setSavingSpecial(null); router.refresh()
     }
 
   const newTotal = (parseInt(newH) || 0) * 60 + (parseInt(newM) || 0)
@@ -243,39 +235,36 @@ export default function SettingsManager({ initialPresets, initialDefaultDuration
         </h3>
 
         {addingSpecial && (
-        <div style={{ background: 'var(--surface-2)', padding: '1rem', borderRadius: '3px', marginBottom: '0.75rem' }}>
+            <div style={{ background: 'var(--surface-2)', padding: '1rem', borderRadius: '3px', marginBottom: '0.75rem' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '0.75rem' }}>
-            <select value={newStDay} onChange={e => setNewStDay(e.target.value)}
-                style={{ padding: '0.45rem 0.5rem', background: 'var(--surface)',
-                border: '1px solid var(--border)', borderRadius: '3px',
-                color: 'var(--text)', fontSize: '0.9rem' }}>
-                <option value="vendredi">Vendredi</option>
-                <option value="samedi">Samedi</option>
-                <option value="dimanche">Dimanche</option>
-            </select>
-            <span style={{ color: 'var(--text-dim)' }}>à</span>
-            <input type="number" min="0" max="23" value={newStH}
+                <input type="number" min="0" max="23" value={newStH}
                 onChange={e => setNewStH(e.target.value)}
                 placeholder="HH" autoFocus
                 style={{ width: '60px', padding: '0.45rem 0.5rem', background: 'var(--surface)',
-                border: '1px solid var(--border)', borderRadius: '3px',
-                color: 'var(--text)', fontFamily: 'var(--font-mono), monospace', fontSize: '0.9rem' }} />
-            <span style={{ color: 'var(--text-dim)' }}>:</span>
-            <input type="number" min="0" max="59" value={newStM}
+                    border: '1px solid var(--border)', borderRadius: '3px',
+                    color: 'var(--text)', fontFamily: 'var(--font-mono), monospace', fontSize: '0.9rem' }} />
+                <span style={{ color: 'var(--text-dim)' }}>:</span>
+                <input type="number" min="0" max="59" value={newStM}
                 onChange={e => setNewStM(e.target.value)}
                 placeholder="MM"
                 style={{ width: '60px', padding: '0.45rem 0.5rem', background: 'var(--surface)',
-                border: '1px solid var(--border)', borderRadius: '3px',
-                color: 'var(--text)', fontFamily: 'var(--font-mono), monospace', fontSize: '0.9rem' }} />
+                    border: '1px solid var(--border)', borderRadius: '3px',
+                    color: 'var(--text)', fontFamily: 'var(--font-mono), monospace', fontSize: '0.9rem' }} />
+                <input type="text" value={newStLabel}
+                onChange={e => setNewStLabel(e.target.value)}
+                placeholder="Libellé (optionnel)"
+                style={{ padding: '0.45rem 0.5rem', background: 'var(--surface)',
+                    border: '1px solid var(--border)', borderRadius: '3px',
+                    color: 'var(--text)', fontSize: '0.9rem', minWidth: '180px' }} />
             </div>
             <div style={{ display: 'flex', gap: '0.5rem' }}>
-            <button onClick={handleAddSpecialTime} className="btn btn-primary" disabled={savingSpecial === 'new'}>
+                <button onClick={handleAddSpecialTime} className="btn btn-primary" disabled={savingSpecial === 'new'}>
                 {savingSpecial === 'new' ? '…' : '✓ Ajouter'}
-            </button>
-            <button onClick={() => { setAddingSpecial(false); setNewStH(''); setNewStM(''); setNewStDay('vendredi'); setError(null) }}
+                </button>
+                <button onClick={() => { setAddingSpecial(false); setNewStH(''); setNewStM(''); setNewStLabel(''); setError(null) }}
                 className="btn btn-secondary">Annuler</button>
             </div>
-        </div>
+            </div>
         )}
 
         {!addingSpecial && (
@@ -290,63 +279,61 @@ export default function SettingsManager({ initialPresets, initialDefaultDuration
                 <thead>
                 <tr>
                     <th style={TH}>Horaire</th>
+                    <th style={TH}>Libellé</th>
                     <th style={TH}></th>
                 </tr>
                 </thead>
                 <tbody>
-                    {specialTimes.map(st => (
-                    <React.Fragment key={st.id}>
-                        <tr style={{ opacity: savingSpecial === st.id ? 0.5 : 1 }}>
-                        <td style={{ ...TD, fontWeight: 600, color: 'var(--accent)' }} className="mono">
-                            {st.day_of_week?.charAt(0).toUpperCase() + st.day_of_week?.slice(1)} à {String(st.hour).padStart(2,'0')}:{String(st.minute).padStart(2,'0')}
-                        </td>
-                        <td style={{ ...TD, textAlign: 'right' }}>
-                            <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
-                            <button onClick={() => { setEditingSpecialId(st.id); setEditStH(String(st.hour)); setEditStM(String(st.minute)); setEditStDay(st.day_of_week || 'vendredi') }}
-                                className="btn btn-secondary btn-sm">Modifier</button>
-                            <button onClick={() => handleDeleteSpecialTime(st.id)}
-                                className="btn btn-danger btn-sm" disabled={savingSpecial === st.id}>Supprimer</button>
+                {specialTimes.map(st => (
+                <React.Fragment key={st.id}>
+                    <tr style={{ opacity: savingSpecial === st.id ? 0.5 : 1 }}>
+                    <td style={{ ...TD, fontWeight: 600, color: 'var(--accent)' }} className="mono">
+                        {String(st.hour).padStart(2,'0')}:{String(st.minute).padStart(2,'0')}
+                    </td>
+                    <td style={TD}>{st.label || '—'}</td>
+                    <td style={{ ...TD, textAlign: 'right' }}>
+                        <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
+                        <button onClick={() => { setEditingSpecialId(st.id); setEditStH(String(st.hour)); setEditStM(String(st.minute)); setEditStLabel(st.label || '') }}
+                            className="btn btn-secondary btn-sm">Modifier</button>
+                        <button onClick={() => handleDeleteSpecialTime(st.id)}
+                            className="btn btn-danger btn-sm" disabled={savingSpecial === st.id}>Supprimer</button>
+                        </div>
+                    </td>
+                    </tr>
+                    {editingSpecialId === st.id && (
+                    <tr>
+                        <td colSpan={3} style={{ padding: 0 }}>
+                        <div style={{ background: 'var(--surface-2)', padding: '1rem' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '0.75rem' }}>
+                            <input type="number" min="0" max="23" value={editStH}
+                                onChange={e => setEditStH(e.target.value)} placeholder="HH"
+                                style={{ width: '60px', padding: '0.45rem 0.5rem', background: 'var(--surface)',
+                                border: '1px solid var(--border)', borderRadius: '3px',
+                                color: 'var(--text)', fontFamily: 'var(--font-mono), monospace', fontSize: '0.9rem' }} />
+                            <span style={{ color: 'var(--text-dim)' }}>:</span>
+                            <input type="number" min="0" max="59" value={editStM}
+                                onChange={e => setEditStM(e.target.value)} placeholder="MM"
+                                style={{ width: '60px', padding: '0.45rem 0.5rem', background: 'var(--surface)',
+                                border: '1px solid var(--border)', borderRadius: '3px',
+                                color: 'var(--text)', fontFamily: 'var(--font-mono), monospace', fontSize: '0.9rem' }} />
+                            <input type="text" value={editStLabel}
+                                onChange={e => setEditStLabel(e.target.value)} placeholder="Libellé (optionnel)"
+                                style={{ padding: '0.45rem 0.5rem', background: 'var(--surface)',
+                                border: '1px solid var(--border)', borderRadius: '3px',
+                                color: 'var(--text)', fontSize: '0.9rem', minWidth: '180px' }} />
                             </div>
-                        </td>
-                        </tr>
-                        {editingSpecialId === st.id && (
-                        <tr>
-                            <td colSpan={2} style={{ padding: 0 }}>
-                            <div style={{ background: 'var(--surface-2)', padding: '1rem' }}>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '0.75rem' }}>
-                                <select value={editStDay} onChange={e => setEditStDay(e.target.value)}
-                                    style={{ padding: '0.45rem 0.5rem', background: 'var(--surface)',
-                                    border: '1px solid var(--border)', borderRadius: '3px',
-                                    color: 'var(--text)', fontSize: '0.9rem' }}>
-                                    <option value="vendredi">Vendredi</option>
-                                    <option value="samedi">Samedi</option>
-                                    <option value="dimanche">Dimanche</option>
-                                </select>
-                                <span style={{ color: 'var(--text-dim)' }}>à</span>
-                                <input type="number" min="0" max="23" value={editStH}
-                                    onChange={e => setEditStH(e.target.value)} placeholder="HH"
-                                    style={{ width: '60px', padding: '0.45rem 0.5rem', background: 'var(--surface)',
-                                    border: '1px solid var(--border)', borderRadius: '3px',
-                                    color: 'var(--text)', fontFamily: 'var(--font-mono), monospace', fontSize: '0.9rem' }} />
-                                <span style={{ color: 'var(--text-dim)' }}>:</span>
-                                <input type="number" min="0" max="59" value={editStM}
-                                    onChange={e => setEditStM(e.target.value)} placeholder="MM"
-                                    style={{ width: '60px', padding: '0.45rem 0.5rem', background: 'var(--surface)',
-                                    border: '1px solid var(--border)', borderRadius: '3px',
-                                    color: 'var(--text)', fontFamily: 'var(--font-mono), monospace', fontSize: '0.9rem' }} />
-                                </div>
-                                <div style={{ display: 'flex', gap: '0.5rem' }}>
-                                <button onClick={handleEditSpecialTime} className="btn btn-primary" disabled={savingSpecial === st.id}>
-                                    {savingSpecial === st.id ? '…' : '✓ Enregistrer'}
-                                </button>
-                                <button onClick={() => setEditingSpecialId(null)} className="btn btn-secondary">Annuler</button>
-                                </div>
+                            <div style={{ display: 'flex', gap: '0.5rem' }}>
+                            <button onClick={handleEditSpecialTime} className="btn btn-primary" disabled={savingSpecial === st.id}>
+                                {savingSpecial === st.id ? '…' : '✓ Enregistrer'}
+                            </button>
+                            <button onClick={() => setEditingSpecialId(null)} className="btn btn-secondary">Annuler</button>
                             </div>
-                            </td>
-                        </tr>
-                        )}
-                    </React.Fragment>
-                    ))}
+                        </div>
+                        </td>
+                    </tr>
+                    )}
+                </React.Fragment>
+                ))}
                 </tbody>
             </table>
             </div>

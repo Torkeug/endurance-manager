@@ -4,8 +4,6 @@ import { useRouter } from 'next/navigation'
 import { createBrowserClient } from '@supabase/ssr'
 import React from 'react'
 
-const DAY_ORDER = { vendredi: 0, samedi: 1, dimanche: 2 }
-
 function formatDuration(minutes) {
   if (!minutes) return '—'
   const h = Math.floor(minutes / 60)
