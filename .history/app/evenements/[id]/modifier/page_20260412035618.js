@@ -129,8 +129,6 @@ export default function ModifierEvenement({ params }) {
       ig_sunrise:       form.ig_sunrise    || null,
       ig_sunset:        form.ig_sunset     || null,
       notes:            form.notes.trim()  || null,
-      is_special:         isSpecial,
-      weekend_start_date: isSpecial && weekendStartDate ? weekendStartDate : null,
     }
 
     const { error: err } = await supabase.from('events').update(payload).eq('id', id)
@@ -139,33 +137,6 @@ export default function ModifierEvenement({ params }) {
       setError(err.message)
       setLoading(false)
     } else {
-      // Regenerate start times for special events if weekend date changed
-      if (isSpecial && weekendStartDate) {
-        const confirmed = confirm('Régénérer les horaires de départ à partir des horaires prédéfinis ? Les horaires existants seront supprimés.')
-        if (confirmed) {
-          const { data: specialStartTimes } = await supabase
-            .from('special_event_start_times').select('*').order('day_of_week').order('hour').order('minute')
-          
-          if (specialStartTimes?.length > 0) {
-            // Delete existing start times
-            await supabase.from('event_start_times').delete().eq('event_id', id)
-            
-            // Generate new ones
-            const { DateTime } = await import('luxon')
-            const friday = DateTime.fromISO(weekendStartDate, { zone: form.timezone })
-            const startTimeRows = specialStartTimes.map(st => {
-              const dayOffset = { vendredi: 0, samedi: 1, dimanche: 2 }[st.day_of_week] || 0
-              const dt = friday.plus({ days: dayOffset }).set({ hour: st.hour, minute: st.minute, second: 0, millisecond: 0 })
-              return {
-                event_id:  id,
-                label:     `${st.day_of_week.charAt(0).toUpperCase() + st.day_of_week.slice(1)} ${dt.toFormat('d MMMM yyyy', { locale: 'fr' })}`,
-                irl_start: dt.toUTC().toISO(),
-              }
-            })
-            await supabase.from('event_start_times').insert(startTimeRows)
-          }
-        }
-      }
       router.push(`/evenements/${id}`)
       router.refresh()
     }
@@ -222,21 +193,6 @@ export default function ModifierEvenement({ params }) {
               <label htmlFor="name">Nom *</label>
               <input id="name" type="text" value={form.name} onChange={set('name')} required />
             </div>
-            <div className="form-group" style={{ gridColumn: '1 / -1' }}>
-              <label style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', cursor: 'pointer' }}>
-                <input type="checkbox" checked={isSpecial} onChange={e => setIsSpecial(e.target.checked)}
-                  style={{ accentColor: 'var(--accent)', width: '16px', height: '16px' }} />
-                <span>Événement spécial (horaires de départ prédéfinis)</span>
-              </label>
-            </div>
-
-            {isSpecial && (
-              <div className="form-group">
-                <label htmlFor="weekend_start_date">Date du weekend (vendredi) *</label>
-                <input id="weekend_start_date" type="date" value={weekendStartDate}
-                  onChange={e => setWeekendStartDate(e.target.value)} />
-              </div>
-            )}            
             <div className="form-group">
               <label htmlFor="format">Format</label>
               <select id="format" value={form.format} onChange={set('format')}>
