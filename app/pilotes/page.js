@@ -2,8 +2,6 @@ import { supabaseServer as supabase } from "../../lib/supabase-server";
 import Link from "next/link";
 import { getSessionAndDriver, isAdmin } from "../../lib/auth";
 
-export const revalidate = 0;
-
 export default async function PilotesPage() {
   const { driver: currentDriver } = await getSessionAndDriver();
   const admin = isAdmin(currentDriver);

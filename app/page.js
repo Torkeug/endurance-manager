@@ -3,8 +3,6 @@ import { getSessionAndDriver, isAdmin } from "../lib/auth";
 import Link from "next/link";
 import { formatInZone } from "../lib/timezone";
 
-export const revalidate = 0;
-
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
 function formatDuration(minutes) {

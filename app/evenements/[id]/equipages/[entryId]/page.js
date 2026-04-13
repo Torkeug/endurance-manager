@@ -6,8 +6,6 @@ import { getSessionAndDriver } from "../../../../../lib/auth";
 import { formatInZone, formatTimeInZone } from "../../../../../lib/timezone";
 import CollapsibleSummary from "./CollapsibleSummary";
 
-export const revalidate = 0;
-
 export default async function EquipageDetail({ params }) {
   const { id, entryId } = await params;
 

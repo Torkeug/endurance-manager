@@ -11,8 +11,6 @@ import {
 import ArchiveToggle from "./ArchiveToggle";
 import DeleteEventButton from "./DeleteEventButton";
 
-export const revalidate = 0;
-
 function formatDuration(minutes) {
   if (!minutes) return "—";
   const h = Math.floor(minutes / 60);

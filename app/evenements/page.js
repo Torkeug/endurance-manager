@@ -3,8 +3,6 @@ import Link from "next/link";
 import { getSessionAndDriver, isAdmin } from "../../lib/auth";
 import EventTabs from "./EventTabs";
 
-export const revalidate = 0;
-
 // Earliest start = used for sorting and display of the next upcoming start.
 function getEarliestStart(startTimes) {
   if (!startTimes || startTimes.length === 0) return null;

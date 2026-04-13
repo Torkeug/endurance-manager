@@ -4,8 +4,6 @@ import { notFound } from "next/navigation";
 import { getSessionAndDriver, isAdmin } from "../../../lib/auth";
 import { formatInZone, formatTimeInZone } from "../../../lib/timezone";
 
-export const revalidate = 0;
-
 function formatDuration(minutes) {
   if (!minutes) return "—";
   const h = Math.floor(minutes / 60);

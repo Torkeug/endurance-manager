@@ -3,8 +3,6 @@ import { getSessionAndDriver } from "../../lib/auth";
 import { redirect } from "next/navigation";
 import AdminTabs from "./AdminTabs";
 
-export const revalidate = 0;
-
 export default async function AdminPage() {
   const { driver: currentDriver } = await getSessionAndDriver();
   // Redirect non-admin users — this is a server-side guard,
