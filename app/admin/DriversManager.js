@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { supabaseBrowser as supabase } from '../../lib/supabase-browser'
+import { supabaseBrowser as supabase } from "../../lib/supabase-browser";
 
 const ROLE_LABELS = {
   driver: "Pilote",
@@ -56,6 +56,10 @@ export default function DriversManager({ initialDrivers, currentDriver }) {
   const [saving, setSaving] = useState(null);
   const [error, setError] = useState(null);
   const [filter, setFilter] = useState("pending");
+
+  // Which driver row has its Discord ID pencil editor open, and the draft value
+  const [editingDiscord, setEditingDiscord] = useState(null);
+  const [discordDraft, setDiscordDraft] = useState("");
 
   const pending = drivers.filter((d) => !d.approved && !d.refused);
   const refused = drivers.filter((d) => d.refused);
@@ -218,6 +222,43 @@ export default function DriversManager({ initialDrivers, currentDriver }) {
     setSaving(null);
   };
 
+  // Open the Discord ID pencil editor for a given driver row
+  const openDiscordEdit = (driverId, currentValue) => {
+    setEditingDiscord(driverId);
+    setDiscordDraft(currentValue || "");
+  };
+
+  // Cancel the Discord ID edit without saving
+  const cancelDiscordEdit = () => {
+    setEditingDiscord(null);
+    setDiscordDraft("");
+  };
+
+  // Save the edited Discord ID to the DB and update local state
+  const saveDiscordId = async (driverId) => {
+    setSaving(driverId);
+    setError(null);
+    const { error: err } = await supabase
+      .from("drivers")
+      .update({ discord_id: discordDraft.trim() || null })
+      .eq("id", driverId);
+    if (err) {
+      setError(err.message);
+      setSaving(null);
+      return;
+    }
+    setDrivers((prev) =>
+      prev.map((d) =>
+        d.id === driverId
+          ? { ...d, discord_id: discordDraft.trim() || null }
+          : d,
+      ),
+    );
+    setSaving(null);
+    setEditingDiscord(null);
+    setDiscordDraft("");
+  };
+
   const tabs = [
     {
       id: "pending",
@@ -367,6 +408,8 @@ export default function DriversManager({ initialDrivers, currentDriver }) {
                   <th style={TH}>Nom</th>
                   <th style={TH}>Email</th>
                   <th style={TH}>Rôle</th>
+                  {/* Discord ID column — editable via pencil icon */}
+                  <th style={TH}>Discord ID</th>
                   <th style={{ ...TH, textAlign: "center" }}>Cotisation</th>
                   <th style={{ ...TH, textAlign: "center" }}>Test</th>
                   <th style={TH}></th>
@@ -387,12 +430,14 @@ export default function DriversManager({ initialDrivers, currentDriver }) {
                     currentDriver?.id,
                   );
                   const isMe = d.id === currentDriver?.id;
+                  const isEditingThisRow = editingDiscord === d.id;
 
                   return (
                     <tr
                       key={d.id}
                       style={{ opacity: saving === d.id ? 0.5 : 1 }}
                     >
+                      {/* Name + (vous) badge */}
                       <td style={TD}>
                         <span style={{ fontWeight: 600 }}>{d.name}</span>
                         {isMe && (
@@ -403,16 +448,20 @@ export default function DriversManager({ initialDrivers, currentDriver }) {
                               color: "var(--accent)",
                             }}
                           >
-                            ( vous)
+                            (vous)
                           </span>
                         )}
                       </td>
+
+                      {/* Email */}
                       <td
                         style={{ ...TD, fontSize: "0.82rem" }}
                         className="mono"
                       >
                         {d.email || "—"}
                       </td>
+
+                      {/* Role — dropdown if editable, plain text otherwise */}
                       <td style={TD}>
                         {allowedRoles ? (
                           <select
@@ -449,6 +498,93 @@ export default function DriversManager({ initialDrivers, currentDriver }) {
                           </span>
                         )}
                       </td>
+
+                      {/* Discord ID — inline pencil editor, only for canAct rows */}
+                      <td style={{ ...TD, whiteSpace: "nowrap" }}>
+                        {isEditingThisRow ? (
+                          // Inline edit mode: input + save/cancel
+                          <div
+                            style={{
+                              display: "flex",
+                              gap: "0.4rem",
+                              alignItems: "center",
+                            }}
+                          >
+                            <input
+                              type="text"
+                              value={discordDraft}
+                              onChange={(e) => setDiscordDraft(e.target.value)}
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter") saveDiscordId(d.id);
+                                if (e.key === "Escape") cancelDiscordEdit();
+                              }}
+                              placeholder="Discord ID"
+                              autoFocus
+                              className="mono"
+                              style={{
+                                background: "var(--surface-2)",
+                                border: "1px solid var(--accent)",
+                                borderRadius: "3px",
+                                color: "var(--text)",
+                                fontSize: "0.82rem",
+                                padding: "0.2rem 0.4rem",
+                                width: "140px",
+                              }}
+                            />
+                            <button
+                              onClick={() => saveDiscordId(d.id)}
+                              className="btn btn-primary btn-sm"
+                              disabled={saving === d.id}
+                            >
+                              ✓
+                            </button>
+                            <button
+                              onClick={cancelDiscordEdit}
+                              className="btn btn-secondary btn-sm"
+                              disabled={saving === d.id}
+                            >
+                              ✗
+                            </button>
+                          </div>
+                        ) : (
+                          // Display mode: value + pencil button (only if canAct)
+                          <div
+                            style={{
+                              display: "flex",
+                              gap: "0.4rem",
+                              alignItems: "center",
+                            }}
+                          >
+                            <span
+                              className="mono"
+                              style={{ fontSize: "0.82rem" }}
+                            >
+                              {d.discord_id || "—"}
+                            </span>
+                            {canAct && (
+                              <button
+                                onClick={() =>
+                                  openDiscordEdit(d.id, d.discord_id)
+                                }
+                                title="Modifier le Discord ID"
+                                style={{
+                                  background: "none",
+                                  border: "none",
+                                  cursor: "pointer",
+                                  color: "var(--text-dim)",
+                                  fontSize: "0.8rem",
+                                  padding: "0 0.2rem",
+                                  lineHeight: 1,
+                                }}
+                              >
+                                ✏️
+                              </button>
+                            )}
+                          </div>
+                        )}
+                      </td>
+
+                      {/* Membership checkbox */}
                       <td style={{ ...TD, textAlign: "center" }}>
                         <input
                           type="checkbox"
@@ -465,6 +601,8 @@ export default function DriversManager({ initialDrivers, currentDriver }) {
                           }}
                         />
                       </td>
+
+                      {/* Test driver checkbox */}
                       <td style={{ ...TD, textAlign: "center" }}>
                         <input
                           type="checkbox"
@@ -481,6 +619,8 @@ export default function DriversManager({ initialDrivers, currentDriver }) {
                           }}
                         />
                       </td>
+
+                      {/* Revoke / Delete actions */}
                       <td style={{ ...TD, textAlign: "right" }}>
                         {canAct && (
                           <div

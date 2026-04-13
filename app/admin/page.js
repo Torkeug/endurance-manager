@@ -35,7 +35,7 @@ export default async function AdminPage() {
     supabase
       .from("drivers")
       .select(
-        "id, name, email, role, approved, refused, iracing_id, discord, active, membership_ok, test_driver",
+        "id, name, email, role, approved, refused, iracing_id, discord, discord_id, active, membership_ok, test_driver",
       )
       .order("name"),
     supabase.from("settings").select("key, value"),
