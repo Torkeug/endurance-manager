@@ -60,7 +60,7 @@ export default async function EquipageDetail({ params }) {
     {
       label: "Voiture",
       value:
-        (event.archived ? entry.car_name_snapshot : null) ||
+        (entry.events?.archived ? entry.car_name_snapshot : null) ||
         entry.cars?.name ||
         "—",
     },
