@@ -240,6 +240,7 @@ export default async function EvenementDetail({ params }) {
           initialStartTimes={event.event_start_times || []}
           timezone={event.timezone || "Europe/Paris"}
           isSpecial={event.is_special}
+          isAdmin={admin}
         />
       </div>
 

@@ -27,6 +27,7 @@ export default function StartTimesManager({
   initialStartTimes,
   timezone = "Europe/Paris",
   isSpecial,
+  isAdmin,
 }) {
   const router = useRouter();
   const [startTimes, setStartTimes] = useState(initialStartTimes);
@@ -226,7 +227,7 @@ export default function StartTimesManager({
                     <td style={{ textAlign: "right" }}>
                       {/* Special event start times are auto-generated from predefined slots —
                       manual edit/delete is disabled to keep them in sync with the template. */}
-                      {!isSpecial && (
+                      {!isSpecial && isAdmin && (
                         <div
                           style={{
                             display: "flex",
@@ -273,7 +274,8 @@ export default function StartTimesManager({
         </div>
       ) : (
         !editingId &&
-        !isSpecial && (
+        !isSpecial &&
+        isAdmin && (
           <button
             onClick={() => {
               setEditingId(null);
