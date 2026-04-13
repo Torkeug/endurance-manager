@@ -55,9 +55,9 @@ function RegisterForm() {
     setError(null);
 
     // Step 1 — Create Supabase auth user.
-    // This sends a confirmation email. The user has no active session yet
-    // (auth.uid() is null until email is confirmed), which is why we cannot
-    // insert the driver record from the client side (RLS would block it).
+    // When email confirmation is enabled, Supabase may return a non-null user
+    // with an id even before confirmation — we rely on that id to link the
+    // driver record. If it's null, we cannot proceed.
     const { data: authData, error: authErr } = await supabase.auth.signUp({
       email: form.email.trim(),
       password: form.password,
@@ -89,9 +89,20 @@ function RegisterForm() {
       return;
     }
 
-    // Step 2 — Create the driver record via a server-side API route.
-    // The route uses the service role key to bypass RLS, since the user
-    // has no active session yet at this point in the registration flow.
+    const authUserId = authData?.user?.id;
+
+    if (!authUserId) {
+      setError(
+        "Identifiant utilisateur manquant après création du compte. Réessayez ou contactez un administrateur.",
+      );
+      setLoading(false);
+      return;
+    }
+
+    // Step 2 — Create the driver record via server-side API route.
+    // Uses service role key server-side to bypass RLS — the user has no
+    // active session yet (email not confirmed), so auth.uid() is null
+    // and a direct client insert would be blocked.
     const driverRes = await fetch("/api/register-driver", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -100,21 +111,23 @@ function RegisterForm() {
         email: form.email.trim(),
         iracing_id: form.iracing_id.trim() || null,
         discord: form.discord.trim() || null,
-        auth_user_id: authData.user?.id,
+        auth_user_id: authUserId,
       }),
     });
 
+    // Parse body once — Response body can only be read once
+    const driverBody = await driverRes.json();
+
     if (!driverRes.ok) {
-      const { error: driverErr } = await driverRes.json();
-      // Show the explicit message returned by the API route
-      setError(driverErr || "Erreur lors de la création du profil pilote.");
+      setError(
+        driverBody.error || "Erreur lors de la création du profil pilote.",
+      );
       setLoading(false);
       return;
     }
 
     // Step 3 — Notify all admins by email — fire-and-forget.
-    // We don't await this or surface errors to the user:
-    // a failed notification must never block a successful registration.
+    // Errors here must never block a successful registration.
     fetch("/api/notify-admins", {
       method: "POST",
       headers: { "Content-Type": "application/json" },

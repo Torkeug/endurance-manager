@@ -13,6 +13,8 @@ const PUBLIC_ROUTES = [
   "/update-password",
   "/change-password",
   "/auth/reset",
+  "/api/register-driver",
+  "/api/notify-admins",
 ];
 
 export async function proxy(request) {
