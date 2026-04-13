@@ -111,6 +111,7 @@ function SignupForm({
   const [carEntryId, setCarEntryId] = useState(signup?.team_entry_id || "");
   const [notes, setNotes] = useState(signup?.notes || "");
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
 
   const toggleClass = (cls) =>
     setPreferredClasses((prev) =>
