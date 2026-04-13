@@ -2,7 +2,7 @@
 import { useState, useEffect, use } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { supabaseBrowser as supabase } from '../../../../lib/supabase-browser'
+import { supabaseBrowser as supabase } from "../../../../lib/supabase-browser";
 import { TIMEZONES } from "../../../../lib/timezone";
 
 function formatDuration(minutes) {
@@ -28,6 +28,7 @@ export default function ModifierEvenement({ params }) {
   const [customH, setCustomH] = useState("");
   const [customM, setCustomM] = useState("");
   const [authChecked, setAuthChecked] = useState(false);
+  const [showRegenModal, setShowRegenModal] = useState(false);
 
   useEffect(() => {
     supabase.auth.getUser().then(async ({ data: { user } }) => {
@@ -175,66 +176,68 @@ export default function ModifierEvenement({ params }) {
     if (err) {
       setError(err.message);
       setLoading(false);
-    } else {
-      // Regenerate start times for special events if weekend date changed
-      if (isSpecial && weekendStartDate) {
-        const confirmed = confirm(
-          "Régénérer les horaires de départ à partir des horaires prédéfinis ? Les horaires existants seront supprimés.",
-        );
-        if (confirmed) {
-          const { data: specialStartTimes } = await supabase
-            .from("special_event_start_times")
-            .select("*")
-            .order("day_of_week")
-            .order("hour")
-            .order("minute");
-
-          if (specialStartTimes?.length > 0) {
-            // Null out start_time_id on team entries before deleting start times —
-            // FK constraint prevents deletion while any team entry still references a start time.
-            await supabase
-              .from("team_entries")
-              .update({ start_time_id: null })
-              .eq("event_id", id);
-
-            // Delete existing start times
-            const { error: deleteErr } = await supabase
-              .from("event_start_times")
-              .delete()
-              .eq("event_id", id);
-            if (deleteErr) {
-              setError(`Erreur suppression horaires: ${deleteErr.message}`);
-              setLoading(false);
-              return;
-            }
-
-            // Generate new ones
-            const { DateTime } = await import("luxon");
-            const friday = DateTime.fromISO(weekendStartDate, {
-              zone: form.timezone,
-            });
-            const startTimeRows = specialStartTimes.map((st) => {
-              const dayOffset =
-                { vendredi: 0, samedi: 1, dimanche: 2 }[st.day_of_week] || 0;
-              const dt = friday.plus({ days: dayOffset }).set({
-                hour: st.hour,
-                minute: st.minute,
-                second: 0,
-                millisecond: 0,
-              });
-              return {
-                event_id: id,
-                label: `${st.day_of_week.charAt(0).toUpperCase() + st.day_of_week.slice(1)} ${dt.toFormat("d MMMM yyyy", { locale: "fr" })}`,
-                irl_start: dt.toUTC().toISO(),
-              };
-            });
-            await supabase.from("event_start_times").insert(startTimeRows);
-          }
-        }
-      }
-      router.push(`/evenements/${id}`);
-      router.refresh();
+      return;
     }
+
+    // If special event with a weekend date, show modal to ask about regenerating start times
+    if (isSpecial && weekendStartDate) {
+      setLoading(false);
+      setShowRegenModal(true);
+      return;
+    }
+
+    router.push(`/evenements/${id}`);
+    router.refresh();
+  };
+
+  const handleRegen = async () => {
+    setShowRegenModal(false);
+    setLoading(true);
+    const { data: specialStartTimes } = await supabase
+      .from("special_event_start_times")
+      .select("*")
+      .order("day_of_week")
+      .order("hour")
+      .order("minute");
+
+    if (specialStartTimes?.length > 0) {
+      // Null out start_time_id on team entries first (FK constraint)
+      await supabase
+        .from("team_entries")
+        .update({ start_time_id: null })
+        .eq("event_id", id);
+      const { error: deleteErr } = await supabase
+        .from("event_start_times")
+        .delete()
+        .eq("event_id", id);
+      if (deleteErr) {
+        setError(`Erreur suppression horaires: ${deleteErr.message}`);
+        setLoading(false);
+        return;
+      }
+
+      // Label is auto-generated from day + time — no free text input.
+      const { DateTime } = await import("luxon");
+      const friday = DateTime.fromISO(weekendStartDate, {
+        zone: form.timezone,
+      });
+      const startTimeRows = specialStartTimes.map((st) => {
+        const dayOffset =
+          { vendredi: 0, samedi: 1, dimanche: 2 }[st.day_of_week] || 0;
+        const dt = friday
+          .plus({ days: dayOffset })
+          .set({ hour: st.hour, minute: st.minute, second: 0, millisecond: 0 });
+        return {
+          event_id: id,
+          label: `${st.day_of_week.charAt(0).toUpperCase() + st.day_of_week.slice(1)} ${dt.toFormat("d MMMM yyyy", { locale: "fr" })}`,
+          irl_start: dt.toUTC().toISO(),
+        };
+      });
+      await supabase.from("event_start_times").insert(startTimeRows);
+    }
+    setLoading(false);
+    router.push(`/evenements/${id}`);
+    router.refresh();
   };
 
   // Hard delete — removes the event and all associated data permanently.
@@ -615,6 +618,61 @@ export default function ModifierEvenement({ params }) {
           </button>
         </div>
       </form>
+      {showRegenModal && (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(0,0,0,0.6)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 1000,
+            padding: "1.5rem",
+          }}
+        >
+          <div className="card" style={{ maxWidth: "480px", width: "100%" }}>
+            <h3 style={{ marginBottom: "0.75rem" }}>Horaires de départ</h3>
+            <p
+              style={{
+                fontSize: "0.9rem",
+                color: "var(--text-dim)",
+                marginBottom: "1.5rem",
+              }}
+            >
+              Souhaitez-vous régénérer les horaires de départ à partir des
+              horaires prédéfinis ? Les horaires existants seront supprimés.
+            </p>
+            <div
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                gap: "0.75rem",
+              }}
+            >
+              <button onClick={handleRegen} className="btn btn-primary">
+                Enregistrer et régénérer les horaires
+              </button>
+              <button
+                onClick={() => {
+                  setShowRegenModal(false);
+                  router.push(`/evenements/${id}`);
+                  router.refresh();
+                }}
+                className="btn btn-secondary"
+              >
+                Enregistrer sans régénérer
+              </button>
+              <button
+                onClick={() => setShowRegenModal(false)}
+                className="btn btn-danger btn-sm"
+              >
+                Annuler
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

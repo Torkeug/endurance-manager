@@ -175,7 +175,9 @@ export default async function EvenementDetail({ params }) {
           // Use snapshot if available (archived event), fall back to live circuit name.
           {
             label: "Circuit",
-            value: event.circuit_name_snapshot || event.circuits?.name || "—",
+            value: event.archived
+              ? event.circuit_name_snapshot || event.circuits?.name
+              : event.circuits?.name || "—",
           },
           { label: "Durée", value: formatDuration(event.duration_minutes) },
           { label: "Format", value: event.format || "—" },
@@ -307,7 +309,9 @@ export default async function EvenementDetail({ params }) {
                 .map((s) => (
                   <tr key={s.id}>
                     <td style={{ fontWeight: 600 }}>
-                      {s.driver_name_snapshot || s.drivers?.name || "—"}
+                      {(event.archived ? s.driver_name_snapshot : null) ||
+                        s.drivers?.name ||
+                        "—"}
                     </td>
                     <td
                       className="mono"
@@ -443,7 +447,9 @@ export default async function EvenementDetail({ params }) {
                   <tr key={entry.id}>
                     <td style={{ fontWeight: 600 }}>{entry.crew_name}</td>
                     <td style={{ color: "var(--text-dim)" }}>
-                      {entry.car_name_snapshot || entry.cars?.name || "—"}
+                      {(event.archived ? entry.car_name_snapshot : null) ||
+                        entry.cars?.name ||
+                        "—"}
                     </td>
                     <td>
                       {entry.class && (
@@ -475,7 +481,9 @@ export default async function EvenementDetail({ params }) {
                                 whiteSpace: "nowrap",
                               }}
                             >
-                              {s.driver_name_snapshot || s.drivers?.name}
+                              {(event.archived
+                                ? s.driver_name_snapshot
+                                : null) || s.drivers?.name}
                             </span>
                           ))}
                         {(entry.signups || []).filter(

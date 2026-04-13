@@ -59,7 +59,10 @@ export default async function EquipageDetail({ params }) {
     // Use snapshot if available (archived event), fall back to live car name.
     {
       label: "Voiture",
-      value: entry.car_name_snapshot || entry.cars?.name || "—",
+      value:
+        (event.archived ? entry.car_name_snapshot : null) ||
+        entry.cars?.name ||
+        "—",
     },
     { label: "Classe", value: entryClass || "—" },
     { label: "SoF", value: avgIrating ? `${avgIrating} iR` : "—" },
@@ -100,7 +103,9 @@ export default async function EquipageDetail({ params }) {
             }}
           >
             {entry.events?.name} —{" "}
-            {entry.car_name_snapshot || entry.cars?.name || "Voiture à définir"}
+            {(entry.events?.archived ? entry.car_name_snapshot : null) ||
+              entry.cars?.name ||
+              "Voiture à définir"}
           </div>
         </div>
         <div style={{ display: "flex", gap: "0.75rem" }}>
