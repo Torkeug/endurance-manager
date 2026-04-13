@@ -149,6 +149,14 @@ export default function ModifierEvenement({ params }) {
       setError("Le circuit est obligatoire.");
       return;
     }
+    // Special event weekend date must be a Friday
+    if (isSpecial && weekendStartDate) {
+      const day = new Date(weekendStartDate + "T00:00:00").getDay();
+      if (day !== 5) {
+        setError("La date du weekend doit être un vendredi.");
+        return;
+      }
+    }
 
     setLoading(true);
     setError(null);
@@ -363,6 +371,16 @@ export default function ModifierEvenement({ params }) {
                   value={weekendStartDate}
                   onChange={(e) => setWeekendStartDate(e.target.value)}
                 />
+                <p
+                  style={{
+                    fontSize: "0.78rem",
+                    color: "var(--text-dim)",
+                    marginTop: "0.4rem",
+                  }}
+                >
+                  💡 La date doit être un vendredi — les horaires du samedi et
+                  dimanche sont générés automatiquement.
+                </p>
               </div>
             )}
             <div className="form-group">

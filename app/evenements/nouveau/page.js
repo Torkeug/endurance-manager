@@ -111,7 +111,8 @@ export default function NouvelEvenement() {
     setForm((prev) => ({ ...prev, [field]: e.target.value }));
 
   const setDuration = (value) => {
-    setCustomMinutes("");
+    setCustomH("");
+    setCustomM("");
     setForm((prev) => ({ ...prev, duration_minutes: value }));
   };
 
@@ -144,7 +145,14 @@ export default function NouvelEvenement() {
       setError("Le circuit est obligatoire.");
       return;
     }
-
+    // Special event weekend date must be a Friday
+    if (isSpecial && weekendStartDate) {
+      const day = new Date(weekendStartDate + "T00:00:00").getDay();
+      if (day !== 5) {
+        setError("La date du weekend doit être un vendredi.");
+        return;
+      }
+    }
     setLoading(true);
     setError(null);
 
@@ -309,6 +317,16 @@ export default function NouvelEvenement() {
                   value={weekendStartDate}
                   onChange={(e) => setWeekendStartDate(e.target.value)}
                 />
+                <p
+                  style={{
+                    fontSize: "0.78rem",
+                    color: "var(--text-dim)",
+                    marginTop: "0.4rem",
+                  }}
+                >
+                  💡 La date doit être un vendredi — les horaires du samedi et
+                  dimanche sont générés automatiquement.
+                </p>
                 {specialStartTimes.length === 0 && (
                   <div
                     style={{
