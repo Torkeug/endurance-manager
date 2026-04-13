@@ -127,6 +127,20 @@ function RegisterForm() {
       return;
     }
 
+    // 3. Notify all admins by email — fire-and-forget.
+    // We don't await this or surface errors to the user:
+    // a failed notification must never block a successful registration.
+    fetch("/api/notify-admins", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        name: form.name.trim(),
+        email: form.email.trim(),
+      }),
+    }).catch((err) =>
+      console.error("[register] Admin notification failed:", err.message),
+    );
+
     // Show confirmation screen after successful registration.
     // User must verify email AND wait for admin approval before they can log in.
     setSent(true);
