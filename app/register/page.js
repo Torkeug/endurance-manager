@@ -54,10 +54,10 @@ function RegisterForm() {
     setLoading(true);
     setError(null);
 
-    // Registration is a two-step process:
-    // 1. Create Supabase auth user (handles email verification)
-    // 2. Create driver record in public.drivers (linked via auth_user_id)
-    // The driver record starts with approved: false — admin must approve before login works.
+    // Step 1 — Create Supabase auth user.
+    // This sends a confirmation email. The user has no active session yet
+    // (auth.uid() is null until email is confirmed), which is why we cannot
+    // insert the driver record from the client side (RLS would block it).
     const { data: authData, error: authErr } = await supabase.auth.signUp({
       email: form.email.trim(),
       password: form.password,
@@ -83,51 +83,36 @@ function RegisterForm() {
           "Trop de tentatives. Attendez quelques minutes avant de réessayer.",
         );
       } else {
-        setError(
-          "Erreur lors de la création du compte. Réessayez ou contactez un administrateur.",
-        );
+        setError(`Erreur lors de la création du compte : ${authErr.message}`);
       }
       setLoading(false);
       return;
     }
 
-    // 2. Create driver record
-    const { error: driverErr } = await supabase.from("drivers").insert([
-      {
+    // Step 2 — Create the driver record via a server-side API route.
+    // The route uses the service role key to bypass RLS, since the user
+    // has no active session yet at this point in the registration flow.
+    const driverRes = await fetch("/api/register-driver", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
         name: form.name.trim(),
         email: form.email.trim(),
         iracing_id: form.iracing_id.trim() || null,
         discord: form.discord.trim() || null,
         auth_user_id: authData.user?.id,
-        approved: false,
-        role: "driver",
-        active: true,
-      },
-    ]);
+      }),
+    });
 
-    if (driverErr) {
-      // 23505 = unique constraint — email or iRacing ID already exists in drivers table.
-      // 23502 = not null violation — a required field is missing.
-      if (driverErr.code === "23505") {
-        if (driverErr.message.includes("email")) {
-          setError(
-            "Cette adresse email est déjà utilisée. Essayez de vous connecter.",
-          );
-        } else if (driverErr.message.includes("iracing_id")) {
-          setError("Cet iRacing ID est déjà associé à un autre compte.");
-        } else {
-          setError("Un compte avec ces informations existe déjà.");
-        }
-      } else if (driverErr.code === "23502") {
-        setError("Un champ obligatoire est manquant.");
-      } else {
-        setError(`Erreur: ${driverErr.message} (code: ${driverErr.code})`);
-      }
+    if (!driverRes.ok) {
+      const { error: driverErr } = await driverRes.json();
+      // Show the explicit message returned by the API route
+      setError(driverErr || "Erreur lors de la création du profil pilote.");
       setLoading(false);
       return;
     }
 
-    // 3. Notify all admins by email — fire-and-forget.
+    // Step 3 — Notify all admins by email — fire-and-forget.
     // We don't await this or surface errors to the user:
     // a failed notification must never block a successful registration.
     fetch("/api/notify-admins", {
@@ -141,8 +126,7 @@ function RegisterForm() {
       console.error("[register] Admin notification failed:", err.message),
     );
 
-    // Show confirmation screen after successful registration.
-    // User must verify email AND wait for admin approval before they can log in.
+    // Show confirmation screen — user must verify email AND wait for admin approval.
     setSent(true);
     setLoading(false);
   };
@@ -172,8 +156,8 @@ function RegisterForm() {
             >
               Un email de confirmation a été envoyé à{" "}
               <strong style={{ color: "var(--text)" }}>{form.email}</strong>.
-              Cliquez sur le lien pour confirmer votre adresse, puis contactez
-              un administrateur pour activer votre compte.
+              Cliquez sur le lien pour confirmer votre adresse, puis attendez
+              l&apos;activation de votre compte par un administrateur.
             </p>
           </div>
         </div>
