@@ -1,7 +1,7 @@
 "use client";
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { supabaseBrowser as supabase } from "../lib/supabase-browser";
+import { supabaseBrowser as supabase } from "../../../lib/supabase-browser";
 
 export default function AuthReset() {
   const router = useRouter();
