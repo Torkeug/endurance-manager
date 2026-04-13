@@ -50,7 +50,6 @@ export default async function PilotesPage() {
                 <th>Discord</th>
                 <th>Twitch</th>
                 <th>Instagram</th>
-                <th>Email</th>
                 <th>Rôle</th>
                 <th></th>
               </tr>
@@ -109,12 +108,6 @@ export default async function PilotesPage() {
                     ) : (
                       "—"
                     )}
-                  </td>
-                  <td
-                    style={{ fontSize: "0.85rem", color: "var(--text-dim)" }}
-                    className="mono"
-                  >
-                    {p.email || "—"}
                   </td>
                   <td>
                     <span
