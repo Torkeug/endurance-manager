@@ -98,13 +98,11 @@ export default async function EvenementsPage() {
     );
   }
 
-  // Auto-archive championship rounds past finish date + 2h headroom
   const now = new Date();
-  // Auto-archive rounds whose last start + duration + 2h grace period is in the past.
-  // The 2h headroom avoids archiving a race that is still running due to clock drift
-  // or a slightly longer-than-planned finish.
-  const roundsToArchive = (evenements || []).filter((ev) => {
-    if (!ev.championship_id || ev.archived) return false;
+  // Auto-archive all past events (not just championship rounds) —
+  // any event whose last start + duration + 2h headroom is in the past.
+  const eventsToArchive = (evenements || []).filter((ev) => {
+    if (ev.archived) return false;
     const latestStart = getLatestStart(ev.event_start_times);
     if (!latestStart) return false;
     const finish = new Date(
@@ -113,16 +111,16 @@ export default async function EvenementsPage() {
     );
     return finish < now;
   });
-  if (roundsToArchive.length > 0) {
+  if (eventsToArchive.length > 0) {
     await supabase
       .from("events")
       .update({ archived: true })
       .in(
         "id",
-        roundsToArchive.map((r) => r.id),
+        eventsToArchive.map((e) => e.id),
       );
-    roundsToArchive.forEach((r) => {
-      r.archived = true;
+    eventsToArchive.forEach((e) => {
+      e.archived = true;
     });
   }
 
