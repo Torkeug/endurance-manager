@@ -3,11 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import StartTimesManager from "./StartTimesManager";
 import { getSessionAndDriver, isAdmin } from "../../../lib/auth";
-import {
-  formatInZone,
-  formatDateInZone,
-  formatTimeInZone,
-} from "../../../lib/timezone";
+import { formatInZone, formatTimeInZone } from "../../../lib/timezone";
 import ArchiveToggle from "./ArchiveToggle";
 import DeleteEventButton from "./DeleteEventButton";
 
@@ -241,6 +237,7 @@ export default async function EvenementDetail({ params }) {
           timezone={event.timezone || "Europe/Paris"}
           isSpecial={event.is_special}
           isAdmin={admin}
+          archived={event.archived}
         />
       </div>
 
@@ -376,7 +373,8 @@ export default async function EvenementDetail({ params }) {
                       {s.notes || "—"}
                     </td>
                     <td>
-                      {(admin || currentDriver?.id === s.drivers?.id) &&
+                      {!event.archived &&
+                        (admin || currentDriver?.id === s.drivers?.id) &&
                         s.drivers?.id && (
                           <Link
                             href={`/evenements/${id}/inscription?driver=${s.drivers?.id}`}
@@ -558,12 +556,17 @@ export default async function EvenementDetail({ params }) {
                       )}
                     </td>
                     <td>
-                      <Link
-                        href={`/evenements/${id}/equipages/${entry.id}`}
-                        className="btn btn-secondary btn-sm"
-                      >
-                        Gérer
-                      </Link>
+                      {(admin ||
+                        (entry.signups || []).some(
+                          (s) => s.drivers?.id === currentDriver?.id,
+                        )) && (
+                        <Link
+                          href={`/evenements/${id}/equipages/${entry.id}`}
+                          className="btn btn-secondary btn-sm"
+                        >
+                          {event.archived ? "Voir" : "Gérer"}
+                        </Link>
+                      )}
                     </td>
                   </tr>
                 ))}

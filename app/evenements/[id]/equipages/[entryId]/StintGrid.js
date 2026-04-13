@@ -5,7 +5,6 @@ import ActualEndInput from "./ActualEndInput";
 
 // ─── Display helpers ────────────────────────────────────────────────────────
 
-// Format a Date to HH:MM (local time)
 function formatTime(date) {
   if (!date) return "—";
   return new Date(date).toLocaleTimeString("fr-FR", {
@@ -15,7 +14,6 @@ function formatTime(date) {
   });
 }
 
-// Format a Date to DD/MM HH:MM
 function formatDatetime(date) {
   if (!date) return "—";
   return new Date(date).toLocaleString("fr-FR", {
@@ -27,7 +25,6 @@ function formatDatetime(date) {
   });
 }
 
-// Format seconds to "Xh YYmin" or "Y min"
 function formatDuration(seconds) {
   if (!seconds) return "—";
   const h = Math.floor(seconds / 3600);
@@ -38,8 +35,6 @@ function formatDuration(seconds) {
 
 // ─── In-game time calculation ───────────────────────────────────────────────
 
-// Convert an IRL timestamp to its in-game equivalent.
-// The IG clock starts at igStartTimeStr when IRL is irlStartStr.
 function getIGTime(irlTime, irlStartStr, igStartTimeStr) {
   if (!igStartTimeStr || !irlStartStr || !irlTime) return null;
   const [igH, igM] = igStartTimeStr.split(":").map(Number);
@@ -49,7 +44,6 @@ function getIGTime(irlTime, irlStartStr, igStartTimeStr) {
   return new Date(igStart.getTime() + (new Date(irlTime) - irlStart));
 }
 
-// Determine day/night phase icon from IG time vs sunrise/sunset strings (HH:MM)
 function getPhase(igTime, sunriseStr, sunsetStr) {
   if (!igTime || !sunriseStr || !sunsetStr) return null;
   const minutes =
@@ -58,13 +52,11 @@ function getPhase(igTime, sunriseStr, sunsetStr) {
   const [ssH, ssM] = sunsetStr.split(":").map(Number);
   const sunrise = srH * 60 + srM;
   const sunset = ssH * 60 + ssM;
-  // Normal day/night (sunrise before sunset)
   if (sunrise < sunset) {
     if (minutes >= sunrise + 30 && minutes < sunset - 30) return "☀️";
     if (minutes >= sunset + 30 || minutes < sunrise - 30) return "🌑";
     return "🌗";
   }
-  // Inverted (sunrise after sunset — overnight race)
   if (minutes >= sunrise + 30 || minutes < sunset - 30) return "☀️";
   if (minutes >= sunset + 30 && minutes < sunrise - 30) return "🌑";
   return "🌗";
@@ -72,27 +64,21 @@ function getPhase(igTime, sunriseStr, sunsetStr) {
 
 // ─── Availability check ─────────────────────────────────────────────────────
 
-// Check a driver's availability for a stint window.
-// Returns: 'available' | 'partial' | 'unavailable' | 'tentative' | null
 function checkAvailability(availabilities, driverId, irlStart, irlEnd) {
   if (!irlStart || !irlEnd || !driverId) return null;
   const start = new Date(irlStart).getTime();
   const end = new Date(irlEnd).getTime();
-
-  // Find all 30-min availability slots that overlap the stint window
   const windowSlots = Object.values(availabilities).filter((a) => {
     if (a.driver_id !== driverId) return false;
     const t = new Date(a.slot_start).getTime();
     return t < end && t + 30 * 60 * 1000 > start;
   });
-
   if (windowSlots.length === 0) return "unavailable";
   const availableCount = windowSlots.filter((a) => a.available === true).length;
   const unavailableCount = windowSlots.filter(
     (a) => a.available === false,
   ).length;
   const tentativeCount = windowSlots.filter((a) => a.available === null).length;
-
   if (availableCount === windowSlots.length) return "available";
   if (unavailableCount > 0 && availableCount === 0 && tentativeCount === 0)
     return "unavailable";
@@ -104,8 +90,6 @@ function checkAvailability(availabilities, driverId, irlStart, irlEnd) {
 
 // ─── Stint calculation engine ───────────────────────────────────────────────
 
-// Calculate all derived fields for a single stint given the IRL start time.
-// Returns the stint object enriched with _ prefixed computed fields.
 function calcStint(
   stint,
   teamEntry,
@@ -118,16 +102,11 @@ function calcStint(
   const pitLane = teamEntry?.events?.circuits?.pit_lane_time_seconds || 0;
   const refuel = teamEntry?.refuel_time_seconds || 0;
   const tyreChange = teamEntry?.tyre_change_time_seconds || 0;
-
-  // Apply BoP tank size percentage if set, otherwise use car default
   const carTankSize = teamEntry?.cars?.tank_size_litres;
   const tankSize = teamEntry?.bop_tank_size_percent
     ? carTankSize * (teamEntry.bop_tank_size_percent / 100)
     : carTankSize;
-
   const raceStart = teamEntry?.event_start_times?.irl_start;
-
-  // Use wet or dry performance data depending on rain flag
   const perf = driverPerf[stint.driver_id];
   const lapTimeSec = stint.rain
     ? perf?.lap_time_wet || perf?.lap_time_dry || null
@@ -135,8 +114,6 @@ function calcStint(
   const fuelPerLap = stint.rain
     ? perf?.fuel_wet || perf?.fuel_dry || null
     : perf?.fuel_dry || perf?.fuel_wet || null;
-
-  // Laps: manual override > calculated from fuel+tank > estimated from 1h
   const calcLaps =
     fuelPerLap && tankSize
       ? Math.max(1, Math.floor(tankSize / fuelPerLap))
@@ -145,36 +122,26 @@ function calcStint(
     stint.laps_planned ||
     calcLaps ||
     (lapTimeSec ? Math.floor(3600 / lapTimeSec) : null);
-
-  // Stint duration: laps x lap time > manual minutes > default 3600s
   const stintDurationSec =
     laps && lapTimeSec
       ? Math.round(laps * lapTimeSec)
       : stint.duration_minutes
         ? stint.duration_minutes * 60
         : 3600;
-
-  // Flags for rendering decisions
   const _durationFromPerf = !!(lapTimeSec && (stint.laps_planned || calcLaps));
   const _durationIsDefault = !laps && !lapTimeSec && !stint.duration_minutes;
-
   const fuelUsed = laps && fuelPerLap ? laps * fuelPerLap : null;
   const pitStopSec = pitLane + refuel + (stint.tyre_change ? tyreChange : 0);
-
   const stintIrlStart = irlStart;
   const stintIrlEnd =
     stintIrlStart && stintDurationSec
       ? new Date(stintIrlStart.getTime() + stintDurationSec * 1000)
       : null;
-
-  // Next stint starts after pit stop
   const nextStart = stintIrlEnd
     ? new Date(stintIrlEnd.getTime() + pitStopSec * 1000)
     : null;
-
   const igStart = getIGTime(stintIrlStart, raceStart, igStartTime);
   const phase = getPhase(igStart, igSunrise, igSunset);
-
   return {
     ...stint,
     _irlStart: stintIrlStart,
@@ -194,10 +161,6 @@ function calcStint(
   };
 }
 
-// Chain-calculate all stints in order.
-// Each stint's start = previous stint's end + pit stop time.
-// Marks the last stint that covers race end with _isLastStint,
-// _adjustedDurationSec and _adjustedIrlEnd (= race end time).
 function calculateAllStints(
   stints,
   teamEntry,
@@ -214,10 +177,8 @@ function calculateAllStints(
             teamEntry.events.duration_minutes * 60 * 1000,
         )
       : null;
-
   let currentTime = raceStart ? new Date(raceStart) : null;
   const result = [];
-
   for (const stint of stints) {
     const calc = calcStint(
       stint,
@@ -229,8 +190,6 @@ function calculateAllStints(
       currentTime,
     );
     result.push(calc);
-
-    // Use actual end time if set (live race), otherwise planned end
     const effectiveEnd = calc.irl_end_actual
       ? new Date(calc.irl_end_actual)
       : calc._irlEnd;
@@ -238,23 +197,18 @@ function calculateAllStints(
       ? new Date(effectiveEnd.getTime() + calc._pitStopSec * 1000)
       : null;
   }
-
-  // Find the stint that covers race end, mark it with flag and adjusted times
   if (result.length > 0 && raceEnd) {
     const coveringStint = result.find((s) => s._irlEnd && s._irlEnd >= raceEnd);
     if (coveringStint) {
       coveringStint._isLastStint = true;
       if (coveringStint._irlStart && coveringStint._lapTimeSec) {
         const remainingSecs = (raceEnd - coveringStint._irlStart) / 1000;
-        // Always store the optimal (minimum to cross finish line) for display hints
         coveringStint._optimalLaps = Math.ceil(
           remainingSecs / coveringStint._lapTimeSec,
         );
-        // If user manually entered laps, respect that — otherwise use optimal
         coveringStint._laps = coveringStint.laps_planned
           ? coveringStint.laps_planned
           : coveringStint._optimalLaps;
-        // Derive optimal duration and end time for hint display
         coveringStint._optimalDurationSec =
           coveringStint._optimalLaps * coveringStint._lapTimeSec;
         coveringStint._optimalIrlEnd = new Date(
@@ -262,17 +216,14 @@ function calculateAllStints(
             coveringStint._optimalDurationSec * 1000,
         );
         coveringStint._calcLaps = coveringStint._laps;
-        // Derive real duration and end time from actual lap count
         coveringStint._stintDurationSec =
           coveringStint._laps * coveringStint._lapTimeSec;
         coveringStint._irlEnd = new Date(
           coveringStint._irlStart.getTime() +
             coveringStint._stintDurationSec * 1000,
         );
-        // _adjustedIrlEnd = real crossing time (≥ race end), used for FIN IRL display
         coveringStint._adjustedIrlEnd = coveringStint._irlEnd;
         coveringStint._adjustedDurationSec = coveringStint._stintDurationSec;
-        // Recalculate fuel based on adjusted laps
         const perf = driverPerf[coveringStint.driver_id];
         const fuelPerLap = coveringStint.rain
           ? perf?.fuel_wet || perf?.fuel_dry
@@ -281,21 +232,16 @@ function calculateAllStints(
           coveringStint._fuelUsed = coveringStint._laps * fuelPerLap;
       }
     } else {
-      // No stint reaches race end — mark last stint, show real end, flag warning
       const lastStint = result[result.length - 1];
       lastStint._isLastStint = true;
       lastStint._doesNotCoverRaceEnd = true;
-      // No _adjustedIrlEnd — FIN IRL shows real calculated end
     }
   }
-
   return result;
 }
 
 // ─── Auto-generation ────────────────────────────────────────────────────────
 
-// Estimate how many stints a race needs based on performance data.
-// Falls back to 1 stint/hour if no perf data is available.
 function estimateStintCount(teamEntry, driverPerf, assignedDrivers) {
   const durationMinutes = teamEntry?.events?.duration_minutes;
   const carTankSize = teamEntry?.cars?.tank_size_litres;
@@ -320,8 +266,6 @@ function estimateStintCount(teamEntry, driverPerf, assignedDrivers) {
 
 // ─── Cross-event conflict detection ─────────────────────────────────────────
 
-// Check if a calculated stint overlaps with any other stint from other team entries.
-// Returns the conflicting stint object, or null if no conflict.
 function hasConflict(calc, otherStints) {
   if (!calc._irlStart || !calc._irlEnd) return null;
   for (const other of otherStints) {
@@ -338,7 +282,13 @@ function hasConflict(calc, otherStints) {
 
 // ─── Main component ──────────────────────────────────────────────────────────
 
-export default function StintGrid({ teamEntryId, teamEntry, assignedDrivers }) {
+export default function StintGrid({
+  teamEntryId,
+  teamEntry,
+  assignedDrivers,
+  // archived — when true all inputs are disabled and action buttons are hidden
+  archived = false,
+}) {
   const [stints, setStints] = useState([]);
   const [driverPerf, setDriverPerf] = useState({});
   const [availabilities, setAvailabilities] = useState({});
@@ -353,28 +303,22 @@ export default function StintGrid({ teamEntryId, teamEntry, assignedDrivers }) {
   const igSunset = event?.ig_sunset;
   const driverIds = assignedDrivers.map((d) => d.drivers?.id).filter(Boolean);
 
-  // ── Data fetching ──────────────────────────────────────────────────────────
-
   useEffect(() => {
     if (!teamEntryId) return;
     Promise.all([
-      // Current team entry's stints
       supabase
         .from("stints")
         .select("*")
         .eq("team_entry_id", teamEntryId)
         .order("stint_number"),
-      // Driver performance data for calculations
       supabase
         .from("driver_performance")
         .select("*")
         .eq("team_entry_id", teamEntryId),
-      // Availability slots for the availability dot indicators
       supabase
         .from("availabilities")
         .select("*")
         .eq("team_entry_id", teamEntryId),
-      // Other stints for assigned drivers (cross-event conflict detection)
       driverIds.length > 0
         ? supabase
             .from("stints")
@@ -389,14 +333,12 @@ export default function StintGrid({ teamEntryId, teamEntry, assignedDrivers }) {
         { data: availData },
         { data: otherStints },
       ]) => {
-        // Build driver performance map: driver_id -> perf object
         const perfMap = {};
         (perfData || []).forEach((p) => {
           perfMap[p.driver_id] = p;
         });
         setDriverPerf(perfMap);
 
-        // Build availability map: "driverId_slotISO" -> availability object
         const availMap = {};
         (availData || []).forEach((a) => {
           const key = `${a.driver_id}_${new Date(a.slot_start).toISOString()}`;
@@ -409,8 +351,8 @@ export default function StintGrid({ teamEntryId, teamEntry, assignedDrivers }) {
         setLoading(false);
         setConflictStints(otherStints || []);
 
-        // Auto-generate stints if none exist yet (runs once on first load)
-        if (loadedStints.length === 0 && !autoGenDone) {
+        // Auto-generate stints if none exist — skipped for archived events
+        if (loadedStints.length === 0 && !autoGenDone && !archived) {
           setAutoGenDone(true);
           const count = estimateStintCount(teamEntry, perfMap, assignedDrivers);
           const rows = Array.from({ length: count }, (_, i) => ({
@@ -431,8 +373,6 @@ export default function StintGrid({ teamEntryId, teamEntry, assignedDrivers }) {
     );
   }, [teamEntryId, JSON.stringify(driverIds)]);
 
-  // ── Calculations ───────────────────────────────────────────────────────────
-
   const calculated = calculateAllStints(
     stints,
     teamEntry,
@@ -442,10 +382,9 @@ export default function StintGrid({ teamEntryId, teamEntry, assignedDrivers }) {
     igSunset,
   );
 
-  // Persist calculated IRL start/end times to DB after each recalculation.
-  // Used for conflict detection and pilot engagement page.
+  // Persist calculated IRL start/end times for conflict detection — skipped when archived
   useEffect(() => {
-    if (calculated.length === 0) return;
+    if (calculated.length === 0 || archived) return;
     const updates = calculated
       .filter((s) => s._irlStart || s._irlEnd)
       .map((s) => ({
@@ -454,8 +393,6 @@ export default function StintGrid({ teamEntryId, teamEntry, assignedDrivers }) {
         irl_end: s._irlEnd ? s._irlEnd.toISOString() : null,
       }));
     if (updates.length === 0) return;
-
-    // Batch update — fire and forget
     Promise.all(
       updates.map((u) =>
         supabase
@@ -470,9 +407,8 @@ export default function StintGrid({ teamEntryId, teamEntry, assignedDrivers }) {
     ),
   ]);
 
-  // ── CRUD ──────────────────────────────────────────────────────────────────
-
   const addStint = async () => {
+    if (archived) return;
     const nextNum =
       stints.length > 0
         ? Math.max(...stints.map((s) => s.stint_number)) + 1
@@ -493,6 +429,7 @@ export default function StintGrid({ teamEntryId, teamEntry, assignedDrivers }) {
   };
 
   const updateStint = async (stintId, field, value) => {
+    if (archived) return;
     setSaving(stintId);
     setStints((prev) =>
       prev.map((s) => (s.id === stintId ? { ...s, [field]: value } : s)),
@@ -505,6 +442,7 @@ export default function StintGrid({ teamEntryId, teamEntry, assignedDrivers }) {
   };
 
   const updateActualEnd = async (stintId, isoString) => {
+    if (archived) return;
     setSaving(stintId);
     setStints((prev) =>
       prev.map((s) =>
@@ -519,18 +457,18 @@ export default function StintGrid({ teamEntryId, teamEntry, assignedDrivers }) {
   };
 
   const deleteStint = async (stintId) => {
+    if (archived) return;
     if (!confirm("Supprimer ce relais ?")) return;
     await supabase.from("stints").delete().eq("id", stintId);
     setStints((prev) => prev.filter((s) => s.id !== stintId));
   };
 
   const clearAllStints = async () => {
+    if (archived) return;
     if (!confirm("Supprimer tous les relais ?")) return;
     await supabase.from("stints").delete().eq("team_entry_id", teamEntryId);
     setStints([]);
   };
-
-  // ── Table styles ───────────────────────────────────────────────────────────
 
   const TH = {
     background: "var(--surface-2)",
@@ -561,8 +499,6 @@ export default function StintGrid({ teamEntryId, teamEntry, assignedDrivers }) {
     width: "100%",
   };
 
-  // ── Guard conditions ───────────────────────────────────────────────────────
-
   if (!teamEntry?.event_start_times?.irl_start)
     return (
       <div className="card">
@@ -584,8 +520,6 @@ export default function StintGrid({ teamEntryId, teamEntry, assignedDrivers }) {
       </div>
     );
 
-  // ── Derived display values ─────────────────────────────────────────────────
-
   const raceEndTime =
     teamEntry?.event_start_times?.irl_start && event?.duration_minutes
       ? new Date(
@@ -595,14 +529,11 @@ export default function StintGrid({ teamEntryId, teamEntry, assignedDrivers }) {
       : null;
 
   const lastCalc = calculated[calculated.length - 1];
-  // Use adjusted end (real crossing time) for last stint, fall back to calculated end
   const projectedFinish = lastCalc?._adjustedIrlEnd || lastCalc?._irlEnd;
-
-  // ── Render ─────────────────────────────────────────────────────────────────
 
   return (
     <div>
-      {/* ── Summary bar ── */}
+      {/* Summary bar */}
       <div
         style={{
           display: "flex",
@@ -665,7 +596,7 @@ export default function StintGrid({ teamEntryId, teamEntry, assignedDrivers }) {
         ))}
       </div>
 
-      {/* ── Fair share indicators ── */}
+      {/* Fair share indicators */}
       {assignedDrivers.length > 0 &&
         calculated.length > 0 &&
         (() => {
@@ -674,8 +605,7 @@ export default function StintGrid({ teamEntryId, teamEntry, assignedDrivers }) {
             0,
           );
           const equalShare = totalLaps / assignedDrivers.length;
-          const fairShareMin = Math.ceil(equalShare * 0.25); // 25% of equal share
-
+          const fairShareMin = Math.ceil(equalShare * 0.25);
           const lapsByDriver = {};
           assignedDrivers.forEach((d) => {
             if (d.drivers?.id) lapsByDriver[d.drivers.id] = 0;
@@ -685,7 +615,6 @@ export default function StintGrid({ teamEntryId, teamEntry, assignedDrivers }) {
               lapsByDriver[s.driver_id] =
                 (lapsByDriver[s.driver_id] || 0) + s._laps;
           });
-
           return (
             <div style={{ marginBottom: "1rem" }}>
               <div
@@ -745,7 +674,7 @@ export default function StintGrid({ teamEntryId, teamEntry, assignedDrivers }) {
           );
         })()}
 
-      {/* ── Stint grid table ── */}
+      {/* Stint grid table */}
       <div
         style={{
           overflowX: "auto",
@@ -767,7 +696,10 @@ export default function StintGrid({ teamEntryId, teamEntry, assignedDrivers }) {
               <th style={{ ...TH, minWidth: "130px" }}>Pilote</th>
               <th style={TH}>Départ IRL</th>
               <th style={TH}>Fin IRL</th>
-              <th style={{ ...TH, minWidth: "110px" }}>Fin réelle</th>
+              {/* Fin réelle column hidden when archived */}
+              {!archived && (
+                <th style={{ ...TH, minWidth: "110px" }}>Fin réelle</th>
+              )}
               <th style={{ ...TH, width: "68px" }}>Durée</th>
               <th style={{ ...TH, width: "52px" }}>Tours</th>
               <th style={{ ...TH, width: "60px" }}>Conso</th>
@@ -793,14 +725,15 @@ export default function StintGrid({ teamEntryId, teamEntry, assignedDrivers }) {
                   {d.drivers?.name?.split(" ")[0]?.slice(0, 3)}
                 </th>
               ))}
-              <th style={{ ...TH, width: "36px" }}></th>
+              {/* Delete column hidden when archived */}
+              {!archived && <th style={{ ...TH, width: "36px" }}></th>}
             </tr>
           </thead>
           <tbody>
             {calculated.length === 0 && (
               <tr>
                 <td
-                  colSpan={11 + assignedDrivers.length}
+                  colSpan={11 + assignedDrivers.length + (archived ? 0 : 2)}
                   style={{
                     ...TD,
                     textAlign: "center",
@@ -814,9 +747,6 @@ export default function StintGrid({ teamEntryId, teamEntry, assignedDrivers }) {
             )}
             {calculated.map((stint, i) => {
               const isSaving = saving === stint.id;
-
-              // FIN IRL: for the last stint, show the adjusted race end time
-              // instead of the full calculated end (which may exceed race end)
               const displayIrlEnd =
                 stint._isLastStint && stint._adjustedIrlEnd
                   ? stint._adjustedIrlEnd
@@ -834,7 +764,6 @@ export default function StintGrid({ teamEntryId, teamEntry, assignedDrivers }) {
                         ? "transparent"
                         : "rgba(255,255,255,0.02)",
                     opacity: isSaving ? 0.6 : 1,
-                    // Green left border marks the last stint covering race end, Red if not
                     borderLeft: stint._isLastStint
                       ? stint._doesNotCoverRaceEnd
                         ? "3px solid var(--danger)"
@@ -842,7 +771,7 @@ export default function StintGrid({ teamEntryId, teamEntry, assignedDrivers }) {
                       : "3px solid transparent",
                   }}
                 >
-                  {/* Stint number + conflict warning icon */}
+                  {/* # */}
                   <td style={{ ...TD, textAlign: "center" }}>
                     <div
                       style={{
@@ -876,7 +805,7 @@ export default function StintGrid({ teamEntryId, teamEntry, assignedDrivers }) {
                     </div>
                   </td>
 
-                  {/* Driver selector with availability suffix */}
+                  {/* Driver selector — disabled when archived */}
                   <td style={TD}>
                     <select
                       value={stint.driver_id || ""}
@@ -887,7 +816,12 @@ export default function StintGrid({ teamEntryId, teamEntry, assignedDrivers }) {
                           e.target.value || null,
                         )
                       }
-                      style={{ ...INPUT, minWidth: "120px" }}
+                      disabled={archived}
+                      style={{
+                        ...INPUT,
+                        minWidth: "120px",
+                        opacity: archived ? 0.7 : 1,
+                      }}
                     >
                       <option value="">— À définir —</option>
                       {assignedDrivers.map((d) => {
@@ -908,7 +842,7 @@ export default function StintGrid({ teamEntryId, teamEntry, assignedDrivers }) {
                           <option
                             key={driverId}
                             value={driverId}
-                            disabled={isUnavailable}
+                            disabled={isUnavailable && !archived}
                           >
                             {d.drivers?.name}
                             {suffix}
@@ -925,7 +859,7 @@ export default function StintGrid({ teamEntryId, teamEntry, assignedDrivers }) {
                     </span>
                   </td>
 
-                  {/* IRL end — shows real crossing time, with optimal hint if user entered custom laps */}
+                  {/* IRL end */}
                   <td style={TD}>
                     <span
                       className="mono"
@@ -941,7 +875,6 @@ export default function StintGrid({ teamEntryId, teamEntry, assignedDrivers }) {
                     >
                       {displayIrlEnd ? formatDatetime(displayIrlEnd) : "—"}
                     </span>
-                    {/* Show optimal crossing time when user has entered custom laps */}
                     {stint._isLastStint &&
                       stint._optimalIrlEnd &&
                       stint.laps_planned &&
@@ -959,19 +892,23 @@ export default function StintGrid({ teamEntryId, teamEntry, assignedDrivers }) {
                       )}
                   </td>
 
-                  {/* Actual end input (live race use) */}
-                  <td style={{ ...TD, padding: "4px 6px", minWidth: "110px" }}>
-                    <ActualEndInput
-                      plannedEnd={stint._irlEnd}
-                      actualEnd={stint.irl_end_actual}
-                      onSave={(isoString) =>
-                        updateActualEnd(stint.id, isoString)
-                      }
-                      saving={saving === stint.id}
-                    />
-                  </td>
+                  {/* Actual end — hidden when archived */}
+                  {!archived && (
+                    <td
+                      style={{ ...TD, padding: "4px 6px", minWidth: "110px" }}
+                    >
+                      <ActualEndInput
+                        plannedEnd={stint._irlEnd}
+                        actualEnd={stint.irl_end_actual}
+                        onSave={(isoString) =>
+                          updateActualEnd(stint.id, isoString)
+                        }
+                        saving={saving === stint.id}
+                      />
+                    </td>
+                  )}
 
-                  {/* Duration — 🏁 adjusted for last stint, calc or manual for others */}
+                  {/* Duration */}
                   <td style={TD}>
                     {stint._isLastStint && stint._adjustedDurationSec ? (
                       <div>
@@ -981,7 +918,6 @@ export default function StintGrid({ teamEntryId, teamEntry, assignedDrivers }) {
                         >
                           🏁 {formatDuration(stint._adjustedDurationSec)}
                         </div>
-                        {/* Show optimal duration hint when user has entered custom laps */}
                         {stint._optimalDurationSec &&
                           stint.laps_planned &&
                           stint.laps_planned !== stint._optimalLaps && (
@@ -1014,13 +950,18 @@ export default function StintGrid({ teamEntryId, teamEntry, assignedDrivers }) {
                             e.target.value ? parseInt(e.target.value) : null,
                           )
                         }
-                        style={{ ...INPUT, width: "80px" }}
+                        disabled={archived}
+                        style={{
+                          ...INPUT,
+                          width: "80px",
+                          opacity: archived ? 0.7 : 1,
+                        }}
                         title="Durée manuelle en minutes"
                       />
                     )}
                   </td>
 
-                  {/* Laps — manual with calculated placeholder, capped at tank capacity */}
+                  {/* Laps */}
                   <td style={TD}>
                     <input
                       type="number"
@@ -1051,14 +992,18 @@ export default function StintGrid({ teamEntryId, teamEntry, assignedDrivers }) {
                         }
                         updateStint(stint.id, "laps_planned", val);
                       }}
-                      style={{ ...INPUT, width: "60px" }}
+                      disabled={archived}
+                      style={{
+                        ...INPUT,
+                        width: "60px",
+                        opacity: archived ? 0.7 : 1,
+                      }}
                       title={
                         stint._calcLaps
                           ? `Calculé : ${stint._calcLaps} tours`
                           : "Saisissez les tours"
                       }
                     />
-                    {/* Show optimal laps hint when user has entered a different value */}
                     {stint._isLastStint &&
                       stint._optimalLaps &&
                       stint.laps_planned &&
@@ -1076,7 +1021,7 @@ export default function StintGrid({ teamEntryId, teamEntry, assignedDrivers }) {
                       )}
                   </td>
 
-                  {/* Fuel consumption */}
+                  {/* Fuel */}
                   <td style={TD}>
                     <span
                       className="mono"
@@ -1091,7 +1036,7 @@ export default function StintGrid({ teamEntryId, teamEntry, assignedDrivers }) {
                     </span>
                   </td>
 
-                  {/* In-game start time */}
+                  {/* IG start */}
                   <td style={TD}>
                     <span
                       className="mono"
@@ -1101,14 +1046,14 @@ export default function StintGrid({ teamEntryId, teamEntry, assignedDrivers }) {
                     </span>
                   </td>
 
-                  {/* Day/night phase icon */}
+                  {/* Phase */}
                   <td
                     style={{ ...TD, textAlign: "center", fontSize: "0.8rem" }}
                   >
                     {stint._phase || "—"}
                   </td>
 
-                  {/* Rain checkbox */}
+                  {/* Rain */}
                   <td style={{ ...TD, textAlign: "center" }}>
                     <input
                       type="checkbox"
@@ -1116,11 +1061,15 @@ export default function StintGrid({ teamEntryId, teamEntry, assignedDrivers }) {
                       onChange={(e) =>
                         updateStint(stint.id, "rain", e.target.checked)
                       }
-                      style={{ accentColor: "#4a9fd4", cursor: "pointer" }}
+                      disabled={archived}
+                      style={{
+                        accentColor: "#4a9fd4",
+                        cursor: archived ? "default" : "pointer",
+                      }}
                     />
                   </td>
 
-                  {/* Tyre change checkbox */}
+                  {/* Tyre change */}
                   <td style={{ ...TD, textAlign: "center" }}>
                     <input
                       type="checkbox"
@@ -1128,14 +1077,15 @@ export default function StintGrid({ teamEntryId, teamEntry, assignedDrivers }) {
                       onChange={(e) =>
                         updateStint(stint.id, "tyre_change", e.target.checked)
                       }
+                      disabled={archived}
                       style={{
                         accentColor: "var(--accent)",
-                        cursor: "pointer",
+                        cursor: archived ? "default" : "pointer",
                       }}
                     />
                   </td>
 
-                  {/* Availability dots — one per assigned driver */}
+                  {/* Availability dots */}
                   {assignedDrivers.map((d) => {
                     const driverId = d.drivers?.id;
                     const status = checkAvailability(
@@ -1171,7 +1121,6 @@ export default function StintGrid({ teamEntryId, teamEntry, assignedDrivers }) {
                             borderRadius: "50%",
                             background: color,
                             margin: "0 auto",
-                            // Accent ring marks the assigned driver
                             outline: isAssigned
                               ? "2px solid var(--accent)"
                               : "none",
@@ -1183,16 +1132,18 @@ export default function StintGrid({ teamEntryId, teamEntry, assignedDrivers }) {
                     );
                   })}
 
-                  {/* Delete button */}
-                  <td style={{ ...TD, textAlign: "center" }}>
-                    <button
-                      onClick={() => deleteStint(stint.id)}
-                      className="btn btn-danger btn-sm"
-                      style={{ padding: "0.15rem 0.4rem" }}
-                    >
-                      ×
-                    </button>
-                  </td>
+                  {/* Delete button — hidden when archived */}
+                  {!archived && (
+                    <td style={{ ...TD, textAlign: "center" }}>
+                      <button
+                        onClick={() => deleteStint(stint.id)}
+                        className="btn btn-danger btn-sm"
+                        style={{ padding: "0.15rem 0.4rem" }}
+                      >
+                        ×
+                      </button>
+                    </td>
+                  )}
                 </tr>
               );
             })}
@@ -1200,43 +1151,49 @@ export default function StintGrid({ teamEntryId, teamEntry, assignedDrivers }) {
         </table>
       </div>
 
-      {/* ── Actions ── */}
-      <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
-        {/* Warning: race already covered by planned stints */}
-        {projectedFinish && raceEndTime && projectedFinish >= raceEndTime && (
+      {/* Actions — hidden entirely when archived */}
+      {!archived && (
+        <div
+          style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}
+        >
+          {projectedFinish && raceEndTime && projectedFinish >= raceEndTime && (
+            <div
+              style={{
+                fontSize: "0.82rem",
+                color: "#d4904a",
+                padding: "0.5rem 0.75rem",
+                background: "#2a1a00",
+                border: "1px solid #a06020",
+                borderRadius: "3px",
+              }}
+            >
+              ⚠️ La course est déjà couverte par les relais planifiés.
+            </div>
+          )}
           <div
             style={{
-              fontSize: "0.82rem",
-              color: "#d4904a",
-              padding: "0.5rem 0.75rem",
-              background: "#2a1a00",
-              border: "1px solid #a06020",
-              borderRadius: "3px",
+              display: "flex",
+              gap: "0.75rem",
+              flexWrap: "wrap",
+              alignItems: "center",
             }}
           >
-            ⚠️ La course est déjà couverte par les relais planifiés.
-          </div>
-        )}
-        <div
-          style={{
-            display: "flex",
-            gap: "0.75rem",
-            flexWrap: "wrap",
-            alignItems: "center",
-          }}
-        >
-          <button onClick={addStint} className="btn btn-secondary">
-            + Ajouter un relais
-          </button>
-          {stints.length > 0 && (
-            <button onClick={clearAllStints} className="btn btn-danger btn-sm">
-              Tout supprimer
+            <button onClick={addStint} className="btn btn-secondary">
+              + Ajouter un relais
             </button>
-          )}
+            {stints.length > 0 && (
+              <button
+                onClick={clearAllStints}
+                className="btn btn-danger btn-sm"
+              >
+                Tout supprimer
+              </button>
+            )}
+          </div>
         </div>
-      </div>
+      )}
 
-      {/* ── Legend ── */}
+      {/* Legend */}
       <div
         style={{
           display: "flex",
@@ -1285,7 +1242,7 @@ export default function StintGrid({ teamEntryId, teamEntry, assignedDrivers }) {
       >
         Temps chgt pneus : {teamEntry?.tyre_change_time_seconds || 0}s{" — "}
         Ravitaillement : {teamEntry?.refuel_time_seconds || 0}s
-        {" (configurables dans Modifier l'équipage)"}
+        {!archived && " (configurables dans Modifier l'équipage)"}
       </div>
     </div>
   );

@@ -20,6 +20,9 @@ export default function EquipageTabs({
   entryCarId,
   entryClass,
   currentDriver,
+  // archived flows from the parent event — passed to every tab so they
+  // can all switch to read-only mode without separate DB queries
+  archived = false,
 }) {
   // Default to the relais tab — it's the most-used view during race preparation.
   const [activeTab, setActiveTab] = useState("relais");
@@ -70,6 +73,24 @@ export default function EquipageTabs({
     <div>
       {tabBar}
 
+      {/* Read-only notice shown across all tabs when the event is archived */}
+      {archived && (
+        <div
+          style={{
+            marginBottom: "1.25rem",
+            padding: "0.65rem 0.9rem",
+            background: "rgba(224,85,85,0.08)",
+            border: "1px solid var(--danger)",
+            borderRadius: "3px",
+            fontSize: "0.82rem",
+            color: "var(--danger)",
+          }}
+        >
+          📦 Cet événement est archivé — toutes les données sont en lecture
+          seule.
+        </div>
+      )}
+
       {activeTab === "pilotes" && (
         <DriversAssignment
           entryId={entryId}
@@ -78,6 +99,7 @@ export default function EquipageTabs({
           assignedDrivers={assignedDrivers}
           unassignedDrivers={unassignedDrivers}
           currentDriver={currentDriver}
+          archived={archived}
         />
       )}
 
@@ -90,8 +112,9 @@ export default function EquipageTabs({
               marginBottom: "1rem",
             }}
           >
-            Sélectionnez votre nom et cliquez ou glissez sur les créneaux pour
-            marquer votre disponibilité.
+            {archived
+              ? "Disponibilités enregistrées au moment de l'archivage."
+              : "Sélectionnez votre nom et cliquez ou glissez sur les créneaux pour marquer votre disponibilité."}
           </p>
           <AvailabilityGrid
             teamEntryId={entryId}
@@ -101,6 +124,7 @@ export default function EquipageTabs({
             igStartTime={teamEntry.events?.ig_start_time || null}
             igSunrise={teamEntry.events?.ig_sunrise || null}
             igSunset={teamEntry.events?.ig_sunset || null}
+            archived={archived}
           />
         </>
       )}
@@ -114,13 +138,15 @@ export default function EquipageTabs({
               marginBottom: "1rem",
             }}
           >
-            Les temps IRL et IG sont calculés automatiquement. Les points
-            colorés indiquent la disponibilité de chaque pilote.
+            {archived
+              ? "Relais planifiés au moment de l'archivage."
+              : "Les temps IRL et IG sont calculés automatiquement. Les points colorés indiquent la disponibilité de chaque pilote."}
           </p>
           <StintGrid
             teamEntryId={entryId}
             teamEntry={teamEntry}
             assignedDrivers={assignedDrivers}
+            archived={archived}
           />
         </>
       )}
@@ -134,12 +160,14 @@ export default function EquipageTabs({
               marginBottom: "1rem",
             }}
           >
-            Chronos et consommations relevés lors des essais. Cliquez sur
-            Modifier pour renseigner vos données.
+            {archived
+              ? "Données de performance enregistrées au moment de l'archivage."
+              : "Chronos et consommations relevés lors des essais. Cliquez sur Modifier pour renseigner vos données."}
           </p>
           <PerformanceData
             teamEntryId={entryId}
             assignedDrivers={assignedDrivers}
+            archived={archived}
           />
         </>
       )}

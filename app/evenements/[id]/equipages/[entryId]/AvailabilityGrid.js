@@ -6,15 +6,12 @@ import React from "react";
 // ── Time helpers ───────────────────────────────────────────────────────────────
 
 // Generate 30-minute slots covering the race window plus 1h buffer on each side.
-// The extra hour before/after lets drivers mark availability for pre- and post-race
-// periods (warm-up, cool-down, handover overlap).
 function generateSlots(irlStart, durationMinutes) {
   const slots = [];
   const start = new Date(new Date(irlStart).getTime() - 60 * 60 * 1000);
   const end = new Date(
     new Date(irlStart).getTime() + (durationMinutes + 60) * 60 * 1000,
   );
-  // Snap start to the nearest 30-min boundary so slots align cleanly
   let current = new Date(start);
   current.setMinutes(Math.floor(current.getMinutes() / 30) * 30, 0, 0);
   while (current <= end) {
@@ -24,9 +21,6 @@ function generateSlots(irlStart, durationMinutes) {
   return slots;
 }
 
-// Convert an IRL slot timestamp to its in-game equivalent.
-// The IG clock starts at igStartTimeStr when IRL is irlStartStr.
-// Same logic as StintGrid — kept local to avoid a shared import for now.
 function getIGTime(irlSlot, irlStartStr, igStartTimeStr) {
   if (!igStartTimeStr || !irlStartStr) return null;
   const [igH, igM] = igStartTimeStr.split(":").map(Number);
@@ -36,8 +30,6 @@ function getIGTime(irlSlot, irlStartStr, igStartTimeStr) {
   return new Date(igStart.getTime() + (new Date(irlSlot) - irlStart));
 }
 
-// Determine day/night phase icon from IG time vs sunrise/sunset strings (HH:MM).
-// Handles overnight races where sunrise > sunset (inverted branch).
 function getPhase(igTime, sunriseStr, sunsetStr) {
   if (!igTime || !sunriseStr || !sunsetStr) return null;
   const minutes = igTime.getHours() * 60 + igTime.getMinutes();
@@ -45,13 +37,11 @@ function getPhase(igTime, sunriseStr, sunsetStr) {
   const [ssH, ssM] = sunsetStr.split(":").map(Number);
   const sunrise = srH * 60 + srM;
   const sunset = ssH * 60 + ssM;
-  // Normal day/night (sunrise before sunset)
   if (sunrise < sunset) {
     if (minutes >= sunrise + 30 && minutes < sunset - 30) return "☀️";
     if (minutes >= sunset + 30 || minutes < sunrise - 30) return "🌑";
     return "🌗";
   } else {
-    // Inverted (sunrise after sunset — overnight race starting at night)
     if (minutes >= sunrise + 30 || minutes < sunset - 30) return "☀️";
     if (minutes >= sunset + 30 && minutes < sunrise - 30) return "🌑";
     return "🌗";
@@ -74,14 +64,10 @@ function formatDate(date) {
   });
 }
 
-// Used to detect day boundaries so we can insert a date separator row
 function sameDay(a, b) {
   return a.toDateString() === b.toDateString();
 }
 
-// ── Badge component ────────────────────────────────────────────────────────────
-
-// Small coloured pill used for race start (▶) and race end (■) markers
 function Badge({ label, bg, borderColor }) {
   return (
     <span
@@ -101,8 +87,6 @@ function Badge({ label, bg, borderColor }) {
   );
 }
 
-// ── Main component ─────────────────────────────────────────────────────────────
-
 export default function AvailabilityGrid({
   teamEntryId,
   assignedDrivers,
@@ -111,23 +95,18 @@ export default function AvailabilityGrid({
   igStartTime,
   igSunrise,
   igSunset,
+  // archived — when true, all editing is disabled and the grid is read-only
+  archived = false,
 }) {
-  // Only the selected driver's slots are editable — others are read-only
   const [selectedDriverId, setSelectedDriverId] = useState("");
-  // Persisted availability map: "driverId_slotISO" → DB row
   const [availabilities, setAvailabilities] = useState({});
   const [loading, setLoading] = useState(true);
 
-  // Drag state — refs (not state) to avoid re-renders during drag
   const isDragging = useRef(false);
-  const dragValue = useRef(null); // value being painted: true | false | null
-  const pendingUpdates = useRef({}); // slots touched during this drag stroke
-
-  // dragPreview mirrors pendingUpdates as state so cells re-render during drag
+  const dragValue = useRef(null);
+  const pendingUpdates = useRef({});
   const [dragPreview, setDragPreview] = useState({});
-
-  // Three paint modes selectable before dragging
-  const [dragMode, setDragMode] = useState("available"); // 'available' | 'unavailable' | 'tentative'
+  const [dragMode, setDragMode] = useState("available");
 
   const slots = irlStart ? generateSlots(irlStart, durationMinutes || 0) : [];
   const raceStart = irlStart ? new Date(irlStart) : null;
@@ -136,8 +115,6 @@ export default function AvailabilityGrid({
       ? new Date(raceStart.getTime() + durationMinutes * 60 * 1000)
       : null;
 
-  // ── Data fetching ────────────────────────────────────────────────────────────
-
   useEffect(() => {
     if (!teamEntryId) return;
     supabase
@@ -145,7 +122,6 @@ export default function AvailabilityGrid({
       .select("*")
       .eq("team_entry_id", teamEntryId)
       .then(({ data }) => {
-        // Build a flat map keyed by "driverId_slotISO" for O(1) lookups in render
         const map = {};
         (data || []).forEach((a) => {
           const key = `${a.driver_id}_${new Date(a.slot_start).toISOString()}`;
@@ -159,23 +135,17 @@ export default function AvailabilityGrid({
   const getAvail = (driverId, slot) =>
     availabilities[`${driverId}_${slot.toISOString()}`];
 
-  // Return the effective state for a cell:
-  // dragPreview takes priority during an active drag stroke,
-  // then the DB row value (true = available, false = unavailable, null = tentative),
-  // and finally false as default when no DB row exists yet.
   const getSlotState = (driverId, slot) => {
     const key = `${driverId}_${slot.toISOString()}`;
     if (dragPreview[key] !== undefined) return dragPreview[key];
     const record = getAvail(driverId, slot);
-    if (!record) return false; // no row = treat as unavailable (not yet declared)
-    return record.available; // true | false | null
+    if (!record) return false;
+    return record.available;
   };
 
-  // ── Drag handlers ────────────────────────────────────────────────────────────
-
-  // Called on mousedown/touchstart — locks in the value being painted for this stroke
+  // All drag handlers bail out immediately when archived
   const startDrag = (slot) => {
-    if (!selectedDriverId) return;
+    if (archived || !selectedDriverId) return;
     isDragging.current = true;
     dragValue.current =
       dragMode === "available"
@@ -187,26 +157,20 @@ export default function AvailabilityGrid({
     applyDrag(slot);
   };
 
-  // Called on mouseenter/touchmove — paint the current slot if not already done.
-  // Skipping already-painted slots prevents duplicate DB rows in the same stroke.
   const applyDrag = (slot) => {
-    if (!isDragging.current || !selectedDriverId) return;
+    if (archived || !isDragging.current || !selectedDriverId) return;
     const key = `${selectedDriverId}_${slot.toISOString()}`;
-    if (pendingUpdates.current[key] !== undefined) return; // already painted this slot
+    if (pendingUpdates.current[key] !== undefined) return;
     pendingUpdates.current[key] = { slot, value: dragValue.current };
-    // Update preview state so cells re-render immediately without waiting for DB
     setDragPreview((prev) => ({ ...prev, [key]: dragValue.current }));
   };
 
-  // Called on mouseup/touchend — batch-upsert all slots touched during this stroke.
-  // Batching avoids a DB round-trip per cell and keeps the UI snappy.
-  // useCallback so the window event listener always holds the latest reference.
   const commitDrag = useCallback(async () => {
     if (!isDragging.current) return;
     isDragging.current = false;
     const updates = Object.values(pendingUpdates.current);
     pendingUpdates.current = {};
-    setDragPreview({}); // clear preview — real state will now come from availabilities map
+    setDragPreview({});
     if (updates.length === 0) return;
 
     const rows = updates.map(({ slot, value }) => ({
@@ -217,7 +181,6 @@ export default function AvailabilityGrid({
       updated_at: new Date().toISOString(),
     }));
 
-    // Optimistic update — apply to local state immediately so there's no flicker
     setAvailabilities((prev) => {
       const next = { ...prev };
       rows.forEach((row) => {
@@ -226,17 +189,12 @@ export default function AvailabilityGrid({
       return next;
     });
 
-    // Persist to DB — conflict key matches the unique constraint on the table
     const { error: upsertError } = await supabase
       .from("availabilities")
-      .upsert(rows, {
-        onConflict: "team_entry_id,driver_id,slot_start",
-      });
+      .upsert(rows, { onConflict: "team_entry_id,driver_id,slot_start" });
     if (upsertError) console.error("Upsert error:", upsertError);
   }, [selectedDriverId, teamEntryId]);
 
-  // Attach commit to window so drag is always finalised even if the
-  // mouse is released outside the table
   useEffect(() => {
     const end = () => commitDrag();
     window.addEventListener("mouseup", end);
@@ -247,16 +205,12 @@ export default function AvailabilityGrid({
     };
   }, [commitDrag]);
 
-  // ── Row style helpers ────────────────────────────────────────────────────────
-
-  // 15-min tolerance so the highlight catches the nearest slot to race start/end
   const isRaceStart = (slot) =>
     raceStart && Math.abs(slot - raceStart) < 15 * 60 * 1000;
   const isRaceEnd = (slot) =>
     raceEnd && Math.abs(slot - raceEnd) < 15 * 60 * 1000;
   const isAfterEnd = (slot) => raceEnd && slot > raceEnd;
 
-  // Row background / border for the full row (non-sticky cells)
   const getRowStyle = (slot) => {
     if (isRaceStart(slot))
       return {
@@ -275,9 +229,6 @@ export default function AvailabilityGrid({
     return {};
   };
 
-  // Sticky cells (IRL time column) need an explicit opaque background because
-  // position:sticky doesn't inherit the row background — it would show through
-  // to whatever is scrolled behind it otherwise.
   const getStickyBg = (slot) => {
     if (isRaceStart(slot)) return "rgba(46,180,96,0.15)";
     if (isRaceEnd(slot)) return "rgba(224,85,85,0.12)";
@@ -285,14 +236,11 @@ export default function AvailabilityGrid({
     return "var(--bg)";
   };
 
-  // Count available (true) slots per driver for the header summary (e.g. "4×30m")
   const driverCounts = assignedDrivers.reduce((acc, d) => {
     const id = d.drivers?.id;
     acc[id] = slots.filter((s) => getSlotState(id, s) === true).length;
     return acc;
   }, {});
-
-  // ── Styles ───────────────────────────────────────────────────────────────────
 
   const TH = {
     background: "var(--surface-2)",
@@ -313,11 +261,9 @@ export default function AvailabilityGrid({
     borderBottom: "1px solid var(--border)",
     verticalAlign: "middle",
     fontSize: "0.8rem",
-    userSelect: "none", // prevent text selection during drag
+    userSelect: "none",
     textAlign: "center",
   };
-
-  // ── Guards ───────────────────────────────────────────────────────────────────
 
   if (!irlStart)
     return (
@@ -332,167 +278,169 @@ export default function AvailabilityGrid({
       </div>
     );
 
-  // ── Render ───────────────────────────────────────────────────────────────────
-
   return (
     <div>
-      {/* ── Driver selector + controls ── */}
-      <div className="card" style={{ marginBottom: "1rem" }}>
-        <div className="form-group">
-          <label>Remplir ma disponibilité</label>
-          <select
-            value={selectedDriverId}
-            onChange={(e) => setSelectedDriverId(e.target.value)}
-          >
-            <option value="">— Sélectionnez votre nom —</option>
-            {assignedDrivers.map((d) => (
-              <option key={d.drivers?.id} value={d.drivers?.id}>
-                {d.drivers?.name}
-              </option>
-            ))}
-          </select>
-        </div>
-        <p
-          style={{
-            fontSize: "0.78rem",
-            color: selectedDriverId ? "var(--accent)" : "var(--text-dim)",
-            marginTop: "0.5rem",
-          }}
-        >
-          {selectedDriverId
-            ? "Cliquez ou glissez sur les créneaux pour marquer votre disponibilité."
-            : "Sélectionnez votre nom pour activer l'édition."}
-        </p>
-
-        {/* Paint mode selector — only shown when a driver is selected */}
-        {selectedDriverId && (
-          <div className="card" style={{ marginBottom: "1rem" }}>
-            <div
-              style={{
-                fontSize: "0.75rem",
-                fontWeight: 700,
-                letterSpacing: "0.08em",
-                textTransform: "uppercase",
-                color: "var(--text-dim)",
-                marginBottom: "0.5rem",
-              }}
+      {/* Driver selector + controls — hidden when archived */}
+      {!archived && (
+        <div className="card" style={{ marginBottom: "1rem" }}>
+          <div className="form-group">
+            <label>Remplir ma disponibilité</label>
+            <select
+              value={selectedDriverId}
+              onChange={(e) => setSelectedDriverId(e.target.value)}
             >
-              Mode de saisie
-            </div>
-            <div style={{ display: "flex", gap: "0.5rem" }}>
-              {[
-                {
-                  value: "available",
-                  label: "✓ Disponible",
-                  color: "var(--accent)",
-                },
-                {
-                  value: "unavailable",
-                  label: "✗ Indisponible",
-                  color: "var(--danger)",
-                },
-                { value: "tentative", label: "? Incertain", color: "#3a8080" },
-              ].map(({ value, label, color }) => (
-                <button
-                  key={value}
-                  onClick={() => setDragMode(value)}
-                  style={{
-                    padding: "0.4rem 0.85rem",
-                    borderRadius: "3px",
-                    border: "1px solid",
-                    borderColor: dragMode === value ? color : "var(--border)",
-                    background:
-                      dragMode === value ? `${color}22` : "var(--surface-2)",
-                    color: dragMode === value ? color : "var(--text-dim)",
-                    fontFamily: "var(--font-rajdhani), sans-serif",
-                    fontSize: "0.85rem",
-                    fontWeight: 700,
-                    cursor: "pointer",
-                    transition: "all 0.15s",
-                  }}
-                >
-                  {label}
-                </button>
+              <option value="">— Sélectionnez votre nom —</option>
+              {assignedDrivers.map((d) => (
+                <option key={d.drivers?.id} value={d.drivers?.id}>
+                  {d.drivers?.name}
+                </option>
               ))}
-            </div>
+            </select>
           </div>
-        )}
+          <p
+            style={{
+              fontSize: "0.78rem",
+              color: selectedDriverId ? "var(--accent)" : "var(--text-dim)",
+              marginTop: "0.5rem",
+            }}
+          >
+            {selectedDriverId
+              ? "Cliquez ou glissez sur les créneaux pour marquer votre disponibilité."
+              : "Sélectionnez votre nom pour activer l'édition."}
+          </p>
 
-        {/* Bulk actions */}
-        <div
-          style={{
-            display: "flex",
-            gap: "0.5rem",
-            marginTop: "0.75rem",
-            flexWrap: "wrap",
-          }}
-        >
-          {/* Mark all slots available for the selected driver */}
+          {/* Paint mode selector */}
           {selectedDriverId && (
-            <button
-              onClick={async () => {
-                const updates = slots.map((slot) => ({
-                  team_entry_id: teamEntryId,
-                  driver_id: selectedDriverId,
-                  slot_start: slot.toISOString(),
-                  available: true,
-                  updated_at: new Date().toISOString(),
-                }));
-                setAvailabilities((prev) => {
-                  const next = { ...prev };
-                  updates.forEach((u) => {
-                    next[`${u.driver_id}_${u.slot_start}`] = u;
-                  });
-                  return next;
-                });
-                await supabase.from("availabilities").upsert(updates, {
-                  onConflict: "team_entry_id,driver_id,slot_start",
-                });
-              }}
-              className="btn btn-primary btn-sm"
-            >
-              Tout marquer disponible
-            </button>
+            <div className="card" style={{ marginBottom: "1rem" }}>
+              <div
+                style={{
+                  fontSize: "0.75rem",
+                  fontWeight: 700,
+                  letterSpacing: "0.08em",
+                  textTransform: "uppercase",
+                  color: "var(--text-dim)",
+                  marginBottom: "0.5rem",
+                }}
+              >
+                Mode de saisie
+              </div>
+              <div style={{ display: "flex", gap: "0.5rem" }}>
+                {[
+                  {
+                    value: "available",
+                    label: "✓ Disponible",
+                    color: "var(--accent)",
+                  },
+                  {
+                    value: "unavailable",
+                    label: "✗ Indisponible",
+                    color: "var(--danger)",
+                  },
+                  {
+                    value: "tentative",
+                    label: "? Incertain",
+                    color: "#3a8080",
+                  },
+                ].map(({ value, label, color }) => (
+                  <button
+                    key={value}
+                    onClick={() => setDragMode(value)}
+                    style={{
+                      padding: "0.4rem 0.85rem",
+                      borderRadius: "3px",
+                      border: "1px solid",
+                      borderColor: dragMode === value ? color : "var(--border)",
+                      background:
+                        dragMode === value ? `${color}22` : "var(--surface-2)",
+                      color: dragMode === value ? color : "var(--text-dim)",
+                      fontFamily: "var(--font-rajdhani), sans-serif",
+                      fontSize: "0.85rem",
+                      fontWeight: 700,
+                      cursor: "pointer",
+                      transition: "all 0.15s",
+                    }}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </div>
           )}
 
-          {/* Wipe all drivers' availability — admin-level destructive action,
-              requires typing CONFIRMER to prevent accidental resets */}
-          {!selectedDriverId && (
-            <button
-              onClick={async () => {
-                const input = prompt(
-                  "Cette action efface les disponibilités de TOUS les pilotes.\nTapez CONFIRMER pour continuer :",
-                );
-                if (input !== "CONFIRMER") return;
-                const updates = assignedDrivers.flatMap((d) =>
-                  slots.map((slot) => ({
+          {/* Bulk actions */}
+          <div
+            style={{
+              display: "flex",
+              gap: "0.5rem",
+              marginTop: "0.75rem",
+              flexWrap: "wrap",
+            }}
+          >
+            {selectedDriverId && (
+              <button
+                onClick={async () => {
+                  const updates = slots.map((slot) => ({
                     team_entry_id: teamEntryId,
-                    driver_id: d.drivers?.id,
+                    driver_id: selectedDriverId,
                     slot_start: slot.toISOString(),
-                    available: false,
+                    available: true,
                     updated_at: new Date().toISOString(),
-                  })),
-                );
-                setAvailabilities((prev) => {
-                  const next = { ...prev };
-                  updates.forEach((u) => {
-                    next[`${u.driver_id}_${u.slot_start}`] = u;
+                  }));
+                  setAvailabilities((prev) => {
+                    const next = { ...prev };
+                    updates.forEach((u) => {
+                      next[`${u.driver_id}_${u.slot_start}`] = u;
+                    });
+                    return next;
                   });
-                  return next;
-                });
-                await supabase.from("availabilities").upsert(updates, {
-                  onConflict: "team_entry_id,driver_id,slot_start",
-                });
-              }}
-              className="btn btn-danger btn-sm"
-            >
-              Effacer toutes les disponibilités
-            </button>
-          )}
-        </div>
-      </div>
+                  await supabase.from("availabilities").upsert(updates, {
+                    onConflict: "team_entry_id,driver_id,slot_start",
+                  });
+                }}
+                className="btn btn-primary btn-sm"
+              >
+                Tout marquer disponible
+              </button>
+            )}
 
-      {/* ── Availability grid ── */}
+            {/* Wipe all — requires typing CONFIRMER to prevent accidents */}
+            {!selectedDriverId && (
+              <button
+                onClick={async () => {
+                  const input = prompt(
+                    "Cette action efface les disponibilités de TOUS les pilotes.\nTapez CONFIRMER pour continuer :",
+                  );
+                  if (input !== "CONFIRMER") return;
+                  const updates = assignedDrivers.flatMap((d) =>
+                    slots.map((slot) => ({
+                      team_entry_id: teamEntryId,
+                      driver_id: d.drivers?.id,
+                      slot_start: slot.toISOString(),
+                      available: false,
+                      updated_at: new Date().toISOString(),
+                    })),
+                  );
+                  setAvailabilities((prev) => {
+                    const next = { ...prev };
+                    updates.forEach((u) => {
+                      next[`${u.driver_id}_${u.slot_start}`] = u;
+                    });
+                    return next;
+                  });
+                  await supabase.from("availabilities").upsert(updates, {
+                    onConflict: "team_entry_id,driver_id,slot_start",
+                  });
+                }}
+                className="btn btn-danger btn-sm"
+              >
+                Effacer toutes les disponibilités
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Grid */}
       {loading ? (
         <div className="card">
           <div className="empty">Chargement…</div>
@@ -502,7 +450,7 @@ export default function AvailabilityGrid({
           style={{
             border: "1px solid var(--border)",
             borderRadius: "4px",
-            maxHeight: "65vh", // scrollable window so long races don't overflow the page
+            maxHeight: "65vh",
             overflowY: "auto",
             overflowX: "auto",
             width: "100%",
@@ -517,7 +465,6 @@ export default function AvailabilityGrid({
           >
             <thead style={{ position: "sticky", top: 0, zIndex: 3 }}>
               <tr>
-                {/* IRL column header — sticky both vertically (thead) and horizontally */}
                 <th
                   style={{
                     ...TH,
@@ -539,7 +486,6 @@ export default function AvailabilityGrid({
                     style={{
                       ...TH,
                       minWidth: "50px",
-                      // Highlight the currently editing driver's column header
                       color:
                         d.drivers?.id === selectedDriverId
                           ? "var(--accent)"
@@ -547,7 +493,6 @@ export default function AvailabilityGrid({
                     }}
                   >
                     <div>{d.drivers?.name?.split(" ")[0]}</div>
-                    {/* Available slot count shown as "N×30m" under the name */}
                     <div
                       style={{
                         fontSize: "0.58rem",
@@ -570,7 +515,6 @@ export default function AvailabilityGrid({
 
                 return (
                   <React.Fragment key={slot.toISOString()}>
-                    {/* Day separator row — inserted when the date changes between slots */}
                     {newDay && (
                       <tr>
                         <td
@@ -592,7 +536,6 @@ export default function AvailabilityGrid({
                       </tr>
                     )}
                     <tr style={rowStyle}>
-                      {/* IRL time — sticky horizontally so it stays visible when scrolling right */}
                       <td
                         style={{
                           ...TD,
@@ -600,7 +543,6 @@ export default function AvailabilityGrid({
                           position: "sticky",
                           left: 0,
                           zIndex: 1,
-                          // Explicit background needed on sticky cells — see getStickyBg comment
                           background: getStickyBg(slot),
                           borderRight: "1px solid var(--border)",
                           width: "56px",
@@ -647,7 +589,6 @@ export default function AvailabilityGrid({
                         </div>
                       </td>
 
-                      {/* IG time */}
                       <td style={TD}>
                         <span
                           className="mono"
@@ -660,19 +601,16 @@ export default function AvailabilityGrid({
                         </span>
                       </td>
 
-                      {/* Day/night phase icon */}
                       <td style={{ ...TD, fontSize: "0.85rem" }}>
                         {phase || ""}
                       </td>
 
-                      {/* Driver availability cells */}
                       {assignedDrivers.map((d) => {
                         const driverId = d.drivers?.id;
-                        const isMe = driverId === selectedDriverId;
+                        // When archived, no cell is interactive
+                        const isMe = !archived && driverId === selectedDriverId;
                         const state = getSlotState(driverId, slot);
 
-                        // Cell colour: green = available, red = unavailable,
-                        // amber = tentative (null), surface = my unset slot, transparent = others
                         const cellBg =
                           state === true
                             ? "#1a3a1a"
@@ -702,16 +640,12 @@ export default function AvailabilityGrid({
                             onMouseEnter={() => isMe && applyDrag(slot)}
                             onTouchStart={(e) => {
                               if (!isMe) return;
-                              // Prevent scroll so the drag gesture is captured
                               e.preventDefault();
                               startDrag(slot);
                             }}
                             onTouchMove={(e) => {
                               if (!isMe || !isDragging.current) return;
                               e.preventDefault();
-                              // elementFromPoint lets us detect which cell the finger
-                              // is over during a touch drag — touch events don't fire
-                              // onMouseEnter, so we use data-slot to identify the slot
                               const touch = e.touches[0];
                               const el = document.elementFromPoint(
                                 touch.clientX,
@@ -721,7 +655,6 @@ export default function AvailabilityGrid({
                                 applyDrag(new Date(el.dataset.slot));
                             }}
                           >
-                            {/* data-slot is read by the touchMove handler above */}
                             <div
                               data-slot={slot.toISOString()}
                               style={{
@@ -747,7 +680,7 @@ export default function AvailabilityGrid({
         </div>
       )}
 
-      {/* ── Legend ── */}
+      {/* Legend */}
       <div
         style={{
           display: "flex",
@@ -806,7 +739,9 @@ export default function AvailabilityGrid({
           <Badge label="■" bg="var(--danger)" borderColor="var(--danger)" />
           Fin
         </span>
-        <span>Cliquez ou glissez pour appliquer le mode sélectionné.</span>
+        {!archived && (
+          <span>Cliquez ou glissez pour appliquer le mode sélectionné.</span>
+        )}
       </div>
     </div>
   );

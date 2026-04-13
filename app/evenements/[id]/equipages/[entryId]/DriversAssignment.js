@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { supabaseBrowser as supabase } from '../../../../../lib/supabase-browser'
+import { supabaseBrowser as supabase } from "../../../../../lib/supabase-browser";
 
 function MismatchBadge({ signup, entryCarId, entryClass }) {
   const prefCarIds = signup.preferred_car_ids || [];
@@ -57,6 +57,8 @@ export default function DriversAssignment({
   assignedDrivers,
   unassignedDrivers,
   currentDriver,
+  // archived — when true, all assign/unassign actions are hidden
+  archived = false,
 }) {
   const router = useRouter();
   const [assigned, setAssigned] = useState(assignedDrivers);
@@ -64,13 +66,13 @@ export default function DriversAssignment({
   const [error, setError] = useState(null);
   // Stores the signup ID being assigned — used to show a loading state
   // on the specific button clicked, not all buttons at once.
-  const [assigning, setAssigning] = useState(null); // driver id being assigned
+  const [assigning, setAssigning] = useState(null);
   const isAdmin =
     currentDriver?.role === "admin" || currentDriver?.role === "super_admin";
   const isExternal = currentDriver?.role === "external";
 
   const assign = async (signup) => {
-    if (assigning) return;
+    if (assigning || archived) return;
     setAssigning(signup.id);
     const { error: err } = await supabase
       .from("signups")
@@ -88,6 +90,7 @@ export default function DriversAssignment({
   };
 
   const unassign = async (signup) => {
+    if (archived) return;
     const { error: err } = await supabase
       .from("signups")
       .update({ team_entry_id: null })
@@ -136,7 +139,8 @@ export default function DriversAssignment({
                 <th>iRating</th>
                 <th>Préférences</th>
                 <th>Notes</th>
-                <th></th>
+                {/* Action column hidden when archived */}
+                {!archived && <th></th>}
               </tr>
             </thead>
             <tbody>
@@ -177,20 +181,22 @@ export default function DriversAssignment({
                   >
                     {s.notes || "—"}
                   </td>
-                  <td>
-                    {/* Only the driver themselves or an admin can remove a driver.
-                    External drivers cannot remove anyone. */}
-                    {!isExternal &&
-                      (isAdmin || s.drivers?.id === currentDriver?.id) && (
-                        <button
-                          onClick={() => unassign(s)}
-                          className="btn btn-secondary btn-sm"
-                          title="Pilote concerné ou admin uniquement"
-                        >
-                          Retirer
-                        </button>
-                      )}
-                  </td>
+                  {/* Retirer button hidden for archived events and external drivers.
+                      Only the driver themselves or an admin can remove a driver. */}
+                  {!archived && (
+                    <td>
+                      {!isExternal &&
+                        (isAdmin || s.drivers?.id === currentDriver?.id) && (
+                          <button
+                            onClick={() => unassign(s)}
+                            className="btn btn-secondary btn-sm"
+                            title="Pilote concerné ou admin uniquement"
+                          >
+                            Retirer
+                          </button>
+                        )}
+                    </td>
+                  )}
                 </tr>
               ))}
             </tbody>
@@ -198,7 +204,8 @@ export default function DriversAssignment({
         </div>
       )}
 
-      {unassigned.length > 0 && !isExternal && (
+      {/* Unassigned section hidden entirely when archived — no new assignments allowed */}
+      {!archived && unassigned.length > 0 && !isExternal && (
         <div>
           <div
             style={{

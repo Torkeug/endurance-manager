@@ -60,15 +60,22 @@ export default function ModifierEquipage({ params }) {
           return;
         }
 
-        // Filter cars by event type if format is set
+        // Fetch the parent event to check archived status and timezone.
+        // Archived events are read-only — redirect to detail page if archived.
         let filteredCars = carsData || [];
         const { data: evData } = await supabase
           .from("events")
-          .select("format, timezone")
+          .select("format, timezone, archived")
           .eq("id", entry.event_id)
           .single();
+
+        // Archived events cannot be modified — redirect to equipage detail
+        if (evData?.archived) {
+          router.push(`/evenements/${id}/equipages/${entryId}`);
+          return;
+        }
+
         // Filter cars by event type — same logic as nouveau/page.js
-        // If no restrictions configured, all cars are shown
         if (evData?.format) {
           const { data: eventType } = await supabase
             .from("event_types")
@@ -94,7 +101,6 @@ export default function ModifierEquipage({ params }) {
           crewData?.map((c) => c.name).sort((a, b) => a.localeCompare(b)) || [],
         );
 
-        // Load start times
         supabase
           .from("event_start_times")
           .select("*")
@@ -512,7 +518,7 @@ export default function ModifierEquipage({ params }) {
               Annuler
             </Link>
           </div>
-          {/* Only admins can delete a team entry — drivers can only edit their own data */}
+          {/* Only admins can delete a team entry */}
           {currentIsAdmin && (
             <button
               type="button"

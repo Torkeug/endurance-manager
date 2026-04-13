@@ -4,6 +4,7 @@ import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { supabaseBrowser as supabase } from "../../../../lib/supabase-browser";
 import { formatTimeInZone } from "../../../../lib/timezone";
+import { useRouter } from "next/navigation";
 
 function MismatchWarning({ message }) {
   return (
@@ -547,7 +548,7 @@ function SignupForm({
 function InscriptionPage({ params }) {
   const searchParams = useSearchParams();
   const { id } = use(params);
-
+  const router = useRouter();
   const [drivers, setDrivers] = useState([]);
   const [cars, setCars] = useState([]);
   const [carEntries, setCarEntries] = useState([]);
@@ -574,7 +575,7 @@ function InscriptionPage({ params }) {
         .order("name"),
       supabase
         .from("events")
-        .select("name, format, timezone")
+        .select("name, format, timezone, archived")
         .eq("id", id)
         .single(),
       supabase
@@ -599,6 +600,11 @@ function InscriptionPage({ params }) {
       ]) => {
         setDrivers(driversData || []);
         setEventName(evData?.name || "");
+        // Archived events are read-only — redirect to event detail page
+        if (evData?.archived) {
+          router.push(`/evenements/${id}`);
+          return;
+        }
         setEventTimezone(evData?.timezone || "Europe/Paris");
         setCarEntries(entriesData || []);
         setStartTimes(stData || []);

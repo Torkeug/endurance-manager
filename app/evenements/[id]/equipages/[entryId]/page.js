@@ -3,7 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import EquipageTabs from "./EquipageTabs";
 import { getSessionAndDriver } from "../../../../../lib/auth";
-import { formatInZone, formatTimeInZone } from "../../../../../lib/timezone";
+import { formatTimeInZone } from "../../../../../lib/timezone";
 import CollapsibleSummary from "./CollapsibleSummary";
 
 export default async function EquipageDetail({ params }) {
@@ -17,7 +17,7 @@ export default async function EquipageDetail({ params }) {
       `
       *,
       cars (id, name, tank_size_litres, class),
-      events (name, duration_minutes, ig_start_time, ig_sunrise, ig_sunset, timezone,
+      events (name, duration_minutes, ig_start_time, ig_sunrise, ig_sunset, timezone, archived,
         circuits (name, pit_lane_time_seconds)),
       event_start_times (irl_start, label)
     `,
@@ -26,6 +26,9 @@ export default async function EquipageDetail({ params }) {
     .single();
 
   if (error || !entry) notFound();
+
+  // archived flows from the parent event — used to lock all tabs to read-only
+  const archived = entry.events?.archived || false;
 
   const { data: allSignups } = await supabase
     .from("signups")
@@ -58,9 +61,7 @@ export default async function EquipageDetail({ params }) {
     {
       label: "Voiture",
       value:
-        (entry.events?.archived ? entry.car_name_snapshot : null) ||
-        entry.cars?.name ||
-        "—",
+        (archived ? entry.car_name_snapshot : null) || entry.cars?.name || "—",
     },
     { label: "Classe", value: entryClass || "—" },
     { label: "SoF", value: avgIrating ? `${avgIrating} iR` : "—" },
@@ -91,7 +92,27 @@ export default async function EquipageDetail({ params }) {
       {/* Header */}
       <div className="page-header">
         <div>
-          <h1>{entry.crew_name}</h1>
+          <h1 style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
+            {entry.crew_name}
+            {/* Archived badge — mirrors the event detail page style */}
+            {archived && (
+              <span
+                style={{
+                  fontSize: "0.7rem",
+                  fontWeight: 700,
+                  letterSpacing: "0.08em",
+                  textTransform: "uppercase",
+                  padding: "0.2rem 0.5rem",
+                  background: "rgba(224,85,85,0.1)",
+                  border: "1px solid var(--danger)",
+                  borderRadius: "3px",
+                  color: "var(--danger)",
+                }}
+              >
+                Archivé
+              </span>
+            )}
+          </h1>
           <div className="accent-line" />
           <div
             style={{
@@ -101,18 +122,21 @@ export default async function EquipageDetail({ params }) {
             }}
           >
             {entry.events?.name} —{" "}
-            {(entry.events?.archived ? entry.car_name_snapshot : null) ||
+            {(archived ? entry.car_name_snapshot : null) ||
               entry.cars?.name ||
               "Voiture à définir"}
           </div>
         </div>
         <div style={{ display: "flex", gap: "0.75rem" }}>
-          <Link
-            href={`/evenements/${id}/equipages/${entryId}/modifier`}
-            className="btn btn-secondary"
-          >
-            Modifier
-          </Link>
+          {/* Modifier hidden for archived events — all data is read-only */}
+          {!archived && (
+            <Link
+              href={`/evenements/${id}/equipages/${entryId}/modifier`}
+              className="btn btn-secondary"
+            >
+              Modifier
+            </Link>
+          )}
           <Link href={`/evenements/${id}`} className="btn btn-secondary">
             Événement
           </Link>
@@ -134,7 +158,7 @@ export default async function EquipageDetail({ params }) {
         infoItems={infoItems}
       />
 
-      {/* Tabbed sections */}
+      {/* Tabbed sections — archived passed down to lock all tabs to read-only */}
       <EquipageTabs
         entryId={entryId}
         teamEntry={entry}
@@ -143,6 +167,7 @@ export default async function EquipageDetail({ params }) {
         entryCarId={entryCarId}
         entryClass={entryClass}
         currentDriver={currentDriver}
+        archived={archived}
       />
     </div>
   );

@@ -277,7 +277,7 @@ export default async function HomePage() {
               fontSize: "0.9rem",
             }}
           >
-            ⚠️ {pendingCount} pilote{pendingCount > 1 ? "s" : ""} en attente
+            ⚠️ {pendingCount} pilote{pendingCount > 1 ? "s " : " "} en attente
             d&apos;approbation
           </span>
           <Link href="/admin" className="btn btn-danger btn-sm">

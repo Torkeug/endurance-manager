@@ -28,6 +28,7 @@ export default function StartTimesManager({
   timezone = "Europe/Paris",
   isSpecial,
   isAdmin,
+  archived = false,
 }) {
   const router = useRouter();
   const [startTimes, setStartTimes] = useState(initialStartTimes);
@@ -185,6 +186,23 @@ export default function StartTimesManager({
 
   return (
     <div>
+      {/* Read-only notice when the event is archived */}
+      {archived && (
+        <div
+          style={{
+            marginBottom: "1.25rem",
+            padding: "0.65rem 0.9rem",
+            background: "rgba(224,85,85,0.08)",
+            border: "1px solid var(--danger)",
+            borderRadius: "3px",
+            fontSize: "0.82rem",
+            color: "var(--danger)",
+          }}
+        >
+          📦 Cet événement est archivé — toutes les données sont en lecture
+          seule.
+        </div>
+      )}
       {error && !adding && !editingId && (
         <div className="alert alert-error" style={{ marginBottom: "0.75rem" }}>
           {error}
@@ -227,7 +245,7 @@ export default function StartTimesManager({
                     <td style={{ textAlign: "right" }}>
                       {/* Special event start times are auto-generated from predefined slots —
                       manual edit/delete is disabled to keep them in sync with the template. */}
-                      {!isSpecial && isAdmin && (
+                      {!isSpecial && isAdmin && !archived && (
                         <div
                           style={{
                             display: "flex",
@@ -275,7 +293,8 @@ export default function StartTimesManager({
       ) : (
         !editingId &&
         !isSpecial &&
-        isAdmin && (
+        isAdmin &&
+        !archived && (
           <button
             onClick={() => {
               setEditingId(null);

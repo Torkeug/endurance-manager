@@ -1,6 +1,6 @@
 "use client";
 import { useState, useEffect } from "react";
-import { supabaseBrowser as supabase } from '../../../../../lib/supabase-browser'
+import { supabaseBrowser as supabase } from "../../../../../lib/supabase-browser";
 
 // ── Lap time helpers ───────────────────────────────────────
 
@@ -27,7 +27,7 @@ function displayToSec(str) {
 
 // ── Row component ──────────────────────────────────────────
 
-function DriverRow({ signup, initialData, teamEntryId, onSaved }) {
+function DriverRow({ signup, initialData, teamEntryId, onSaved, archived }) {
   const driver = signup.drivers;
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -166,19 +166,22 @@ function DriverRow({ signup, initialData, teamEntryId, onSaved }) {
         >
           {initialData?.setup_notes_wet || "—"}
         </td>
+        {/* Modifier button hidden when archived */}
         <td style={tdStyle}>
-          <button
-            onClick={() => setEditing(true)}
-            className="btn btn-secondary btn-sm"
-          >
-            Modifier
-          </button>
+          {!archived && (
+            <button
+              onClick={() => setEditing(true)}
+              className="btn btn-secondary btn-sm"
+            >
+              Modifier
+            </button>
+          )}
         </td>
       </tr>
     );
   }
 
-  // Edit mode — expanded row
+  // Edit mode — expanded row (only reachable when not archived)
   return (
     <>
       <tr style={{ background: "var(--surface-2)" }}>
@@ -386,7 +389,11 @@ const tdStyle = {
 
 // ── Main component ─────────────────────────────────────────
 
-export default function PerformanceData({ teamEntryId, assignedDrivers }) {
+export default function PerformanceData({
+  teamEntryId,
+  assignedDrivers,
+  archived = false,
+}) {
   const [perfData, setPerfData] = useState({});
   const [loading, setLoading] = useState(true);
 
@@ -451,6 +458,7 @@ export default function PerformanceData({ teamEntryId, assignedDrivers }) {
               initialData={perfData[signup.drivers?.id] || null}
               teamEntryId={teamEntryId}
               onSaved={handleSaved}
+              archived={archived}
             />
           ))}
         </tbody>
