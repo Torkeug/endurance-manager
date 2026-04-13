@@ -221,12 +221,6 @@ function SignupForm({
 
   return (
     <form onSubmit={handleSubmit}>
-      {error && (
-        <div className="alert alert-error" style={{ marginBottom: "1rem" }}>
-          {error}
-        </div>
-      )}
-
       {/* Preferred start times */}
       {startTimes.length > 0 && (
         <div className="card" style={{ marginBottom: "1.25rem" }}>
@@ -507,6 +501,11 @@ function SignupForm({
         </div>
       </div>
 
+      {error && (
+        <div className="alert alert-error" style={{ marginBottom: "0.75rem" }}>
+          {error}
+        </div>
+      )}
       <div
         style={{
           display: "flex",
@@ -743,6 +742,17 @@ function InscriptionPage({ params }) {
 
       {driverId && (
         <>
+          {/* Helper text explaining multiple signups are allowed */}
+          <p
+            style={{
+              fontSize: "0.82rem",
+              color: "var(--text-dim)",
+              marginBottom: "1rem",
+            }}
+          >
+            Vous pouvez vous inscrire pour plusieurs équipes séparément.
+          </p>
+
           {/* Existing signups */}
           {existingSignups.length > 0 && (
             <div style={{ marginBottom: "1.25rem" }}>
@@ -907,7 +917,7 @@ function InscriptionPage({ params }) {
               >
                 +{" "}
                 {existingSignups.length > 0
-                  ? "Ajouter une inscription"
+                  ? "S'inscrire pour une autre équipe"
                   : "S'inscrire"}
               </button>
             )
