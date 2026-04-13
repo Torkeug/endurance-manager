@@ -403,7 +403,7 @@ export default async function EvenementDetail({ params }) {
         }}
       >
         <h2>Équipages engagés</h2>
-        {admin && !event.archived && (
+        {!event.archived && (
           <Link
             href={`/evenements/${id}/equipages/nouveau`}
             className="btn btn-primary"

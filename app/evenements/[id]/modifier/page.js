@@ -86,6 +86,11 @@ export default function ModifierEvenement({ params }) {
         ig_sunset: event.ig_sunset || "",
         notes: event.notes || "",
       });
+      // Archived events cannot be modified — redirect to detail page
+      if (event.archived) {
+        router.push(`/evenements/${id}`);
+        return;
+      }
       setIsSpecial(event.is_special || false);
       setWeekendStartDate(event.weekend_start_date || "");
       setFetching(false);
