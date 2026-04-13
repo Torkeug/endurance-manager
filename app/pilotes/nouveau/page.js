@@ -124,8 +124,6 @@ export default function NouveauPilote() {
         </Link>
       </div>
 
-      {error && <div className="alert alert-error">{error}</div>}
-
       <form onSubmit={handleSubmit}>
         <div className="card" style={{ marginBottom: "1.5rem" }}>
           <h3 style={{ marginBottom: "1.25rem", color: "var(--text-dim)" }}>
@@ -210,6 +208,11 @@ export default function NouveauPilote() {
           </div>
         </div>
 
+        {error && (
+          <div className="alert alert-error" style={{ marginBottom: "1rem" }}>
+            {error}
+          </div>
+        )}
         <div style={{ display: "flex", gap: "0.75rem" }}>
           <button type="submit" className="btn btn-primary" disabled={loading}>
             {loading ? "Enregistrement…" : "✓ Enregistrer le pilote"}

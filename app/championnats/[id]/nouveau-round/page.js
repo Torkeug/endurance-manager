@@ -219,8 +219,6 @@ export default function NouveauRound({ params }) {
         </Link>
       </div>
 
-      {error && <div className="alert alert-error">{error}</div>}
-
       <div
         style={{
           background: "var(--surface-2)",
@@ -476,6 +474,11 @@ export default function NouveauRound({ params }) {
           </div>
         </div>
 
+        {error && (
+          <div className="alert alert-error" style={{ marginBottom: "1rem" }}>
+            {error}
+          </div>
+        )}
         <div style={{ display: "flex", gap: "0.75rem" }}>
           <button type="submit" className="btn btn-primary" disabled={loading}>
             {loading ? "Enregistrement…" : "✓ Créer la manche"}
