@@ -167,11 +167,33 @@ export default async function DriverDetail({ params, searchParams }) {
               Changer mot de passe
             </Link>
           )}
-          {currentDriver?.id === id && (
-            <a href="/auth/iracing" className="btn btn-primary btn-sm">
-              🏎️ {driver.iracing_id ? "Relier iRacing" : "Lier iRacing"}
-            </a>
-          )}
+          {currentDriver?.id === id &&
+            (driver.iracing_id ? (
+              // Already linked — show status + discrete re-link option
+              <div
+                style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}
+              >
+                <span
+                  className="btn btn-sm"
+                  style={{
+                    background: "var(--surface-2)",
+                    color: "#2eb460",
+                    border: "1px solid #2eb460",
+                    cursor: "default",
+                  }}
+                >
+                  ✓ iRacing lié
+                </span>
+                <a href="/auth/iracing" className="btn btn-secondary btn-sm">
+                  Relier
+                </a>
+              </div>
+            ) : (
+              // Not yet linked
+              <a href="/auth/iracing" className="btn btn-primary btn-sm">
+                🏎️ Lier iRacing
+              </a>
+            ))}
           <Link href="/pilotes" className="btn btn-secondary">
             ← Pilotes
           </Link>
