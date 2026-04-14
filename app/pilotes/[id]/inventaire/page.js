@@ -2,43 +2,7 @@ import { supabaseServer as supabase } from "../../../../lib/supabase-server";
 import { getSessionAndDriver, isAdmin } from "../../../../lib/auth";
 import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
-
-// Human-readable labels for iRacing category keys
-const CAR_CATEGORY_LABELS = {
-  sports_car: "Sports Car",
-  formula_car: "Formula Car",
-  oval: "Oval",
-  dirt_oval: "Dirt Oval",
-  dirt_road: "Dirt Road",
-};
-
-const TRACK_CATEGORY_LABELS = {
-  road: "Route",
-  oval: "Oval",
-  dirt_oval: "Dirt Oval",
-  dirt_road: "Dirt Road",
-};
-
-// Inline badge for cars/tracks that exist in the Kronos DB
-function KronosBadge() {
-  return (
-    <span
-      style={{
-        fontSize: "0.68rem",
-        fontWeight: 700,
-        letterSpacing: "0.08em",
-        textTransform: "uppercase",
-        color: "var(--accent)",
-        border: "1px solid var(--accent)",
-        borderRadius: "3px",
-        padding: "0.1rem 0.4rem",
-        flexShrink: 0,
-      }}
-    >
-      Kronos
-    </span>
-  );
-}
+import InventaireDisplay from "./InventaireDisplay";
 
 export default async function InventairePage({ params }) {
   const { id } = await params;
@@ -56,7 +20,6 @@ export default async function InventairePage({ params }) {
 
   if (error || !driver) notFound();
 
-  // Fetch owned cars and tracks for this driver
   const { data: ownedCars } = await supabase
     .from("driver_car_ownership")
     .select("*")
@@ -69,31 +32,61 @@ export default async function InventairePage({ params }) {
     .eq("driver_id", id)
     .order("track_name");
 
-  // Fetch Kronos reference lists for badge matching
+  // Kronos reference lists for badge matching
   const { data: kronosCars } = await supabase.from("cars").select("name");
   const { data: kronosCircuits } = await supabase
     .from("circuits")
     .select("name");
 
-  // Build Sets for O(1) lookup
-  const kronosCarNames = new Set((kronosCars || []).map((c) => c.name));
-  const kronosCircuitNames = new Set((kronosCircuits || []).map((c) => c.name));
-
-  // Group cars by category, sorted by category name then car name
-  const carsByCategory = {};
+  // ── Build car structure: category → class → cars[] ───────────────────────
+  const carCatMap = {};
   for (const car of ownedCars || []) {
     const cat = car.car_category || "other";
-    if (!carsByCategory[cat]) carsByCategory[cat] = [];
-    carsByCategory[cat].push(car);
+    const cls = car.car_class_short_name || "—";
+    if (!carCatMap[cat]) carCatMap[cat] = {};
+    if (!carCatMap[cat][cls]) carCatMap[cat][cls] = [];
+    carCatMap[cat][cls].push(car);
   }
 
-  // Group tracks by category, sorted by category name then track name
-  const tracksByCategory = {};
+  const carData = Object.entries(carCatMap)
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([category, classes]) => ({
+      category,
+      // Total cars owned in this category
+      count: Object.values(classes).reduce((sum, cars) => sum + cars.length, 0),
+      classes: Object.entries(classes)
+        .sort(([a], [b]) => a.localeCompare(b))
+        .map(([cls, cars]) => ({
+          class: cls,
+          count: cars.length,
+          cars,
+        })),
+    }));
+
+  // ── Build track structure: category → base track → configs[] ─────────────
+  const trackCatMap = {};
   for (const track of ownedTracks || []) {
     const cat = track.track_category || "other";
-    if (!tracksByCategory[cat]) tracksByCategory[cat] = [];
-    tracksByCategory[cat].push(track);
+    const base = track.track_name;
+    if (!trackCatMap[cat]) trackCatMap[cat] = {};
+    if (!trackCatMap[cat][base]) trackCatMap[cat][base] = [];
+    trackCatMap[cat][base].push(track.track_config || null);
   }
+
+  const trackData = Object.entries(trackCatMap)
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([category, tracks]) => ({
+      category,
+      // Count of unique base tracks (not configs) for the category header
+      count: Object.keys(tracks).length,
+      tracks: Object.entries(tracks)
+        .sort(([a], [b]) => a.localeCompare(b))
+        .map(([track_name, configs]) => ({
+          track_name,
+          count: configs.length,
+          configs: configs.filter(Boolean),
+        })),
+    }));
 
   const syncedAt = driver.iracing_synced_at
     ? new Date(driver.iracing_synced_at).toLocaleDateString("fr-FR", {
@@ -128,7 +121,6 @@ export default async function InventairePage({ params }) {
           )}
         </div>
         <div style={{ display: "flex", gap: "0.75rem" }}>
-          {/* Only the driver themselves can trigger a sync */}
           {currentDriver?.id === id && (
             <a
               href="/auth/iracing?mode=driver"
@@ -143,7 +135,7 @@ export default async function InventairePage({ params }) {
         </div>
       </div>
 
-      {/* Not linked yet */}
+      {/* Not linked */}
       {!driver.iracing_id && (
         <div className="card" style={{ marginBottom: "2rem" }}>
           <div className="empty">
@@ -153,7 +145,7 @@ export default async function InventairePage({ params }) {
         </div>
       )}
 
-      {/* Linked but no data synced yet */}
+      {/* Linked but no data */}
       {driver.iracing_id && !hasData && (
         <div className="card" style={{ marginBottom: "2rem" }}>
           <div className="empty">
@@ -165,169 +157,15 @@ export default async function InventairePage({ params }) {
         </div>
       )}
 
-      {/* Cars section */}
-      {Object.keys(carsByCategory).length > 0 && (
-        <section style={{ marginBottom: "2.5rem" }}>
-          <h2 style={{ marginBottom: "1rem" }}>
-            Voitures
-            <span
-              style={{
-                fontSize: "0.85rem",
-                fontWeight: 500,
-                color: "var(--text-dim)",
-                marginLeft: "0.75rem",
-              }}
-            >
-              {(ownedCars || []).length}
-            </span>
-          </h2>
-
-          {Object.entries(carsByCategory)
-            .sort(([a], [b]) => a.localeCompare(b))
-            .map(([category, cars]) => (
-              <div key={category} style={{ marginBottom: "1.5rem" }}>
-                {/* Category heading */}
-                <h3
-                  style={{
-                    fontSize: "0.72rem",
-                    fontWeight: 700,
-                    letterSpacing: "0.1em",
-                    textTransform: "uppercase",
-                    color: "var(--text-dim)",
-                    marginBottom: "0.5rem",
-                  }}
-                >
-                  {CAR_CATEGORY_LABELS[category] || category}
-                </h3>
-
-                <div className="card" style={{ padding: 0 }}>
-                  {cars.map((car, i) => (
-                    <div
-                      key={car.id}
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "space-between",
-                        gap: "1rem",
-                        padding: "0.6rem 1rem",
-                        borderBottom:
-                          i < cars.length - 1
-                            ? "1px solid var(--border)"
-                            : "none",
-                      }}
-                    >
-                      <div>
-                        <span style={{ fontSize: "0.88rem" }}>
-                          {car.car_name}
-                        </span>
-                        {(car.car_types || []).length > 0 && (
-                          <div
-                            style={{
-                              display: "flex",
-                              gap: "0.3rem",
-                              flexWrap: "wrap",
-                              marginTop: "0.2rem",
-                            }}
-                          >
-                            {car.car_types.map((t) => (
-                              <span
-                                key={t}
-                                style={{
-                                  fontSize: "0.65rem",
-                                  fontWeight: 700,
-                                  letterSpacing: "0.06em",
-                                  textTransform: "uppercase",
-                                  color: "var(--text-dim)",
-                                  background: "var(--surface)",
-                                  border: "1px solid var(--border)",
-                                  borderRadius: "3px",
-                                  padding: "0.1rem 0.35rem",
-                                }}
-                              >
-                                {t}
-                              </span>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                      {kronosCarNames.has(car.car_name) && <KronosBadge />}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            ))}
-        </section>
-      )}
-
-      {/* Tracks section */}
-      {Object.keys(tracksByCategory).length > 0 && (
-        <section style={{ marginBottom: "2.5rem" }}>
-          <h2 style={{ marginBottom: "1rem" }}>
-            Circuits
-            <span
-              style={{
-                fontSize: "0.85rem",
-                fontWeight: 500,
-                color: "var(--text-dim)",
-                marginLeft: "0.75rem",
-              }}
-            >
-              {(ownedTracks || []).length}
-            </span>
-          </h2>
-
-          {Object.entries(tracksByCategory)
-            .sort(([a], [b]) => a.localeCompare(b))
-            .map(([category, tracks]) => (
-              <div key={category} style={{ marginBottom: "1.5rem" }}>
-                {/* Category heading */}
-                <h3
-                  style={{
-                    fontSize: "0.72rem",
-                    fontWeight: 700,
-                    letterSpacing: "0.1em",
-                    textTransform: "uppercase",
-                    color: "var(--text-dim)",
-                    marginBottom: "0.5rem",
-                  }}
-                >
-                  {TRACK_CATEGORY_LABELS[category] || category}
-                </h3>
-
-                <div className="card" style={{ padding: 0 }}>
-                  {tracks.map((track, i) => {
-                    // Show "Track Name — Config" when a config exists
-                    const displayName = track.track_config
-                      ? `${track.track_name} — ${track.track_config}`
-                      : track.track_name;
-                    // Badge matches on base track name only (ignoring config variant)
-                    const isKronos = kronosCircuitNames.has(track.track_name);
-                    return (
-                      <div
-                        key={track.id}
-                        style={{
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "space-between",
-                          gap: "1rem",
-                          padding: "0.6rem 1rem",
-                          borderBottom:
-                            i < tracks.length - 1
-                              ? "1px solid var(--border)"
-                              : "none",
-                        }}
-                      >
-                        <span style={{ fontSize: "0.88rem" }}>
-                          {displayName}
-                        </span>
-                        {isKronos && <KronosBadge />}
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            ))}
-        </section>
+      {/* Main display — client component handles all collapse state */}
+      {hasData && (
+        <InventaireDisplay
+          carData={carData}
+          trackData={trackData}
+          // Sets can't cross server/client boundary — pass as arrays
+          kronosCarNamesArr={(kronosCars || []).map((c) => c.name)}
+          kronosCircuitNamesArr={(kronosCircuits || []).map((c) => c.name)}
+        />
       )}
     </div>
   );
