@@ -3,7 +3,7 @@ import { getSessionAndDriver, isAdmin } from "../../../../lib/auth";
 import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
 import InventaireDisplay from "./InventaireDisplay";
-import { deriveCarClass, isLegacyContent } from "../../../../lib/car-types";
+import { isLegacyContent } from "../../../../lib/car-types";
 
 export default async function InventairePage({ params }) {
   const { id } = await params;
@@ -32,15 +32,21 @@ export default async function InventairePage({ params }) {
     .eq("driver_id", id)
     .order("track_name");
 
-  const { data: kronosCars } = await supabase.from("cars").select("name");
+  // Fetch Kronos cars with iRacing link — used for badge and class grouping
+  const { data: kronosCars } = await supabase
+    .from("cars")
+    .select("iracing_car_id, class, car_type_label, name")
+    .not("iracing_car_id", "is", null);
+
   const { data: kronosCircuits } = await supabase
     .from("circuits")
     .select("name");
 
-  const { data: carTypeLabels } = await supabase
-    .from("car_type_labels")
-    .select("*")
-    .order("priority");
+  // Build lookup map: iracing_car_id → { class, car_type_label }
+  const kronosCarsById = new Map();
+  for (const car of kronosCars || []) {
+    kronosCarsById.set(car.iracing_car_id, car);
+  }
 
   // ── Car type priority lookup ──────────────────────────────────────────────
   // iRacing's car class system is series-based and unreliable for grouping.
@@ -93,13 +99,15 @@ export default async function InventairePage({ params }) {
   }
 
   // ── Build car structure: category → class → cars[], with legacy bucket ───
-  // Uses car_type_labels from DB for classification (priority-ordered, admin-editable).
-  // Legacy/retired cars (detected by [Legacy]/[Retired] in name) are grouped
-  // separately at the bottom of each category.
+  // Class label comes from Kronos cars map (explicit admin selection).
+  // Non-Kronos cars fall back to "Autre" within their category.
+  // Legacy/retired cars (detected by [Legacy]/[Retired] in name) are grouped separately.
   const carCatMap = {};
   for (const car of ownedCars || []) {
     const cat = car.car_category || "other";
-    const cls = deriveCarClass(car.car_types, carTypeLabels || []);
+    const kronosInfo = kronosCarsById.get(car.iracing_car_id);
+    const cls =
+      kronosInfo?.car_type_label?.toUpperCase() || kronosInfo?.class || "Autre";
     const legacy = isLegacyContent(car.car_name);
     if (!carCatMap[cat]) carCatMap[cat] = { normal: {}, legacy: [] };
     if (legacy) {
@@ -248,7 +256,8 @@ export default async function InventairePage({ params }) {
         <InventaireDisplay
           carData={carData}
           trackData={trackData}
-          kronosCarNamesArr={(kronosCars || []).map((c) => c.name)}
+          // Pass iracing_car_ids for exact Kronos badge matching
+          kronosCarIdsArr={[...kronosCarsById.keys()]}
           kronosCircuitNamesArr={(kronosCircuits || []).map((c) => c.name)}
         />
       )}

@@ -1,6 +1,6 @@
 "use client";
 import { useState, useEffect, useMemo, Fragment } from "react";
-import { deriveCarClass, isLegacyContent } from "../../lib/car-types";
+import { isLegacyContent } from "../../lib/car-types";
 
 const CAR_CATEGORY_LABELS = {
   sports_car: "Sports Car",
@@ -96,8 +96,7 @@ export default function InventoryMatrix({
   allTracks,
   carOwnership,
   trackOwnership,
-  carTypeLabels,
-  kronosCarNames,
+  kronosCarsMap,
   kronosCircuitNames,
 }) {
   const [subTab, setSubTab] = useState("cars");
@@ -134,16 +133,18 @@ export default function InventoryMatrix({
     [allCars],
   );
 
+  // Derive class label from Kronos map — car_type_label if set, then class, else "Autre"
+  const getCarClass = (car) => {
+    const k = (kronosCarsMap || {})[car.iracing_car_id];
+    if (k?.car_type_label) return k.car_type_label.toUpperCase();
+    if (k?.class) return k.class;
+    return "Autre";
+  };
+
   const allCarClasses = useMemo(
-    () =>
-      [
-        ...new Set(
-          (allCars || [])
-            .map((c) => deriveCarClass(c.car_types, carTypeLabels))
-            .filter((c) => c !== "—"),
-        ),
-      ].sort(),
-    [allCars, carTypeLabels],
+    () => [...new Set((allCars || []).map(getCarClass))].sort(),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [allCars, kronosCarsMap],
   );
 
   const allTrackCategories = useMemo(
@@ -156,11 +157,6 @@ export default function InventoryMatrix({
     [allTracks],
   );
 
-  // Kronos reference sets
-  const kronosCarSet = useMemo(
-    () => new Set(kronosCarNames || []),
-    [kronosCarNames],
-  );
   const kronosCircuitSet = useMemo(
     () => new Set(kronosCircuitNames || []),
     [kronosCircuitNames],
@@ -261,7 +257,7 @@ export default function InventoryMatrix({
     const catMap = {};
     for (const car of filtered) {
       const cat = car.car_category || "other";
-      const cls = deriveCarClass(car.car_types, carTypeLabels);
+      const cls = getCarClass(car);
       const legacy = car.isLegacy || isLegacyContent(car.car_name);
       if (!catMap[cat]) catMap[cat] = { normal: {}, legacy: [] };
       if (legacy) {
@@ -523,7 +519,9 @@ export default function InventoryMatrix({
                             <tr key={car.iracing_car_id}>
                               <td style={nameColStyle}>
                                 {car.car_name}
-                                {kronosCarSet.has(car.car_name) && <KBadge />}
+                                {!!(kronosCarsMap || {})[
+                                  car.iracing_car_id
+                                ] && <KBadge />}
                               </td>
                               {matrixDrivers.map((d) => (
                                 <td key={d.id} style={cellStyle}>
@@ -576,7 +574,9 @@ export default function InventoryMatrix({
                                 }}
                               >
                                 {car.car_name}
-                                {kronosCarSet.has(car.car_name) && <KBadge />}
+                                {!!(kronosCarsMap || {})[
+                                  car.iracing_car_id
+                                ] && <KBadge />}
                               </td>
                               {matrixDrivers.map((d) => (
                                 <td

@@ -7,7 +7,6 @@ import CircuitsManager from "./CircuitsManager";
 import EventTypesManager from "./EventTypesManager";
 import DriversManager from "./DriversManager";
 import SettingsManager from "./SettingsManager";
-import CarTypeLabelsManager from "./CarTypeLabelsManager";
 import InventoryMatrix from "./InventoryMatrix";
 
 const TABS = [
@@ -18,7 +17,6 @@ const TABS = [
   { id: "circuits", label: "Circuits" },
   { id: "types", label: "Types d'événement" },
   { id: "parametres", label: "Paramètres" },
-  { id: "typesvoitures", label: "Types Voitures" },
   { id: "inventaire", label: "Inventaire" },
 ];
 
@@ -34,13 +32,13 @@ export default function AdminTabs({
   settings,
   durationPresets,
   specialStartTimes,
-  carTypeLabels,
+  iracingCars,
   matrixDrivers,
   allCarsMatrix,
   allTracksMatrix,
   carOwnership,
   trackOwnership,
-  kronosCarNames,
+  kronosCarsMap,
   kronosCircuitNames,
 }) {
   const [activeTab, setActiveTab] = useState("pilotes");
@@ -119,7 +117,9 @@ export default function AdminTabs({
       {activeTab === "equipages" && (
         <CrewNamesManager initialCrewNames={crewNames} />
       )}
-      {activeTab === "voitures" && <CarsManager initialCars={cars} />}
+      {activeTab === "voitures" && (
+        <CarsManager initialCars={cars} iracingCars={iracingCars} />
+      )}
       {activeTab === "classes" && (
         <ClassesManager initialClasses={carClasses} initialCars={cars} />
       )}
@@ -143,9 +143,6 @@ export default function AdminTabs({
           initialSpecialStartTimes={specialStartTimes}
         />
       )}
-      {activeTab === "typesvoitures" && (
-        <CarTypeLabelsManager initialLabels={carTypeLabels} />
-      )}
       {activeTab === "inventaire" && (
         <InventoryMatrix
           matrixDrivers={matrixDrivers}
@@ -153,8 +150,7 @@ export default function AdminTabs({
           allTracks={allTracksMatrix}
           carOwnership={carOwnership}
           trackOwnership={trackOwnership}
-          carTypeLabels={carTypeLabels}
-          kronosCarNames={kronosCarNames}
+          kronosCarsMap={kronosCarsMap}
           kronosCircuitNames={kronosCircuitNames}
         />
       )}

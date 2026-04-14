@@ -26,7 +26,7 @@ export default async function AdminPage() {
     { data: settingsData },
     { data: durationPresets },
     { data: specialStartTimes },
-    { data: carTypeLabels },
+    { data: iracingCars },
     { data: allCarOwnership },
     { data: allTrackOwnership },
   ] = await Promise.all([
@@ -49,7 +49,10 @@ export default async function AdminPage() {
       .select("*")
       .order("hour")
       .order("minute"),
-    supabase.from("car_type_labels").select("*").order("priority"),
+    supabase
+      .from("iracing_cars")
+      .select("iracing_car_id, car_name, car_types")
+      .order("car_name"),
     supabase
       .from("driver_car_ownership")
       .select("driver_id, iracing_car_id, car_name, car_category, car_types"),
@@ -93,7 +96,7 @@ export default async function AdminPage() {
     carOwnership[row.driver_id].push(row.iracing_car_id);
   }
 
-  // Build unique base tracks list — deduped by track_name (configs merged)
+  // Build unique base tracks list — deduped by track_name
   const trackMap = new Map();
   for (const row of allTrackOwnership || []) {
     if (!trackMap.has(row.track_name)) {
@@ -117,8 +120,19 @@ export default async function AdminPage() {
     }
   }
 
-  // Kronos reference arrays for matrix badges
-  const kronosCarNames = (cars || []).map((c) => c.name);
+  // Kronos cars map: iracing_car_id → { class, car_type_label }
+  // Used by matrix and inventaire for class grouping and Kronos badge
+  const kronosCarsMap = {};
+  for (const car of cars || []) {
+    if (car.iracing_car_id) {
+      kronosCarsMap[car.iracing_car_id] = {
+        class: car.class,
+        car_type_label: car.car_type_label,
+      };
+    }
+  }
+
+  // Circuit names for track Kronos badge (still name-based — no iracing_track_id on circuits)
   const kronosCircuitNames = (circuits || []).map((c) => c.name);
 
   return (
@@ -151,14 +165,14 @@ export default async function AdminPage() {
         settings={settings}
         durationPresets={durationPresets || []}
         specialStartTimes={specialStartTimes || []}
-        carTypeLabels={carTypeLabels || []}
+        iracingCars={iracingCars || []}
         matrixDrivers={matrixDrivers}
         allCarsMatrix={allCarsMatrix}
         allTracksMatrix={allTracksMatrix}
         carOwnership={carOwnership}
         trackOwnership={trackOwnership}
-        kronosCarNames={kronosCarNames}
         kronosCircuitNames={kronosCircuitNames}
+        kronosCarsMap={kronosCarsMap}
       />
     </div>
   );

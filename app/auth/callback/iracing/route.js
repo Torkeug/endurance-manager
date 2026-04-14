@@ -22,48 +22,54 @@ async function fetchIracingS3(path, token) {
   return s3Res.json();
 }
 
-// Build Map<car_id → { car_class_name, car_class_short_name }> from /data/carclass/get
-async function buildCarClassLookup(token) {
-  const classes = await fetchIracingS3("/data/carclass/get", token);
-  const map = new Map();
-  // Skip "Hosted All Cars" — it's a catch-all for hosted sessions, not a meaningful competitive class
-  for (const cls of classes.filter((c) => c.short_name !== "Hosted All Cars")) {
-    for (const car of cls.cars_in_class || []) {
-      // First match wins — a car can appear in multiple classes
-      if (!map.has(car.car_id)) {
-        map.set(car.car_id, {
-          car_class_name: cls.name,
-          car_class_short_name: cls.short_name,
-        });
-      }
-    }
-  }
-  return map;
-}
-
-// Build Map<car_id → { car_name, car_category, car_types, car_class_name, car_class_short_name }>
+// Build Map<car_id → { car_name, car_category, car_types }> from /data/car/get.
+// Also upserts the full iRacing car catalog into iracing_cars for admin use.
 async function buildCarLookup(token) {
-  const [cars, carClassLookup] = await Promise.all([
-    fetchIracingS3("/data/car/get", token),
-    buildCarClassLookup(token),
-  ]);
+  const cars = await fetchIracingS3("/data/car/get", token);
+
+  // Upsert entire catalog into iracing_cars — done once per sync, not per driver
+  const carRows = cars.map((car) => ({
+    iracing_car_id: car.car_id,
+    car_name: car.car_name,
+    car_categories: car.categories || [],
+    car_types: (car.car_types || []).map((t) => t.car_type),
+  }));
+  // Batch in groups of 100 to avoid payload size limits
+  for (let i = 0; i < carRows.length; i += 100) {
+    await supabase
+      .from("iracing_cars")
+      .upsert(carRows.slice(i, i + 100), { onConflict: "iracing_car_id" });
+  }
+
   const map = new Map();
   for (const car of cars) {
-    const cls = carClassLookup.get(car.car_id);
     map.set(car.car_id, {
       car_name: car.car_name,
       car_category: (car.categories || [])[0] || null,
       car_types: (car.car_types || []).map((t) => t.car_type),
-      car_class_name: cls?.car_class_name || null,
-      car_class_short_name: cls?.car_class_short_name || null,
     });
   }
   return map;
 }
 
-// Build Map<track_id → { track_name, track_config, track_category }> from /data/track/get
+// Build Map<track_id → { track_name, track_config, track_category }> from /data/track/get.
+// Also upserts the full iRacing track catalog into iracing_tracks for admin use.
 async function buildTrackLookup(token) {
   const tracks = await fetchIracingS3("/data/track/get", token);
+
+  // Upsert entire catalog into iracing_tracks — done once per sync, not per driver
+  const trackRows = tracks.map((track) => ({
+    iracing_track_id: track.track_id,
+    track_name: track.track_name,
+    config_name: track.config_name || null,
+    track_category: track.category || null,
+  }));
+  for (let i = 0; i < trackRows.length; i += 100) {
+    await supabase
+      .from("iracing_tracks")
+      .upsert(trackRows.slice(i, i + 100), { onConflict: "iracing_track_id" });
+  }
+
   const map = new Map();
   for (const track of tracks) {
     map.set(track.track_id, {
@@ -123,8 +129,6 @@ async function syncOneDriver(
         car_name: car.car_name,
         car_category: car.car_category,
         car_types: car.car_types,
-        car_class_name: car.car_class_name,
-        car_class_short_name: car.car_class_short_name,
         synced_at: now,
       };
     })

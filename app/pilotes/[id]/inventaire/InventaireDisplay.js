@@ -211,10 +211,11 @@ function BaseTrackRow({ baseTrack, isKronos, expanded, onToggle, isLast }) {
 export default function InventaireDisplay({
   carData,
   trackData,
-  kronosCarNamesArr,
+  kronosCarIdsArr,
   kronosCircuitNamesArr,
 }) {
-  const kronosCarNames = new Set(kronosCarNamesArr);
+  // iracing_car_id integers — exact match, no string comparison fragility
+  const kronosCarIds = new Set(kronosCarIdsArr);
   const kronosCircuitNames = new Set(kronosCircuitNamesArr);
 
   // All collapsed by default
@@ -306,7 +307,7 @@ export default function InventaireDisplay({
                                 <span style={{ fontSize: "0.85rem" }}>
                                   {car.car_name}
                                 </span>
-                                {kronosCarNames.has(car.car_name) && (
+                                {kronosCarIds.has(car.iracing_car_id) && (
                                   <KronosBadge />
                                 )}
                               </div>
@@ -352,7 +353,7 @@ export default function InventaireDisplay({
                             >
                               {car.car_name}
                             </span>
-                            {kronosCarNames.has(car.car_name) && (
+                            {kronosCarIds.has(car.iracing_car_id) && (
                               <KronosBadge />
                             )}
                           </div>
