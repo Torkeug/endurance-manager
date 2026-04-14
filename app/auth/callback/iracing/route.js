@@ -22,16 +22,39 @@ async function fetchIracingS3(path, token) {
   return s3Res.json();
 }
 
-// Build Map<car_id → { car_name, car_category }> from /data/car/get
+// Build Map<car_id → { car_class_name, car_class_short_name }> from /data/carclass/get
+async function buildCarClassLookup(token) {
+  const classes = await fetchIracingS3("/data/carclass/get", token);
+  const map = new Map();
+  for (const cls of classes) {
+    for (const car of cls.cars_in_class || []) {
+      // First match wins — a car can appear in multiple classes
+      if (!map.has(car.car_id)) {
+        map.set(car.car_id, {
+          car_class_name: cls.name,
+          car_class_short_name: cls.short_name,
+        });
+      }
+    }
+  }
+  return map;
+}
+
+// Build Map<car_id → { car_name, car_category, car_types, car_class_name, car_class_short_name }>
 async function buildCarLookup(token) {
-  const cars = await fetchIracingS3("/data/car/get", token);
+  const [cars, carClassLookup] = await Promise.all([
+    fetchIracingS3("/data/car/get", token),
+    buildCarClassLookup(token),
+  ]);
   const map = new Map();
   for (const car of cars) {
+    const cls = carClassLookup.get(car.car_id);
     map.set(car.car_id, {
       car_name: car.car_name,
       car_category: (car.categories || [])[0] || null,
-      // car_types is an array of objects — flatten to array of strings
       car_types: (car.car_types || []).map((t) => t.car_type),
+      car_class_name: cls?.car_class_name || null,
+      car_class_short_name: cls?.car_class_short_name || null,
     });
   }
   return map;
@@ -99,6 +122,8 @@ async function syncOneDriver(
         car_name: car.car_name,
         car_category: car.car_category,
         car_types: car.car_types,
+        car_class_name: car.car_class_name,
+        car_class_short_name: car.car_class_short_name,
         synced_at: now,
       };
     })
