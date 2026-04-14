@@ -73,6 +73,8 @@ export default function AdminTabs({
               cursor: "pointer",
               transition: "color 0.15s",
               marginBottom: "-1px",
+              whiteSpace: "nowrap", // prevents label text from wrapping
+              flexShrink: 0, // prevents button from collapsing in flex container
             }}
           >
             {tab.label}

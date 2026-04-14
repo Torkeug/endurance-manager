@@ -61,6 +61,8 @@ export default function EquipageTabs({
             cursor: "pointer",
             transition: "color 0.15s",
             marginBottom: "-1px",
+            whiteSpace: "nowrap",
+            flexShrink: 0,
           }}
         >
           {tab.label}
