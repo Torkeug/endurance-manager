@@ -277,33 +277,33 @@ export async function GET(request) {
         return NextResponse.redirect(`${origin}/admin?iracing_synced=0`);
       }
 
-      // Batch-fetch iRatings — /data/member/get accepts comma-separated cust_ids
-      const custIds = linkedDrivers.map((d) => d.iracing_id).join(",");
-      const memberData = await fetchIracingS3(
-        `/data/member/get?cust_ids=${custIds}&include_licenses=true`,
-        accessToken,
-      );
-
-      // Build a Map<iracing_cust_id → sports_car_irating> from the response
-      // The response has a `members` array, each with cust_id and licenses
-      const iRatingByCustId = new Map();
-      for (const member of memberData.members || []) {
-        const irating = member.licenses?.sports_car?.irating ?? null;
-        iRatingByCustId.set(String(member.cust_id), irating);
-      }
-
-      // Update each driver's iRating and sync timestamp
+      // Fetch iRating per driver using /data/member/profile?cust_id=X —
+      // this endpoint is public (works for any cust_id) and returns licenses
+      // as an array inside member_info. Sports car category_id = 5.
       const now = new Date().toISOString();
       let syncCount = 0;
       for (const d of linkedDrivers) {
-        const irating = iRatingByCustId.get(String(d.iracing_id));
-        // Skip if irating is missing or null — don't overwrite existing data
-        if (irating === undefined || irating === null) continue;
-        const { error: updateErr } = await supabase
-          .from("drivers")
-          .update({ irating, iracing_synced_at: now })
-          .eq("id", d.id);
-        if (!updateErr) syncCount++;
+        try {
+          const profileData = await fetchIracingS3(
+            `/data/member/profile?cust_id=${d.iracing_id}`,
+            accessToken,
+          );
+          // licenses is an array — find sports car by category_id 5
+          const sportsCar = (profileData.member_info?.licenses || []).find(
+            (l) => l.category_id === 5,
+          );
+          const irating = sportsCar?.irating;
+          // Only update if we got a valid iRating — never overwrite with null
+          if (typeof irating !== "number") continue;
+          const { error: updateErr } = await supabase
+            .from("drivers")
+            .update({ irating, iracing_synced_at: now })
+            .eq("id", d.id);
+          if (!updateErr) syncCount++;
+        } catch (err) {
+          // Log per-driver errors but continue syncing remaining drivers
+          console.error(`iRacing sync failed for driver ${d.id}:`, err.message);
+        }
       }
 
       return NextResponse.redirect(
