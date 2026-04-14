@@ -113,9 +113,8 @@ export default function Nav() {
           display: "flex",
           alignItems: "center",
           gap: "1rem",
-          height: "auto", // was fixed 56px — let it grow to 2 rows on mobile
           minHeight: "56px",
-          flexWrap: "wrap", // allows the links row to wrap below on mobile
+          flexWrap: "wrap",
         }}
       >
         {/* Brand */}
@@ -127,21 +126,86 @@ export default function Nav() {
           />
         </Link>
 
-        {/* Right side — sits on row 1 next to the logo via marginLeft auto */}
+        {/* Nav links — between logo and controls so desktop order is correct.
+          On mobile, width:100% from .nav-links forces this to its own row below. */}
+        {driver && (
+          <div
+            className="nav-links"
+            style={{
+              display: "flex",
+              gap: "0.25rem",
+              flex: 1, // takes remaining space on desktop
+              overflowX: "auto",
+              WebkitOverflowScrolling: "touch",
+              scrollbarWidth: "none",
+              msOverflowStyle: "none",
+            }}
+          >
+            {links
+              .filter((l) => l.href !== "/admin" || isAdmin)
+              .map(({ href, label }) => {
+                const active =
+                  pathname === href ||
+                  (href !== "/" && pathname.startsWith(href));
+                return (
+                  <Link
+                    key={href}
+                    href={href}
+                    style={{
+                      textDecoration: "none",
+                      padding: "0.4rem 0.85rem",
+                      borderRadius: "3px",
+                      fontSize: "0.85rem",
+                      fontWeight: 700,
+                      letterSpacing: "0.06em",
+                      textTransform: "uppercase",
+                      color: active ? "var(--accent)" : "var(--text-dim)",
+                      background: active ? "var(--surface-2)" : "transparent",
+                      borderBottom: active
+                        ? "2px solid var(--accent)"
+                        : "2px solid transparent",
+                      transition: "color 0.15s",
+                      whiteSpace: "nowrap",
+                      flexShrink: 0,
+                    }}
+                  >
+                    {label}
+                    {href === "/admin" && pendingCount > 0 && (
+                      <span
+                        style={{
+                          marginLeft: "0.4rem",
+                          background: "var(--danger)",
+                          color: "#fff",
+                          fontSize: "0.65rem",
+                          fontWeight: 700,
+                          padding: "1px 5px",
+                          borderRadius: "10px",
+                          verticalAlign: "middle",
+                        }}
+                      >
+                        {pendingCount}
+                      </span>
+                    )}
+                  </Link>
+                );
+              })}
+          </div>
+        )}
+
+        {/* Right side — marginLeft:auto keeps it pinned right when links don't fill the row */}
         <div
           style={{
             display: "flex",
             alignItems: "center",
             gap: "0.75rem",
             flexShrink: 0,
-            marginLeft: "auto", // pushes this block to the far right on row 1
+            marginLeft: "auto",
           }}
         >
           {driver && (
-            // Hide the driver name on mobile — only show role badge + controls
             <Link
               href={`/pilotes/${driver.id}`}
-              className="nav-driver-name" // hidden below 640px via globals.css
+              className="nav-driver-name"
               style={{
                 textDecoration: "none",
                 fontSize: "0.82rem",
@@ -182,70 +246,6 @@ export default function Nav() {
             </button>
           )}
         </div>
-
-        {/* Nav links — full width on mobile (row 2), inline on desktop */}
-        {driver && (
-          <div
-            className="nav-links" // globals.css adds width:100% below 640px
-            style={{
-              display: "flex",
-              gap: "0.25rem",
-              overflowX: "auto",
-              WebkitOverflowScrolling: "touch",
-              scrollbarWidth: "none",
-              msOverflowStyle: "none",
-            }}
-          >
-            {links
-              .filter((l) => l.href !== "/admin" || isAdmin)
-              .map(({ href, label }) => {
-                const active =
-                  pathname === href ||
-                  (href !== "/" && pathname.startsWith(href));
-                return (
-                  <Link
-                    key={href}
-                    href={href}
-                    style={{
-                      textDecoration: "none",
-                      padding: "0.4rem 0.85rem",
-                      borderRadius: "3px",
-                      fontSize: "0.85rem",
-                      fontWeight: 700,
-                      letterSpacing: "0.06em",
-                      textTransform: "uppercase",
-                      color: active ? "var(--accent)" : "var(--text-dim)",
-                      background: active ? "var(--surface-2)" : "transparent",
-                      borderBottom: active
-                        ? "2px solid var(--accent)"
-                        : "2px solid transparent",
-                      transition: "color 0.15s",
-                      whiteSpace: "nowrap", // prevent label wrapping
-                      flexShrink: 0, // prevent link from collapsing
-                    }}
-                  >
-                    {label}
-                    {href === "/admin" && pendingCount > 0 && (
-                      <span
-                        style={{
-                          marginLeft: "0.4rem",
-                          background: "var(--danger)",
-                          color: "#fff",
-                          fontSize: "0.65rem",
-                          fontWeight: 700,
-                          padding: "1px 5px",
-                          borderRadius: "10px",
-                          verticalAlign: "middle",
-                        }}
-                      >
-                        {pendingCount}
-                      </span>
-                    )}
-                  </Link>
-                );
-              })}
-          </div>
-        )}
       </div>
     </nav>
   );
