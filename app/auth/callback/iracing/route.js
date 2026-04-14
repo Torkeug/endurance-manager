@@ -26,7 +26,8 @@ async function fetchIracingS3(path, token) {
 async function buildCarClassLookup(token) {
   const classes = await fetchIracingS3("/data/carclass/get", token);
   const map = new Map();
-  for (const cls of classes) {
+  // Skip "Hosted All Cars" — it's a catch-all for hosted sessions, not a meaningful competitive class
+  for (const cls of classes.filter((c) => c.short_name !== "Hosted All Cars")) {
     for (const car of cls.cars_in_class || []) {
       // First match wins — a car can appear in multiple classes
       if (!map.has(car.car_id)) {

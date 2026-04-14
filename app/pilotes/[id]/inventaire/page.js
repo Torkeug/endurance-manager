@@ -9,7 +9,6 @@ export default async function InventairePage({ params }) {
   const { driver: currentDriver } = await getSessionAndDriver();
   const admin = isAdmin(currentDriver);
 
-  // Access: own driver or admin only
   if (!admin && currentDriver?.id !== id) redirect("/pilotes");
 
   const { data: driver, error } = await supabase
@@ -32,7 +31,6 @@ export default async function InventairePage({ params }) {
     .eq("driver_id", id)
     .order("track_name");
 
-  // Kronos reference lists for badge matching
   const { data: kronosCars } = await supabase.from("cars").select("name");
   const { data: kronosCircuits } = await supabase
     .from("circuits")
@@ -52,7 +50,6 @@ export default async function InventairePage({ params }) {
     .sort(([a], [b]) => a.localeCompare(b))
     .map(([category, classes]) => ({
       category,
-      // Total cars owned in this category
       count: Object.values(classes).reduce((sum, cars) => sum + cars.length, 0),
       classes: Object.entries(classes)
         .sort(([a], [b]) => a.localeCompare(b))
@@ -63,30 +60,52 @@ export default async function InventairePage({ params }) {
         })),
     }));
 
-  // ── Build track structure: category → base track → configs[] ─────────────
+  // ── Build track structure: category → { normal, legacy } ─────────────────
+  // Legacy/retired tracks are detected by [Legacy] or [Retired] in the name.
+  // They are grouped into a dedicated collapsible within their category,
+  // rather than overriding the category itself.
   const trackCatMap = {};
   for (const track of ownedTracks || []) {
     const cat = track.track_category || "other";
     const base = track.track_name;
-    if (!trackCatMap[cat]) trackCatMap[cat] = {};
-    if (!trackCatMap[cat][base]) trackCatMap[cat][base] = [];
-    trackCatMap[cat][base].push(track.track_config || null);
+    const isLegacy = /\[(legacy|retired)\]/i.test(track.track_name);
+
+    if (!trackCatMap[cat]) trackCatMap[cat] = { normal: {}, legacy: {} };
+    const bucket = isLegacy ? "legacy" : "normal";
+    if (!trackCatMap[cat][bucket][base]) trackCatMap[cat][bucket][base] = [];
+    trackCatMap[cat][bucket][base].push(track.track_config || null);
   }
 
+  // Serialize into an array for the client component
   const trackData = Object.entries(trackCatMap)
     .sort(([a], [b]) => a.localeCompare(b))
-    .map(([category, tracks]) => ({
-      category,
-      // Count of unique base tracks (not configs) for the category header
-      count: Object.keys(tracks).length,
-      tracks: Object.entries(tracks)
+    .map(([category, { normal, legacy }]) => {
+      const normalTracks = Object.entries(normal)
         .sort(([a], [b]) => a.localeCompare(b))
         .map(([track_name, configs]) => ({
           track_name,
           count: configs.length,
-          configs: configs.filter(Boolean),
-        })),
-    }));
+          configs: configs.filter(Boolean).sort(),
+        }));
+
+      const legacyTracks = Object.entries(legacy)
+        .sort(([a], [b]) => a.localeCompare(b))
+        .map(([track_name, configs]) => ({
+          track_name,
+          count: configs.length,
+          configs: configs.filter(Boolean).sort(),
+        }));
+
+      return {
+        category,
+        // Category count = unique base track names across both buckets
+        count: Object.keys(normal).length + Object.keys(legacy).length,
+        tracks: normalTracks,
+        // Legacy group only present if there are legacy/retired tracks
+        legacyTracks: legacyTracks.length > 0 ? legacyTracks : null,
+        legacyCount: legacyTracks.length,
+      };
+    });
 
   const syncedAt = driver.iracing_synced_at
     ? new Date(driver.iracing_synced_at).toLocaleDateString("fr-FR", {
@@ -103,7 +122,6 @@ export default async function InventairePage({ params }) {
 
   return (
     <div className="page">
-      {/* Header */}
       <div className="page-header">
         <div>
           <h1>Inventaire — {driver.name}</h1>
@@ -135,7 +153,6 @@ export default async function InventairePage({ params }) {
         </div>
       </div>
 
-      {/* Not linked */}
       {!driver.iracing_id && (
         <div className="card" style={{ marginBottom: "2rem" }}>
           <div className="empty">
@@ -145,7 +162,6 @@ export default async function InventairePage({ params }) {
         </div>
       )}
 
-      {/* Linked but no data */}
       {driver.iracing_id && !hasData && (
         <div className="card" style={{ marginBottom: "2rem" }}>
           <div className="empty">
@@ -157,12 +173,10 @@ export default async function InventairePage({ params }) {
         </div>
       )}
 
-      {/* Main display — client component handles all collapse state */}
       {hasData && (
         <InventaireDisplay
           carData={carData}
           trackData={trackData}
-          // Sets can't cross server/client boundary — pass as arrays
           kronosCarNamesArr={(kronosCars || []).map((c) => c.name)}
           kronosCircuitNamesArr={(kronosCircuits || []).map((c) => c.name)}
         />
