@@ -248,12 +248,11 @@ export default function InventoryMatrix({
       const catOk =
         selectedCarCats.length === 0 ||
         selectedCarCats.includes(car.car_category);
-      const cls = deriveCarClass(car.car_types, carTypeLabels);
+      const cls = getCarClass(car);
       const clsOk =
         selectedCarClasses.length === 0 || selectedCarClasses.includes(cls);
       return catOk && clsOk;
     });
-
     const catMap = {};
     for (const car of filtered) {
       const cat = car.car_category || "other";
@@ -280,7 +279,7 @@ export default function InventoryMatrix({
           })),
         legacy: legacy.sort((a, b) => a.car_name.localeCompare(b.car_name)),
       }));
-  }, [allCars, selectedCarCats, selectedCarClasses, carTypeLabels, loaded]);
+  }, [allCars, selectedCarCats, selectedCarClasses, kronosCarsMap, loaded]);
 
   // Build grouped track matrix rows (category → tracks, with legacy bucket)
   const trackMatrixRows = useMemo(() => {
