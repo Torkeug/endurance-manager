@@ -3,15 +3,106 @@ import React, { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { supabaseBrowser as supabase } from "../../lib/supabase-browser";
 
-const emptyForm = { tank_size_litres: "", car_type_label: "" };
+// ─── Shared styles ───────────────────────────────────────────────────────────
 
-export default function CarsManager({ initialCars, iracingCars }) {
+const TH = {
+  background: "var(--surface-2)",
+  color: "var(--text-dim)",
+  fontSize: "0.72rem",
+  fontWeight: 700,
+  letterSpacing: "0.08em",
+  textTransform: "uppercase",
+  padding: "0.6rem 1rem",
+  textAlign: "left",
+  borderBottom: "1px solid var(--border)",
+  whiteSpace: "nowrap",
+};
+
+const TD = {
+  padding: "0.6rem 1rem",
+  borderBottom: "1px solid var(--border)",
+  verticalAlign: "middle",
+};
+
+// ─── Car type tag pills ───────────────────────────────────────────────────────
+// Shared between both tabs — shows iRacing car_types as selectable pills
+// plus a free-text input for manual override.
+function CarTypePicker({ carTypes, value, onChange }) {
+  return (
+    <div>
+      {carTypes?.length > 0 && (
+        <div
+          style={{
+            display: "flex",
+            flexWrap: "wrap",
+            gap: "0.4rem",
+            margin: "0.5rem 0",
+          }}
+        >
+          {[...new Set(carTypes)].map((tag) => {
+            const isSelected = value === tag;
+            return (
+              <button
+                key={tag}
+                type="button"
+                onClick={() => onChange(isSelected ? "" : tag)}
+                style={{
+                  padding: "0.25rem 0.65rem",
+                  borderRadius: "3px",
+                  border: `1px solid ${isSelected ? "var(--accent)" : "var(--border)"}`,
+                  background: isSelected
+                    ? "var(--accent-dim)"
+                    : "var(--surface)",
+                  color: isSelected ? "var(--accent)" : "var(--text-dim)",
+                  fontSize: "0.75rem",
+                  fontWeight: 700,
+                  cursor: "pointer",
+                  fontFamily: "var(--font-mono), monospace",
+                }}
+              >
+                {tag}
+              </button>
+            );
+          })}
+        </div>
+      )}
+      {/* Free text — always editable, pills just pre-fill it */}
+      <input
+        type="text"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder="ex: gt3, gte, gtp, lmp2…"
+        style={{ maxWidth: "200px" }}
+      />
+      {value && (
+        <div
+          style={{
+            marginTop: "0.4rem",
+            fontSize: "0.78rem",
+            color: "var(--text-dim)",
+          }}
+        >
+          Groupé sous :{" "}
+          <span style={{ color: "var(--accent)", fontWeight: 700 }}>
+            {value.toUpperCase()}
+          </span>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Kronos Endurance tab ─────────────────────────────────────────────────────
+// Manages cars used in events — linked to iRacing catalog, with tank size and class.
+function KronosEnduranceTab({ initialCars, iracingCars }) {
   const router = useRouter();
   const [cars, setCars] = useState(initialCars);
   const [adding, setAdding] = useState(false);
   const [editingId, setEditingId] = useState(null);
-  const [form, setForm] = useState(emptyForm);
-  // The iRacing catalog car currently selected in the form
+  const [form, setForm] = useState({
+    tank_size_litres: "",
+    car_type_label: "",
+  });
   const [selectedIracingCar, setSelectedIracingCar] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [saving, setSaving] = useState(false);
@@ -20,7 +111,6 @@ export default function CarsManager({ initialCars, iracingCars }) {
   const set = (field) => (e) =>
     setForm((prev) => ({ ...prev, [field]: e.target.value }));
 
-  // Filter iRacing catalog by search query — max 20 results shown
   const filteredIracingCars = useMemo(() => {
     if (!searchQuery.trim() || selectedIracingCar) return [];
     const q = searchQuery.toLowerCase();
@@ -29,15 +119,12 @@ export default function CarsManager({ initialCars, iracingCars }) {
       .slice(0, 20);
   }, [searchQuery, iracingCars, selectedIracingCar]);
 
-  // Select a car from the catalog dropdown
   const selectIracingCar = (car) => {
     setSelectedIracingCar(car);
     setSearchQuery(car.car_name);
-    // Reset type label when switching car
-    setForm((prev) => ({ ...prev, car_type_label: "" }));
+    setForm((prev) => ({ ...prev, car_type_label: car.car_type_label || "" }));
   };
 
-  // Clear the selection to allow re-searching
   const clearIracingCarSelection = () => {
     setSelectedIracingCar(null);
     setSearchQuery("");
@@ -61,7 +148,7 @@ export default function CarsManager({ initialCars, iracingCars }) {
     setEditingId(null);
     setSelectedIracingCar(null);
     setSearchQuery("");
-    setForm(emptyForm);
+    setForm({ tank_size_litres: "", car_type_label: "" });
     setError(null);
   };
 
@@ -143,7 +230,6 @@ export default function CarsManager({ initialCars, iracingCars }) {
 
   const startEdit = (car) => {
     setEditingId(car.id);
-    // Find this car in the iRacing catalog by iracing_car_id
     const iracingCar = (iracingCars || []).find(
       (c) => c.iracing_car_id === car.iracing_car_id,
     );
@@ -154,6 +240,7 @@ export default function CarsManager({ initialCars, iracingCars }) {
               iracing_car_id: car.iracing_car_id,
               car_name: car.name,
               car_types: [],
+              car_type_label: null,
             }
           : null),
     );
@@ -166,7 +253,6 @@ export default function CarsManager({ initialCars, iracingCars }) {
     setError(null);
   };
 
-  // Group cars by class for display
   const withClass = cars.filter((c) => c.class);
   const withoutClass = cars.filter((c) => !c.class);
   const carsByClass = withClass.reduce((acc, car) => {
@@ -175,10 +261,9 @@ export default function CarsManager({ initialCars, iracingCars }) {
     return acc;
   }, {});
 
-  // Inline form — used for both add and edit
   const editForm = (
     <div style={{ padding: "1rem", background: "var(--surface-2)" }}>
-      {/* iRacing catalog search / selection */}
+      {/* iRacing catalog search */}
       <div className="form-group" style={{ marginBottom: "1rem" }}>
         <label>Voiture iRacing</label>
         {!iracingCars?.length ? (
@@ -193,7 +278,6 @@ export default function CarsManager({ initialCars, iracingCars }) {
             d&apos;abord.
           </div>
         ) : selectedIracingCar ? (
-          // Car is selected — show name + change button
           <div
             style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}
           >
@@ -209,7 +293,6 @@ export default function CarsManager({ initialCars, iracingCars }) {
             </button>
           </div>
         ) : (
-          // Search mode — text input + dropdown
           <div style={{ position: "relative" }}>
             <input
               type="text"
@@ -243,7 +326,6 @@ export default function CarsManager({ initialCars, iracingCars }) {
                       cursor: "pointer",
                       fontSize: "0.85rem",
                       borderBottom: "1px solid var(--border)",
-                      transition: "background 0.1s",
                     }}
                     onMouseEnter={(e) => {
                       e.currentTarget.style.background = "var(--surface-2)";
@@ -261,7 +343,7 @@ export default function CarsManager({ initialCars, iracingCars }) {
         )}
       </div>
 
-      {/* car_types pills — click to populate the label input, or type manually */}
+      {/* Type label picker */}
       {selectedIracingCar && (
         <div className="form-group" style={{ marginBottom: "1rem" }}>
           <label>
@@ -270,73 +352,13 @@ export default function CarsManager({ initialCars, iracingCars }) {
               — sélectionnez un tag ou saisissez manuellement (optionnel)
             </span>
           </label>
-
-          {/* Available tags as pills — clicking sets the input value */}
-          {selectedIracingCar?.car_types?.length > 0 && (
-            <div
-              style={{
-                display: "flex",
-                flexWrap: "wrap",
-                gap: "0.4rem",
-                margin: "0.5rem 0",
-              }}
-            >
-              {[...new Set(selectedIracingCar.car_types)].map((tag) => {
-                const isSelected = form.car_type_label === tag;
-                return (
-                  <button
-                    key={tag}
-                    type="button"
-                    onClick={() =>
-                      setForm((prev) => ({
-                        ...prev,
-                        // Click again to deselect
-                        car_type_label: isSelected ? "" : tag,
-                      }))
-                    }
-                    style={{
-                      padding: "0.25rem 0.65rem",
-                      borderRadius: "3px",
-                      border: `1px solid ${isSelected ? "var(--accent)" : "var(--border)"}`,
-                      background: isSelected
-                        ? "var(--accent-dim)"
-                        : "var(--surface)",
-                      color: isSelected ? "var(--accent)" : "var(--text-dim)",
-                      fontSize: "0.75rem",
-                      fontWeight: 700,
-                      cursor: "pointer",
-                      fontFamily: "var(--font-mono), monospace",
-                    }}
-                  >
-                    {tag}
-                  </button>
-                );
-              })}
-            </div>
-          )}
-
-          {/* Free text input — always editable, pills just pre-fill it */}
-          <input
-            type="text"
+          <CarTypePicker
+            carTypes={selectedIracingCar.car_types}
             value={form.car_type_label}
-            onChange={set("car_type_label")}
-            placeholder="ex: gt3, gte, gtp, lmp2…"
-            style={{ maxWidth: "200px" }}
+            onChange={(val) =>
+              setForm((prev) => ({ ...prev, car_type_label: val }))
+            }
           />
-          {form.car_type_label && (
-            <div
-              style={{
-                marginTop: "0.4rem",
-                fontSize: "0.78rem",
-                color: "var(--text-dim)",
-              }}
-            >
-              Groupé sous :{" "}
-              <span style={{ color: "var(--accent)", fontWeight: 700 }}>
-                {form.car_type_label.toUpperCase()}
-              </span>
-            </div>
-          )}
         </div>
       )}
 
@@ -606,6 +628,285 @@ export default function CarsManager({ initialCars, iracingCars }) {
           </tbody>
         </table>
       </div>
+    </div>
+  );
+}
+
+// ─── Catalogue iRacing tab ────────────────────────────────────────────────────
+// Shows all iRacing cars — admin can set car_type_label for inventory grouping.
+// Has no impact on the endurance/event side.
+function IracingCatalogueTab({ iracingCars: initialIracingCars }) {
+  const [iracingCars, setIracingCars] = useState(initialIracingCars || []);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [saving, setSaving] = useState(null);
+  const [error, setError] = useState(null);
+
+  // Inline edit state per car
+  const [editingId, setEditingId] = useState(null);
+  const [editLabel, setEditLabel] = useState("");
+
+  const filteredCars = useMemo(() => {
+    if (!searchQuery.trim()) return iracingCars;
+    const q = searchQuery.toLowerCase();
+    return iracingCars.filter((c) => c.car_name.toLowerCase().includes(q));
+  }, [searchQuery, iracingCars]);
+
+  const openEdit = (car) => {
+    setEditingId(car.iracing_car_id);
+    setEditLabel(car.car_type_label || "");
+  };
+
+  const cancelEdit = () => {
+    setEditingId(null);
+    setEditLabel("");
+  };
+
+  const saveLabel = async (car) => {
+    setSaving(car.iracing_car_id);
+    setError(null);
+    const { error: err } = await supabase
+      .from("iracing_cars")
+      .update({ car_type_label: editLabel.trim() || null })
+      .eq("iracing_car_id", car.iracing_car_id);
+    if (err) {
+      setError(err.message);
+      setSaving(null);
+      return;
+    }
+    setIracingCars((prev) =>
+      prev.map((c) =>
+        c.iracing_car_id === car.iracing_car_id
+          ? { ...c, car_type_label: editLabel.trim() || null }
+          : c,
+      ),
+    );
+    setSaving(null);
+    setEditingId(null);
+    setEditLabel("");
+  };
+
+  return (
+    <div>
+      {error && (
+        <div className="alert alert-error" style={{ marginBottom: "1rem" }}>
+          {error}
+        </div>
+      )}
+
+      <p
+        style={{
+          fontSize: "0.82rem",
+          color: "var(--text-dim)",
+          marginBottom: "1rem",
+        }}
+      >
+        Assignez un label de type à chaque voiture iRacing pour le regroupement
+        dans l&apos;inventaire des pilotes. Ces labels n&apos;affectent pas les
+        événements ou équipages.
+      </p>
+
+      {/* Search */}
+      <div style={{ marginBottom: "1rem", maxWidth: "400px" }}>
+        <input
+          type="text"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          placeholder="Rechercher dans le catalogue iRacing…"
+        />
+      </div>
+
+      {iracingCars.length === 0 ? (
+        <div className="card">
+          <div className="empty">
+            Catalogue iRacing vide. Lancez une synchronisation iRacing depuis
+            votre profil.
+          </div>
+        </div>
+      ) : (
+        <div className="table-wrap">
+          <table style={{ width: "100%", borderCollapse: "collapse" }}>
+            <thead>
+              <tr>
+                <th style={TH}>Voiture</th>
+                <th style={TH}>Tags iRacing</th>
+                <th style={TH}>Label inventaire</th>
+                <th style={TH} />
+              </tr>
+            </thead>
+            <tbody>
+              {filteredCars.map((car) => {
+                const isEditing = editingId === car.iracing_car_id;
+                return (
+                  <tr
+                    key={car.iracing_car_id}
+                    style={{ opacity: saving === car.iracing_car_id ? 0.5 : 1 }}
+                  >
+                    {/* Car name */}
+                    <td style={{ ...TD, fontWeight: 600, fontSize: "0.85rem" }}>
+                      {car.car_name}
+                    </td>
+
+                    {/* car_types tags — display only */}
+                    <td style={TD}>
+                      <div
+                        style={{
+                          display: "flex",
+                          flexWrap: "wrap",
+                          gap: "0.3rem",
+                        }}
+                      >
+                        {[...new Set(car.car_types || [])].map((tag) => (
+                          <span
+                            key={tag}
+                            className="mono"
+                            style={{
+                              fontSize: "0.68rem",
+                              color: "var(--text-dim)",
+                              background: "var(--surface-2)",
+                              border: "1px solid var(--border)",
+                              borderRadius: "3px",
+                              padding: "0.1rem 0.35rem",
+                            }}
+                          >
+                            {tag}
+                          </span>
+                        ))}
+                      </div>
+                    </td>
+
+                    {/* Label — editable */}
+                    <td style={TD}>
+                      {isEditing ? (
+                        <CarTypePicker
+                          carTypes={car.car_types}
+                          value={editLabel}
+                          onChange={setEditLabel}
+                        />
+                      ) : car.car_type_label ? (
+                        <span
+                          className="mono"
+                          style={{
+                            fontSize: "0.82rem",
+                            color: "var(--accent)",
+                            fontWeight: 700,
+                          }}
+                        >
+                          {car.car_type_label.toUpperCase()}
+                        </span>
+                      ) : (
+                        <span
+                          style={{
+                            color: "var(--text-dim)",
+                            fontSize: "0.78rem",
+                          }}
+                        >
+                          —
+                        </span>
+                      )}
+                    </td>
+
+                    {/* Actions */}
+                    <td style={{ ...TD, textAlign: "right" }}>
+                      {isEditing ? (
+                        <div
+                          style={{
+                            display: "flex",
+                            gap: "0.4rem",
+                            justifyContent: "flex-end",
+                          }}
+                        >
+                          <button
+                            onClick={() => saveLabel(car)}
+                            className="btn btn-primary btn-sm"
+                            disabled={saving === car.iracing_car_id}
+                          >
+                            ✓
+                          </button>
+                          <button
+                            onClick={cancelEdit}
+                            className="btn btn-secondary btn-sm"
+                          >
+                            ✗
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => openEdit(car)}
+                          className="btn btn-secondary btn-sm"
+                          disabled={!!saving}
+                        >
+                          ✏️ Modifier
+                        </button>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Main export ──────────────────────────────────────────────────────────────
+// Two-tab wrapper: Kronos Endurance (event cars) + Catalogue iRacing (inventory labels)
+export default function CarsManager({ initialCars, iracingCars }) {
+  const [activeTab, setActiveTab] = useState("kronos");
+
+  const tabs = [
+    { id: "kronos", label: "Kronos Endurance" },
+    { id: "catalogue", label: "Catalogue iRacing" },
+  ];
+
+  return (
+    <div>
+      {/* Sub-tab switcher */}
+      <div
+        style={{
+          display: "flex",
+          gap: "0.25rem",
+          borderBottom: "1px solid var(--border)",
+          marginBottom: "1.5rem",
+        }}
+      >
+        {tabs.map((tab) => (
+          <button
+            key={tab.id}
+            onClick={() => setActiveTab(tab.id)}
+            style={{
+              padding: "0.5rem 1.25rem",
+              background: "transparent",
+              border: "none",
+              borderBottom:
+                activeTab === tab.id
+                  ? "2px solid var(--accent)"
+                  : "2px solid transparent",
+              color: activeTab === tab.id ? "var(--accent)" : "var(--text-dim)",
+              fontFamily: "var(--font-rajdhani), sans-serif",
+              fontSize: "0.85rem",
+              fontWeight: 700,
+              letterSpacing: "0.06em",
+              textTransform: "uppercase",
+              cursor: "pointer",
+              marginBottom: "-1px",
+            }}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
+      {activeTab === "kronos" && (
+        <KronosEnduranceTab
+          initialCars={initialCars}
+          iracingCars={iracingCars}
+        />
+      )}
+      {activeTab === "catalogue" && (
+        <IracingCatalogueTab iracingCars={iracingCars} />
+      )}
     </div>
   );
 }

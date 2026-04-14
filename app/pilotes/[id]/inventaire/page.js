@@ -42,10 +42,22 @@ export default async function InventairePage({ params }) {
     .from("circuits")
     .select("name");
 
-  // Build lookup map: iracing_car_id → { class, car_type_label }
+  // Fetch iRacing catalog labels — used for non-Kronos car grouping in inventory
+  const { data: iracingCatalog } = await supabase
+    .from("iracing_cars")
+    .select("iracing_car_id, car_type_label")
+    .not("car_type_label", "is", null);
+
+  // Build lookup map: iracing_car_id → { class, car_type_label } for Kronos cars
   const kronosCarsById = new Map();
   for (const car of kronosCars || []) {
     kronosCarsById.set(car.iracing_car_id, car);
+  }
+
+  // Build lookup map: iracing_car_id → car_type_label for catalog cars
+  const iracingLabelById = new Map();
+  for (const car of iracingCatalog || []) {
+    iracingLabelById.set(car.iracing_car_id, car.car_type_label);
   }
 
   // ── Car type priority lookup ──────────────────────────────────────────────
@@ -106,8 +118,12 @@ export default async function InventairePage({ params }) {
   for (const car of ownedCars || []) {
     const cat = car.car_category || "other";
     const kronosInfo = kronosCarsById.get(car.iracing_car_id);
+    // Priority: Kronos explicit label → Kronos class → catalog label → fallback
     const cls =
-      kronosInfo?.car_type_label?.toUpperCase() || kronosInfo?.class || "Autre";
+      kronosInfo?.car_type_label?.toUpperCase() ||
+      kronosInfo?.class ||
+      iracingLabelById.get(car.iracing_car_id)?.toUpperCase() ||
+      "Autre";
     const legacy = isLegacyContent(car.car_name);
     if (!carCatMap[cat]) carCatMap[cat] = { normal: {}, legacy: [] };
     if (legacy) {

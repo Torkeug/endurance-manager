@@ -51,7 +51,7 @@ export default async function AdminPage() {
       .order("minute"),
     supabase
       .from("iracing_cars")
-      .select("iracing_car_id, car_name, car_types")
+      .select("iracing_car_id, car_name, car_types, car_type_label")
       .order("car_name"),
     supabase
       .from("driver_car_ownership")
