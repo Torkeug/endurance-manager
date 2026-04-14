@@ -216,9 +216,40 @@ export default async function InventairePage({ params }) {
                             : "none",
                       }}
                     >
-                      <span style={{ fontSize: "0.88rem" }}>
-                        {car.car_name}
-                      </span>
+                      <div>
+                        <span style={{ fontSize: "0.88rem" }}>
+                          {car.car_name}
+                        </span>
+                        {(car.car_types || []).length > 0 && (
+                          <div
+                            style={{
+                              display: "flex",
+                              gap: "0.3rem",
+                              flexWrap: "wrap",
+                              marginTop: "0.2rem",
+                            }}
+                          >
+                            {car.car_types.map((t) => (
+                              <span
+                                key={t}
+                                style={{
+                                  fontSize: "0.65rem",
+                                  fontWeight: 700,
+                                  letterSpacing: "0.06em",
+                                  textTransform: "uppercase",
+                                  color: "var(--text-dim)",
+                                  background: "var(--surface)",
+                                  border: "1px solid var(--border)",
+                                  borderRadius: "3px",
+                                  padding: "0.1rem 0.35rem",
+                                }}
+                              >
+                                {t}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                      </div>
                       {kronosCarNames.has(car.car_name) && <KronosBadge />}
                     </div>
                   ))}

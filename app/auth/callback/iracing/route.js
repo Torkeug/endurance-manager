@@ -29,8 +29,9 @@ async function buildCarLookup(token) {
   for (const car of cars) {
     map.set(car.car_id, {
       car_name: car.car_name,
-      // categories is an array e.g. ["sports_car"] — take the first entry
       car_category: (car.categories || [])[0] || null,
+      // car_types is an array of objects — flatten to array of strings
+      car_types: (car.car_types || []).map((t) => t.car_type),
     });
   }
   return map;
@@ -97,6 +98,7 @@ async function syncOneDriver(
         iracing_car_id: carId,
         car_name: car.car_name,
         car_category: car.car_category,
+        car_types: car.car_types,
         synced_at: now,
       };
     })
