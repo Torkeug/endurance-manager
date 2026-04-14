@@ -297,7 +297,8 @@ export async function GET(request) {
       let syncCount = 0;
       for (const d of linkedDrivers) {
         const irating = iRatingByCustId.get(String(d.iracing_id));
-        if (irating === undefined) continue; // driver not found in response
+        // Skip if irating is missing or null — don't overwrite existing data
+        if (irating === undefined || irating === null) continue;
         const { error: updateErr } = await supabase
           .from("drivers")
           .update({ irating, iracing_synced_at: now })
