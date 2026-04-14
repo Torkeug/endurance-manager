@@ -36,11 +36,62 @@ export default async function InventairePage({ params }) {
     .from("circuits")
     .select("name");
 
+  // ── Car type priority lookup ──────────────────────────────────────────────
+  // iRacing's car class system is series-based and unreliable for grouping.
+  // Instead we derive a class label from car_types, which are type-based tags.
+  // Priority order: most specific first, generic last. First match wins.
+  const CAR_TYPE_PRIORITY = [
+    { match: ["gtp", "lmdh"], label: "GTP" },
+    { match: ["lmp2", "p2"], label: "LMP2" },
+    { match: ["lmp3"], label: "LMP3" },
+    { match: ["dp", "daytonaprototype"], label: "DP" },
+    { match: ["prototype"], label: "Prototype" },
+    { match: ["gte", "gtlm"], label: "GTE" },
+    { match: ["gt3", "gtd"], label: "GT3" },
+    { match: ["gt4"], label: "GT4" },
+    { match: ["gs"], label: "GS" },
+    { match: ["gt"], label: "GT" },
+    { match: ["tcr"], label: "TCR" },
+    { match: ["supercup"], label: "Supercup" },
+    { match: ["formula", "formulavee", "openwheel"], label: "Formula" },
+    {
+      match: [
+        "nascar",
+        "cupcar",
+        "xfinity",
+        "nationwide",
+        "truck",
+        "cot",
+        "classb",
+        "craftsman",
+        "ss",
+      ],
+      label: "NASCAR",
+    },
+    { match: ["oval", "arca", "legends"], label: "Oval" },
+    { match: ["supercars", "v8sc", "aussiev8"], label: "Supercars" },
+    { match: ["sprintcar", "dirtoval"], label: "Dirt Oval" },
+    { match: ["dirtroad", "rallycross", "irx", "offroad"], label: "Dirt Road" },
+    {
+      match: ["rookie", "srf", "mx5", "miata", "mini", "starmazda"],
+      label: "Road",
+    },
+  ];
+
+  function deriveCarClass(car_types) {
+    if (!car_types || car_types.length === 0) return "—";
+    for (const { match, label } of CAR_TYPE_PRIORITY) {
+      if (car_types.some((t) => match.includes(t))) return label;
+    }
+    return "—";
+  }
+
   // ── Build car structure: category → class → cars[] ───────────────────────
   const carCatMap = {};
   for (const car of ownedCars || []) {
     const cat = car.car_category || "other";
-    const cls = car.car_class_short_name || "—";
+    // Use car_types priority lookup — more reliable than iRacing's class system
+    const cls = deriveCarClass(car.car_types);
     if (!carCatMap[cat]) carCatMap[cat] = {};
     if (!carCatMap[cat][cls]) carCatMap[cat][cls] = [];
     carCatMap[cat][cls].push(car);
