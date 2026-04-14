@@ -1,9 +1,8 @@
 import { NextResponse } from "next/server";
 import { createClient } from "../../../../lib/auth";
 
-const IRACING_TOKEN_URL = "https://members-ng.iracing.com/oauth2/token";
-const IRACING_PROFILE_URL =
-  "https://members-ng.iracing.com/data/member/profile";
+const IRACING_TOKEN_URL = "https://oauth.iracing.com/oauth2/token";
+const IRACING_PROFILE_URL = "https://oauth.iracing.com/oauth2/iracing/profile";
 const CLIENT_ID = "kronos-team";
 const REDIRECT_URI = `${process.env.NEXT_PUBLIC_APP_URL}/auth/callback/iracing`;
 
@@ -67,8 +66,7 @@ export async function GET(request) {
     }
 
     const profile = await profileRes.json();
-    const iracingId = String(profile.cust_id || profile.custid || "");
-    const irating = profile.irating || null;
+    const iracingId = String(profile.iracing_cust_id || "");
 
     if (!iracingId) {
       return NextResponse.redirect(`${origin}/pilotes?error=iracing_no_id`);
@@ -103,7 +101,6 @@ export async function GET(request) {
       .from("drivers")
       .update({
         iracing_id: iracingId,
-        ...(irating ? { irating } : {}),
       })
       .eq("id", driver.id);
 

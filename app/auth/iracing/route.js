@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server";
 import crypto from "crypto";
 
-const IRACING_AUTH_URL = "https://members-ng.iracing.com/oauth2/authorize";
+const IRACING_AUTH_URL = "https://oauth.iracing.com/oauth2/authorize";
 const CLIENT_ID = "kronos-team";
 const REDIRECT_URI = `${process.env.NEXT_PUBLIC_APP_URL}/auth/callback/iracing`;
-const SCOPE = "openid profile";
+const SCOPE = "iracing.profile"; // Grants access to /oauth2/iracing/profile endpoint
 
 // Generate PKCE code verifier and challenge
 function generatePKCE() {
