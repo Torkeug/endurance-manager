@@ -261,59 +261,72 @@ export default function CarsManager({ initialCars, iracingCars }) {
         )}
       </div>
 
-      {/* car_types pills — pick the most representative tag for grouping */}
-      {selectedIracingCar?.car_types?.length > 0 && (
+      {/* car_types pills — click to populate the label input, or type manually */}
+      {selectedIracingCar && (
         <div className="form-group" style={{ marginBottom: "1rem" }}>
           <label>
             Type de classe{" "}
             <span style={{ fontWeight: 400, color: "var(--text-dim)" }}>
-              — sélectionnez le tag le plus représentatif (optionnel)
+              — sélectionnez un tag ou saisissez manuellement (optionnel)
             </span>
           </label>
-          <div
-            style={{
-              display: "flex",
-              flexWrap: "wrap",
-              gap: "0.4rem",
-              marginTop: "0.5rem",
-            }}
-          >
-            {selectedIracingCar.car_types.map((tag) => {
-              const isSelected = form.car_type_label === tag;
-              return (
-                <button
-                  key={tag}
-                  type="button"
-                  onClick={() =>
-                    setForm((prev) => ({
-                      ...prev,
-                      // Click again to deselect
-                      car_type_label: isSelected ? "" : tag,
-                    }))
-                  }
-                  style={{
-                    padding: "0.25rem 0.65rem",
-                    borderRadius: "3px",
-                    border: `1px solid ${isSelected ? "var(--accent)" : "var(--border)"}`,
-                    background: isSelected
-                      ? "var(--accent-dim)"
-                      : "var(--surface)",
-                    color: isSelected ? "var(--accent)" : "var(--text-dim)",
-                    fontSize: "0.75rem",
-                    fontWeight: 700,
-                    cursor: "pointer",
-                    fontFamily: "var(--font-mono), monospace",
-                  }}
-                >
-                  {tag}
-                </button>
-              );
-            })}
-          </div>
+
+          {/* Available tags as pills — clicking sets the input value */}
+          {selectedIracingCar?.car_types?.length > 0 && (
+            <div
+              style={{
+                display: "flex",
+                flexWrap: "wrap",
+                gap: "0.4rem",
+                margin: "0.5rem 0",
+              }}
+            >
+              {selectedIracingCar.car_types.map((tag) => {
+                const isSelected = form.car_type_label === tag;
+                return (
+                  <button
+                    key={tag}
+                    type="button"
+                    onClick={() =>
+                      setForm((prev) => ({
+                        ...prev,
+                        // Click again to deselect
+                        car_type_label: isSelected ? "" : tag,
+                      }))
+                    }
+                    style={{
+                      padding: "0.25rem 0.65rem",
+                      borderRadius: "3px",
+                      border: `1px solid ${isSelected ? "var(--accent)" : "var(--border)"}`,
+                      background: isSelected
+                        ? "var(--accent-dim)"
+                        : "var(--surface)",
+                      color: isSelected ? "var(--accent)" : "var(--text-dim)",
+                      fontSize: "0.75rem",
+                      fontWeight: 700,
+                      cursor: "pointer",
+                      fontFamily: "var(--font-mono), monospace",
+                    }}
+                  >
+                    {tag}
+                  </button>
+                );
+              })}
+            </div>
+          )}
+
+          {/* Free text input — always editable, pills just pre-fill it */}
+          <input
+            type="text"
+            value={form.car_type_label}
+            onChange={set("car_type_label")}
+            placeholder="ex: gt3, gte, gtp, lmp2…"
+            style={{ maxWidth: "200px" }}
+          />
           {form.car_type_label && (
             <div
               style={{
-                marginTop: "0.5rem",
+                marginTop: "0.4rem",
                 fontSize: "0.78rem",
                 color: "var(--text-dim)",
               }}
