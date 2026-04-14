@@ -7,6 +7,8 @@ import CircuitsManager from "./CircuitsManager";
 import EventTypesManager from "./EventTypesManager";
 import DriversManager from "./DriversManager";
 import SettingsManager from "./SettingsManager";
+import CarTypeLabelsManager from "./CarTypeLabelsManager";
+import InventoryMatrix from "./InventoryMatrix";
 
 const TABS = [
   { id: "pilotes", label: "Pilotes" },
@@ -16,6 +18,8 @@ const TABS = [
   { id: "circuits", label: "Circuits" },
   { id: "types", label: "Types d'événement" },
   { id: "parametres", label: "Paramètres" },
+  { id: "typesvoitures", label: "Types Voitures" },
+  { id: "inventaire", label: "Inventaire" },
 ];
 
 export default function AdminTabs({
@@ -30,6 +34,14 @@ export default function AdminTabs({
   settings,
   durationPresets,
   specialStartTimes,
+  carTypeLabels,
+  matrixDrivers,
+  allCarsMatrix,
+  allTracksMatrix,
+  carOwnership,
+  trackOwnership,
+  kronosCarNames,
+  kronosCircuitNames,
 }) {
   const [activeTab, setActiveTab] = useState("pilotes");
   // Count drivers awaiting approval for the red badge on the Pilotes tab
@@ -129,6 +141,21 @@ export default function AdminTabs({
             settings?.default_event_duration_minutes || "160",
           )}
           initialSpecialStartTimes={specialStartTimes}
+        />
+      )}
+      {activeTab === "typesvoitures" && (
+        <CarTypeLabelsManager initialLabels={carTypeLabels} />
+      )}
+      {activeTab === "inventaire" && (
+        <InventoryMatrix
+          matrixDrivers={matrixDrivers}
+          allCars={allCarsMatrix}
+          allTracks={allTracksMatrix}
+          carOwnership={carOwnership}
+          trackOwnership={trackOwnership}
+          carTypeLabels={carTypeLabels}
+          kronosCarNames={kronosCarNames}
+          kronosCircuitNames={kronosCircuitNames}
         />
       )}
     </div>

@@ -224,6 +224,10 @@ export default function InventaireDisplay({
   const [expandedBaseTracks, setExpandedBaseTracks] = useState(new Set());
   // One key per category for the legacy sub-group
   const [expandedLegacyGroups, setExpandedLegacyGroups] = useState(new Set());
+  // Separate state for legacy car groups (vs legacy track groups)
+  const [expandedLegacyCarGroups, setExpandedLegacyCarGroups] = useState(
+    new Set(),
+  );
 
   const toggle = (setter, key) =>
     setter((prev) => {
@@ -310,6 +314,51 @@ export default function InventaireDisplay({
                         </div>
                       );
                     })}
+                  {/* Legacy & Retired cars — muted sub-group at bottom of category */}
+                  {catExpanded && cat.legacyCars && (
+                    <div>
+                      <CollapseHeader
+                        label="Legacy & Retraités"
+                        count={cat.legacyCarCount}
+                        expanded={expandedLegacyCarGroups.has(cat.category)}
+                        onToggle={() =>
+                          toggle(setExpandedLegacyCarGroups, cat.category)
+                        }
+                        indent={1}
+                        muted={true}
+                      />
+                      {expandedLegacyCarGroups.has(cat.category) &&
+                        cat.legacyCars.map((car, i) => (
+                          <div
+                            key={car.iracing_car_id}
+                            style={{
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "space-between",
+                              gap: "1rem",
+                              padding: "0.45rem 1rem 0.45rem 3.5rem",
+                              opacity: 0.6,
+                              borderBottom:
+                                i < cat.legacyCars.length - 1
+                                  ? "1px solid var(--border)"
+                                  : "none",
+                            }}
+                          >
+                            <span
+                              style={{
+                                fontSize: "0.85rem",
+                                fontStyle: "italic",
+                              }}
+                            >
+                              {car.car_name}
+                            </span>
+                            {kronosCarNames.has(car.car_name) && (
+                              <KronosBadge />
+                            )}
+                          </div>
+                        ))}
+                    </div>
+                  )}
                 </div>
               );
             })}

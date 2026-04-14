@@ -3,6 +3,7 @@ import { getSessionAndDriver, isAdmin } from "../../../../lib/auth";
 import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
 import InventaireDisplay from "./InventaireDisplay";
+import { deriveCarClass, isLegacyContent } from "../../../../lib/car-types";
 
 export default async function InventairePage({ params }) {
   const { id } = await params;
@@ -35,6 +36,11 @@ export default async function InventairePage({ params }) {
   const { data: kronosCircuits } = await supabase
     .from("circuits")
     .select("name");
+
+  const { data: carTypeLabels } = await supabase
+    .from("car_type_labels")
+    .select("*")
+    .order("priority");
 
   // ── Car type priority lookup ──────────────────────────────────────────────
   // iRacing's car class system is series-based and unreliable for grouping.
@@ -86,29 +92,43 @@ export default async function InventairePage({ params }) {
     return "—";
   }
 
-  // ── Build car structure: category → class → cars[] ───────────────────────
+  // ── Build car structure: category → class → cars[], with legacy bucket ───
+  // Uses car_type_labels from DB for classification (priority-ordered, admin-editable).
+  // Legacy/retired cars (detected by [Legacy]/[Retired] in name) are grouped
+  // separately at the bottom of each category.
   const carCatMap = {};
   for (const car of ownedCars || []) {
     const cat = car.car_category || "other";
-    // Use car_types priority lookup — more reliable than iRacing's class system
-    const cls = deriveCarClass(car.car_types);
-    if (!carCatMap[cat]) carCatMap[cat] = {};
-    if (!carCatMap[cat][cls]) carCatMap[cat][cls] = [];
-    carCatMap[cat][cls].push(car);
+    const cls = deriveCarClass(car.car_types, carTypeLabels || []);
+    const legacy = isLegacyContent(car.car_name);
+    if (!carCatMap[cat]) carCatMap[cat] = { normal: {}, legacy: [] };
+    if (legacy) {
+      carCatMap[cat].legacy.push(car);
+    } else {
+      if (!carCatMap[cat].normal[cls]) carCatMap[cat].normal[cls] = [];
+      carCatMap[cat].normal[cls].push(car);
+    }
   }
 
   const carData = Object.entries(carCatMap)
     .sort(([a], [b]) => a.localeCompare(b))
-    .map(([category, classes]) => ({
+    .map(([category, { normal, legacy }]) => ({
       category,
-      count: Object.values(classes).reduce((sum, cars) => sum + cars.length, 0),
-      classes: Object.entries(classes)
+      count:
+        Object.values(normal).reduce((sum, cars) => sum + cars.length, 0) +
+        legacy.length,
+      classes: Object.entries(normal)
         .sort(([a], [b]) => a.localeCompare(b))
         .map(([cls, cars]) => ({
           class: cls,
           count: cars.length,
           cars,
         })),
+      legacyCars:
+        legacy.length > 0
+          ? legacy.sort((a, b) => a.car_name.localeCompare(b.car_name))
+          : null,
+      legacyCarCount: legacy.length,
     }));
 
   // ── Build track structure: category → { normal, legacy } ─────────────────
