@@ -1,6 +1,6 @@
 "use client";
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { supabaseBrowser as supabase } from "../../lib/supabase-browser";
 
 const ROLE_LABELS = {
@@ -52,6 +52,11 @@ function canApproveOrRevoke(
 
 export default function DriversManager({ initialDrivers, currentDriver }) {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  // Number of drivers synced in the last sync-all run (from redirect param)
+  const iracingSyncedCount = searchParams.get("iracing_synced");
+  const iracingUnauthorized =
+    searchParams.get("error") === "iracing_unauthorized";
   const [drivers, setDrivers] = useState(initialDrivers);
   const [saving, setSaving] = useState(null);
   const [error, setError] = useState(null);
@@ -271,9 +276,41 @@ export default function DriversManager({ initialDrivers, currentDriver }) {
 
   return (
     <div>
+      {/* iRacing sync-all feedback banners */}
+      {iracingSyncedCount && (
+        <div className="alert alert-success" style={{ marginBottom: "1rem" }}>
+          ✓ {iracingSyncedCount} pilote{iracingSyncedCount !== "1" ? "s" : ""}{" "}
+          synchronisé
+          {iracingSyncedCount !== "1" ? "s" : ""} avec iRacing.
+        </div>
+      )}
+      {iracingUnauthorized && (
+        <div className="alert alert-error" style={{ marginBottom: "1rem" }}>
+          Accès refusé — seuls les admins peuvent lancer une synchronisation
+          globale.
+        </div>
+      )}
       {error && (
         <div className="alert alert-error" style={{ marginBottom: "1rem" }}>
           {error}
+        </div>
+      )}
+
+      {/* Sync All iRacing — admin only, triggers OAuth flow with mode=syncall */}
+      {["admin", "super_admin"].includes(currentDriver?.role) && (
+        <div
+          style={{
+            marginBottom: "1rem",
+            display: "flex",
+            justifyContent: "flex-end",
+          }}
+        >
+          <a
+            href="/auth/iracing?mode=syncall"
+            className="btn btn-secondary btn-sm"
+          >
+            🔄 Sync All iRacing
+          </a>
         </div>
       )}
 
@@ -412,6 +449,8 @@ export default function DriversManager({ initialDrivers, currentDriver }) {
                   <th style={TH}>Discord ID</th>
                   <th style={{ ...TH, textAlign: "center" }}>Cotisation</th>
                   <th style={{ ...TH, textAlign: "center" }}>Test</th>
+                  {/* iRacing sync — read-only timestamp, populated by sync-all or driver self-sync */}
+                  <th style={{ ...TH, textAlign: "center" }}>iRacing sync</th>
                   <th style={TH}></th>
                 </tr>
               </thead>
@@ -617,6 +656,37 @@ export default function DriversManager({ initialDrivers, currentDriver }) {
                             cursor: "pointer",
                           }}
                         />
+                      </td>
+
+                      {/* iRacing sync timestamp — read-only */}
+                      <td style={{ ...TD, textAlign: "center" }}>
+                        {d.iracing_synced_at ? (
+                          <span
+                            className="mono"
+                            style={{
+                              fontSize: "0.75rem",
+                              color: "var(--text-dim)",
+                            }}
+                          >
+                            {new Date(d.iracing_synced_at).toLocaleDateString(
+                              "fr-FR",
+                              {
+                                day: "2-digit",
+                                month: "2-digit",
+                                year: "2-digit",
+                              },
+                            )}
+                          </span>
+                        ) : (
+                          <span
+                            style={{
+                              color: "var(--text-dim)",
+                              fontSize: "0.8rem",
+                            }}
+                          >
+                            —
+                          </span>
+                        )}
                       </td>
 
                       {/* Revoke / Delete actions */}

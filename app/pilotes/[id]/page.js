@@ -167,9 +167,17 @@ export default async function DriverDetail({ params, searchParams }) {
               Changer mot de passe
             </Link>
           )}
+          {(admin || currentDriver?.id === id) && (
+            <Link
+              href={`/pilotes/${id}/inventaire`}
+              className="btn btn-secondary btn-sm"
+            >
+              📦 Inventaire
+            </Link>
+          )}
           {currentDriver?.id === id &&
             (driver.iracing_id ? (
-              // Already linked — show status + discrete re-link option
+              // Already linked — show status badge + re-link/update option
               <div
                 style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}
               >
@@ -184,13 +192,20 @@ export default async function DriverDetail({ params, searchParams }) {
                 >
                   ✓ iRacing lié
                 </span>
-                <a href="/auth/iracing" className="btn btn-secondary btn-sm">
-                  Relier
+                {/* mode=driver syncs own data — always valid for the account owner */}
+                <a
+                  href="/auth/iracing?mode=driver"
+                  className="btn btn-secondary btn-sm"
+                >
+                  🔄 Mettre à jour
                 </a>
               </div>
             ) : (
               // Not yet linked
-              <a href="/auth/iracing" className="btn btn-primary btn-sm">
+              <a
+                href="/auth/iracing?mode=driver"
+                className="btn btn-primary btn-sm"
+              >
                 🏎️ Lier iRacing
               </a>
             ))}
@@ -204,6 +219,26 @@ export default async function DriverDetail({ params, searchParams }) {
       {iracing_linked === "true" && (
         <div className="alert alert-success" style={{ marginBottom: "1rem" }}>
           ✓ Compte iRacing lié avec succès.
+        </div>
+      )}
+
+      {/* iRacing sync timestamp — shown if data has been synced at least once */}
+      {driver.iracing_synced_at && (
+        <div
+          style={{
+            marginBottom: "1rem",
+            fontSize: "0.8rem",
+            color: "var(--text-dim)",
+          }}
+        >
+          Données iRacing synchronisées le{" "}
+          {new Date(driver.iracing_synced_at).toLocaleDateString("fr-FR", {
+            day: "2-digit",
+            month: "2-digit",
+            year: "numeric",
+            hour: "2-digit",
+            minute: "2-digit",
+          })}
         </div>
       )}
 
