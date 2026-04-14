@@ -499,7 +499,7 @@ export default function DriversManager({ initialDrivers, currentDriver }) {
                         )}
                       </td>
 
-                      {/* Discord ID — inline pencil editor, only for canAct rows */}
+                      {/* Discord ID — inline pencil editor */}
                       <td style={{ ...TD, whiteSpace: "nowrap" }}>
                         {isEditingThisRow ? (
                           // Inline edit mode: input + save/cancel
@@ -547,7 +547,7 @@ export default function DriversManager({ initialDrivers, currentDriver }) {
                             </button>
                           </div>
                         ) : (
-                          // Display mode: value + pencil button (only if canAct)
+                          // Display mode: value + pencil button
                           <div
                             style={{
                               display: "flex",
@@ -561,25 +561,24 @@ export default function DriversManager({ initialDrivers, currentDriver }) {
                             >
                               {d.discord_id || "—"}
                             </span>
-                            {canAct && (
-                              <button
-                                onClick={() =>
-                                  openDiscordEdit(d.id, d.discord_id)
-                                }
-                                title="Modifier le Discord ID"
-                                style={{
-                                  background: "none",
-                                  border: "none",
-                                  cursor: "pointer",
-                                  color: "var(--text-dim)",
-                                  fontSize: "0.8rem",
-                                  padding: "0 0.2rem",
-                                  lineHeight: 1,
-                                }}
-                              >
-                                ✏️
-                              </button>
-                            )}
+                            {/* Discord ID edit — available for all rows, not restricted to canAct */}
+                            <button
+                              onClick={() =>
+                                openDiscordEdit(d.id, d.discord_id)
+                              }
+                              title="Modifier le Discord ID"
+                              style={{
+                                background: "none",
+                                border: "none",
+                                cursor: "pointer",
+                                color: "var(--text-dim)",
+                                fontSize: "0.8rem",
+                                padding: "0 0.2rem",
+                                lineHeight: 1,
+                              }}
+                            >
+                              ✏️
+                            </button>
                           </div>
                         )}
                       </td>
