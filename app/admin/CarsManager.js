@@ -281,7 +281,7 @@ export default function CarsManager({ initialCars, iracingCars }) {
                 margin: "0.5rem 0",
               }}
             >
-              {selectedIracingCar.car_types.map((tag) => {
+              {[...new Set(selectedIracingCar.car_types)].map((tag) => {
                 const isSelected = form.car_type_label === tag;
                 return (
                   <button
