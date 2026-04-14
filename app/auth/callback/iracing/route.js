@@ -10,7 +10,7 @@ const REDIRECT_URI = `${process.env.NEXT_PUBLIC_APP_URL}/auth/callback/iracing`;
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
-// iRacing data endpoints return an S3 link — this does the two-step fetch.
+// iRacing data endpoints return a { link } pointing to S3 — two-step fetch.
 async function fetchIracingS3(path, token) {
   const res = await fetch(`${IRACING_DATA_BASE}${path}`, {
     headers: { Authorization: `Bearer ${token}` },
@@ -18,7 +18,7 @@ async function fetchIracingS3(path, token) {
   if (!res.ok) throw new Error(`iRacing API ${path}: ${res.status}`);
   const { link } = await res.json();
   const s3Res = await fetch(link);
-  if (!s3Res.ok) throw new Error(`S3 fetch: ${s3Res.status}`);
+  if (!s3Res.ok) throw new Error(`S3 fetch for ${path}: ${s3Res.status}`);
   return s3Res.json();
 }
 
@@ -51,7 +51,7 @@ async function buildTrackLookup(token) {
 }
 
 // Sync one driver's iRating + car/track ownership from iRacing.
-// carLookup and trackLookup are built once and reused across all drivers.
+// Used in driver mode only — requires the driver's own access token.
 async function syncOneDriver(
   token,
   driverId,
@@ -59,7 +59,6 @@ async function syncOneDriver(
   carLookup,
   trackLookup,
 ) {
-  // Fetch member info — S3-linked response
   const memberData = await fetchIracingS3(
     `/data/member/info?cust_id=${iracingCustId}`,
     token,
@@ -68,25 +67,23 @@ async function syncOneDriver(
   // Sports car iRating — licenses is a keyed object, not an array
   const irating = memberData.licenses?.sports_car?.irating ?? null;
 
-  // Flatten all package content_ids to get owned car IDs
+  // Flatten all package content_ids into sets of owned IDs
   const ownedCarIds = new Set(
     (memberData.car_packages || []).flatMap((pkg) => pkg.content_ids || []),
   );
-
-  // Flatten all package content_ids to get owned track IDs
   const ownedTrackIds = new Set(
     (memberData.track_packages || []).flatMap((pkg) => pkg.content_ids || []),
   );
 
   const now = new Date().toISOString();
 
-  // Update driver iRating and sync timestamp
+  // Update iRating and sync timestamp on the driver record
   await supabase
     .from("drivers")
     .update({ irating, iracing_synced_at: now })
     .eq("id", driverId);
 
-  // Replace car ownership: delete all rows for this driver, then reinsert
+  // Replace car ownership: delete then reinsert for this driver
   await supabase
     .from("driver_car_ownership")
     .delete()
@@ -94,7 +91,7 @@ async function syncOneDriver(
   const carRows = [...ownedCarIds]
     .map((carId) => {
       const car = carLookup.get(carId);
-      if (!car) return null; // unknown car ID — skip
+      if (!car) return null;
       return {
         driver_id: driverId,
         iracing_car_id: carId,
@@ -108,7 +105,7 @@ async function syncOneDriver(
     await supabase.from("driver_car_ownership").insert(carRows);
   }
 
-  // Replace track ownership: delete all rows for this driver, then reinsert
+  // Replace track ownership: delete then reinsert for this driver
   await supabase
     .from("driver_track_ownership")
     .delete()
@@ -116,7 +113,7 @@ async function syncOneDriver(
   const trackRows = [...ownedTrackIds]
     .map((trackId) => {
       const track = trackLookup.get(trackId);
-      if (!track) return null; // unknown track ID — skip
+      if (!track) return null;
       return {
         driver_id: driverId,
         iracing_track_id: trackId,
@@ -134,9 +131,10 @@ async function syncOneDriver(
 
 // ─── Route handler ───────────────────────────────────────────────────────────
 
-// iRacing OAuth callback — handles two modes:
-// driver   → links iRacing account to the logged-in driver and syncs their data
-// syncall  → admin-only: syncs all drivers who have a linked iracing_id
+// iRacing OAuth callback — two modes:
+// driver   → links iRacing account and syncs own iRating + car/track ownership
+// syncall  → admin only: batch-updates iRating for all linked drivers (no car/track —
+//            ownership can only be read for the authenticated user, not others)
 export async function GET(request) {
   const { searchParams, origin } = new URL(request.url);
   const code = searchParams.get("code");
@@ -150,11 +148,11 @@ export async function GET(request) {
     return NextResponse.redirect(`${origin}/login?error=iracing_no_code`);
   }
 
-  // Split state into PKCE verifier and mode
+  // State encodes PKCE verifier and mode separated by |
   const [verifier, mode = "driver"] = state.split("|");
 
   try {
-    // Use the session-aware client only for auth.getUser()
+    // Session-aware client for auth.getUser() only
     const authClient = await createClient();
     const {
       data: { user },
@@ -183,15 +181,11 @@ export async function GET(request) {
     }
     const { access_token: accessToken } = await tokenRes.json();
 
-    // Fetch the global car and track catalogues once — reused for all drivers
-    const [carLookup, trackLookup] = await Promise.all([
-      buildCarLookup(accessToken),
-      buildTrackLookup(accessToken),
-    ]);
-
-    // ── Driver mode: link own account and sync own data ──────────────────────
+    // ── Driver mode ──────────────────────────────────────────────────────────
+    // Links the iRacing account and syncs own iRating + car/track ownership.
+    // Car/track lookups are only needed here — ownership is per authenticated user.
     if (mode === "driver") {
-      // Get the iRacing identity of the person who just authenticated
+      // Confirm iRacing identity of the person who just authenticated
       const profileRes = await fetch(IRACING_PROFILE_URL, {
         headers: { Authorization: `Bearer ${accessToken}` },
       });
@@ -229,13 +223,17 @@ export async function GET(request) {
         );
       }
 
-      // Link the iRacing ID on the driver record
+      // Link the iRacing ID
       await supabase
         .from("drivers")
         .update({ iracing_id: iracingCustId })
         .eq("id", driver.id);
 
-      // Sync iRating + owned cars + owned tracks
+      // Build car/track catalogues then sync this driver's full data
+      const [carLookup, trackLookup] = await Promise.all([
+        buildCarLookup(accessToken),
+        buildTrackLookup(accessToken),
+      ]);
       await syncOneDriver(
         accessToken,
         driver.id,
@@ -249,7 +247,10 @@ export async function GET(request) {
       );
     }
 
-    // ── Syncall mode: admin syncs all linked drivers ──────────────────────────
+    // ── Syncall mode ─────────────────────────────────────────────────────────
+    // Admin only. Batch-fetches iRating for all linked drivers using the public
+    // /data/member/get endpoint — does NOT touch car/track ownership since
+    // iRacing only exposes ownership data for the authenticated user.
     if (mode === "syncall") {
       // Server-side role check — admins and super_admins only
       const { data: requestingDriver } = await supabase
@@ -272,22 +273,36 @@ export async function GET(request) {
         .select("id, iracing_id")
         .not("iracing_id", "is", null);
 
+      if (!linkedDrivers || linkedDrivers.length === 0) {
+        return NextResponse.redirect(`${origin}/admin?iracing_synced=0`);
+      }
+
+      // Batch-fetch iRatings — /data/member/get accepts comma-separated cust_ids
+      const custIds = linkedDrivers.map((d) => d.iracing_id).join(",");
+      const memberData = await fetchIracingS3(
+        `/data/member/get?cust_ids=${custIds}&include_licenses=true`,
+        accessToken,
+      );
+
+      // Build a Map<iracing_cust_id → sports_car_irating> from the response
+      // The response has a `members` array, each with cust_id and licenses
+      const iRatingByCustId = new Map();
+      for (const member of memberData.members || []) {
+        const irating = member.licenses?.sports_car?.irating ?? null;
+        iRatingByCustId.set(String(member.cust_id), irating);
+      }
+
+      // Update each driver's iRating and sync timestamp
+      const now = new Date().toISOString();
       let syncCount = 0;
-      // Sync sequentially to respect iRacing rate limits
-      for (const d of linkedDrivers || []) {
-        try {
-          await syncOneDriver(
-            accessToken,
-            d.id,
-            d.iracing_id,
-            carLookup,
-            trackLookup,
-          );
-          syncCount++;
-        } catch (err) {
-          // Log per-driver errors but continue syncing remaining drivers
-          console.error(`iRacing sync failed for driver ${d.id}:`, err.message);
-        }
+      for (const d of linkedDrivers) {
+        const irating = iRatingByCustId.get(String(d.iracing_id));
+        if (irating === undefined) continue; // driver not found in response
+        const { error: updateErr } = await supabase
+          .from("drivers")
+          .update({ irating, iracing_synced_at: now })
+          .eq("id", d.id);
+        if (!updateErr) syncCount++;
       }
 
       return NextResponse.redirect(
