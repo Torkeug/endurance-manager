@@ -4,8 +4,8 @@ import crypto from "crypto";
 const IRACING_AUTH_URL = "https://oauth.iracing.com/oauth2/authorize";
 const CLIENT_ID = "kronos-team";
 const REDIRECT_URI = `${process.env.NEXT_PUBLIC_APP_URL}/auth/callback/iracing`;
-// iracing.profile grants access to /oauth2/iracing/profile (cust_id + name)
-const SCOPE = "iracing.profile";
+// iracing.profile grants access to /oauth2/iracing/profile (identity)
+const SCOPE = "iracing.profile iracing.auth";
 
 // Generate PKCE code verifier and challenge
 function generatePKCE() {
