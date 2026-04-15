@@ -1,10 +1,9 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { supabaseBrowser as supabase } from "../../../lib/supabase-browser";
 import { TIMEZONES } from "../../../lib/timezone";
-import { useState, useEffect, useMemo } from "react";
 
 function formatDuration(minutes) {
   const h = Math.floor(minutes / 60);
@@ -28,9 +27,7 @@ export default function NouvelEvenement() {
   const router = useRouter();
   const [form, setForm] = useState(emptyForm);
   const [circuits, setCircuits] = useState([]);
-  const [iracingTrackGroups, setIracingTrackGroups] = useState([]);
   const [selectedBaseTrack, setSelectedBaseTrack] = useState("");
-  const [iracingTrackNames, setIracingTrackNames] = useState({});
   const [pitTime, setPitTime] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -39,8 +36,9 @@ export default function NouvelEvenement() {
   const [isSpecial, setIsSpecial] = useState(false);
   const [weekendStartDate, setWeekendStartDate] = useState("");
   const [specialStartTimes, setSpecialStartTimes] = useState([]);
-
   const [authChecked, setAuthChecked] = useState(false);
+  // Track name lookup: iracing_track_id → track_name
+  const [trackNameById, setTrackNameById] = useState({});
 
   // Auth checked client-side because this is a client component (needs form interactivity).
   // Redirects non-admins before rendering the form.
@@ -73,28 +71,6 @@ export default function NouvelEvenement() {
       .order("name")
       .then(({ data }) => setCircuits(data || []));
   }, []);
-
-  // Fetch base track names for grouped circuit dropdown
-  useEffect(() => {
-    supabase
-      .from("iracing_tracks")
-      .select("iracing_track_id, track_name, config_name")
-      .order("track_name")
-      .then(({ data }) => {
-        // Group by base track name
-        const groups = {};
-        for (const t of data || []) {
-          if (!groups[t.track_name]) groups[t.track_name] = [];
-          groups[t.track_name].push(t);
-        }
-        setIracingTrackGroups(
-          Object.entries(groups).sort(([a], [b]) => a.localeCompare(b)),
-        );
-      });
-  }, []);
-
-  // Track name lookup: iracing_track_id → track_name
-  const [trackNameById, setTrackNameById] = useState({});
 
   useEffect(() => {
     supabase

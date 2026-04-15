@@ -22,9 +22,7 @@ export default function ModifierEvenement({ params }) {
   const [form, setForm] = useState(null);
   const [circuits, setCircuits] = useState([]);
   const [trackNameById, setTrackNameById] = useState({});
-  const [iracingTrackGroups, setIracingTrackGroups] = useState([]);
   const [selectedBaseTrack, setSelectedBaseTrack] = useState("");
-  const [iracingTrackNames, setIracingTrackNames] = useState({});
   const [pitTime, setPitTime] = useState(null);
   const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(true);
@@ -110,36 +108,6 @@ export default function ModifierEvenement({ params }) {
       setFetching(false);
     });
   }, [id]);
-
-  // Fetch iRacing track groups for grouped circuit dropdown
-  useEffect(() => {
-    supabase
-      .from("iracing_tracks")
-      .select("iracing_track_id, track_name, config_name")
-      .order("track_name")
-      .then(({ data }) => {
-        const groups = {};
-        for (const t of data || []) {
-          if (!groups[t.track_name]) groups[t.track_name] = [];
-          groups[t.track_name].push(t);
-        }
-        setIracingTrackGroups(
-          Object.entries(groups).sort(([a], [b]) => a.localeCompare(b)),
-        );
-      });
-  }, []);
-
-  // Fetch base track names for grouped circuit dropdown
-  useEffect(() => {
-    supabase
-      .from("iracing_tracks")
-      .select("iracing_track_id, track_name")
-      .then(({ data }) => {
-        const map = {};
-        for (const t of data || []) map[t.iracing_track_id] = t.track_name;
-        setIracingTrackNames(map);
-      });
-  }, []);
 
   useEffect(() => {
     supabase
@@ -354,22 +322,6 @@ export default function ModifierEvenement({ params }) {
     transition: "all 0.15s",
   });
 
-  if (fetching)
-    return (
-      <div className="page">
-        <p style={{ color: "var(--text-dim)" }}>Chargement…</p>
-      </div>
-    );
-  if (!form)
-    return (
-      <div className="page">
-        <div className="alert alert-error">{error}</div>
-        <Link href="/evenements" className="btn btn-secondary">
-          ← Retour
-        </Link>
-      </div>
-    );
-
   const circuitGroups = useMemo(() => {
     const groups = {};
     const unlinked = [];
@@ -387,6 +339,22 @@ export default function ModifierEvenement({ params }) {
       unlinked,
     };
   }, [circuits, trackNameById]);
+
+  if (fetching)
+    return (
+      <div className="page">
+        <p style={{ color: "var(--text-dim)" }}>Chargement…</p>
+      </div>
+    );
+  if (!form)
+    return (
+      <div className="page">
+        <div className="alert alert-error">{error}</div>
+        <Link href="/evenements" className="btn btn-secondary">
+          ← Retour
+        </Link>
+      </div>
+    );
 
   if (!authChecked)
     return (
