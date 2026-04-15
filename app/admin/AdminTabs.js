@@ -40,6 +40,8 @@ export default function AdminTabs({
   trackOwnership,
   kronosCarsMap,
   iracingLabelById,
+  iracingTracks,
+  kronosCircuitsByTrackId,
   kronosCircuitNames,
 }) {
   const [activeTab, setActiveTab] = useState("pilotes");
@@ -125,7 +127,10 @@ export default function AdminTabs({
         <ClassesManager initialClasses={carClasses} initialCars={cars} />
       )}
       {activeTab === "circuits" && (
-        <CircuitsManager initialCircuits={circuits} />
+        <CircuitsManager
+          initialCircuits={circuits}
+          iracingTracks={iracingTracks}
+        />
       )}
       {activeTab === "types" && (
         <EventTypesManager
@@ -153,6 +158,7 @@ export default function AdminTabs({
           trackOwnership={trackOwnership}
           kronosCarsMap={kronosCarsMap}
           iracingLabelById={iracingLabelById}
+          kronosCircuitsByTrackId={kronosCircuitsByTrackId}
           kronosCircuitNames={kronosCircuitNames}
         />
       )}

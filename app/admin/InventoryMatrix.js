@@ -116,6 +116,7 @@ export default function InventoryMatrix({
   trackOwnership,
   kronosCarsMap,
   iracingLabelById,
+  kronosCircuitsByTrackId,
   kronosCircuitNames,
 }) {
   const [subTab, setSubTab] = useState("cars");
@@ -179,10 +180,15 @@ export default function InventoryMatrix({
     [allTracks],
   );
 
+  // Two-tier Kronos badge: exact iracing_track_id match first, name fallback for unlinked
   const kronosCircuitSet = useMemo(
     () => new Set(kronosCircuitNames || []),
     [kronosCircuitNames],
   );
+
+  const isKronosTrack = (track) =>
+    !!(kronosCircuitsByTrackId || {})[track.iracing_track_id] ||
+    kronosCircuitSet.has(track.track_name);
 
   // Load persisted filter state from localStorage on mount
   // Never read localStorage in useState initializer — causes hydration errors
@@ -852,9 +858,7 @@ export default function InventoryMatrix({
                           <tr key={track.track_name}>
                             <td style={nameColStyle}>
                               {track.track_name}
-                              {kronosCircuitSet.has(track.track_name) && (
-                                <KBadge />
-                              )}
+                              {isKronosTrack(track) && <KBadge />}
                             </td>
                             <td style={countCellStyle}>
                               {ownerCount}/{matrixDrivers.length}
@@ -913,9 +917,7 @@ export default function InventoryMatrix({
                                   }}
                                 >
                                   {track.track_name}
-                                  {kronosCircuitSet.has(track.track_name) && (
-                                    <KBadge />
-                                  )}
+                                  {isKronosTrack(track) && <KBadge />}
                                 </td>
                                 <td
                                   style={{ ...countCellStyle, opacity: 0.55 }}

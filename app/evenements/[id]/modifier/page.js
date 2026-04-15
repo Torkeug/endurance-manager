@@ -21,6 +21,7 @@ export default function ModifierEvenement({ params }) {
 
   const [form, setForm] = useState(null);
   const [circuits, setCircuits] = useState([]);
+  const [iracingTrackNames, setIracingTrackNames] = useState({});
   const [pitTime, setPitTime] = useState(null);
   const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(true);
@@ -56,7 +57,7 @@ export default function ModifierEvenement({ params }) {
     Promise.all([
       supabase
         .from("circuits")
-        .select("id, name, pit_lane_time_seconds")
+        .select("id, name, pit_lane_time_seconds, iracing_track_id")
         .order("name"),
       supabase.from("events").select("*").eq("id", id).single(),
     ]).then(([{ data: circuitsData }, { data: event, error: eventError }]) => {
@@ -96,6 +97,18 @@ export default function ModifierEvenement({ params }) {
       setFetching(false);
     });
   }, [id]);
+
+  // Fetch base track names for grouped circuit dropdown
+  useEffect(() => {
+    supabase
+      .from("iracing_tracks")
+      .select("iracing_track_id, track_name")
+      .then(({ data }) => {
+        const map = {};
+        for (const t of data || []) map[t.iracing_track_id] = t.track_name;
+        setIracingTrackNames(map);
+      });
+  }, []);
 
   useEffect(() => {
     if (!form?.circuit_id) {
@@ -538,12 +551,55 @@ export default function ModifierEvenement({ params }) {
                 onChange={set("circuit_id")}
                 required
               >
-                <option value="">— Sélectionner —</option>
-                {circuits.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.name}
-                  </option>
-                ))}
+                <option value="">— Sélectionner un circuit —</option>
+                {(() => {
+                  // Group circuits by base track name from iRacing
+                  // Circuits without iracing_track_id shown at bottom
+                  const linked = circuits.filter((c) => c.iracing_track_id);
+                  const unlinked = circuits.filter((c) => !c.iracing_track_id);
+
+                  // Group linked circuits by base track name
+                  const groups = {};
+                  for (const c of linked) {
+                    const baseName =
+                      iracingTrackNames[c.iracing_track_id] || c.name;
+                    if (!groups[baseName]) groups[baseName] = [];
+                    groups[baseName].push(c);
+                  }
+
+                  return (
+                    <>
+                      {Object.entries(groups)
+                        .sort(([a], [b]) => a.localeCompare(b))
+                        .map(([baseName, configs]) =>
+                          configs.length === 1 ? (
+                            // Single config — no optgroup needed
+                            <option key={configs[0].id} value={configs[0].id}>
+                              {configs[0].name}
+                            </option>
+                          ) : (
+                            // Multiple configs — group them
+                            <optgroup key={baseName} label={baseName}>
+                              {configs.map((c) => (
+                                <option key={c.id} value={c.id}>
+                                  {c.name}
+                                </option>
+                              ))}
+                            </optgroup>
+                          ),
+                        )}
+                      {unlinked.length > 0 && (
+                        <optgroup label="— Autres circuits —">
+                          {unlinked.map((c) => (
+                            <option key={c.id} value={c.id}>
+                              {c.name}
+                            </option>
+                          ))}
+                        </optgroup>
+                      )}
+                    </>
+                  );
+                })()}
               </select>
             </div>
             <div className="form-group">

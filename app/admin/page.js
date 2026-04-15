@@ -27,10 +27,11 @@ export default async function AdminPage() {
     { data: durationPresets },
     { data: specialStartTimes },
     { data: iracingCars },
+    { data: iracingTracks },
     { data: allCarOwnership },
     { data: allTrackOwnership },
   ] = await Promise.all([
-    supabase.from("circuits").select("*").order("name"),
+    supabase.from("circuits").select("*, iracing_track_id").order("name"),
     supabase.from("cars").select("*").order("class").order("name"),
     supabase.from("crew_names").select("*").order("name"),
     supabase.from("car_classes").select("*").order("sort_order"),
@@ -53,6 +54,10 @@ export default async function AdminPage() {
       .from("iracing_cars")
       .select("iracing_car_id, car_name, car_types, car_type_label")
       .order("car_name"),
+    supabase
+      .from("iracing_tracks")
+      .select("iracing_track_id, track_name, config_name, track_category")
+      .order("track_name"),
     supabase
       .from("driver_car_ownership")
       .select("driver_id, iracing_car_id, car_name, car_category, car_types"),
@@ -140,8 +145,18 @@ export default async function AdminPage() {
       iracingLabelById[car.iracing_car_id] = car.car_type_label;
   }
 
-  // Circuit names for track Kronos badge (still name-based — no iracing_track_id on circuits)
-  const kronosCircuitNames = (circuits || []).map((c) => c.name);
+  // Kronos circuits map: iracing_track_id → circuit (for exact badge matching)
+  const kronosCircuitsByTrackId = {};
+  for (const circuit of circuits || []) {
+    if (circuit.iracing_track_id) {
+      kronosCircuitsByTrackId[circuit.iracing_track_id] = circuit;
+    }
+  }
+
+  // Keep name-based fallback for circuits not yet linked to iRacing
+  const kronosCircuitNames = (circuits || [])
+    .filter((c) => !c.iracing_track_id)
+    .map((c) => c.name);
 
   return (
     <div className="page">
@@ -182,6 +197,8 @@ export default async function AdminPage() {
         kronosCircuitNames={kronosCircuitNames}
         kronosCarsMap={kronosCarsMap}
         iracingLabelById={iracingLabelById}
+        iracingTracks={iracingTracks || []}
+        kronosCircuitsByTrackId={kronosCircuitsByTrackId}
       />
     </div>
   );

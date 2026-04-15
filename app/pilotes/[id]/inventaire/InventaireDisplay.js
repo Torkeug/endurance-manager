@@ -212,11 +212,14 @@ export default function InventaireDisplay({
   carData,
   trackData,
   kronosCarIdsArr,
+  kronosTrackIdsArr,
   kronosCircuitNamesArr,
 }) {
   // iracing_car_id integers — exact match, no string comparison fragility
   const kronosCarIds = new Set(kronosCarIdsArr);
-  const kronosCircuitNames = new Set(kronosCircuitNamesArr);
+  // Exact iracing_track_id match + name fallback for unlinked circuits
+  const kronosTrackIds = new Set(kronosTrackIdsArr || []);
+  const kronosCircuitNames = new Set(kronosCircuitNamesArr || []);
 
   // All collapsed by default
   const [expandedCarCats, setExpandedCarCats] = useState(new Set());
@@ -409,9 +412,9 @@ export default function InventaireDisplay({
                       {/* Normal tracks */}
                       {allNormalTracks.map((baseTrack, idx) => {
                         const trackKey = `${cat.category}|${baseTrack.track_name}`;
-                        const isKronos = kronosCircuitNames.has(
-                          baseTrack.track_name,
-                        );
+                        const isKronos =
+                          kronosTrackIds.has(baseTrack.iracing_track_id) ||
+                          kronosCircuitNames.has(baseTrack.track_name);
                         // isLast only if no legacy group follows
                         const isLast =
                           idx === allNormalTracks.length - 1 &&
@@ -447,9 +450,11 @@ export default function InventaireDisplay({
                           {legacyExpanded &&
                             cat.legacyTracks.map((baseTrack, idx) => {
                               const trackKey = `legacy_track|${cat.category}|${baseTrack.track_name}`;
-                              const isKronos = kronosCircuitNames.has(
-                                baseTrack.track_name,
-                              );
+                              const isKronos =
+                                kronosTrackIds.has(
+                                  baseTrack.iracing_track_id,
+                                ) ||
+                                kronosCircuitNames.has(baseTrack.track_name);
                               const isLast =
                                 idx === cat.legacyTracks.length - 1;
                               return (

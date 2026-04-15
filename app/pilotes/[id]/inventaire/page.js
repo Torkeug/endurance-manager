@@ -40,13 +40,24 @@ export default async function InventairePage({ params }) {
 
   const { data: kronosCircuits } = await supabase
     .from("circuits")
-    .select("name");
+    .select("name, iracing_track_id");
 
   // Fetch iRacing catalog labels — used for non-Kronos car grouping in inventory
   const { data: iracingCatalog } = await supabase
     .from("iracing_cars")
     .select("iracing_car_id, car_type_label")
     .not("car_type_label", "is", null);
+
+  // Kronos track IDs for exact badge matching
+  const kronosTrackIds = new Set(
+    (kronosCircuits || [])
+      .filter((c) => c.iracing_track_id)
+      .map((c) => c.iracing_track_id),
+  );
+  // Name fallback for circuits not yet linked to iRacing
+  const kronosCircuitNamesFallback = (kronosCircuits || [])
+    .filter((c) => !c.iracing_track_id)
+    .map((c) => c.name);
 
   // Build lookup map: iracing_car_id → { class, car_type_label } for Kronos cars
   const kronosCarsById = new Map();
@@ -274,7 +285,8 @@ export default async function InventairePage({ params }) {
           trackData={trackData}
           // Pass iracing_car_ids for exact Kronos badge matching
           kronosCarIdsArr={[...kronosCarsById.keys()]}
-          kronosCircuitNamesArr={(kronosCircuits || []).map((c) => c.name)}
+          kronosTrackIdsArr={[...kronosTrackIds]}
+          kronosCircuitNamesArr={kronosCircuitNamesFallback}
         />
       )}
     </div>
