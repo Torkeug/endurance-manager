@@ -635,8 +635,7 @@ function KronosEnduranceTab({ initialCars, iracingCars }) {
 // ─── Catalogue iRacing tab ────────────────────────────────────────────────────
 // Shows all iRacing cars — admin can set car_type_label for inventory grouping.
 // Has no impact on the endurance/event side.
-function IracingCatalogueTab({ iracingCars: initialIracingCars }) {
-  const [iracingCars, setIracingCars] = useState(initialIracingCars || []);
+function IracingCatalogueTab({ iracingCars, setIracingCars }) {
   const [searchQuery, setSearchQuery] = useState("");
   const [saving, setSaving] = useState(null);
   const [error, setError] = useState(null);
@@ -852,8 +851,13 @@ function IracingCatalogueTab({ iracingCars: initialIracingCars }) {
 
 // ─── Main export ──────────────────────────────────────────────────────────────
 // Two-tab wrapper: Kronos Endurance (event cars) + Catalogue iRacing (inventory labels)
-export default function CarsManager({ initialCars, iracingCars }) {
+export default function CarsManager({
+  initialCars,
+  iracingCars: initialIracingCars,
+}) {
   const [activeTab, setActiveTab] = useState("kronos");
+  // Lifted state — persists across tab switches within CarsManager
+  const [iracingCars, setIracingCars] = useState(initialIracingCars);
 
   const tabs = [
     { id: "kronos", label: "Kronos Endurance" },
@@ -905,7 +909,10 @@ export default function CarsManager({ initialCars, iracingCars }) {
         />
       )}
       {activeTab === "catalogue" && (
-        <IracingCatalogueTab iracingCars={iracingCars} />
+        <IracingCatalogueTab
+          iracingCars={iracingCars}
+          setIracingCars={setIracingCars}
+        />
       )}
     </div>
   );
