@@ -12,7 +12,7 @@ const CAR_CATEGORY_LABELS = {
 };
 
 const TRACK_CATEGORY_LABELS = {
-  road: "Route",
+  road: "Road",
   oval: "Oval",
   dirt_oval: "Dirt Oval",
   dirt_road: "Dirt Road",
