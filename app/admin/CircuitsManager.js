@@ -287,6 +287,9 @@ export default function CircuitsManager({ initialCircuits, iracingTracks }) {
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Escape") setSearchQuery("");
+              }}
               placeholder="Rechercher un circuit iRacing…"
             />
             {filteredGroups.length > 0 && (
