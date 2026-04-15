@@ -194,6 +194,7 @@ export default function Nav() {
 
         {/* Right side — marginLeft:auto keeps it pinned right when links don't fill the row */}
         <div
+          className="nav-controls"
           style={{
             display: "flex",
             alignItems: "center",

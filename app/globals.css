@@ -343,9 +343,14 @@ tbody td {
   .nav-links {
     flex: none;
     width: 100%;
+    order: 2; /* drops to row 2, after logo + controls */
     border-top: 1px solid var(--border);
     padding-top: 0.25rem;
     padding-bottom: 0.25rem;
+  }
+
+  .nav-controls {
+    order: 1; /* stays on row 1 next to the logo */
   }
 
   .nav-driver-name {
