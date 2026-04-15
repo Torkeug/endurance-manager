@@ -134,7 +134,7 @@ export default function Nav() {
             style={{
               display: "flex",
               gap: "0.25rem",
-              flex: 1, // takes remaining space on desktop
+              // flex:1 is in globals.css .nav-links — can't use inline or it overrides the mobile media query
               overflowX: "auto",
               WebkitOverflowScrolling: "touch",
               scrollbarWidth: "none",
