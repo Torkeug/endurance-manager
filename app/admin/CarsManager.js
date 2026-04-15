@@ -136,10 +136,6 @@ function KronosEnduranceTab({ initialCars, iracingCars }) {
       setError("Sélectionnez une voiture depuis le catalogue iRacing.");
       return false;
     }
-    if (!form.tank_size_litres) {
-      setError("La taille du réservoir est obligatoire.");
-      return false;
-    }
     return true;
   };
 
@@ -162,7 +158,9 @@ function KronosEnduranceTab({ initialCars, iracingCars }) {
           name: selectedIracingCar.car_name,
           iracing_car_id: selectedIracingCar.iracing_car_id,
           car_type_label: form.car_type_label || null,
-          tank_size_litres: parseFloat(form.tank_size_litres),
+          tank_size_litres: form.tank_size_litres
+            ? parseFloat(form.tank_size_litres)
+            : null,
         },
       ])
       .select()
@@ -193,7 +191,9 @@ function KronosEnduranceTab({ initialCars, iracingCars }) {
         name: selectedIracingCar.car_name,
         iracing_car_id: selectedIracingCar.iracing_car_id,
         car_type_label: form.car_type_label || null,
-        tank_size_litres: parseFloat(form.tank_size_litres),
+        tank_size_litres: form.tank_size_litres
+          ? parseFloat(form.tank_size_litres)
+          : null,
       })
       .eq("id", editingId)
       .select()

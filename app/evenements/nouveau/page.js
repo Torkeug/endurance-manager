@@ -27,6 +27,8 @@ export default function NouvelEvenement() {
   const router = useRouter();
   const [form, setForm] = useState(emptyForm);
   const [circuits, setCircuits] = useState([]);
+  const [iracingTrackGroups, setIracingTrackGroups] = useState([]);
+  const [selectedBaseTrack, setSelectedBaseTrack] = useState("");
   const [iracingTrackNames, setIracingTrackNames] = useState({});
   const [pitTime, setPitTime] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -75,11 +77,18 @@ export default function NouvelEvenement() {
   useEffect(() => {
     supabase
       .from("iracing_tracks")
-      .select("iracing_track_id, track_name")
+      .select("iracing_track_id, track_name, config_name")
+      .order("track_name")
       .then(({ data }) => {
-        const map = {};
-        for (const t of data || []) map[t.iracing_track_id] = t.track_name;
-        setIracingTrackNames(map);
+        // Group by base track name
+        const groups = {};
+        for (const t of data || []) {
+          if (!groups[t.track_name]) groups[t.track_name] = [];
+          groups[t.track_name].push(t);
+        }
+        setIracingTrackGroups(
+          Object.entries(groups).sort(([a], [b]) => a.localeCompare(b)),
+        );
       });
   }, []);
 
@@ -541,64 +550,112 @@ export default function NouvelEvenement() {
             Circuit
           </h3>
           <div className="form-grid">
-            <div className="form-group">
-              <label htmlFor="circuit_id">Circuit *</label>
-              <select
-                id="circuit_id"
-                value={form.circuit_id}
-                onChange={set("circuit_id")}
-                required
-              >
-                <option value="">— Sélectionner un circuit —</option>
-                {(() => {
-                  // Group circuits by base track name from iRacing
-                  // Circuits without iracing_track_id shown at bottom
-                  const linked = circuits.filter((c) => c.iracing_track_id);
-                  const unlinked = circuits.filter((c) => !c.iracing_track_id);
-
-                  // Group linked circuits by base track name
-                  const groups = {};
-                  for (const c of linked) {
-                    const baseName =
-                      iracingTrackNames[c.iracing_track_id] || c.name;
-                    if (!groups[baseName]) groups[baseName] = [];
-                    groups[baseName].push(c);
-                  }
-
-                  return (
-                    <>
-                      {Object.entries(groups)
-                        .sort(([a], [b]) => a.localeCompare(b))
-                        .map(([baseName, configs]) =>
-                          configs.length === 1 ? (
-                            // Single config — no optgroup needed
-                            <option key={configs[0].id} value={configs[0].id}>
-                              {configs[0].name}
+            <div className="form-group" style={{ gridColumn: "1 / -1" }}>
+              <label>Circuit *</label>
+              {iracingTrackGroups.length > 0 ? (
+                <div
+                  style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: "0.5rem",
+                  }}
+                >
+                  {/* Step 1 — base track */}
+                  <select
+                    value={selectedBaseTrack}
+                    onChange={(e) => {
+                      setSelectedBaseTrack(e.target.value);
+                      setForm((prev) => ({ ...prev, circuit_id: "" }));
+                    }}
+                  >
+                    <option value="">— Sélectionner un circuit —</option>
+                    {iracingTrackGroups.map(([trackName]) => (
+                      <option key={trackName} value={trackName}>
+                        {trackName}
+                      </option>
+                    ))}
+                    {/* Unlinked Kronos circuits at bottom */}
+                    {circuits.filter((c) => !c.iracing_track_id).length > 0 && (
+                      <optgroup label="— Autres —">
+                        {circuits
+                          .filter((c) => !c.iracing_track_id)
+                          .map((c) => (
+                            <option key={c.id} value={`__unlinked__${c.id}`}>
+                              {c.name}
                             </option>
-                          ) : (
-                            // Multiple configs — group them
-                            <optgroup key={baseName} label={baseName}>
-                              {configs.map((c) => (
-                                <option key={c.id} value={c.id}>
-                                  {c.name}
-                                </option>
-                              ))}
-                            </optgroup>
-                          ),
-                        )}
-                      {unlinked.length > 0 && (
-                        <optgroup label="— Autres circuits —">
-                          {unlinked.map((c) => (
+                          ))}
+                      </optgroup>
+                    )}
+                  </select>
+
+                  {/* Step 2 — layout, filtered to Kronos circuits only */}
+                  {selectedBaseTrack &&
+                    !selectedBaseTrack.startsWith("__unlinked__") &&
+                    (() => {
+                      const group = iracingTrackGroups.find(
+                        ([name]) => name === selectedBaseTrack,
+                      );
+                      const layoutIds = (group?.[1] || []).map(
+                        (t) => t.iracing_track_id,
+                      );
+                      const kronosLayouts = circuits.filter((c) =>
+                        layoutIds.includes(c.iracing_track_id),
+                      );
+                      if (kronosLayouts.length === 0)
+                        return (
+                          <div
+                            style={{
+                              fontSize: "0.82rem",
+                              color: "var(--text-dim)",
+                            }}
+                          >
+                            Aucun layout Kronos pour ce circuit.
+                          </div>
+                        );
+                      return (
+                        <select
+                          value={form.circuit_id}
+                          onChange={set("circuit_id")}
+                          required
+                        >
+                          <option value="">— Sélectionner un layout —</option>
+                          {kronosLayouts.map((c) => (
                             <option key={c.id} value={c.id}>
                               {c.name}
                             </option>
                           ))}
-                        </optgroup>
-                      )}
-                    </>
-                  );
-                })()}
-              </select>
+                        </select>
+                      );
+                    })()}
+
+                  {/* Unlinked circuit selected directly */}
+                  {selectedBaseTrack.startsWith("__unlinked__") &&
+                    (() => {
+                      const id = selectedBaseTrack.replace("__unlinked__", "");
+                      setForm((prev) =>
+                        prev.circuit_id === id
+                          ? prev
+                          : { ...prev, circuit_id: id },
+                      );
+                      return null;
+                    })()}
+                </div>
+              ) : (
+                // Fallback flat select if no iRacing tracks loaded
+                <select
+                  id="circuit_id"
+                  value={form.circuit_id}
+                  onChange={set("circuit_id")}
+                  required
+                >
+                  <option value="">— Sélectionner un circuit —</option>
+                  {circuits.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.name}
+                    </option>
+                  ))}
+                </select>
+              )}
             </div>
             <div className="form-group">
               <label>Temps pit lane (auto-rempli)</label>
