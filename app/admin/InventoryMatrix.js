@@ -165,10 +165,17 @@ export default function InventoryMatrix({
     );
   };
 
-  const allCarClasses = useMemo(
-    () => [...new Set((allCars || []).map(getCarClass))].sort(),
-    [allCars, kronosCarsMap, iracingLabelById],
-  );
+  // Only show class filters relevant to the currently selected categories
+  const allCarClasses = useMemo(() => {
+    const filtered =
+      selectedCarCats.length === 0
+        ? allCars || []
+        : (allCars || []).filter((c) =>
+            selectedCarCats.includes(c.car_category),
+          );
+    return [...new Set(filtered.map(getCarClass))].sort();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [allCars, selectedCarCats, kronosCarsMap, iracingLabelById]);
 
   const allTrackCategories = useMemo(
     () =>
@@ -239,6 +246,14 @@ export default function InventoryMatrix({
       );
     } catch {}
   }, [selectedCarCats, loaded]);
+
+  // When categories change, drop any selected classes that no longer exist in the filtered set
+  useEffect(() => {
+    if (!loaded) return;
+    setSelectedCarClasses((prev) =>
+      prev.filter((cls) => allCarClasses.includes(cls)),
+    );
+  }, [allCarClasses, loaded]);
 
   useEffect(() => {
     if (!loaded) return;
