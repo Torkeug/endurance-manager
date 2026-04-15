@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect, use } from "react";
+import { useState, useEffect, use, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { supabaseBrowser as supabase } from "../../../../lib/supabase-browser";
@@ -21,6 +21,7 @@ export default function ModifierEvenement({ params }) {
 
   const [form, setForm] = useState(null);
   const [circuits, setCircuits] = useState([]);
+  const [trackNameById, setTrackNameById] = useState({});
   const [iracingTrackGroups, setIracingTrackGroups] = useState([]);
   const [selectedBaseTrack, setSelectedBaseTrack] = useState("");
   const [iracingTrackNames, setIracingTrackNames] = useState({});
@@ -89,17 +90,14 @@ export default function ModifierEvenement({ params }) {
         ig_sunset: event.ig_sunset || "",
         notes: event.notes || "",
       });
-      // Pre-fill base track selection for grouped dropdown
+      // Pre-fill base track for grouped dropdown
       if (event.circuit_id && circuitsData) {
-        const existingCircuit = circuitsData.find(
-          (c) => c.id === event.circuit_id,
-        );
-        if (existingCircuit?.iracing_track_id) {
-          // Will be resolved once iracingTrackGroups loads — handled in useEffect below
-          // Store iracing_track_id temporarily to resolve base track name
-          setSelectedBaseTrack(
-            `__pending__${existingCircuit.iracing_track_id}`,
-          );
+        const existing = circuitsData.find((c) => c.id === event.circuit_id);
+        if (existing?.iracing_track_id) {
+          // Will be resolved once trackNameById loads
+          setSelectedBaseTrack(`__pending__${existing.iracing_track_id}`);
+        } else if (existing) {
+          setSelectedBaseTrack(`__direct__${existing.id}`);
         }
       }
       // Archived events cannot be modified — redirect to detail page
@@ -143,15 +141,25 @@ export default function ModifierEvenement({ params }) {
       });
   }, []);
 
+  useEffect(() => {
+    supabase
+      .from("iracing_tracks")
+      .select("iracing_track_id, track_name")
+      .then(({ data }) => {
+        const map = {};
+        for (const t of data || []) map[t.iracing_track_id] = t.track_name;
+        setTrackNameById(map);
+      });
+  }, []);
+
   // Resolve base track name once iracingTrackGroups loads
   useEffect(() => {
     if (!selectedBaseTrack.startsWith("__pending__")) return;
     const trackId = parseInt(selectedBaseTrack.replace("__pending__", ""));
-    const group = iracingTrackGroups.find(([, configs]) =>
-      configs.some((c) => c.iracing_track_id === trackId),
-    );
-    if (group) setSelectedBaseTrack(group[0]);
-  }, [iracingTrackGroups, selectedBaseTrack]);
+    if (trackNameById[trackId]) {
+      setSelectedBaseTrack(trackNameById[trackId]);
+    }
+  }, [trackNameById, selectedBaseTrack]);
 
   useEffect(() => {
     if (!form?.circuit_id) {
@@ -361,6 +369,24 @@ export default function ModifierEvenement({ params }) {
         </Link>
       </div>
     );
+
+  const circuitGroups = useMemo(() => {
+    const groups = {};
+    const unlinked = [];
+    for (const c of circuits) {
+      if (c.iracing_track_id && trackNameById[c.iracing_track_id]) {
+        const baseName = trackNameById[c.iracing_track_id];
+        if (!groups[baseName]) groups[baseName] = [];
+        groups[baseName].push(c);
+      } else {
+        unlinked.push(c);
+      }
+    }
+    return {
+      sorted: Object.entries(groups).sort(([a], [b]) => a.localeCompare(b)),
+      unlinked,
+    };
+  }, [circuits, trackNameById]);
 
   if (!authChecked)
     return (
@@ -588,125 +614,85 @@ export default function ModifierEvenement({ params }) {
           <div className="form-grid">
             <div className="form-group" style={{ gridColumn: "1 / -1" }}>
               <label>Circuit *</label>
-              {iracingTrackGroups.length > 0 ? (
-                <div
-                  style={{
-                    display: "flex",
-                    flexDirection: "column",
-                    gap: "0.5rem",
-                  }}
-                >
-                  {/* Step 1 — base track */}
-                  <select
-                    value={selectedBaseTrack}
-                    onChange={(e) => {
-                      setSelectedBaseTrack(e.target.value);
-                      setForm((prev) => ({ ...prev, circuit_id: "" }));
-                    }}
-                  >
-                    <option value="">— Sélectionner un circuit —</option>
-                    {iracingTrackGroups.map(([trackName]) => (
-                      <option key={trackName} value={trackName}>
-                        {trackName}
-                      </option>
-                    ))}
-                    {/* Unlinked Kronos circuits at bottom */}
-                    {circuits.filter((c) => !c.iracing_track_id).length > 0 && (
-                      <optgroup label="— Autres —">
-                        {circuits
-                          .filter((c) => !c.iracing_track_id)
-                          .map((c) => (
-                            <option key={c.id} value={`__unlinked__${c.id}`}>
-                              {c.name}
-                            </option>
-                          ))}
-                      </optgroup>
-                    )}
-                  </select>
-
-                  {/* Step 2 — layout, filtered to Kronos circuits only */}
-                  {selectedBaseTrack &&
-                    !selectedBaseTrack.startsWith("__unlinked__") &&
-                    (() => {
-                      const group = iracingTrackGroups.find(
-                        ([name]) => name === selectedBaseTrack,
-                      );
-                      const layoutIds = (group?.[1] || []).map(
-                        (t) => t.iracing_track_id,
-                      );
-                      const kronosLayouts = circuits.filter((c) =>
-                        layoutIds.includes(c.iracing_track_id),
-                      );
-                      if (kronosLayouts.length === 0)
-                        return (
-                          <div
-                            style={{
-                              fontSize: "0.82rem",
-                              color: "var(--text-dim)",
-                            }}
-                          >
-                            Aucun layout Kronos pour ce circuit.
-                          </div>
-                        );
-                      return (
-                        <select
-                          value={form.circuit_id}
-                          onChange={set("circuit_id")}
-                          required
-                        >
-                          <option value="">— Sélectionner un layout —</option>
-                          {kronosLayouts.map((c) => (
-                            <option key={c.id} value={c.id}>
-                              {c.name}
-                            </option>
-                          ))}
-                        </select>
-                      );
-                    })()}
-
-                  {/* Unlinked circuit selected directly */}
-                  {selectedBaseTrack.startsWith("__unlinked__") &&
-                    (() => {
-                      const id = selectedBaseTrack.replace("__unlinked__", "");
-                      setForm((prev) =>
-                        prev.circuit_id === id
-                          ? prev
-                          : { ...prev, circuit_id: id },
-                      );
-                      return null;
-                    })()}
-                </div>
-              ) : (
-                // Fallback flat select if no iRacing tracks loaded
-                <select
-                  id="circuit_id"
-                  value={form.circuit_id}
-                  onChange={set("circuit_id")}
-                  required
-                >
-                  <option value="">— Sélectionner un circuit —</option>
-                  {circuits.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.name}
-                    </option>
-                  ))}
-                </select>
-              )}
-            </div>
-            <div className="form-group">
-              <label>Temps pit lane (auto-rempli)</label>
               <div
                 style={{
-                  background: "var(--surface-2)",
-                  border: "1px solid var(--border)",
-                  borderRadius: "3px",
-                  padding: "0.55rem 0.75rem",
-                  fontFamily: "var(--font-mono), monospace",
-                  fontSize: "0.9rem",
-                  color: pitTime ? "var(--accent)" : "var(--text-dim)",
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "0.5rem",
                 }}
               >
-                {pitTime ? `${pitTime}s` : "— sélectionnez un circuit"}
+                {/* Step 1 — base track */}
+                <select
+                  value={selectedBaseTrack}
+                  onChange={(e) => {
+                    setSelectedBaseTrack(e.target.value);
+                    // Reset layout selection when base track changes
+                    setForm((prev) => ({ ...prev, circuit_id: "" }));
+                  }}
+                >
+                  <option value="">— Sélectionner un circuit —</option>
+                  {circuitGroups.sorted.map(([baseName]) => (
+                    <option key={baseName} value={baseName}>
+                      {baseName}
+                    </option>
+                  ))}
+                  {circuitGroups.unlinked.length > 0 && (
+                    <optgroup label="— Autres —">
+                      {circuitGroups.unlinked.map((c) => (
+                        <option key={c.id} value={`__direct__${c.id}`}>
+                          {c.name}
+                        </option>
+                      ))}
+                    </optgroup>
+                  )}
+                </select>
+
+                {/* Step 2 — layout (only shown when base track selected and has multiple layouts) */}
+                {selectedBaseTrack &&
+                  !selectedBaseTrack.startsWith("__direct__") &&
+                  (() => {
+                    const layouts =
+                      circuitGroups.sorted.find(
+                        ([name]) => name === selectedBaseTrack,
+                      )?.[1] || [];
+                    // Single layout — auto-select it
+                    if (
+                      layouts.length === 1 &&
+                      form.circuit_id !== layouts[0].id
+                    ) {
+                      setForm((prev) => ({
+                        ...prev,
+                        circuit_id: layouts[0].id,
+                      }));
+                    }
+                    if (layouts.length <= 1) return null;
+                    return (
+                      <select
+                        value={form.circuit_id}
+                        onChange={set("circuit_id")}
+                      >
+                        <option value="">— Sélectionner un layout —</option>
+                        {layouts.map((c) => (
+                          <option key={c.id} value={c.id}>
+                            {c.name}
+                          </option>
+                        ))}
+                      </select>
+                    );
+                  })()}
+
+                {/* Direct unlinked circuit — set circuit_id immediately */}
+                {selectedBaseTrack.startsWith("__direct__") &&
+                  (() => {
+                    const directId = selectedBaseTrack.replace(
+                      "__direct__",
+                      "",
+                    );
+                    if (form.circuit_id !== directId) {
+                      setForm((prev) => ({ ...prev, circuit_id: directId }));
+                    }
+                    return null;
+                  })()}
               </div>
             </div>
           </div>
