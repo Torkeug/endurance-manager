@@ -46,6 +46,7 @@ function FilterPill({ label, active, onToggle }) {
 // Shared table cell styles
 // Fixed column widths — applied via colgroup for proper alignment
 const NAME_COL_WIDTH = 220;
+const COUNT_COL_WIDTH = 48;
 const DRIVER_COL_WIDTH = 36;
 
 const nameColStyle = {
@@ -69,9 +70,21 @@ const cellStyle = {
   padding: "0.25rem 0",
   textAlign: "center",
   borderBottom: "1px solid var(--border)",
-  fontSize: "0.8rem",
   width: `${DRIVER_COL_WIDTH}px`,
   boxSizing: "border-box",
+};
+
+const countCellStyle = {
+  padding: "0.25rem 0.4rem",
+  textAlign: "center",
+  borderBottom: "1px solid var(--border)",
+  borderRight: "1px solid var(--border)",
+  width: `${COUNT_COL_WIDTH}px`,
+  boxSizing: "border-box",
+  fontSize: "0.72rem",
+  fontWeight: 700,
+  fontFamily: "var(--font-mono), monospace",
+  color: "var(--accent)",
 };
 
 // Kronos badge — compact K for matrix use
@@ -153,8 +166,7 @@ export default function InventoryMatrix({
 
   const allCarClasses = useMemo(
     () => [...new Set((allCars || []).map(getCarClass))].sort(),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [allCars, kronosCarsMap],
+    [allCars, kronosCarsMap, iracingLabelById],
   );
 
   const allTrackCategories = useMemo(
@@ -289,7 +301,14 @@ export default function InventoryMatrix({
           })),
         legacy: legacy.sort((a, b) => a.car_name.localeCompare(b.car_name)),
       }));
-  }, [allCars, selectedCarCats, selectedCarClasses, kronosCarsMap, loaded]);
+  }, [
+    allCars,
+    selectedCarCats,
+    selectedCarClasses,
+    kronosCarsMap,
+    iracingLabelById,
+    loaded,
+  ]);
 
   // Build grouped track matrix rows (category → tracks, with legacy bucket)
   const trackMatrixRows = useMemo(() => {
@@ -325,7 +344,8 @@ export default function InventoryMatrix({
     return <div className="empty">Chargement...</div>;
   }
 
-  const colCount = matrixDrivers.length + 1;
+  // +1 for name col, +1 for count col, + drivers
+  const colCount = matrixDrivers.length + 2;
 
   // Reusable group header row style
   const groupTdStyle = (indent = 0, muted = false) => ({
@@ -342,15 +362,6 @@ export default function InventoryMatrix({
     borderBottom: "1px solid var(--border)",
     opacity: muted ? 0.7 : 1,
   });
-
-  const driverHeaderStyle = {
-    background: "var(--surface-2)",
-    borderBottom: "2px solid var(--border)",
-    verticalAlign: "bottom",
-    padding: "0.5rem 0.25rem 0.25rem",
-    width: "40px",
-    minWidth: "40px",
-  };
 
   return (
     <div>
@@ -470,6 +481,7 @@ export default function InventoryMatrix({
                 {/* colgroup enforces exact column widths matching header and data rows */}
                 <colgroup>
                   <col style={{ width: `${NAME_COL_WIDTH}px` }} />
+                  <col style={{ width: `${COUNT_COL_WIDTH}px` }} />
                   {matrixDrivers.map((d) => (
                     <col
                       key={d.id}
@@ -494,6 +506,22 @@ export default function InventoryMatrix({
                     >
                       Voiture
                     </th>
+                    <th
+                      style={{
+                        background: "var(--surface-2)",
+                        borderBottom: "2px solid var(--border)",
+                        borderRight: "1px solid var(--border)",
+                        width: `${COUNT_COL_WIDTH}px`,
+                        fontSize: "0.65rem",
+                        fontWeight: 700,
+                        color: "var(--text-dim)",
+                        textAlign: "center",
+                        verticalAlign: "bottom",
+                        padding: "0.25rem",
+                      }}
+                    >
+                      #
+                    </th>
                     {matrixDrivers.map((d) => (
                       <th
                         key={d.id}
@@ -501,24 +529,33 @@ export default function InventoryMatrix({
                           background: "var(--surface-2)",
                           borderBottom: "2px solid var(--border)",
                           verticalAlign: "bottom",
-                          padding: "0.5rem 0 0.25rem",
                           width: `${DRIVER_COL_WIDTH}px`,
                           boxSizing: "border-box",
                           overflow: "hidden",
+                          padding: 0,
                         }}
                       >
                         <div
                           style={{
-                            writingMode: "vertical-rl",
-                            transform: "rotate(180deg)",
-                            fontSize: "0.68rem",
-                            fontWeight: 700,
-                            color: "var(--text-dim)",
-                            whiteSpace: "nowrap",
-                            margin: "0 auto",
+                            display: "flex",
+                            justifyContent: "center",
+                            alignItems: "flex-end",
+                            height: "80px",
+                            paddingBottom: "0.25rem",
                           }}
                         >
-                          {d.name.split(" ")[0]}
+                          <span
+                            style={{
+                              writingMode: "vertical-rl",
+                              transform: "rotate(180deg)",
+                              fontSize: "0.68rem",
+                              fontWeight: 700,
+                              color: "var(--text-dim)",
+                              whiteSpace: "nowrap",
+                            }}
+                          >
+                            {d.name.split(" ")[0]}
+                          </span>
                         </div>
                       </th>
                     ))}
@@ -544,41 +581,49 @@ export default function InventoryMatrix({
                             </td>
                           </tr>
                           {/* Car data rows */}
-                          {cars.map((car) => (
-                            <tr key={car.iracing_car_id}>
-                              <td style={nameColStyle}>
-                                {car.car_name}
-                                {!!(kronosCarsMap || {})[
-                                  car.iracing_car_id
-                                ] && <KBadge />}
-                              </td>
-                              {matrixDrivers.map((d) => (
-                                <td key={d.id} style={cellStyle}>
-                                  {carOwnershipSets[d.id]?.has(
-                                    car.iracing_car_id,
-                                  ) ? (
-                                    <span
-                                      style={{
-                                        color: "var(--accent)",
-                                        fontWeight: 700,
-                                      }}
-                                    >
-                                      ✓
-                                    </span>
-                                  ) : (
-                                    <span
-                                      style={{
-                                        color: "var(--text-dim)",
-                                        opacity: 0.35,
-                                      }}
-                                    >
-                                      —
-                                    </span>
-                                  )}
+                          {cars.map((car) => {
+                            const ownerCount = matrixDrivers.filter((d) =>
+                              carOwnershipSets[d.id]?.has(car.iracing_car_id),
+                            ).length;
+                            return (
+                              <tr key={car.iracing_car_id}>
+                                <td style={nameColStyle}>
+                                  {car.car_name}
+                                  {!!(kronosCarsMap || {})[
+                                    car.iracing_car_id
+                                  ] && <KBadge />}
                                 </td>
-                              ))}
-                            </tr>
-                          ))}
+                                <td style={countCellStyle}>
+                                  {ownerCount}/{matrixDrivers.length}
+                                </td>
+                                {matrixDrivers.map((d) => (
+                                  <td key={d.id} style={cellStyle}>
+                                    {carOwnershipSets[d.id]?.has(
+                                      car.iracing_car_id,
+                                    ) ? (
+                                      <span
+                                        style={{
+                                          color: "var(--accent)",
+                                          fontWeight: 700,
+                                        }}
+                                      >
+                                        ✓
+                                      </span>
+                                    ) : (
+                                      <span
+                                        style={{
+                                          color: "var(--text-dim)",
+                                          opacity: 0.35,
+                                        }}
+                                      >
+                                        —
+                                      </span>
+                                    )}
+                                  </td>
+                                ))}
+                              </tr>
+                            );
+                          })}
                         </Fragment>
                       ))}
 
@@ -593,50 +638,60 @@ export default function InventoryMatrix({
                               Legacy & Retraités ({legacy.length})
                             </td>
                           </tr>
-                          {legacy.map((car) => (
-                            <tr key={car.iracing_car_id}>
-                              <td
-                                style={{
-                                  ...nameColStyle,
-                                  opacity: 0.55,
-                                  fontStyle: "italic",
-                                }}
-                              >
-                                {car.car_name}
-                                {!!(kronosCarsMap || {})[
-                                  car.iracing_car_id
-                                ] && <KBadge />}
-                              </td>
-                              {matrixDrivers.map((d) => (
+                          {legacy.map((car) => {
+                            const ownerCount = matrixDrivers.filter((d) =>
+                              carOwnershipSets[d.id]?.has(car.iracing_car_id),
+                            ).length;
+                            return (
+                              <tr key={car.iracing_car_id}>
                                 <td
-                                  key={d.id}
-                                  style={{ ...cellStyle, opacity: 0.55 }}
+                                  style={{
+                                    ...nameColStyle,
+                                    opacity: 0.55,
+                                    fontStyle: "italic",
+                                  }}
                                 >
-                                  {carOwnershipSets[d.id]?.has(
-                                    car.iracing_car_id,
-                                  ) ? (
-                                    <span
-                                      style={{
-                                        color: "var(--accent)",
-                                        fontWeight: 700,
-                                      }}
-                                    >
-                                      ✓
-                                    </span>
-                                  ) : (
-                                    <span
-                                      style={{
-                                        color: "var(--text-dim)",
-                                        opacity: 0.35,
-                                      }}
-                                    >
-                                      —
-                                    </span>
-                                  )}
+                                  {car.car_name}
+                                  {!!(kronosCarsMap || {})[
+                                    car.iracing_car_id
+                                  ] && <KBadge />}
                                 </td>
-                              ))}
-                            </tr>
-                          ))}
+                                <td
+                                  style={{ ...countCellStyle, opacity: 0.55 }}
+                                >
+                                  {ownerCount}/{matrixDrivers.length}
+                                </td>
+                                {matrixDrivers.map((d) => (
+                                  <td
+                                    key={d.id}
+                                    style={{ ...cellStyle, opacity: 0.55 }}
+                                  >
+                                    {carOwnershipSets[d.id]?.has(
+                                      car.iracing_car_id,
+                                    ) ? (
+                                      <span
+                                        style={{
+                                          color: "var(--accent)",
+                                          fontWeight: 700,
+                                        }}
+                                      >
+                                        ✓
+                                      </span>
+                                    ) : (
+                                      <span
+                                        style={{
+                                          color: "var(--text-dim)",
+                                          opacity: 0.35,
+                                        }}
+                                      >
+                                        —
+                                      </span>
+                                    )}
+                                  </td>
+                                ))}
+                              </tr>
+                            );
+                          })}
                         </Fragment>
                       )}
                     </Fragment>
@@ -697,6 +752,7 @@ export default function InventoryMatrix({
                 {/* colgroup enforces exact column widths matching header and data rows */}
                 <colgroup>
                   <col style={{ width: `${NAME_COL_WIDTH}px` }} />
+                  <col style={{ width: `${COUNT_COL_WIDTH}px` }} />
                   {matrixDrivers.map((d) => (
                     <col
                       key={d.id}
@@ -721,6 +777,23 @@ export default function InventoryMatrix({
                     >
                       Circuit
                     </th>
+                    {/* Count column header */}
+                    <th
+                      style={{
+                        background: "var(--surface-2)",
+                        borderBottom: "2px solid var(--border)",
+                        borderRight: "1px solid var(--border)",
+                        width: `${COUNT_COL_WIDTH}px`,
+                        fontSize: "0.65rem",
+                        fontWeight: 700,
+                        color: "var(--text-dim)",
+                        textAlign: "center",
+                        verticalAlign: "bottom",
+                        padding: "0.25rem",
+                      }}
+                    >
+                      #
+                    </th>
                     {matrixDrivers.map((d) => (
                       <th
                         key={d.id}
@@ -728,24 +801,33 @@ export default function InventoryMatrix({
                           background: "var(--surface-2)",
                           borderBottom: "2px solid var(--border)",
                           verticalAlign: "bottom",
-                          padding: "0.5rem 0 0.25rem",
                           width: `${DRIVER_COL_WIDTH}px`,
                           boxSizing: "border-box",
                           overflow: "hidden",
+                          padding: 0,
                         }}
                       >
                         <div
                           style={{
-                            writingMode: "vertical-rl",
-                            transform: "rotate(180deg)",
-                            fontSize: "0.68rem",
-                            fontWeight: 700,
-                            color: "var(--text-dim)",
-                            whiteSpace: "nowrap",
-                            margin: "0 auto",
+                            display: "flex",
+                            justifyContent: "center",
+                            alignItems: "flex-end",
+                            height: "80px",
+                            paddingBottom: "0.25rem",
                           }}
                         >
-                          {d.name.split(" ")[0]}
+                          <span
+                            style={{
+                              writingMode: "vertical-rl",
+                              transform: "rotate(180deg)",
+                              fontSize: "0.68rem",
+                              fontWeight: 700,
+                              color: "var(--text-dim)",
+                              whiteSpace: "nowrap",
+                            }}
+                          >
+                            {d.name.split(" ")[0]}
+                          </span>
                         </div>
                       </th>
                     ))}
@@ -762,41 +844,49 @@ export default function InventoryMatrix({
                       </tr>
 
                       {/* Normal tracks */}
-                      {tracks.map((track) => (
-                        <tr key={track.track_name}>
-                          <td style={nameColStyle}>
-                            {track.track_name}
-                            {kronosCircuitSet.has(track.track_name) && (
-                              <KBadge />
-                            )}
-                          </td>
-                          {matrixDrivers.map((d) => (
-                            <td key={d.id} style={cellStyle}>
-                              {trackOwnershipSets[d.id]?.has(
-                                track.track_name,
-                              ) ? (
-                                <span
-                                  style={{
-                                    color: "var(--accent)",
-                                    fontWeight: 700,
-                                  }}
-                                >
-                                  ✓
-                                </span>
-                              ) : (
-                                <span
-                                  style={{
-                                    color: "var(--text-dim)",
-                                    opacity: 0.35,
-                                  }}
-                                >
-                                  —
-                                </span>
+                      {tracks.map((track) => {
+                        const ownerCount = matrixDrivers.filter((d) =>
+                          trackOwnershipSets[d.id]?.has(track.track_name),
+                        ).length;
+                        return (
+                          <tr key={track.track_name}>
+                            <td style={nameColStyle}>
+                              {track.track_name}
+                              {kronosCircuitSet.has(track.track_name) && (
+                                <KBadge />
                               )}
                             </td>
-                          ))}
-                        </tr>
-                      ))}
+                            <td style={countCellStyle}>
+                              {ownerCount}/{matrixDrivers.length}
+                            </td>
+                            {matrixDrivers.map((d) => (
+                              <td key={d.id} style={cellStyle}>
+                                {trackOwnershipSets[d.id]?.has(
+                                  track.track_name,
+                                ) ? (
+                                  <span
+                                    style={{
+                                      color: "var(--accent)",
+                                      fontWeight: 700,
+                                    }}
+                                  >
+                                    ✓
+                                  </span>
+                                ) : (
+                                  <span
+                                    style={{
+                                      color: "var(--text-dim)",
+                                      opacity: 0.35,
+                                    }}
+                                  >
+                                    —
+                                  </span>
+                                )}
+                              </td>
+                            ))}
+                          </tr>
+                        );
+                      })}
 
                       {/* Legacy & Retired sub-group */}
                       {legacy.length > 0 && (
@@ -809,50 +899,60 @@ export default function InventoryMatrix({
                               Legacy & Retraités ({legacy.length})
                             </td>
                           </tr>
-                          {legacy.map((track) => (
-                            <tr key={track.track_name}>
-                              <td
-                                style={{
-                                  ...nameColStyle,
-                                  opacity: 0.55,
-                                  fontStyle: "italic",
-                                }}
-                              >
-                                {track.track_name}
-                                {kronosCircuitSet.has(track.track_name) && (
-                                  <KBadge />
-                                )}
-                              </td>
-                              {matrixDrivers.map((d) => (
+                          {legacy.map((track) => {
+                            const ownerCount = matrixDrivers.filter((d) =>
+                              trackOwnershipSets[d.id]?.has(track.track_name),
+                            ).length;
+                            return (
+                              <tr key={track.track_name}>
                                 <td
-                                  key={d.id}
-                                  style={{ ...cellStyle, opacity: 0.55 }}
+                                  style={{
+                                    ...nameColStyle,
+                                    opacity: 0.55,
+                                    fontStyle: "italic",
+                                  }}
                                 >
-                                  {trackOwnershipSets[d.id]?.has(
-                                    track.track_name,
-                                  ) ? (
-                                    <span
-                                      style={{
-                                        color: "var(--accent)",
-                                        fontWeight: 700,
-                                      }}
-                                    >
-                                      ✓
-                                    </span>
-                                  ) : (
-                                    <span
-                                      style={{
-                                        color: "var(--text-dim)",
-                                        opacity: 0.35,
-                                      }}
-                                    >
-                                      —
-                                    </span>
+                                  {track.track_name}
+                                  {kronosCircuitSet.has(track.track_name) && (
+                                    <KBadge />
                                   )}
                                 </td>
-                              ))}
-                            </tr>
-                          ))}
+                                <td
+                                  style={{ ...countCellStyle, opacity: 0.55 }}
+                                >
+                                  {ownerCount}/{matrixDrivers.length}
+                                </td>
+                                {matrixDrivers.map((d) => (
+                                  <td
+                                    key={d.id}
+                                    style={{ ...cellStyle, opacity: 0.55 }}
+                                  >
+                                    {trackOwnershipSets[d.id]?.has(
+                                      track.track_name,
+                                    ) ? (
+                                      <span
+                                        style={{
+                                          color: "var(--accent)",
+                                          fontWeight: 700,
+                                        }}
+                                      >
+                                        ✓
+                                      </span>
+                                    ) : (
+                                      <span
+                                        style={{
+                                          color: "var(--text-dim)",
+                                          opacity: 0.35,
+                                        }}
+                                      >
+                                        —
+                                      </span>
+                                    )}
+                                  </td>
+                                ))}
+                              </tr>
+                            );
+                          })}
                         </Fragment>
                       )}
                     </Fragment>
