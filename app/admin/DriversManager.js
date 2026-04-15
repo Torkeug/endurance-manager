@@ -70,6 +70,9 @@ export default function DriversManager({ initialDrivers, currentDriver }) {
   const refused = drivers.filter((d) => d.refused);
   const approved = drivers.filter((d) => d.approved && !d.refused);
 
+  // Tracks which driver's email was just copied — for the ✓ flash
+  const [copiedEmail, setCopiedEmail] = useState(null);
+
   const approve = async (driverId) => {
     setSaving(driverId);
     setError(null);
@@ -274,6 +277,15 @@ export default function DriversManager({ initialDrivers, currentDriver }) {
     { id: "refused", label: `Refusés (${refused.length})` },
   ];
 
+// Copies a driver's email to clipboard and flashes ✓ for 1.5s
+function copyEmail(driverId, email) {
+  navigator.clipboard.writeText(email).then(() => {
+    setCopiedEmail(driverId);
+    setTimeout(() => setCopiedEmail(null), 1500);
+  });
+}
+
+  
   return (
     <div>
       {/* iRacing sync-all feedback banners */}
@@ -494,10 +506,57 @@ export default function DriversManager({ initialDrivers, currentDriver }) {
 
                       {/* Email */}
                       <td
-                        style={{ ...TD, fontSize: "0.82rem" }}
-                        className="mono"
+                        style={{
+                          ...TD,
+                          fontSize: "0.82rem",
+                          maxWidth: "160px",
+                          whiteSpace: "nowrap",
+                        }}
                       >
-                        {d.email || "—"}
+                        {d.email ? (
+                          <div
+                            style={{
+                              display: "flex",
+                              alignItems: "center",
+                              gap: "0.3rem",
+                            }}
+                          >
+                            {/* Truncated email — title shows full address on hover */}
+                            <span
+                              className="mono"
+                              title={d.email}
+                              style={{
+                                overflow: "hidden",
+                                textOverflow: "ellipsis",
+                                minWidth: 0,
+                              }}
+                            >
+                              {d.email}
+                            </span>
+                            {/* Clipboard copy button — flashes ✓ on success */}
+                            <button
+                              onClick={() => copyEmail(d.id, d.email)}
+                              title="Copier l'adresse email"
+                              style={{
+                                background: "none",
+                                border: "none",
+                                cursor: "pointer",
+                                color:
+                                  copiedEmail === d.id
+                                    ? "var(--accent)"
+                                    : "var(--text-dim)",
+                                fontSize: "0.75rem",
+                                padding: "0 0.1rem",
+                                flexShrink: 0,
+                                lineHeight: 1,
+                              }}
+                            >
+                              {copiedEmail === d.id ? "✓" : "📋"}
+                            </button>
+                          </div>
+                        ) : (
+                          "—"
+                        )}
                       </td>
 
                       {/* Role — dropdown if editable, plain text otherwise */}
@@ -567,7 +626,7 @@ export default function DriversManager({ initialDrivers, currentDriver }) {
                                 color: "var(--text)",
                                 fontSize: "0.82rem",
                                 padding: "0.2rem 0.4rem",
-                                width: "140px",
+                                width: "110px",
                               }}
                             />
                             <button
@@ -659,7 +718,7 @@ export default function DriversManager({ initialDrivers, currentDriver }) {
                       </td>
 
                       {/* iRacing sync timestamp — read-only */}
-                      <td style={{ ...TD, textAlign: "center" }}>
+                      <td style={{ ...TD, textAlign: "center", width: "90px" }}>
                         {d.iracing_synced_at ? (
                           <span
                             className="mono"
