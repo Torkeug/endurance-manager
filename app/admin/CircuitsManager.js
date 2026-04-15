@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useMemo } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { supabaseBrowser as supabase } from "../../lib/supabase-browser";
 
@@ -15,6 +15,9 @@ export default function CircuitsManager({ initialCircuits, iracingTracks }) {
   const [searchQuery, setSearchQuery] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
+  // Collapsed groups state — persisted in localStorage, all collapsed by default
+  const [expandedGroups, setExpandedGroups] = useState(new Set());
+  const [groupStateLoaded, setGroupStateLoaded] = useState(false);
 
   const set = (field) => (e) =>
     setForm((prev) => ({ ...prev, [field]: e.target.value }));
@@ -28,6 +31,59 @@ export default function CircuitsManager({ initialCircuits, iracingTracks }) {
     }
     return Object.entries(groups).sort(([a], [b]) => a.localeCompare(b));
   }, [iracingTracks]);
+
+  // Build a map of iracing_track_id → track_name for display grouping
+  const trackNameById = useMemo(() => {
+    const map = {};
+    for (const t of iracingTracks || []) map[t.iracing_track_id] = t.track_name;
+    return map;
+  }, [iracingTracks]);
+
+  // Group Kronos circuits by iRacing base track name for collapsible display
+  const circuitGroups = useMemo(() => {
+    const groups = {};
+    const unlinked = [];
+    for (const c of circuits) {
+      if (c.iracing_track_id && trackNameById[c.iracing_track_id]) {
+        const name = trackNameById[c.iracing_track_id];
+        if (!groups[name]) groups[name] = [];
+        groups[name].push(c);
+      } else {
+        unlinked.push(c);
+      }
+    }
+    return {
+      sorted: Object.entries(groups).sort(([a], [b]) => a.localeCompare(b)),
+      unlinked,
+    };
+  }, [circuits, trackNameById]);
+
+  // Load expanded groups from localStorage after mount
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem("kronos_circuits_expanded");
+      if (saved) setExpandedGroups(new Set(JSON.parse(saved)));
+    } catch {}
+    setGroupStateLoaded(true);
+  }, []);
+
+  // Persist expanded groups to localStorage
+  useEffect(() => {
+    if (!groupStateLoaded) return;
+    try {
+      localStorage.setItem(
+        "kronos_circuits_expanded",
+        JSON.stringify([...expandedGroups]),
+      );
+    } catch {}
+  }, [expandedGroups, groupStateLoaded]);
+
+  const toggleGroup = (key) =>
+    setExpandedGroups((prev) => {
+      const next = new Set(prev);
+      next.has(key) ? next.delete(key) : next.add(key);
+      return next;
+    });
 
   // Filter grouped tracks by search query
   const filteredGroups = useMemo(() => {
@@ -72,10 +128,6 @@ export default function CircuitsManager({ initialCircuits, iracingTracks }) {
       setError("Le nom est obligatoire.");
       return false;
     }
-    if (!form.pit_lane_time_seconds) {
-      setError("Le temps pit lane est obligatoire.");
-      return false;
-    }
     return true;
   };
 
@@ -96,7 +148,9 @@ export default function CircuitsManager({ initialCircuits, iracingTracks }) {
       .insert([
         {
           name: form.name.trim(),
-          pit_lane_time_seconds: parseInt(form.pit_lane_time_seconds),
+          pit_lane_time_seconds: form.pit_lane_time_seconds
+            ? parseInt(form.pit_lane_time_seconds)
+            : null,
           iracing_track_id: selectedIracingTrack?.iracing_track_id || null,
         },
       ])
@@ -122,7 +176,9 @@ export default function CircuitsManager({ initialCircuits, iracingTracks }) {
       .from("circuits")
       .update({
         name: form.name.trim(),
-        pit_lane_time_seconds: parseInt(form.pit_lane_time_seconds),
+        pit_lane_time_seconds: form.pit_lane_time_seconds
+          ? parseInt(form.pit_lane_time_seconds)
+          : null,
         iracing_track_id: selectedIracingTrack?.iracing_track_id || null,
       })
       .eq("id", editingId)
@@ -161,7 +217,9 @@ export default function CircuitsManager({ initialCircuits, iracingTracks }) {
     setEditingId(circuit.id);
     setForm({
       name: circuit.name,
-      pit_lane_time_seconds: String(circuit.pit_lane_time_seconds),
+      pit_lane_time_seconds: circuit.pit_lane_time_seconds
+        ? String(circuit.pit_lane_time_seconds)
+        : "",
     });
     // Pre-load iRacing track if linked
     if (circuit.iracing_track_id) {
@@ -305,7 +363,12 @@ export default function CircuitsManager({ initialCircuits, iracingTracks }) {
           />
         </div>
         <div className="form-group">
-          <label>Temps pit lane (secondes) *</label>
+          <label>
+            Temps pit lane (secondes){" "}
+            <span style={{ fontWeight: 400, color: "var(--text-dim)" }}>
+              — optionnel
+            </span>
+          </label>
           <input
             type="number"
             value={form.pit_lane_time_seconds}
@@ -365,74 +428,245 @@ export default function CircuitsManager({ initialCircuits, iracingTracks }) {
       )}
 
       <div className="table-wrap" style={{ marginBottom: "0.75rem" }}>
-        <table>
+        <table style={{ width: "100%", borderCollapse: "collapse" }}>
           <thead>
             <tr>
-              <th>Circuit</th>
-              <th>iRacing</th>
-              <th>Pit lane</th>
-              <th />
+              <th
+                style={{
+                  background: "var(--surface-2)",
+                  color: "var(--text-dim)",
+                  fontSize: "0.72rem",
+                  fontWeight: 700,
+                  letterSpacing: "0.08em",
+                  textTransform: "uppercase",
+                  padding: "0.6rem 1rem",
+                  textAlign: "left",
+                  borderBottom: "1px solid var(--border)",
+                }}
+              >
+                Circuit
+              </th>
+              <th
+                style={{
+                  background: "var(--surface-2)",
+                  color: "var(--text-dim)",
+                  fontSize: "0.72rem",
+                  fontWeight: 700,
+                  letterSpacing: "0.08em",
+                  textTransform: "uppercase",
+                  padding: "0.6rem 1rem",
+                  textAlign: "left",
+                  borderBottom: "1px solid var(--border)",
+                }}
+              >
+                Pit lane
+              </th>
+              <th
+                style={{
+                  background: "var(--surface-2)",
+                  borderBottom: "1px solid var(--border)",
+                }}
+              />
             </tr>
           </thead>
           <tbody>
-            {circuits.map((circuit) => (
-              <React.Fragment key={circuit.id}>
-                <tr>
-                  <td style={{ fontWeight: 600 }}>{circuit.name}</td>
-                  <td>
-                    {circuit.iracing_track_id ? (
-                      <span
-                        style={{ fontSize: "0.78rem", color: "var(--accent)" }}
-                      >
-                        ✓ Lié
-                      </span>
-                    ) : (
-                      <span
-                        style={{
-                          fontSize: "0.78rem",
-                          color: "var(--text-dim)",
-                        }}
-                      >
-                        —
-                      </span>
-                    )}
-                  </td>
-                  <td className="mono" style={{ color: "var(--accent)" }}>
-                    {circuit.pit_lane_time_seconds}s
-                  </td>
-                  <td style={{ textAlign: "right" }}>
-                    <div
+            {/* Linked circuits grouped by base track name — collapsible */}
+            {circuitGroups.sorted.map(([trackName, configs]) => {
+              const isExpanded = expandedGroups.has(trackName);
+              return (
+                <React.Fragment key={trackName}>
+                  {/* Group header — clickable to expand/collapse */}
+                  <tr
+                    onClick={() => toggleGroup(trackName)}
+                    style={{ cursor: "pointer" }}
+                  >
+                    <td
+                      colSpan={3}
                       style={{
-                        display: "flex",
-                        gap: "0.5rem",
-                        justifyContent: "flex-end",
+                        padding: "0.5rem 1rem",
+                        background: "var(--surface-2)",
+                        borderBottom: "1px solid var(--border)",
+                        fontWeight: 700,
+                        fontSize: "0.82rem",
+                        userSelect: "none",
                       }}
                     >
-                      <button
-                        onClick={() => startEdit(circuit)}
-                        className="btn btn-secondary btn-sm"
+                      <span
+                        style={{
+                          display: "inline-block",
+                          marginRight: "0.5rem",
+                          fontSize: "0.6rem",
+                          color: "var(--text-dim)",
+                          transition: "transform 0.15s",
+                          transform: isExpanded
+                            ? "rotate(90deg)"
+                            : "rotate(0deg)",
+                        }}
                       >
-                        Modifier
-                      </button>
-                      <button
-                        onClick={() => handleDelete(circuit.id)}
-                        className="btn btn-danger btn-sm"
+                        ▶
+                      </span>
+                      {trackName}
+                      <span
+                        style={{
+                          marginLeft: "0.6rem",
+                          fontSize: "0.75rem",
+                          fontWeight: 400,
+                          color: "var(--accent)",
+                          fontFamily: "var(--font-mono), monospace",
+                        }}
                       >
-                        Supprimer
-                      </button>
-                    </div>
+                        {configs.length}
+                      </span>
+                    </td>
+                  </tr>
+
+                  {/* Circuit rows — shown when expanded */}
+                  {isExpanded &&
+                    configs.map((circuit) => (
+                      <React.Fragment key={circuit.id}>
+                        <tr>
+                          <td
+                            style={{ fontWeight: 600, paddingLeft: "2.5rem" }}
+                          >
+                            {circuit.name}
+                          </td>
+                          <td
+                            className="mono"
+                            style={{ color: "var(--accent)" }}
+                          >
+                            {circuit.pit_lane_time_seconds
+                              ? `${circuit.pit_lane_time_seconds}s`
+                              : "—"}
+                          </td>
+                          <td style={{ textAlign: "right" }}>
+                            <div
+                              style={{
+                                display: "flex",
+                                gap: "0.5rem",
+                                justifyContent: "flex-end",
+                              }}
+                            >
+                              <button
+                                onClick={() => startEdit(circuit)}
+                                className="btn btn-secondary btn-sm"
+                              >
+                                Modifier
+                              </button>
+                              <button
+                                onClick={() => handleDelete(circuit.id)}
+                                className="btn btn-danger btn-sm"
+                              >
+                                Supprimer
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                        {editingId === circuit.id && (
+                          <tr>
+                            <td colSpan={3}>{editForm}</td>
+                          </tr>
+                        )}
+                      </React.Fragment>
+                    ))}
+                </React.Fragment>
+              );
+            })}
+
+            {/* Unlinked circuits — not grouped, shown in "Autres" collapsible */}
+            {circuitGroups.unlinked.length > 0 && (
+              <React.Fragment key="__autres__">
+                <tr
+                  onClick={() => toggleGroup("__autres__")}
+                  style={{ cursor: "pointer" }}
+                >
+                  <td
+                    colSpan={3}
+                    style={{
+                      padding: "0.5rem 1rem",
+                      background: "var(--surface-2)",
+                      borderBottom: "1px solid var(--border)",
+                      fontWeight: 700,
+                      fontSize: "0.82rem",
+                      color: "var(--text-dim)",
+                      fontStyle: "italic",
+                      userSelect: "none",
+                    }}
+                  >
+                    <span
+                      style={{
+                        display: "inline-block",
+                        marginRight: "0.5rem",
+                        fontSize: "0.6rem",
+                        transition: "transform 0.15s",
+                        transform: expandedGroups.has("__autres__")
+                          ? "rotate(90deg)"
+                          : "rotate(0deg)",
+                      }}
+                    >
+                      ▶
+                    </span>
+                    Autres (non liés iRacing)
+                    <span
+                      style={{
+                        marginLeft: "0.6rem",
+                        fontSize: "0.75rem",
+                        fontWeight: 400,
+                        color: "var(--accent)",
+                        fontFamily: "var(--font-mono), monospace",
+                      }}
+                    >
+                      {circuitGroups.unlinked.length}
+                    </span>
                   </td>
                 </tr>
-                {editingId === circuit.id && (
-                  <tr>
-                    <td colSpan={4}>{editForm}</td>
-                  </tr>
-                )}
+                {expandedGroups.has("__autres__") &&
+                  circuitGroups.unlinked.map((circuit) => (
+                    <React.Fragment key={circuit.id}>
+                      <tr>
+                        <td style={{ fontWeight: 600, paddingLeft: "2.5rem" }}>
+                          {circuit.name}
+                        </td>
+                        <td className="mono" style={{ color: "var(--accent)" }}>
+                          {circuit.pit_lane_time_seconds
+                            ? `${circuit.pit_lane_time_seconds}s`
+                            : "—"}
+                        </td>
+                        <td style={{ textAlign: "right" }}>
+                          <div
+                            style={{
+                              display: "flex",
+                              gap: "0.5rem",
+                              justifyContent: "flex-end",
+                            }}
+                          >
+                            <button
+                              onClick={() => startEdit(circuit)}
+                              className="btn btn-secondary btn-sm"
+                            >
+                              Modifier
+                            </button>
+                            <button
+                              onClick={() => handleDelete(circuit.id)}
+                              className="btn btn-danger btn-sm"
+                            >
+                              Supprimer
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                      {editingId === circuit.id && (
+                        <tr>
+                          <td colSpan={3}>{editForm}</td>
+                        </tr>
+                      )}
+                    </React.Fragment>
+                  ))}
               </React.Fragment>
-            ))}
+            )}
+
             {circuits.length === 0 && (
               <tr>
-                <td colSpan={4} className="empty">
+                <td colSpan={3} className="empty">
                   Aucun circuit.
                 </td>
               </tr>
