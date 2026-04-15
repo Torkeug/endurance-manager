@@ -132,6 +132,14 @@ export default async function AdminPage() {
     }
   }
 
+  // Catalog label map: iracing_car_id → car_type_label for non-Kronos cars
+  // Same fallback used in inventaire/page.js
+  const iracingLabelById = {};
+  for (const car of iracingCars || []) {
+    if (car.car_type_label)
+      iracingLabelById[car.iracing_car_id] = car.car_type_label;
+  }
+
   // Circuit names for track Kronos badge (still name-based — no iracing_track_id on circuits)
   const kronosCircuitNames = (circuits || []).map((c) => c.name);
 
@@ -173,6 +181,7 @@ export default async function AdminPage() {
         trackOwnership={trackOwnership}
         kronosCircuitNames={kronosCircuitNames}
         kronosCarsMap={kronosCarsMap}
+        iracingLabelById={iracingLabelById}
       />
     </div>
   );

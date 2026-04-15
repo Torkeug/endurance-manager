@@ -39,6 +39,7 @@ export default function AdminTabs({
   carOwnership,
   trackOwnership,
   kronosCarsMap,
+  iracingLabelById,
   kronosCircuitNames,
 }) {
   const [activeTab, setActiveTab] = useState("pilotes");
@@ -151,6 +152,7 @@ export default function AdminTabs({
           carOwnership={carOwnership}
           trackOwnership={trackOwnership}
           kronosCarsMap={kronosCarsMap}
+          iracingLabelById={iracingLabelById}
           kronosCircuitNames={kronosCircuitNames}
         />
       )}

@@ -44,6 +44,10 @@ function FilterPill({ label, active, onToggle }) {
 }
 
 // Shared table cell styles
+// Fixed column widths — applied via colgroup for proper alignment
+const NAME_COL_WIDTH = 220;
+const DRIVER_COL_WIDTH = 36;
+
 const nameColStyle = {
   position: "sticky",
   left: 0,
@@ -53,20 +57,21 @@ const nameColStyle = {
   borderRight: "1px solid var(--border)",
   borderBottom: "1px solid var(--border)",
   fontSize: "0.8rem",
-  minWidth: "220px",
-  maxWidth: "220px",
+  width: `${NAME_COL_WIDTH}px`,
+  maxWidth: `${NAME_COL_WIDTH}px`,
   whiteSpace: "nowrap",
   overflow: "hidden",
   textOverflow: "ellipsis",
+  boxSizing: "border-box",
 };
 
 const cellStyle = {
-  padding: "0.35rem 0",
+  padding: "0.25rem 0",
   textAlign: "center",
   borderBottom: "1px solid var(--border)",
   fontSize: "0.8rem",
-  width: "40px",
-  minWidth: "40px",
+  width: `${DRIVER_COL_WIDTH}px`,
+  boxSizing: "border-box",
 };
 
 // Kronos badge — compact K for matrix use
@@ -97,6 +102,7 @@ export default function InventoryMatrix({
   carOwnership,
   trackOwnership,
   kronosCarsMap,
+  iracingLabelById,
   kronosCircuitNames,
 }) {
   const [subTab, setSubTab] = useState("cars");
@@ -136,9 +142,13 @@ export default function InventoryMatrix({
   // Derive class label from Kronos map — car_type_label if set, then class, else "Autre"
   const getCarClass = (car) => {
     const k = (kronosCarsMap || {})[car.iracing_car_id];
-    if (k?.car_type_label) return k.car_type_label.toUpperCase();
-    if (k?.class) return k.class;
-    return "Autre";
+    // Same 4-level priority as inventaire/page.js
+    return (
+      k?.car_type_label?.toUpperCase() ||
+      k?.class ||
+      (iracingLabelById || {})[car.iracing_car_id]?.toUpperCase() ||
+      "Autre"
+    );
   };
 
   const allCarClasses = useMemo(
@@ -457,9 +467,18 @@ export default function InventoryMatrix({
               <table
                 style={{ borderCollapse: "collapse", tableLayout: "fixed" }}
               >
+                {/* colgroup enforces exact column widths matching header and data rows */}
+                <colgroup>
+                  <col style={{ width: `${NAME_COL_WIDTH}px` }} />
+                  {matrixDrivers.map((d) => (
+                    <col
+                      key={d.id}
+                      style={{ width: `${DRIVER_COL_WIDTH}px` }}
+                    />
+                  ))}
+                </colgroup>
                 <thead>
                   <tr>
-                    {/* Sticky name column header */}
                     <th
                       style={{
                         ...nameColStyle,
@@ -475,9 +494,19 @@ export default function InventoryMatrix({
                     >
                       Voiture
                     </th>
-                    {/* Driver column headers — vertical text to save horizontal space */}
                     {matrixDrivers.map((d) => (
-                      <th key={d.id} style={driverHeaderStyle}>
+                      <th
+                        key={d.id}
+                        style={{
+                          background: "var(--surface-2)",
+                          borderBottom: "2px solid var(--border)",
+                          verticalAlign: "bottom",
+                          padding: "0.5rem 0 0.25rem",
+                          width: `${DRIVER_COL_WIDTH}px`,
+                          boxSizing: "border-box",
+                          overflow: "hidden",
+                        }}
+                      >
                         <div
                           style={{
                             writingMode: "vertical-rl",
@@ -486,6 +515,7 @@ export default function InventoryMatrix({
                             fontWeight: 700,
                             color: "var(--text-dim)",
                             whiteSpace: "nowrap",
+                            margin: "0 auto",
                           }}
                         >
                           {d.name.split(" ")[0]}
@@ -664,6 +694,16 @@ export default function InventoryMatrix({
               <table
                 style={{ borderCollapse: "collapse", tableLayout: "fixed" }}
               >
+                {/* colgroup enforces exact column widths matching header and data rows */}
+                <colgroup>
+                  <col style={{ width: `${NAME_COL_WIDTH}px` }} />
+                  {matrixDrivers.map((d) => (
+                    <col
+                      key={d.id}
+                      style={{ width: `${DRIVER_COL_WIDTH}px` }}
+                    />
+                  ))}
+                </colgroup>
                 <thead>
                   <tr>
                     <th
@@ -682,7 +722,18 @@ export default function InventoryMatrix({
                       Circuit
                     </th>
                     {matrixDrivers.map((d) => (
-                      <th key={d.id} style={driverHeaderStyle}>
+                      <th
+                        key={d.id}
+                        style={{
+                          background: "var(--surface-2)",
+                          borderBottom: "2px solid var(--border)",
+                          verticalAlign: "bottom",
+                          padding: "0.5rem 0 0.25rem",
+                          width: `${DRIVER_COL_WIDTH}px`,
+                          boxSizing: "border-box",
+                          overflow: "hidden",
+                        }}
+                      >
                         <div
                           style={{
                             writingMode: "vertical-rl",
@@ -691,6 +742,7 @@ export default function InventoryMatrix({
                             fontWeight: 700,
                             color: "var(--text-dim)",
                             whiteSpace: "nowrap",
+                            margin: "0 auto",
                           }}
                         >
                           {d.name.split(" ")[0]}
