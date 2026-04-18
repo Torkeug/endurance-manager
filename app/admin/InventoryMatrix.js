@@ -127,9 +127,9 @@ export default function InventoryMatrix({
   const [selectedCarClasses, setSelectedCarClasses] = useState([]);
   const [selectedTrackCats, setSelectedTrackCats] = useState([]);
 
-  // Sort mode per matrix — "alpha" (default) or "count" (descending by owner count)
-  const [carSortMode, setCarSortMode] = useState("alpha");
-  const [trackSortMode, setTrackSortMode] = useState("alpha");
+  // Sort state per matrix: { col: "name"|"count", dir: "asc"|"desc" }
+  const [carSort, setCarSort] = useState({ col: "name", dir: "asc" });
+  const [trackSort, setTrackSort] = useState({ col: "name", dir: "asc" });
 
   // Build O(1) lookup sets from serialized ownership arrays
   const carOwnershipSets = useMemo(() => {
@@ -224,10 +224,10 @@ export default function InventoryMatrix({
       );
 
       const savedCarSort = localStorage.getItem("kronos_inv_car_sort");
-      if (savedCarSort) setCarSortMode(savedCarSort);
+      if (savedCarSort) setCarSort(JSON.parse(savedCarSort));
 
       const savedTrackSort = localStorage.getItem("kronos_inv_track_sort");
-      if (savedTrackSort) setTrackSortMode(savedTrackSort);
+      if (savedTrackSort) setTrackSort(JSON.parse(savedTrackSort));
     } catch {
       // Fallback to all-selected if localStorage fails
       setSelectedCarCats(allCarCategories);
@@ -260,16 +260,16 @@ export default function InventoryMatrix({
   useEffect(() => {
     if (!loaded) return;
     try {
-      localStorage.setItem("kronos_inv_car_sort", carSortMode);
+      localStorage.setItem("kronos_inv_car_sort", JSON.stringify(carSort));
     } catch {}
-  }, [carSortMode, loaded]);
+  }, [carSort, loaded]);
 
   useEffect(() => {
     if (!loaded) return;
     try {
-      localStorage.setItem("kronos_inv_track_sort", trackSortMode);
+      localStorage.setItem("kronos_inv_track_sort", JSON.stringify(trackSort));
     } catch {}
-  }, [trackSortMode, loaded]);
+  }, [trackSort, loaded]);
 
   // When categories change, drop any selected classes that no longer exist in the filtered set
   useEffect(() => {
@@ -308,6 +308,37 @@ export default function InventoryMatrix({
     );
   }
 
+  // Sort a list of items by name or owner count
+  const sortItems = (items, sort, ownershipSets, getId, getName) => {
+    return items.slice().sort((a, b) => {
+      if (sort.col === "count") {
+        const aCount = matrixDrivers.filter((d) =>
+          ownershipSets[d.id]?.has(getId(a)),
+        ).length;
+        const bCount = matrixDrivers.filter((d) =>
+          ownershipSets[d.id]?.has(getId(b)),
+        ).length;
+        const diff = sort.dir === "asc" ? aCount - bCount : bCount - aCount;
+        return diff !== 0 ? diff : getName(a).localeCompare(getName(b));
+      }
+      const diff = getName(a).localeCompare(getName(b));
+      return sort.dir === "asc" ? diff : -diff;
+    });
+  };
+
+  // Toggle sort — same col flips direction, new col defaults to desc for count, asc for name
+  const toggleSort = (current, col, setter) => {
+    if (current.col === col) {
+      setter({ col, dir: current.dir === "asc" ? "desc" : "asc" });
+    } else {
+      setter({ col, dir: col === "count" ? "desc" : "asc" });
+    }
+  };
+
+  // Sort indicator arrow
+  const sortArrow = (sort, col) =>
+    sort.col === col ? (sort.dir === "asc" ? " ↑" : " ↓") : "";
+
   // Build grouped car matrix rows (category → class → cars, with legacy bucket)
   const carMatrixRows = useMemo(() => {
     if (!loaded) return [];
@@ -342,33 +373,21 @@ export default function InventoryMatrix({
           .sort(([a], [b]) => a.localeCompare(b))
           .map(([cls, cars]) => ({
             cls,
-            cars:
-              carSortMode === "count"
-                ? cars.slice().sort((a, b) => {
-                    const aCount = matrixDrivers.filter((d) =>
-                      carOwnershipSets[d.id]?.has(a.iracing_car_id),
-                    ).length;
-                    const bCount = matrixDrivers.filter((d) =>
-                      carOwnershipSets[d.id]?.has(b.iracing_car_id),
-                    ).length;
-                    return (
-                      bCount - aCount || a.car_name.localeCompare(b.car_name)
-                    );
-                  })
-                : cars.sort((a, b) => a.car_name.localeCompare(b.car_name)),
+            cars: sortItems(
+              cars,
+              carSort,
+              carOwnershipSets,
+              (c) => c.iracing_car_id,
+              (c) => c.car_name,
+            ),
           })),
-        legacy:
-          carSortMode === "count"
-            ? legacy.slice().sort((a, b) => {
-                const aCount = matrixDrivers.filter((d) =>
-                  carOwnershipSets[d.id]?.has(a.iracing_car_id),
-                ).length;
-                const bCount = matrixDrivers.filter((d) =>
-                  carOwnershipSets[d.id]?.has(b.iracing_car_id),
-                ).length;
-                return bCount - aCount || a.car_name.localeCompare(b.car_name);
-              })
-            : legacy.sort((a, b) => a.car_name.localeCompare(b.car_name)),
+        legacy: sortItems(
+          legacy,
+          carSort,
+          carOwnershipSets,
+          (c) => c.iracing_car_id,
+          (c) => c.car_name,
+        ),
       }));
   }, [
     allCars,
@@ -376,7 +395,7 @@ export default function InventoryMatrix({
     selectedCarClasses,
     kronosCarsMap,
     iracingLabelById,
-    carSortMode,
+    carSort,
     matrixDrivers,
     carOwnershipSets,
     loaded,
@@ -407,39 +426,25 @@ export default function InventoryMatrix({
       .sort(([a], [b]) => a.localeCompare(b))
       .map(([category, { normal, legacy }]) => ({
         category,
-        tracks:
-          trackSortMode === "count"
-            ? normal.slice().sort((a, b) => {
-                const aCount = matrixDrivers.filter((d) =>
-                  trackOwnershipSets[d.id]?.has(a.track_name),
-                ).length;
-                const bCount = matrixDrivers.filter((d) =>
-                  trackOwnershipSets[d.id]?.has(b.track_name),
-                ).length;
-                return (
-                  bCount - aCount || a.track_name.localeCompare(b.track_name)
-                );
-              })
-            : normal.sort((a, b) => a.track_name.localeCompare(b.track_name)),
-        legacy:
-          trackSortMode === "count"
-            ? legacy.slice().sort((a, b) => {
-                const aCount = matrixDrivers.filter((d) =>
-                  trackOwnershipSets[d.id]?.has(a.track_name),
-                ).length;
-                const bCount = matrixDrivers.filter((d) =>
-                  trackOwnershipSets[d.id]?.has(b.track_name),
-                ).length;
-                return (
-                  bCount - aCount || a.track_name.localeCompare(b.track_name)
-                );
-              })
-            : legacy.sort((a, b) => a.track_name.localeCompare(b.track_name)),
+        tracks: sortItems(
+          normal,
+          trackSort,
+          trackOwnershipSets,
+          (t) => t.track_name,
+          (t) => t.track_name,
+        ),
+        legacy: sortItems(
+          legacy,
+          trackSort,
+          trackOwnershipSets,
+          (t) => t.track_name,
+          (t) => t.track_name,
+        ),
       }));
   }, [
     allTracks,
     selectedTrackCats,
-    trackSortMode,
+    trackSort,
     matrixDrivers,
     trackOwnershipSets,
     loaded,
@@ -568,68 +573,6 @@ export default function InventoryMatrix({
             </div>
           </div>
 
-          {/* Sort toggle */}
-          <div
-            style={{
-              display: "flex",
-              gap: "0.5rem",
-              alignItems: "center",
-              marginBottom: "1.25rem",
-            }}
-          >
-            <span
-              style={{
-                fontSize: "0.7rem",
-                fontWeight: 700,
-                color: "var(--text-dim)",
-                letterSpacing: "0.08em",
-                textTransform: "uppercase",
-              }}
-            >
-              Tri :
-            </span>
-            <button
-              onClick={() => setCarSortMode("alpha")}
-              style={{
-                padding: "0.3rem 0.75rem",
-                borderRadius: "3px",
-                border: `1px solid ${carSortMode === "alpha" ? "var(--accent)" : "var(--border)"}`,
-                background:
-                  carSortMode === "alpha"
-                    ? "var(--accent-dim)"
-                    : "var(--surface-2)",
-                color:
-                  carSortMode === "alpha" ? "var(--accent)" : "var(--text-dim)",
-                fontFamily: "var(--font-rajdhani), sans-serif",
-                fontSize: "0.78rem",
-                fontWeight: 700,
-                cursor: "pointer",
-              }}
-            >
-              A → Z
-            </button>
-            <button
-              onClick={() => setCarSortMode("count")}
-              style={{
-                padding: "0.3rem 0.75rem",
-                borderRadius: "3px",
-                border: `1px solid ${carSortMode === "count" ? "var(--accent)" : "var(--border)"}`,
-                background:
-                  carSortMode === "count"
-                    ? "var(--accent-dim)"
-                    : "var(--surface-2)",
-                color:
-                  carSortMode === "count" ? "var(--accent)" : "var(--text-dim)",
-                fontFamily: "var(--font-rajdhani), sans-serif",
-                fontSize: "0.78rem",
-                fontWeight: 700,
-                cursor: "pointer",
-              }}
-            >
-              # ↓
-            </button>
-          </div>
-
           {/* Empty state */}
           {carMatrixRows.length === 0 && (
             <div className="card">
@@ -659,6 +602,7 @@ export default function InventoryMatrix({
                 <thead>
                   <tr>
                     <th
+                      onClick={() => toggleSort(carSort, "name", setCarSort)}
                       style={{
                         ...nameColStyle,
                         background: "var(--surface-2)",
@@ -666,14 +610,20 @@ export default function InventoryMatrix({
                         fontSize: "0.7rem",
                         letterSpacing: "0.08em",
                         textTransform: "uppercase",
-                        color: "var(--text-dim)",
+                        color:
+                          carSort.col === "name"
+                            ? "var(--accent)"
+                            : "var(--text-dim)",
                         zIndex: 2,
                         borderBottom: "2px solid var(--border)",
+                        cursor: "pointer",
+                        userSelect: "none",
                       }}
                     >
-                      Voiture
+                      Voiture{sortArrow(carSort, "name")}
                     </th>
                     <th
+                      onClick={() => toggleSort(carSort, "count", setCarSort)}
                       style={{
                         background: "var(--surface-2)",
                         borderBottom: "2px solid var(--border)",
@@ -681,13 +631,18 @@ export default function InventoryMatrix({
                         width: `${COUNT_COL_WIDTH}px`,
                         fontSize: "0.65rem",
                         fontWeight: 700,
-                        color: "var(--text-dim)",
+                        color:
+                          carSort.col === "count"
+                            ? "var(--accent)"
+                            : "var(--text-dim)",
                         textAlign: "center",
                         verticalAlign: "bottom",
                         padding: "0.25rem",
+                        cursor: "pointer",
+                        userSelect: "none",
                       }}
                     >
-                      #
+                      #{sortArrow(carSort, "count")}
                     </th>
                     {matrixDrivers.map((d) => (
                       <th
@@ -901,72 +856,6 @@ export default function InventoryMatrix({
             </div>
           </div>
 
-          {/* Sort toggle */}
-          <div
-            style={{
-              display: "flex",
-              gap: "0.5rem",
-              alignItems: "center",
-              marginBottom: "1.25rem",
-            }}
-          >
-            <span
-              style={{
-                fontSize: "0.7rem",
-                fontWeight: 700,
-                color: "var(--text-dim)",
-                letterSpacing: "0.08em",
-                textTransform: "uppercase",
-              }}
-            >
-              Tri :
-            </span>
-            <button
-              onClick={() => setTrackSortMode("alpha")}
-              style={{
-                padding: "0.3rem 0.75rem",
-                borderRadius: "3px",
-                border: `1px solid ${trackSortMode === "alpha" ? "var(--accent)" : "var(--border)"}`,
-                background:
-                  trackSortMode === "alpha"
-                    ? "var(--accent-dim)"
-                    : "var(--surface-2)",
-                color:
-                  trackSortMode === "alpha"
-                    ? "var(--accent)"
-                    : "var(--text-dim)",
-                fontFamily: "var(--font-rajdhani), sans-serif",
-                fontSize: "0.78rem",
-                fontWeight: 700,
-                cursor: "pointer",
-              }}
-            >
-              A → Z
-            </button>
-            <button
-              onClick={() => setTrackSortMode("count")}
-              style={{
-                padding: "0.3rem 0.75rem",
-                borderRadius: "3px",
-                border: `1px solid ${trackSortMode === "count" ? "var(--accent)" : "var(--border)"}`,
-                background:
-                  trackSortMode === "count"
-                    ? "var(--accent-dim)"
-                    : "var(--surface-2)",
-                color:
-                  trackSortMode === "count"
-                    ? "var(--accent)"
-                    : "var(--text-dim)",
-                fontFamily: "var(--font-rajdhani), sans-serif",
-                fontSize: "0.78rem",
-                fontWeight: 700,
-                cursor: "pointer",
-              }}
-            >
-              # ↓
-            </button>
-          </div>
-
           {/* Empty state */}
           {trackMatrixRows.length === 0 && (
             <div className="card">
@@ -996,6 +885,9 @@ export default function InventoryMatrix({
                 <thead>
                   <tr>
                     <th
+                      onClick={() =>
+                        toggleSort(trackSort, "name", setTrackSort)
+                      }
                       style={{
                         ...nameColStyle,
                         background: "var(--surface-2)",
@@ -1003,15 +895,22 @@ export default function InventoryMatrix({
                         fontSize: "0.7rem",
                         letterSpacing: "0.08em",
                         textTransform: "uppercase",
-                        color: "var(--text-dim)",
+                        color:
+                          trackSort.col === "name"
+                            ? "var(--accent)"
+                            : "var(--text-dim)",
                         zIndex: 2,
                         borderBottom: "2px solid var(--border)",
+                        cursor: "pointer",
+                        userSelect: "none",
                       }}
                     >
-                      Circuit
+                      Circuit{sortArrow(trackSort, "name")}
                     </th>
-                    {/* Count column header */}
                     <th
+                      onClick={() =>
+                        toggleSort(trackSort, "count", setTrackSort)
+                      }
                       style={{
                         background: "var(--surface-2)",
                         borderBottom: "2px solid var(--border)",
@@ -1019,14 +918,20 @@ export default function InventoryMatrix({
                         width: `${COUNT_COL_WIDTH}px`,
                         fontSize: "0.65rem",
                         fontWeight: 700,
-                        color: "var(--text-dim)",
+                        color:
+                          trackSort.col === "count"
+                            ? "var(--accent)"
+                            : "var(--text-dim)",
                         textAlign: "center",
                         verticalAlign: "bottom",
                         padding: "0.25rem",
+                        cursor: "pointer",
+                        userSelect: "none",
                       }}
                     >
-                      #
+                      #{sortArrow(trackSort, "count")}
                     </th>
+
                     {matrixDrivers.map((d) => (
                       <th
                         key={d.id}
