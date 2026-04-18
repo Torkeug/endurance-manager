@@ -8,6 +8,7 @@ const links = [
   { href: "/", label: "Accueil" },
   { href: "/pilotes", label: "Pilotes" },
   { href: "/evenements", label: "Événements" },
+  { href: "/inventaire", label: "Inventaire" },
   { href: "/admin", label: "Admin" },
 ];
 
@@ -144,7 +145,14 @@ export default function Nav() {
             }}
           >
             {links
-              .filter((l) => l.href !== "/admin" || isAdmin)
+              .filter((l) => {
+                // Hide Admin for non-admins
+                if (l.href === "/admin" && !isAdmin) return false;
+                // Hide Inventaire for external drivers
+                if (l.href === "/inventaire" && driver.role === "external")
+                  return false;
+                return true;
+              })
               .map(({ href, label }) => {
                 const active =
                   pathname === href ||

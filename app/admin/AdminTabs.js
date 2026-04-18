@@ -7,7 +7,6 @@ import CircuitsManager from "./CircuitsManager";
 import EventTypesManager from "./EventTypesManager";
 import DriversManager from "./DriversManager";
 import SettingsManager from "./SettingsManager";
-import InventoryMatrix from "./InventoryMatrix";
 
 const TABS = [
   { id: "pilotes", label: "Pilotes" },
@@ -17,7 +16,6 @@ const TABS = [
   { id: "circuits", label: "Circuits" },
   { id: "types", label: "Types d'événement" },
   { id: "parametres", label: "Paramètres" },
-  { id: "inventaire", label: "Inventaire" },
 ];
 
 export default function AdminTabs({
@@ -33,16 +31,7 @@ export default function AdminTabs({
   durationPresets,
   specialStartTimes,
   iracingCars,
-  matrixDrivers,
-  allCarsMatrix,
-  allTracksMatrix,
-  carOwnership,
-  trackOwnership,
-  kronosCarsMap,
-  iracingLabelById,
   iracingTracks,
-  kronosCircuitsByTrackId,
-  kronosCircuitNames,
 }) {
   const [activeTab, setActiveTab] = useState("pilotes");
   // Count drivers awaiting approval for the red badge on the Pilotes tab
@@ -147,19 +136,6 @@ export default function AdminTabs({
             settings?.default_event_duration_minutes || "160",
           )}
           initialSpecialStartTimes={specialStartTimes}
-        />
-      )}
-      {activeTab === "inventaire" && (
-        <InventoryMatrix
-          matrixDrivers={matrixDrivers}
-          allCars={allCarsMatrix}
-          allTracks={allTracksMatrix}
-          carOwnership={carOwnership}
-          trackOwnership={trackOwnership}
-          kronosCarsMap={kronosCarsMap}
-          iracingLabelById={iracingLabelById}
-          kronosCircuitsByTrackId={kronosCircuitsByTrackId}
-          kronosCircuitNames={kronosCircuitNames}
         />
       )}
     </div>
