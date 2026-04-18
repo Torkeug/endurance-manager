@@ -1,6 +1,6 @@
 "use client";
 import { useState, useEffect, useMemo, Fragment } from "react";
-import { isLegacyContent } from "../../lib/car-types";
+import { isLegacyContent } from "../lib/car-types";
 
 const CAR_CATEGORY_LABELS = {
   sports_car: "Sports Car",

@@ -140,12 +140,6 @@ export default async function PilotesPage() {
                   </td>
                   <td>
                     <div style={{ display: "flex", gap: "0.5rem" }}>
-                      <Link
-                        href={`/pilotes/${p.id}`}
-                        className="btn btn-primary btn-sm"
-                      >
-                        Voir
-                      </Link>
                       {/* Admins can edit anyone, drivers can only edit themselves */}
                       {(admin || currentDriver?.id === p.id) && (
                         <Link
@@ -155,6 +149,12 @@ export default async function PilotesPage() {
                           Modifier
                         </Link>
                       )}
+                      <Link
+                        href={`/pilotes/${p.id}`}
+                        className="btn btn-primary btn-sm"
+                      >
+                        Voir
+                      </Link>
                     </div>
                   </td>
                 </tr>

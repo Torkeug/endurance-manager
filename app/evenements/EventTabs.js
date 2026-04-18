@@ -100,6 +100,7 @@ function EventCard({ ev }) {
               alignItems: "center",
               gap: "0.5rem",
               marginBottom: "0.25rem",
+              flexWrap: "wrap",
             }}
           >
             <span style={{ fontWeight: 700, fontSize: "1.1rem" }}>
@@ -137,6 +138,24 @@ function EventCard({ ev }) {
                 Manche {ev.round_number}
               </span>
             )}
+            {/* Green "Inscrit" pill — shown when the current driver has signed up */}
+            {ev.is_signed_up && (
+              <span
+                style={{
+                  fontSize: "0.65rem",
+                  fontWeight: 700,
+                  letterSpacing: "0.08em",
+                  textTransform: "uppercase",
+                  padding: "0.1rem 0.45rem",
+                  background: "rgba(80,200,120,0.12)",
+                  border: "1px solid #50c878",
+                  borderRadius: "3px",
+                  color: "#50c878",
+                }}
+              >
+                Inscrit ✓
+              </span>
+            )}
           </div>
           <div style={{ fontSize: "0.85rem", color: "var(--text-dim)" }}>
             {ev.circuit}
@@ -155,7 +174,7 @@ function EventCard({ ev }) {
           </div>
         </div>
 
-        {/* Stats */}
+        {/* Stats — order: Format › Pilotes inscrits › Équipages › Durée */}
         <div
           style={{
             display: "flex",
@@ -164,12 +183,13 @@ function EventCard({ ev }) {
             alignItems: "center",
           }}
         >
+          {ev.format && <span className="badge badge-admin">{ev.format}</span>}
           <div style={{ textAlign: "center" }}>
             <div
               className="mono"
               style={{ fontSize: "1.1rem", color: "var(--text)" }}
             >
-              {formatDuration(ev.duration_minutes)}
+              {ev.signup_count}
             </div>
             <div
               style={{
@@ -179,7 +199,7 @@ function EventCard({ ev }) {
                 color: "var(--text-dim)",
               }}
             >
-              Durée
+              Pilote{ev.signup_count !== 1 ? "s" : ""}
             </div>
           </div>
           <div style={{ textAlign: "center" }}>
@@ -200,7 +220,24 @@ function EventCard({ ev }) {
               Équipage{ev.team_count !== 1 ? "s" : ""}
             </div>
           </div>
-          {ev.format && <span className="badge badge-admin">{ev.format}</span>}
+          <div style={{ textAlign: "center" }}>
+            <div
+              className="mono"
+              style={{ fontSize: "1.1rem", color: "var(--text)" }}
+            >
+              {formatDuration(ev.duration_minutes)}
+            </div>
+            <div
+              style={{
+                fontSize: "0.7rem",
+                textTransform: "uppercase",
+                letterSpacing: "0.08em",
+                color: "var(--text-dim)",
+              }}
+            >
+              Durée
+            </div>
+          </div>
         </div>
 
         <div style={{ color: "var(--text-dim)", fontSize: "1.2rem" }}>›</div>

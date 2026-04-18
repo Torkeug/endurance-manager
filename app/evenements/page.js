@@ -27,7 +27,9 @@ function getLatestStart(startTimes) {
   );
 }
 
-function serializeEvent(ev) {
+// Serialize an event row into a plain object safe to pass to the client component.
+// currentDriverId is used to flag whether the current user is signed up.
+function serializeEvent(ev, currentDriverId) {
   const earliest = getEarliestStart(ev.event_start_times);
   return {
     id: ev.id,
@@ -38,7 +40,13 @@ function serializeEvent(ev) {
     timezone: ev.timezone || "Europe/Paris",
     irl_start: earliest?.irl_start || null,
     start_count: ev.event_start_times?.length || 0,
+    // Total number of distinct pilots signed up across all team entries
+    signup_count: ev.signups?.length || 0,
     team_count: ev.team_entries?.length || 0,
+    // True if the current driver has at least one signup entry for this event
+    is_signed_up: currentDriverId
+      ? (ev.signups || []).some((s) => s.driver_id === currentDriverId)
+      : false,
     archived: ev.archived || false,
     is_special: ev.is_special || false,
     championship_id: ev.championship_id || null,
@@ -59,6 +67,7 @@ export default async function EvenementsPage() {
     circuits (name),
     team_entries (id),
     event_start_times (id, irl_start, label),
+    signups (id, driver_id),
     timezone
   `,
     )
@@ -122,7 +131,9 @@ export default async function EvenementsPage() {
     });
   }
 
-  const allEvents = (evenements || []).map(serializeEvent);
+  const allEvents = (evenements || []).map((ev) =>
+    serializeEvent(ev, currentDriver?.id),
+  );
 
   const normalEvents = allEvents.filter(
     (ev) => !ev.is_special && !ev.championship_id,

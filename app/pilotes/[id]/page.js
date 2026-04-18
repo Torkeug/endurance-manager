@@ -126,8 +126,19 @@ export default async function DriverDetail({ params, searchParams }) {
 
   return (
     <div className="page">
-      {/* Header */}
-      <div className="page-header">
+      {/* ────────────────────────────────────────────────────────────────────────
+          SECTION 1: Name + iR (left) | Back button (right)
+          ──────────────────────────────────────────────────────────────────────── */}
+      <div
+        style={{
+          display: "flex",
+          alignItems: "flex-start",
+          justifyContent: "space-between",
+          gap: "1rem",
+          marginBottom: "1.5rem",
+          flexWrap: "wrap",
+        }}
+      >
         <div>
           <h1>{driver.name}</h1>
           <div className="accent-line" />
@@ -153,34 +164,37 @@ export default async function DriverDetail({ params, searchParams }) {
             )}
           </div>
         </div>
-        <div style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap" }}>
-          {(admin || currentDriver?.id === id) && (
-            <Link
-              href={`/pilotes/${id}/modifier`}
-              className="btn btn-secondary"
-            >
-              Modifier
-            </Link>
-          )}
-          {currentDriver?.id === id && (
-            <Link href="/change-password" className="btn btn-danger btn-sm">
-              Changer mot de passe
-            </Link>
-          )}
-          {(admin || currentDriver?.id === id) && (
-            <Link
-              href={`/pilotes/${id}/inventaire`}
-              className="btn btn-secondary btn-sm"
-            >
-              📦 Inventaire
-            </Link>
-          )}
+        {/* Back button — top right */}
+        <Link href="/pilotes" className="btn btn-secondary">
+          ← Pilotes
+        </Link>
+      </div>
+
+      {/* iRacing link success alert */}
+      {iracing_linked === "true" && (
+        <div className="alert alert-success" style={{ marginBottom: "1rem" }}>
+          ✓ Compte iRacing lié avec succès.
+        </div>
+      )}
+
+      {/* ────────────────────────────────────────────────────────────────────────
+          SECTION 2: iRacing buttons (left) | Inventory button (right) + sync timestamp
+          ──────────────────────────────────────────────────────────────────────── */}
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          gap: "1rem",
+          marginBottom: "0.5rem",
+          flexWrap: "wrap",
+        }}
+      >
+        {/* Left: iRacing Lié + Mettre à jour buttons */}
+        <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
           {currentDriver?.id === id &&
             (driver.iracing_id ? (
-              // Already linked — show status badge + re-link/update option
-              <div
-                style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}
-              >
+              <>
                 <span
                   className="btn btn-sm"
                   style={{
@@ -192,16 +206,14 @@ export default async function DriverDetail({ params, searchParams }) {
                 >
                   ✓ iRacing lié
                 </span>
-                {/* mode=driver syncs own data — always valid for the account owner */}
                 <a
                   href="/auth/iracing?mode=driver"
                   className="btn btn-secondary btn-sm"
                 >
                   🔄 Mettre à jour
                 </a>
-              </div>
+              </>
             ) : (
-              // Not yet linked
               <a
                 href="/auth/iracing?mode=driver"
                 className="btn btn-primary btn-sm"
@@ -209,24 +221,24 @@ export default async function DriverDetail({ params, searchParams }) {
                 🏎️ Lier iRacing
               </a>
             ))}
-          <Link href="/pilotes" className="btn btn-secondary">
-            ← Pilotes
-          </Link>
         </div>
-      </div>
 
-      {/* iRacing link success */}
-      {iracing_linked === "true" && (
-        <div className="alert alert-success" style={{ marginBottom: "1rem" }}>
-          ✓ Compte iRacing lié avec succès.
-        </div>
-      )}
+        {/* Right: Inventory button */}
+        {(admin || currentDriver?.id === id) && (
+          <Link
+            href={`/pilotes/${id}/inventaire`}
+            className="btn btn-secondary btn-sm"
+          >
+            📦 Inventaire
+          </Link>
+        )}
+      </div>
 
       {/* iRacing sync timestamp — shown if data has been synced at least once */}
       {driver.iracing_synced_at && (
         <div
           style={{
-            marginBottom: "1rem",
+            marginBottom: "1.5rem",
             fontSize: "0.8rem",
             color: "var(--text-dim)",
           }}
@@ -242,59 +254,100 @@ export default async function DriverDetail({ params, searchParams }) {
         </div>
       )}
 
-      {/* Driver info */}
+      {/* ────────────────────────────────────────────────────────────────────────
+          Summary card: Data grid (left) + Auth buttons (right)
+          ──────────────────────────────────────────────────────────────────────── */}
       {socials.length > 0 && (
         <div className="card" style={{ marginBottom: "2rem" }}>
-          <div style={{ display: "flex", gap: "1.5rem", flexWrap: "wrap" }}>
-            {socials.map(({ label, value, link }) => (
-              <div key={label}>
-                <div
-                  style={{
-                    fontSize: "0.7rem",
-                    fontWeight: 700,
-                    letterSpacing: "0.1em",
-                    textTransform: "uppercase",
-                    color: "var(--text-dim)",
-                    marginBottom: "0.2rem",
-                  }}
-                >
-                  {label}
-                </div>
-                {link ? (
-                  <a
-                    href={link}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="mono"
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              gap: "1.5rem",
+              flexWrap: "wrap",
+            }}
+          >
+            {/* Left: Socials data grid */}
+            <div style={{ display: "flex", gap: "1.5rem", flexWrap: "wrap" }}>
+              {socials.map(({ label, value, link }) => (
+                <div key={label}>
+                  <div
                     style={{
-                      fontSize: "0.85rem",
-                      color:
-                        label === "Instagram"
-                          ? "#405DE6"
-                          : label === "Twitch"
-                            ? "#9147ff"
-                            : label === "iRacing ID"
-                              ? "var(--text-dim)"
-                              : "var(--accent)",
-                      textDecoration:
-                        label === "iRacing ID" ? "underline" : "none",
+                      fontSize: "0.7rem",
+                      fontWeight: 700,
+                      letterSpacing: "0.1em",
+                      textTransform: "uppercase",
+                      color: "var(--text-dim)",
+                      marginBottom: "0.2rem",
                     }}
                   >
-                    {value}
-                    {label === "iRacing ID" ? " ↗" : ""}
-                  </a>
-                ) : (
-                  <span className="mono" style={{ fontSize: "0.85rem" }}>
-                    {value}
-                  </span>
-                )}
-              </div>
-            ))}
+                    {label}
+                  </div>
+                  {link ? (
+                    <a
+                      href={link}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="mono"
+                      style={{
+                        fontSize: "0.85rem",
+                        color:
+                          label === "Instagram"
+                            ? "#405DE6"
+                            : label === "Twitch"
+                              ? "#9147ff"
+                              : label === "iRacing ID"
+                                ? "var(--text-dim)"
+                                : "var(--accent)",
+                        textDecoration:
+                          label === "iRacing ID" ? "underline" : "none",
+                      }}
+                    >
+                      {value}
+                      {label === "iRacing ID" ? " ↗" : ""}
+                    </a>
+                  ) : (
+                    <span className="mono" style={{ fontSize: "0.85rem" }}>
+                      {value}
+                    </span>
+                  )}
+                </div>
+              ))}
+            </div>
+
+            {/* Right: Auth buttons (Changer mot de passe + Modifier) */}
+            <div
+              style={{
+                display: "flex",
+                gap: "0.75rem",
+                flexWrap: "wrap",
+                justifyContent: "flex-end",
+              }}
+            >
+              {currentDriver?.id === id && (
+                <Link
+                  href="/change-password"
+                  className="btn btn-secondary btn-sm"
+                >
+                  Changer mot de passe
+                </Link>
+              )}
+              {(admin || currentDriver?.id === id) && (
+                <Link
+                  href={`/pilotes/${id}/modifier`}
+                  className="btn btn-secondary btn-sm"
+                >
+                  Modifier
+                </Link>
+              )}
+            </div>
           </div>
         </div>
       )}
 
-      {/* Engagements */}
+      {/* ────────────────────────────────────────────────────────────────────────
+          Engagements section
+          ──────────────────────────────────────────────────────────────────────── */}
       <h2 style={{ marginBottom: "1rem" }}>
         Engagements
         <span
