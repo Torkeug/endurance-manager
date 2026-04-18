@@ -92,6 +92,8 @@ export default function Nav() {
 
   const isAdmin = driver?.role === "admin" || driver?.role === "super_admin";
 
+  const isEngineer = driver?.role === "engineer";
+
   const logoSrc =
     theme === "dark" ? "/kronos-logo-text.png" : "/kronos-logo-light.png";
 
@@ -221,13 +223,18 @@ export default function Nav() {
                   style={{
                     marginLeft: "0.4rem",
                     fontSize: "0.65rem",
-                    color: "var(--accent)",
+                    // Engineers get amber, admins get the standard accent colour
+                    color: isEngineer ? "#f59e0b" : "var(--accent)",
                     fontWeight: 700,
                     letterSpacing: "0.06em",
                     textTransform: "uppercase",
                   }}
                 >
-                  {driver.role === "super_admin" ? "Super Admin" : "Admin"}
+                  {driver.role === "super_admin"
+                    ? "Super Admin"
+                    : driver.role === "engineer"
+                      ? "Ingénieur"
+                      : "Admin"}
                 </span>
               )}
             </Link>

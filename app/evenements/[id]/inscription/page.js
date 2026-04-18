@@ -562,10 +562,12 @@ function InscriptionPage({ params }) {
 
   useEffect(() => {
     Promise.all([
+      // Engineers are staff — they don't sign up as drivers for events
       supabase
         .from("drivers")
         .select("id, name")
         .eq("active", true)
+        .neq("role", "engineer")
         .order("name"),
       supabase
         .from("cars")

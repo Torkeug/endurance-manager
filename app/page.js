@@ -1,5 +1,5 @@
 import { supabaseServer as supabase } from "../lib/supabase-server";
-import { getSessionAndDriver, isAdmin } from "../lib/auth";
+import { getSessionAndDriver, isAdmin, isEngineer } from "../lib/auth";
 import Link from "next/link";
 import { formatInZone } from "../lib/timezone";
 
@@ -53,6 +53,8 @@ function Badge({
 export default async function HomePage() {
   const { driver: currentDriver } = await getSessionAndDriver();
   const admin = isAdmin(currentDriver);
+  // Engineers don't have personal stints — "Mon prochain relais" is not relevant to them
+  const engineer = isEngineer(currentDriver);
 
   // ── Data fetching ──────────────────────────────────────────────────────────
   const [
@@ -501,7 +503,8 @@ export default async function HomePage() {
       <div
         style={{
           display: "grid",
-          gridTemplateColumns: "1fr 1fr",
+          // Engineers don't have personal stints — collapse to a single column
+          gridTemplateColumns: engineer ? "1fr" : "1fr 1fr",
           gap: "1.5rem",
           marginBottom: "2rem",
           alignItems: "stretch",
@@ -605,68 +608,72 @@ export default async function HomePage() {
         </div>
 
         {/* Driver's next planned stint */}
-        <div style={{ display: "flex", flexDirection: "column" }}>
-          <h2 style={{ marginBottom: "1rem" }}>Mon prochain relais</h2>
-          {myNextStint ? (
-            <Link
-              href={`/evenements/${myNextStint.team_entries?.event_id}/equipages/${myNextStint.team_entry_id}`}
-              style={{ textDecoration: "none", flex: 1, display: "flex" }}
-            >
-              <div className="card" style={{ flex: 1 }}>
-                <div
-                  style={{
-                    fontWeight: 700,
-                    fontSize: "1rem",
-                    marginBottom: "0.35rem",
-                  }}
-                >
-                  {myNextStint.team_entries?.events?.name}
+        {!engineer && (
+          <div style={{ display: "flex", flexDirection: "column" }}>
+            <h2 style={{ marginBottom: "1rem" }}>Mon prochain relais</h2>
+            {myNextStint ? (
+              <Link
+                href={`/evenements/${myNextStint.team_entries?.event_id}/equipages/${myNextStint.team_entry_id}`}
+                style={{ textDecoration: "none", flex: 1, display: "flex" }}
+              >
+                <div className="card" style={{ flex: 1 }}>
+                  <div
+                    style={{
+                      fontWeight: 700,
+                      fontSize: "1rem",
+                      marginBottom: "0.35rem",
+                    }}
+                  >
+                    {myNextStint.team_entries?.events?.name}
+                  </div>
+                  <div
+                    style={{
+                      fontSize: "0.82rem",
+                      color: "var(--text-dim)",
+                      marginBottom: "0.5rem",
+                    }}
+                  >
+                    {myNextStint.team_entries?.crew_name} · Relais #
+                    {myNextStint.stint_number}
+                    {myNextStint.rain && " 💧"}
+                    {myNextStint.tyre_change && " 🛞"}
+                  </div>
+                  <div
+                    className="mono"
+                    style={{
+                      fontSize: "0.85rem",
+                      color: "var(--accent)",
+                      marginBottom: "0.25rem",
+                    }}
+                  >
+                    {formatInZone(
+                      myNextStint.irl_start,
+                      myNextStint.team_entries?.events?.timezone ||
+                        "Europe/Paris",
+                    )}
+                  </div>
+                  <div
+                    style={{ fontSize: "0.78rem", color: "var(--text-dim)" }}
+                  >
+                    {timeUntil(myNextStint.irl_start)}
+                  </div>
                 </div>
-                <div
-                  style={{
-                    fontSize: "0.82rem",
-                    color: "var(--text-dim)",
-                    marginBottom: "0.5rem",
-                  }}
-                >
-                  {myNextStint.team_entries?.crew_name} · Relais #
-                  {myNextStint.stint_number}
-                  {myNextStint.rain && " 💧"}
-                  {myNextStint.tyre_change && " 🛞"}
-                </div>
-                <div
-                  className="mono"
-                  style={{
-                    fontSize: "0.85rem",
-                    color: "var(--accent)",
-                    marginBottom: "0.25rem",
-                  }}
-                >
-                  {formatInZone(
-                    myNextStint.irl_start,
-                    myNextStint.team_entries?.events?.timezone ||
-                      "Europe/Paris",
-                  )}
-                </div>
-                <div style={{ fontSize: "0.78rem", color: "var(--text-dim)" }}>
-                  {timeUntil(myNextStint.irl_start)}
-                </div>
+              </Link>
+            ) : (
+              <div
+                className="card"
+                style={{
+                  flex: 1,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+              >
+                <div className="empty">Aucun relais assigné.</div>
               </div>
-            </Link>
-          ) : (
-            <div
-              className="card"
-              style={{
-                flex: 1,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-              }}
-            >
-              <div className="empty">Aucun relais assigné.</div>
-            </div>
-          )}
-        </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* ── Driver's upcoming events ── */}

@@ -2,7 +2,7 @@ import { supabaseServer as supabase } from "../../../lib/supabase-server";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import StartTimesManager from "./StartTimesManager";
-import { getSessionAndDriver, isAdmin } from "../../../lib/auth";
+import { getSessionAndDriver, isAdmin, isEngineer } from "../../../lib/auth";
 import { formatInZone, formatTimeInZone } from "../../../lib/timezone";
 import ArchiveToggle from "./ArchiveToggle";
 import DeleteEventButton from "./DeleteEventButton";
@@ -32,6 +32,8 @@ export default async function EvenementDetail({ params }) {
   const { driver: currentDriver } = await getSessionAndDriver();
   const admin = isAdmin(currentDriver);
   const isExternal = currentDriver?.role === "external";
+  // Engineers can view all event data but cannot sign up or manage team entries
+  const engineer = isEngineer(currentDriver);
 
   const [{ data: event, error }, { data: allCars }] = await Promise.all([
     supabase
@@ -264,7 +266,8 @@ export default async function EvenementDetail({ params }) {
             {(event.signups?.length ?? 0) !== 1 ? "s" : ""}
           </div>
         </div>
-        {!event.archived && (
+        {/* Engineers don't sign up for events — they're staff, not drivers */}
+        {!event.archived && !engineer && (
           <Link
             href={`/evenements/${id}/inscription`}
             className="btn btn-primary"
@@ -401,7 +404,8 @@ export default async function EvenementDetail({ params }) {
         }}
       >
         <h2>Équipages engagés</h2>
-        {!event.archived && (
+        {/* Engineers cannot create team entries — admin only action */}
+        {!event.archived && !engineer && (
           <Link
             href={`/evenements/${id}/equipages/nouveau`}
             className="btn btn-primary"
@@ -557,6 +561,7 @@ export default async function EvenementDetail({ params }) {
                     </td>
                     <td>
                       {(admin ||
+                        engineer ||
                         (entry.signups || []).some(
                           (s) => s.drivers?.id === currentDriver?.id,
                         )) && (
@@ -564,7 +569,8 @@ export default async function EvenementDetail({ params }) {
                           href={`/evenements/${id}/equipages/${entry.id}`}
                           className="btn btn-secondary btn-sm"
                         >
-                          {event.archived ? "Voir" : "Gérer"}
+                          {/* Engineers always see "Voir" — they manage stints but not the entry itself */}
+                          {event.archived || engineer ? "Voir" : "Gérer"}
                         </Link>
                       )}
                     </td>

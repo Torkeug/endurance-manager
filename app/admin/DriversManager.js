@@ -6,6 +6,8 @@ import { supabaseBrowser as supabase } from "../../lib/supabase-browser";
 const ROLE_LABELS = {
   driver: "Pilote",
   external: "Externe",
+  // Engineer is a race-day role: full read access, stint interaction only
+  engineer: "Ingénieur",
   admin: "Admin",
   super_admin: "Super Admin",
 };
@@ -13,6 +15,8 @@ const ROLE_LABELS = {
 const ROLE_COLORS = {
   driver: "var(--text-dim)",
   external: "#9147ff",
+  // Amber — distinct from admin gold and driver grey
+  engineer: "#f59e0b",
   admin: "var(--accent)",
   super_admin: "#e05555",
 };
@@ -26,12 +30,12 @@ function getAllowedRoles(currentRole, targetRole, targetId, currentDriverId) {
   if (currentRole === "super_admin") {
     // Super admin can promote/demote anyone except other super_admins
     if (targetRole === "super_admin") return null;
-    return ["driver", "external", "admin"];
+    return ["driver", "external", "engineer", "admin"];
   }
   if (currentRole === "admin") {
-    // Admin can promote drivers/externals, cannot touch other admins or super_admins
+    // Admin can promote drivers/externals/engineers, cannot touch other admins or super_admins
     if (targetRole === "admin" || targetRole === "super_admin") return null;
-    return ["driver", "external"];
+    return ["driver", "external", "engineer"];
   }
   return null;
 }
@@ -46,7 +50,9 @@ function canApproveOrRevoke(
 ) {
   if (targetId === currentDriverId) return false;
   if (currentRole === "super_admin") return targetRole !== "super_admin";
-  if (currentRole === "admin") return targetRole === "driver";
+  // Admins can revoke drivers and engineers — not other admins or super_admins
+  if (currentRole === "admin")
+    return targetRole === "driver" || targetRole === "engineer";
   return false;
 }
 
@@ -277,15 +283,14 @@ export default function DriversManager({ initialDrivers, currentDriver }) {
     { id: "refused", label: `Refusés (${refused.length})` },
   ];
 
-// Copies a driver's email to clipboard and flashes ✓ for 1.5s
-function copyEmail(driverId, email) {
-  navigator.clipboard.writeText(email).then(() => {
-    setCopiedEmail(driverId);
-    setTimeout(() => setCopiedEmail(null), 1500);
-  });
-}
+  // Copies a driver's email to clipboard and flashes ✓ for 1.5s
+  function copyEmail(driverId, email) {
+    navigator.clipboard.writeText(email).then(() => {
+      setCopiedEmail(driverId);
+      setTimeout(() => setCopiedEmail(null), 1500);
+    });
+  }
 
-  
   return (
     <div>
       {/* iRacing sync-all feedback banners */}

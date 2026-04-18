@@ -27,6 +27,11 @@ export default function EquipageTabs({
   // Default to the relais tab — it's the most-used view during race preparation.
   const [activeTab, setActiveTab] = useState("relais");
 
+  // Engineers can view all tabs but only interact with the Relais tab.
+  // Passing (archived || isEngineer) to the other tabs reuses the existing
+  // read-only mechanism without touching the child components.
+  const isEngineer = currentDriver?.role === "engineer";
+
   const tabBar = (
     <div
       style={{
@@ -101,7 +106,7 @@ export default function EquipageTabs({
           assignedDrivers={assignedDrivers}
           unassignedDrivers={unassignedDrivers}
           currentDriver={currentDriver}
-          archived={archived}
+          archived={archived || isEngineer}
         />
       )}
 
@@ -126,7 +131,7 @@ export default function EquipageTabs({
             igStartTime={teamEntry.events?.ig_start_time || null}
             igSunrise={teamEntry.events?.ig_sunrise || null}
             igSunset={teamEntry.events?.ig_sunset || null}
-            archived={archived}
+            archived={archived || isEngineer}
           />
         </>
       )}
@@ -169,7 +174,7 @@ export default function EquipageTabs({
           <PerformanceData
             teamEntryId={entryId}
             assignedDrivers={assignedDrivers}
-            archived={archived}
+            archived={archived || isEngineer}
           />
         </>
       )}
