@@ -127,6 +127,10 @@ export default function InventoryMatrix({
   const [selectedCarClasses, setSelectedCarClasses] = useState([]);
   const [selectedTrackCats, setSelectedTrackCats] = useState([]);
 
+  // Sort mode per matrix — "alpha" (default) or "count" (descending by owner count)
+  const [carSortMode, setCarSortMode] = useState("alpha");
+  const [trackSortMode, setTrackSortMode] = useState("alpha");
+
   // Build O(1) lookup sets from serialized ownership arrays
   const carOwnershipSets = useMemo(() => {
     const map = {};
@@ -218,6 +222,12 @@ export default function InventoryMatrix({
       setSelectedTrackCats(
         savedTrackCats ? JSON.parse(savedTrackCats) : allTrackCategories,
       );
+
+      const savedCarSort = localStorage.getItem("kronos_inv_car_sort");
+      if (savedCarSort) setCarSortMode(savedCarSort);
+
+      const savedTrackSort = localStorage.getItem("kronos_inv_track_sort");
+      if (savedTrackSort) setTrackSortMode(savedTrackSort);
     } catch {
       // Fallback to all-selected if localStorage fails
       setSelectedCarCats(allCarCategories);
@@ -246,6 +256,20 @@ export default function InventoryMatrix({
       );
     } catch {}
   }, [selectedCarCats, loaded]);
+
+  useEffect(() => {
+    if (!loaded) return;
+    try {
+      localStorage.setItem("kronos_inv_car_sort", carSortMode);
+    } catch {}
+  }, [carSortMode, loaded]);
+
+  useEffect(() => {
+    if (!loaded) return;
+    try {
+      localStorage.setItem("kronos_inv_track_sort", trackSortMode);
+    } catch {}
+  }, [trackSortMode, loaded]);
 
   // When categories change, drop any selected classes that no longer exist in the filtered set
   useEffect(() => {
@@ -318,9 +342,33 @@ export default function InventoryMatrix({
           .sort(([a], [b]) => a.localeCompare(b))
           .map(([cls, cars]) => ({
             cls,
-            cars: cars.sort((a, b) => a.car_name.localeCompare(b.car_name)),
+            cars:
+              carSortMode === "count"
+                ? cars.slice().sort((a, b) => {
+                    const aCount = matrixDrivers.filter((d) =>
+                      carOwnershipSets[d.id]?.has(a.iracing_car_id),
+                    ).length;
+                    const bCount = matrixDrivers.filter((d) =>
+                      carOwnershipSets[d.id]?.has(b.iracing_car_id),
+                    ).length;
+                    return (
+                      bCount - aCount || a.car_name.localeCompare(b.car_name)
+                    );
+                  })
+                : cars.sort((a, b) => a.car_name.localeCompare(b.car_name)),
           })),
-        legacy: legacy.sort((a, b) => a.car_name.localeCompare(b.car_name)),
+        legacy:
+          carSortMode === "count"
+            ? legacy.slice().sort((a, b) => {
+                const aCount = matrixDrivers.filter((d) =>
+                  carOwnershipSets[d.id]?.has(a.iracing_car_id),
+                ).length;
+                const bCount = matrixDrivers.filter((d) =>
+                  carOwnershipSets[d.id]?.has(b.iracing_car_id),
+                ).length;
+                return bCount - aCount || a.car_name.localeCompare(b.car_name);
+              })
+            : legacy.sort((a, b) => a.car_name.localeCompare(b.car_name)),
       }));
   }, [
     allCars,
@@ -328,6 +376,9 @@ export default function InventoryMatrix({
     selectedCarClasses,
     kronosCarsMap,
     iracingLabelById,
+    carSortMode,
+    matrixDrivers,
+    carOwnershipSets,
     loaded,
   ]);
 
@@ -356,10 +407,43 @@ export default function InventoryMatrix({
       .sort(([a], [b]) => a.localeCompare(b))
       .map(([category, { normal, legacy }]) => ({
         category,
-        tracks: normal.sort((a, b) => a.track_name.localeCompare(b.track_name)),
-        legacy: legacy.sort((a, b) => a.track_name.localeCompare(b.track_name)),
+        tracks:
+          trackSortMode === "count"
+            ? normal.slice().sort((a, b) => {
+                const aCount = matrixDrivers.filter((d) =>
+                  trackOwnershipSets[d.id]?.has(a.track_name),
+                ).length;
+                const bCount = matrixDrivers.filter((d) =>
+                  trackOwnershipSets[d.id]?.has(b.track_name),
+                ).length;
+                return (
+                  bCount - aCount || a.track_name.localeCompare(b.track_name)
+                );
+              })
+            : normal.sort((a, b) => a.track_name.localeCompare(b.track_name)),
+        legacy:
+          trackSortMode === "count"
+            ? legacy.slice().sort((a, b) => {
+                const aCount = matrixDrivers.filter((d) =>
+                  trackOwnershipSets[d.id]?.has(a.track_name),
+                ).length;
+                const bCount = matrixDrivers.filter((d) =>
+                  trackOwnershipSets[d.id]?.has(b.track_name),
+                ).length;
+                return (
+                  bCount - aCount || a.track_name.localeCompare(b.track_name)
+                );
+              })
+            : legacy.sort((a, b) => a.track_name.localeCompare(b.track_name)),
       }));
-  }, [allTracks, selectedTrackCats, loaded]);
+  }, [
+    allTracks,
+    selectedTrackCats,
+    trackSortMode,
+    matrixDrivers,
+    trackOwnershipSets,
+    loaded,
+  ]);
 
   if (!loaded) {
     return <div className="empty">Chargement...</div>;
@@ -482,6 +566,68 @@ export default function InventoryMatrix({
                 />
               ))}
             </div>
+          </div>
+
+          {/* Sort toggle */}
+          <div
+            style={{
+              display: "flex",
+              gap: "0.5rem",
+              alignItems: "center",
+              marginBottom: "1.25rem",
+            }}
+          >
+            <span
+              style={{
+                fontSize: "0.7rem",
+                fontWeight: 700,
+                color: "var(--text-dim)",
+                letterSpacing: "0.08em",
+                textTransform: "uppercase",
+              }}
+            >
+              Tri :
+            </span>
+            <button
+              onClick={() => setCarSortMode("alpha")}
+              style={{
+                padding: "0.3rem 0.75rem",
+                borderRadius: "3px",
+                border: `1px solid ${carSortMode === "alpha" ? "var(--accent)" : "var(--border)"}`,
+                background:
+                  carSortMode === "alpha"
+                    ? "var(--accent-dim)"
+                    : "var(--surface-2)",
+                color:
+                  carSortMode === "alpha" ? "var(--accent)" : "var(--text-dim)",
+                fontFamily: "var(--font-rajdhani), sans-serif",
+                fontSize: "0.78rem",
+                fontWeight: 700,
+                cursor: "pointer",
+              }}
+            >
+              A → Z
+            </button>
+            <button
+              onClick={() => setCarSortMode("count")}
+              style={{
+                padding: "0.3rem 0.75rem",
+                borderRadius: "3px",
+                border: `1px solid ${carSortMode === "count" ? "var(--accent)" : "var(--border)"}`,
+                background:
+                  carSortMode === "count"
+                    ? "var(--accent-dim)"
+                    : "var(--surface-2)",
+                color:
+                  carSortMode === "count" ? "var(--accent)" : "var(--text-dim)",
+                fontFamily: "var(--font-rajdhani), sans-serif",
+                fontSize: "0.78rem",
+                fontWeight: 700,
+                cursor: "pointer",
+              }}
+            >
+              # ↓
+            </button>
           </div>
 
           {/* Empty state */}
@@ -753,6 +899,72 @@ export default function InventoryMatrix({
                 />
               ))}
             </div>
+          </div>
+
+          {/* Sort toggle */}
+          <div
+            style={{
+              display: "flex",
+              gap: "0.5rem",
+              alignItems: "center",
+              marginBottom: "1.25rem",
+            }}
+          >
+            <span
+              style={{
+                fontSize: "0.7rem",
+                fontWeight: 700,
+                color: "var(--text-dim)",
+                letterSpacing: "0.08em",
+                textTransform: "uppercase",
+              }}
+            >
+              Tri :
+            </span>
+            <button
+              onClick={() => setTrackSortMode("alpha")}
+              style={{
+                padding: "0.3rem 0.75rem",
+                borderRadius: "3px",
+                border: `1px solid ${trackSortMode === "alpha" ? "var(--accent)" : "var(--border)"}`,
+                background:
+                  trackSortMode === "alpha"
+                    ? "var(--accent-dim)"
+                    : "var(--surface-2)",
+                color:
+                  trackSortMode === "alpha"
+                    ? "var(--accent)"
+                    : "var(--text-dim)",
+                fontFamily: "var(--font-rajdhani), sans-serif",
+                fontSize: "0.78rem",
+                fontWeight: 700,
+                cursor: "pointer",
+              }}
+            >
+              A → Z
+            </button>
+            <button
+              onClick={() => setTrackSortMode("count")}
+              style={{
+                padding: "0.3rem 0.75rem",
+                borderRadius: "3px",
+                border: `1px solid ${trackSortMode === "count" ? "var(--accent)" : "var(--border)"}`,
+                background:
+                  trackSortMode === "count"
+                    ? "var(--accent-dim)"
+                    : "var(--surface-2)",
+                color:
+                  trackSortMode === "count"
+                    ? "var(--accent)"
+                    : "var(--text-dim)",
+                fontFamily: "var(--font-rajdhani), sans-serif",
+                fontSize: "0.78rem",
+                fontWeight: 700,
+                cursor: "pointer",
+              }}
+            >
+              # ↓
+            </button>
           </div>
 
           {/* Empty state */}
