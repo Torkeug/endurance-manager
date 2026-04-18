@@ -45,6 +45,20 @@ const cellStyle = {
   boxSizing: "border-box",
 };
 
+// Group header row style
+const groupTdStyle = {
+  position: "sticky",
+  left: 0,
+  padding: "0.4rem 0.75rem",
+  fontSize: "0.72rem",
+  fontWeight: 700,
+  letterSpacing: "0.08em",
+  textTransform: "uppercase",
+  color: "var(--text-dim)",
+  background: "var(--surface-2)",
+  borderBottom: "1px solid var(--border)",
+};
+
 // Compact K badge for Kronos catalog cars — matches InventoryMatrix badge
 function KBadge() {
   return (
@@ -65,86 +79,115 @@ function KBadge() {
   );
 }
 
-// Group header row style
-const groupTdStyle = {
-  position: "sticky",
-  left: 0,
-  padding: "0.4rem 0.75rem",
-  fontSize: "0.72rem",
-  fontWeight: 700,
-  letterSpacing: "0.08em",
-  textTransform: "uppercase",
-  color: "var(--text-dim)",
-  background: "var(--surface-2)",
-  borderBottom: "1px solid var(--border)",
-};
+// Format driver name as "Prénom N." — first name(s) + initial of surname.
+// Matches the format used in InventoryMatrix.
+function formatDriverName(name) {
+  if (!name) return "?";
+  const parts = name.trim().split(/\s+/);
+  if (parts.length === 1) return parts[0];
+  const firstName = parts.slice(0, -1).join(" ");
+  const lastInitial = parts[parts.length - 1][0].toUpperCase();
+  return `${firstName} ${lastInitial}.`;
+}
 
-// Inventory matrix filtered to cars entered in this event, with columns
-// for all drivers assigned to any team entry in this event.
+// Inventory matrix filtered to cars available for this event's type,
+// with columns for all drivers assigned to any team entry in this event.
 // Data is fetched lazily on mount to avoid bloating the event page query.
-export default function EventInventoryTab({ teamEntries, archived }) {
+export default function EventInventoryTab({
+  teamEntries,
+  archived,
+  eventFormat,
+}) {
+  // Cars come from the event type catalog (not from team entries)
+  const [eventCars, setEventCars] = useState([]);
   const [carOwnershipSets, setCarOwnershipSets] = useState({});
   const [kronosCarsMap, setKronosCarsMap] = useState({});
   const [loaded, setLoaded] = useState(false);
+  const [error, setError] = useState(null);
 
-  // Derive unique cars and drivers from the event's team entries.
-  // Cars are keyed by iracing_car_id; drivers by driver id.
-  const { eventCars, matrixDrivers } = useMemo(() => {
-    const carMap = new Map(); // iracing_car_id → car info
-    const driverMap = new Map(); // driver id → driver info
-
+  // Derive unique drivers from the event's team entries — who is actually racing
+  const matrixDrivers = useMemo(() => {
+    const driverMap = new Map();
     for (const entry of teamEntries) {
-      // Use car_name_snapshot on archived events; fall back to live car name
-      const carName =
-        (archived ? entry.car_name_snapshot : null) || entry.cars?.name;
-      if (entry.cars?.iracing_car_id && carName) {
-        carMap.set(entry.cars.iracing_car_id, {
-          iracing_car_id: entry.cars.iracing_car_id,
-          car_name: carName,
-          // Group by team entry class — this is the Kronos class, not iRacing category
-          class: entry.class || "Autre",
-        });
-      }
-      // Collect all unique drivers across all team entries
       for (const signup of entry.signups || []) {
         if (signup.drivers) {
           driverMap.set(signup.drivers.id, signup.drivers);
         }
       }
     }
+    return [...driverMap.values()].sort((a, b) => a.name.localeCompare(b.name));
+  }, [teamEntries]);
 
-    return {
-      eventCars: [...carMap.values()],
-      matrixDrivers: [...driverMap.values()].sort((a, b) =>
-        a.name.localeCompare(b.name),
-      ),
-    };
-  }, [teamEntries, archived]);
-
-  // Fetch car ownership and Kronos car catalog data on mount.
-  // Only fetches rows relevant to this event (filtered by driver IDs and car IDs).
+  // Fetch event type cars then ownership data.
+  // Sequential: event_types → event_type_cars → driver_car_ownership.
   useEffect(() => {
-    const driverIds = matrixDrivers.map((d) => d.id);
-    const carIds = eventCars.map((c) => c.iracing_car_id).filter(Boolean);
+    const load = async () => {
+      // Step 1: resolve event type ID from the event format name
+      if (!eventFormat) {
+        setLoaded(true);
+        return;
+      }
 
-    if (driverIds.length === 0 || carIds.length === 0) {
-      setLoaded(true);
-      return;
-    }
+      const { data: eventType, error: typeErr } = await supabase
+        .from("event_types")
+        .select("id")
+        .eq("name", eventFormat)
+        .single();
 
-    Promise.all([
-      // Car ownership: which drivers own which cars (iRacing account data)
-      supabase
-        .from("driver_car_ownership")
-        .select("driver_id, iracing_car_id")
-        .in("driver_id", driverIds)
-        .in("iracing_car_id", carIds),
-      // Kronos cars catalog: used to show the K badge and confirm registration
-      supabase
-        .from("cars")
-        .select("iracing_car_id, class, car_type_label")
-        .in("iracing_car_id", carIds),
-    ]).then(([ownershipRes, kronosRes]) => {
+      if (typeErr || !eventType?.id) {
+        // No matching event type — show empty state
+        setLoaded(true);
+        return;
+      }
+
+      // Step 2: fetch all cars linked to this event type
+      const { data: typeCars, error: carsErr } = await supabase
+        .from("event_type_cars")
+        .select("cars (id, name, iracing_car_id, class)")
+        .eq("event_type_id", eventType.id);
+
+      if (carsErr) {
+        setError(carsErr.message);
+        setLoaded(true);
+        return;
+      }
+
+      // Flatten and deduplicate by iracing_car_id
+      const carMap = new Map();
+      for (const row of typeCars || []) {
+        const car = row.cars;
+        if (car && !carMap.has(car.iracing_car_id ?? car.id)) {
+          carMap.set(car.iracing_car_id ?? car.id, car);
+        }
+      }
+      const cars = [...carMap.values()].sort((a, b) =>
+        (a.name || "").localeCompare(b.name || ""),
+      );
+      setEventCars(cars);
+
+      // Step 3: fetch ownership + Kronos catalog for these cars + event drivers
+      const driverIds = matrixDrivers.map((d) => d.id);
+      const carIds = cars.map((c) => c.iracing_car_id).filter(Boolean);
+
+      if (driverIds.length === 0 || carIds.length === 0) {
+        setLoaded(true);
+        return;
+      }
+
+      const [ownershipRes, kronosRes] = await Promise.all([
+        // Car ownership: which drivers own which cars (from iRacing sync)
+        supabase
+          .from("driver_car_ownership")
+          .select("driver_id, iracing_car_id")
+          .in("driver_id", driverIds)
+          .in("iracing_car_id", carIds),
+        // Kronos catalog: used to show the K badge
+        supabase
+          .from("cars")
+          .select("iracing_car_id, class, car_type_label")
+          .in("iracing_car_id", carIds),
+      ]);
+
       // Build driver_id → Set(iracing_car_id) for O(1) ownership lookup
       const ownershipMap = {};
       for (const row of ownershipRes.data || []) {
@@ -162,10 +205,12 @@ export default function EventInventoryTab({ teamEntries, archived }) {
       setKronosCarsMap(kronosMap);
 
       setLoaded(true);
-    });
-  }, [eventCars, matrixDrivers]);
+    };
 
-  // Group event cars by their Kronos class, sorted alphabetically
+    load();
+  }, [eventFormat, matrixDrivers]);
+
+  // Group event type cars by their Kronos class, sorted alphabetically
   const groupedCars = useMemo(() => {
     const classMap = {};
     for (const car of eventCars) {
@@ -175,20 +220,31 @@ export default function EventInventoryTab({ teamEntries, archived }) {
     }
     return Object.entries(classMap)
       .sort(([a], [b]) => a.localeCompare(b))
-      .map(([cls, cars]) => ({
-        cls,
-        cars: cars.slice().sort((a, b) => a.car_name.localeCompare(b.car_name)),
-      }));
+      .map(([cls, cars]) => ({ cls, cars }));
   }, [eventCars]);
 
-  if (!loaded) {
-    return <div className="empty">Chargement...</div>;
+  if (!loaded) return <div className="empty">Chargement...</div>;
+
+  if (error) {
+    return <div className="alert alert-error">{error}</div>;
+  }
+
+  if (!eventFormat) {
+    return (
+      <div className="table-wrap">
+        <div className="empty">
+          Aucun type d&apos;événement défini pour cet événement.
+        </div>
+      </div>
+    );
   }
 
   if (eventCars.length === 0) {
     return (
       <div className="table-wrap">
-        <div className="empty">Aucune voiture engagée dans cet événement.</div>
+        <div className="empty">
+          Aucune voiture configurée pour le type « {eventFormat} ».
+        </div>
       </div>
     );
   }
@@ -203,12 +259,12 @@ export default function EventInventoryTab({ teamEntries, archived }) {
     );
   }
 
-  const colCount = matrixDrivers.length + 2; // name col + count col + driver cols
+  const colCount = matrixDrivers.length + 2;
 
   return (
     <div style={{ overflowX: "auto" }}>
       <table style={{ borderCollapse: "collapse", tableLayout: "fixed" }}>
-        {/* colgroup enforces exact column widths matching header and data rows */}
+        {/* colgroup enforces exact column widths */}
         <colgroup>
           <col style={{ width: `${NAME_COL_WIDTH}px` }} />
           <col style={{ width: `${COUNT_COL_WIDTH}px` }} />
@@ -219,7 +275,7 @@ export default function EventInventoryTab({ teamEntries, archived }) {
 
         <thead>
           <tr>
-            {/* Car name header */}
+            {/* Car name header — verticalAlign bottom matches driver name headers */}
             <th
               style={{
                 ...nameColStyle,
@@ -231,11 +287,12 @@ export default function EventInventoryTab({ teamEntries, archived }) {
                 color: "var(--text-dim)",
                 zIndex: 2,
                 borderBottom: "2px solid var(--border)",
+                verticalAlign: "bottom",
               }}
             >
               Voiture
             </th>
-            {/* Owner count header */}
+            {/* # header — same verticalAlign as Voiture for alignment consistency */}
             <th
               style={{
                 background: "var(--surface-2)",
@@ -252,7 +309,7 @@ export default function EventInventoryTab({ teamEntries, archived }) {
             >
               #
             </th>
-            {/* Driver name headers — rotated vertically to save horizontal space */}
+            {/* Driver name headers — rotated vertically, aligned to bottom */}
             {matrixDrivers.map((d) => (
               <th
                 key={d.id}
@@ -285,7 +342,7 @@ export default function EventInventoryTab({ teamEntries, archived }) {
                       whiteSpace: "nowrap",
                     }}
                   >
-                    {d.name.split(" ")[0]}
+                    {formatDriverName(d.name)}
                   </span>
                 </div>
               </th>
@@ -311,18 +368,21 @@ export default function EventInventoryTab({ teamEntries, archived }) {
                 ).length;
 
                 return (
-                  <tr key={car.iracing_car_id}>
+                  <tr key={car.iracing_car_id ?? car.id}>
                     <td style={nameColStyle}>
-                      {car.car_name}
+                      {car.name}
                       {/* K badge for cars registered in the Kronos catalog */}
                       {isKronos && <KBadge />}
                     </td>
                     <td style={countCellStyle}>
-                      {ownerCount}/{matrixDrivers.length}
+                      {car.iracing_car_id
+                        ? `${ownerCount}/${matrixDrivers.length}`
+                        : "—"}
                     </td>
                     {matrixDrivers.map((d) => (
                       <td key={d.id} style={cellStyle}>
-                        {carOwnershipSets[d.id]?.has(car.iracing_car_id) ? (
+                        {car.iracing_car_id &&
+                        carOwnershipSets[d.id]?.has(car.iracing_car_id) ? (
                           <span
                             style={{ color: "var(--accent)", fontWeight: 700 }}
                           >

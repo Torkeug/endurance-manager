@@ -583,6 +583,7 @@ export default function EventPageTabs({
         <EventInventoryTab
           teamEntries={event.team_entries || []}
           archived={event.archived}
+          eventFormat={event.format}
         />
       )}
     </div>

@@ -19,6 +19,15 @@ const TRACK_CATEGORY_LABELS = {
   other: "Autre",
 };
 
+function formatDriverName(name) {
+  if (!name) return "?";
+  const parts = name.trim().split(/\s+/);
+  if (parts.length === 1) return parts[0];
+  const firstName = parts.slice(0, -1).join(" ");
+  const lastInitial = parts[parts.length - 1][0].toUpperCase();
+  return `${firstName} ${lastInitial}.`;
+}
+
 // Toggle filter pill
 function FilterPill({ label, active, onToggle }) {
   return (
@@ -618,6 +627,7 @@ export default function InventoryMatrix({
                         borderBottom: "2px solid var(--border)",
                         cursor: "pointer",
                         userSelect: "none",
+                        verticalAlign: "bottom",
                       }}
                     >
                       Voiture{sortArrow(carSort, "name")}
@@ -640,6 +650,7 @@ export default function InventoryMatrix({
                         padding: "0.25rem",
                         cursor: "pointer",
                         userSelect: "none",
+                        verticalAlign: "bottom",
                       }}
                     >
                       #{sortArrow(carSort, "count")}
@@ -676,7 +687,7 @@ export default function InventoryMatrix({
                               whiteSpace: "nowrap",
                             }}
                           >
-                            {d.name.split(" ")[0]}
+                            {formatDriverName(d.name)}
                           </span>
                         </div>
                       </th>
@@ -903,6 +914,7 @@ export default function InventoryMatrix({
                         borderBottom: "2px solid var(--border)",
                         cursor: "pointer",
                         userSelect: "none",
+                        verticalAlign: "bottom",
                       }}
                     >
                       Circuit{sortArrow(trackSort, "name")}
@@ -927,6 +939,7 @@ export default function InventoryMatrix({
                         padding: "0.25rem",
                         cursor: "pointer",
                         userSelect: "none",
+                        verticalAlign: "bottom",
                       }}
                     >
                       #{sortArrow(trackSort, "count")}
@@ -964,7 +977,7 @@ export default function InventoryMatrix({
                               whiteSpace: "nowrap",
                             }}
                           >
-                            {d.name.split(" ")[0]}
+                            {formatDriverName(d.name)}
                           </span>
                         </div>
                       </th>
