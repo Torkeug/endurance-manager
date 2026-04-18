@@ -2,6 +2,8 @@
 import { useState, useEffect } from "react";
 
 // Collapsible info grid + notes panel for the event detail page.
+// When collapsed, shows a condensed one-line summary of the first 4 items
+// (Circuit · Format · Durée · Départ IG) so key facts are always visible.
 // Collapse state is persisted per event in localStorage.
 export default function CollapsibleEventInfo({ eventId, items, notes }) {
   const [collapsed, setCollapsed] = useState(false);
@@ -19,9 +21,17 @@ export default function CollapsibleEventInfo({ eventId, items, notes }) {
     localStorage.setItem(`event-info-${eventId}`, String(next));
   };
 
+  // Condensed summary: values of the first 4 items joined with ·
+  // Assumes page.js sends items in order: Circuit · Format · Durée · Départ IG
+  const condensed = items
+    .slice(0, 4)
+    .map((item) => item.value)
+    .filter((v) => v && v !== "—")
+    .join(" · ");
+
   return (
     <div style={{ marginBottom: "1.5rem" }}>
-      {/* Toggle button */}
+      {/* Toggle button — shows condensed summary inline when collapsed */}
       <button
         onClick={toggle}
         style={{
@@ -31,16 +41,49 @@ export default function CollapsibleEventInfo({ eventId, items, notes }) {
           display: "flex",
           alignItems: "center",
           gap: "0.5rem",
-          color: "var(--text-dim)",
-          fontSize: "0.72rem",
-          fontWeight: 700,
-          letterSpacing: "0.08em",
-          textTransform: "uppercase",
           padding: "0 0 0.75rem 0",
+          width: "100%",
+          textAlign: "left",
         }}
       >
-        <span style={{ fontSize: "0.6rem" }}>{collapsed ? "▶" : "▼"}</span>
-        Informations
+        <span
+          style={{
+            fontSize: "0.6rem",
+            color: "var(--text-dim)",
+            flexShrink: 0,
+          }}
+        >
+          {collapsed ? "▶" : "▼"}
+        </span>
+        <span
+          style={{
+            fontSize: "0.72rem",
+            fontWeight: 700,
+            letterSpacing: "0.08em",
+            textTransform: "uppercase",
+            color: "var(--text-dim)",
+            flexShrink: 0,
+          }}
+        >
+          Informations
+        </span>
+        {/* Condensed summary — only visible when collapsed */}
+        {collapsed && condensed && (
+          <span
+            style={{
+              fontSize: "0.82rem",
+              color: "var(--text-dim)",
+              fontWeight: 400,
+              letterSpacing: 0,
+              textTransform: "none",
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              whiteSpace: "nowrap",
+            }}
+          >
+            — {condensed}
+          </span>
+        )}
       </button>
 
       {!collapsed && (

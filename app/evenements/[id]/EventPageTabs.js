@@ -33,10 +33,39 @@ function getCrewColor(name) {
   return CREW_PALETTE[hashString(name) % CREW_PALETTE.length];
 }
 
-// Colored pill for an équipage name. Works on light and dark themes.
-function CrewPill({ name }) {
+// Convert a hex color to its relative luminance (0 = black, 1 = white).
+// Used to decide whether the color is safe as text on both light and dark themes.
+function hexLuminance(hex) {
+  const r = parseInt(hex.slice(1, 3), 16);
+  const g = parseInt(hex.slice(3, 5), 16);
+  const b = parseInt(hex.slice(5, 7), 16);
+  const toLinear = (c) => {
+    c /= 255;
+    return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
+  };
+  return 0.2126 * toLinear(r) + 0.7152 * toLinear(g) + 0.0722 * toLinear(b);
+}
+
+// Returns true when a hex color is mid-range enough to be legible as text
+// on both a light and a dark background.
+// Below 0.08 = too dark (invisible on dark theme).
+// Above 0.70 = too light (invisible on light theme).
+function isSafeTextColor(hex) {
+  const lum = hexLuminance(hex);
+  return lum > 0.08 && lum < 0.7;
+}
+
+// Colored pill for an équipage name.
+// `color` is an explicit hex from the DB; falls back to the hash palette when absent.
+// Text color uses the hex only when luminance is mid-range — otherwise falls back to
+// var(--text) so the pill stays readable on both light and dark themes.
+function CrewPill({ name, color }) {
   if (!name) return <span style={{ color: "var(--text-dim)" }}>—</span>;
-  const { bg, border } = getCrewColor(name);
+  const border = color || getCrewColor(name).border;
+  // 8-digit hex (color + "20") gives ~12% alpha — subtle tint on any background
+  const bg = color ? `${color}20` : getCrewColor(name).bg;
+  // Only use the color as text when it's legible on both themes
+  const textColor = color && isSafeTextColor(color) ? color : "var(--text)";
   return (
     <span
       style={{
@@ -44,7 +73,7 @@ function CrewPill({ name }) {
         borderRadius: "3px",
         background: bg,
         border: `1px solid ${border}`,
-        color: border,
+        color: textColor,
         fontSize: "0.82rem",
         fontWeight: 600,
         whiteSpace: "nowrap",
@@ -65,6 +94,7 @@ export default function EventPageTabs({
   isExternal,
   engineer,
   currentDriver,
+  crewColorsMap = {},
 }) {
   const [activeTab, setActiveTab] = useState("inscriptions");
 
@@ -250,9 +280,12 @@ export default function EventPageTabs({
                         >
                           {s.drivers?.irating ?? "—"}
                         </td>
-                        {/* Colored crew name pill */}
+                        {/* Colored crew name pill — DB color takes priority over hash */}
                         <td>
-                          <CrewPill name={s.team_entries?.crew_name} />
+                          <CrewPill
+                            name={s.team_entries?.crew_name}
+                            color={crewColorsMap[s.team_entries?.crew_name]}
+                          />
                         </td>
                         <td
                           style={{
@@ -381,9 +414,12 @@ export default function EventPageTabs({
                     )
                     .map((entry) => (
                       <tr key={entry.id}>
-                        {/* Colored crew name pill */}
+                        {/* Colored crew name pill — DB color takes priority over hash */}
                         <td style={{ fontWeight: 600 }}>
-                          <CrewPill name={entry.crew_name} />
+                          <CrewPill
+                            name={entry.crew_name}
+                            color={crewColorsMap[entry.crew_name]}
+                          />
                         </td>
                         <td style={{ color: "var(--text-dim)" }}>
                           {(event.archived ? entry.car_name_snapshot : null) ||

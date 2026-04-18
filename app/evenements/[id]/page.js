@@ -36,46 +36,56 @@ export default async function EvenementDetail({ params }) {
   // Engineers can view all event data but cannot sign up or manage team entries
   const engineer = isEngineer(currentDriver);
 
-  const [{ data: event, error }, { data: allCars }] = await Promise.all([
-    supabase
-      .from("events")
-      .select(
-        `
-        *,
-        circuits (name, pit_lane_time_seconds),
-        team_entries (
-          id, crew_name, class, stream_url, start_time_id,
-          car_name_snapshot,
-          cars (id, name, iracing_car_id),
-          event_start_times (irl_start, label),
+  const [{ data: event, error }, { data: allCars }, { data: crewNames }] =
+    await Promise.all([
+      supabase
+        .from("events")
+        .select(
+          `
+          *,
+          circuits (name, pit_lane_time_seconds),
+          team_entries (
+            id, crew_name, class, stream_url, start_time_id,
+            car_name_snapshot,
+            cars (id, name, iracing_car_id),
+            event_start_times (irl_start, label),
+            signups (
+              team_entry_id,
+              driver_name_snapshot,
+              drivers (id, name, irating)
+            )
+          ),
+          event_start_times (id, label, irl_start),
           signups (
-            team_entry_id,
+            id, preferred_class, preferred_car_ids, preferred_start_time_ids, notes, team_entry_id,
             driver_name_snapshot,
-            drivers (id, name, irating)
-          )
-        ),
-        event_start_times (id, label, irl_start),
-        signups (
-          id, preferred_class, preferred_car_ids, preferred_start_time_ids, notes, team_entry_id,
-          driver_name_snapshot,
-          drivers (id, name, irating),
-          team_entries (crew_name)
-        ),
-        timezone,
-        championships (id, name)
-      `,
-      )
-      .eq("id", id)
-      .single(),
-    supabase.from("cars").select("id, name"),
-  ]);
+            drivers (id, name, irating),
+            team_entries (crew_name)
+          ),
+          timezone,
+          championships (id, name)
+        `,
+        )
+        .eq("id", id)
+        .single(),
+      supabase.from("cars").select("id, name"),
+      // Fetch crew name colors for the pill system
+      supabase.from("crew_names").select("name, color"),
+    ]);
 
   if (error || !event) notFound();
 
   const earliest = getEarliestStart(event.event_start_times);
 
-  // Build info items for the collapsible info grid.
-  // Order: Format (event type) › Pilotes inscrits › Équipages › Durée › technical details.
+  // Build crew name → hex color map for pill coloring.
+  // Entries with no color set will fall back to the hash-based palette in CrewPill.
+  const crewColorsMap = (crewNames || []).reduce((acc, cn) => {
+    if (cn.color) acc[cn.name] = cn.color;
+    return acc;
+  }, {});
+
+  // Info items — first 4 are shown as condensed summary when collapsed:
+  // Circuit · Format · Durée · Départ IG
   const infoItems = [
     {
       label: "Circuit",
@@ -84,10 +94,10 @@ export default async function EvenementDetail({ params }) {
         : event.circuits?.name || "—",
     },
     { label: "Format", value: event.format || "—" },
-    { label: "Pilotes inscrits", value: String(event.signups?.length ?? 0) },
-    { label: "Équipages", value: String(event.team_entries?.length ?? 0) },
     { label: "Durée", value: formatDuration(event.duration_minutes) },
     { label: "Départ IG", value: event.ig_start_time || "—" },
+    { label: "Pilotes inscrits", value: String(event.signups?.length ?? 0) },
+    { label: "Équipages", value: String(event.team_entries?.length ?? 0) },
     { label: "Lever soleil", value: event.ig_sunrise || "—" },
     { label: "Coucher soleil", value: event.ig_sunset || "—" },
     {
@@ -183,6 +193,7 @@ export default async function EvenementDetail({ params }) {
         isExternal={isExternal}
         engineer={engineer}
         currentDriver={currentDriver}
+        crewColorsMap={crewColorsMap}
       />
     </div>
   );
