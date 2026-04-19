@@ -15,6 +15,7 @@ const PUBLIC_ROUTES = [
   "/auth/reset",
   "/api/register-driver",
   "/api/notify-admins",
+  "/api/notify-driver-approved",
 ];
 
 export async function proxy(request) {

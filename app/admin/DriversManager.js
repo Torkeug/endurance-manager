@@ -98,6 +98,13 @@ export default function DriversManager({ initialDrivers, currentDriver }) {
     );
     setSaving(null);
     router.refresh();
+
+    // Send approval email — fire and forget, failure must not block the approval action
+    fetch("/api/notify-driver-approved", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ driver_id: driverId }),
+    }).catch((e) => console.error("[approve] Email notification failed:", e));
   };
 
   const refuse = async (driverId) => {
