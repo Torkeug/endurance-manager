@@ -2,7 +2,7 @@ import { supabaseServer as supabase } from "../../../../../lib/supabase-server";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import EquipageTabs from "./EquipageTabs";
-import { getSessionAndDriver } from "../../../../../lib/auth";
+import { getSessionAndDriver, isAdmin } from "../../../../../lib/auth";
 import { formatTimeInZone } from "../../../../../lib/timezone";
 import CollapsibleSummary from "./CollapsibleSummary";
 
@@ -88,6 +88,14 @@ export default async function EquipageDetail({ params }) {
     { label: "Coucher soleil IG", value: entry.events?.ig_sunset || "—" },
   ];
 
+  const driverId = currentDriver?.id;
+
+  const isInEvent = (allSignups || []).some((s) => s.drivers?.id === driverId);
+
+  const isInTeam = assignedDrivers.some((s) => s.drivers?.id === driverId);
+
+  const canEditTeam = isEngineer || entry.created_by === driverId; // adjust if needed
+
   return (
     <div className="page">
       {/* Header */}
@@ -130,7 +138,7 @@ export default async function EquipageDetail({ params }) {
         </div>
         <div style={{ display: "flex", gap: "0.75rem" }}>
           {/* Modifier hidden for archived events — all data is read-only */}
-          {!archived && !isEngineer && (
+          {!archived && !isEngineer && (isAdmin(currentDriver) || isInTeam) && (
             <Link
               href={`/evenements/${id}/equipages/${entryId}/modifier`}
               className="btn btn-secondary"
@@ -169,6 +177,9 @@ export default async function EquipageDetail({ params }) {
         entryClass={entryClass}
         currentDriver={currentDriver}
         archived={archived}
+        isInEvent={isInEvent}
+        isInTeam={isInTeam}
+        isEngineer={isEngineer}
       />
     </div>
   );
