@@ -233,7 +233,7 @@ export default function DriversAssignment({
               marginBottom: "0.75rem",
             }}
           >
-            {isAdmin
+            {isAdmin || isInTeam
               ? "Pilotes inscrits sans équipe"
               : "Rejoindre cet équipage"}
           </div>
