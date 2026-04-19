@@ -131,12 +131,8 @@ export default function ModifierEquipage({ params }) {
           .order("irl_start")
           .then(({ data: stData }) => setStartTimes(stData || []));
 
-        // Pre-fill Twitch usernames from stream_urls array, falling back to legacy stream_url
-        const existingUrls = entry.stream_urls?.length
-          ? entry.stream_urls
-          : entry.stream_url
-            ? [entry.stream_url]
-            : [];
+        // Pre-fill Twitch usernames from stream_urls array
+        const existingUrls = entry.stream_urls || [];
         setTwitchUsernames(
           existingUrls.map(extractTwitchUsername).filter(Boolean),
         );
@@ -219,8 +215,6 @@ export default function ModifierEquipage({ params }) {
       class: form.class || null,
       start_time_id: form.start_time_id,
       stream_urls: streamUrls,
-      // Keep legacy stream_url as first entry for backward compatibility
-      stream_url: streamUrls[0] || null,
       bop_power_percent: parseFloat(form.bop_power_percent) || 100,
       bop_weight_kg: parseFloat(form.bop_weight_kg) || 0,
       bop_tank_size_percent: form.bop_tank_size_percent

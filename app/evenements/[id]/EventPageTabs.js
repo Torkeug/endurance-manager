@@ -538,13 +538,11 @@ export default function EventPageTabs({
                           )}
                         </td>
                         <td>
-                          {/* Prefer stream_urls array; fall back to legacy stream_url */}
+                          {/* Prefer stream_urls array */}
                           {(() => {
                             const urls = (entry.stream_urls || []).filter(
                               Boolean,
                             );
-                            if (urls.length === 0 && entry.stream_url)
-                              urls.push(entry.stream_url);
                             if (urls.length === 0) return "—";
                             return (
                               <div

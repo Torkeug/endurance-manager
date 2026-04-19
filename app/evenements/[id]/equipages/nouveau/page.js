@@ -172,8 +172,6 @@ export default function NouvelEquipage({ params }) {
       class: form.class || null,
       start_time_id: form.start_time_id,
       stream_urls: streamUrls,
-      // Keep legacy stream_url as first entry for backward compatibility
-      stream_url: streamUrls[0] || null,
       bop_power_percent: parseFloat(form.bop_power_percent) || 100,
       bop_weight_kg: parseFloat(form.bop_weight_kg) || 0,
       // BoP tank size is optional — null means use the car's default tank size.
