@@ -118,7 +118,9 @@ export default async function PilotesPage() {
                               ? "var(--accent)"
                               : p.role === "external"
                                 ? "#9147ff"
-                                : "var(--text-dim)",
+                                : p.role === "engineer"
+                                  ? "#f59e0b"
+                                  : "var(--text-dim)",
                         borderColor:
                           p.role === "super_admin"
                             ? "#e05555"
@@ -126,7 +128,9 @@ export default async function PilotesPage() {
                               ? "var(--accent)"
                               : p.role === "external"
                                 ? "#9147ff"
-                                : "var(--border)",
+                                : p.role === "engineer"
+                                  ? "#f59e0b"
+                                  : "var(--border)",
                       }}
                     >
                       {p.role === "super_admin"
@@ -135,7 +139,9 @@ export default async function PilotesPage() {
                           ? "Admin"
                           : p.role === "external"
                             ? "Externe"
-                            : "Pilote"}
+                            : p.role === "engineer"
+                              ? "Ingénieur"
+                              : "Pilote"}
                     </span>
                   </td>
                   <td>
