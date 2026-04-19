@@ -10,6 +10,7 @@ export default async function EquipageDetail({ params }) {
   const { id, entryId } = await params;
 
   const { driver: currentDriver } = await getSessionAndDriver();
+  const isEngineer = currentDriver?.role === "engineer";
 
   const { data: entry, error } = await supabase
     .from("team_entries")
@@ -129,7 +130,7 @@ export default async function EquipageDetail({ params }) {
         </div>
         <div style={{ display: "flex", gap: "0.75rem" }}>
           {/* Modifier hidden for archived events — all data is read-only */}
-          {!archived && (
+          {!archived && !isEngineer && (
             <Link
               href={`/evenements/${id}/equipages/${entryId}/modifier`}
               className="btn btn-secondary"
