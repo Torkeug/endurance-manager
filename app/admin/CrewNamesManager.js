@@ -20,7 +20,7 @@ function isSafeTextColor(hex) {
 const PALETTE_PRESETS = [
   "#000000", // black
   "#c9a84c", // gold
-  "#c0c0c0", // grey
+  "#808080", // grey
   "#ffffff", // white
   "#0774eb", // blue
   "#10b981", // emerald
