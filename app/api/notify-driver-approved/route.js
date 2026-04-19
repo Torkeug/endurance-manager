@@ -1,8 +1,5 @@
 import { NextResponse } from "next/server";
 import { supabaseServer as supabase } from "../../../lib/supabase-server";
-import { Resend } from "resend";
-
-const resend = new Resend(process.env.RESEND_API_KEY);
 
 // POST /api/notify-driver-approved
 // Sends an approval confirmation email to a driver after an admin approves them.
@@ -30,46 +27,102 @@ export async function POST(req) {
         "[notify-driver-approved] Driver fetch failed:",
         driverErr?.message,
       );
-      // Return 200 — approval already succeeded in the DB, don't surface email errors
       return NextResponse.json({ success: false, reason: "driver_not_found" });
     }
 
     const appUrl =
       process.env.NEXT_PUBLIC_APP_URL || "https://kronos-simsports.com";
 
-    const { error: emailErr } = await resend.emails.send({
-      from: "Kronos SimSports <no-reply@kronos-simsports.com>",
-      to: driver.email,
-      subject: "Votre accès Kronos a été approuvé",
-      html: `
-        <div style="font-family: sans-serif; max-width: 480px; margin: 0 auto; color: #e0e0e0; background: #111; padding: 32px; border-radius: 6px;">
-          <img src="${appUrl}/kronos-logo-text.png" alt="Kronos SimSports" style="height: 40px; margin-bottom: 24px; display: block;" />
-          <h2 style="margin: 0 0 12px; color: #ffffff;">Bienvenue, ${driver.name} !</h2>
-          <p style="margin: 0 0 16px; line-height: 1.6; color: #aaa;">
-            Votre compte Kronos SimSports a été approuvé par un administrateur.
-            Vous pouvez maintenant vous connecter et accéder à la plateforme.
-          </p>
-          <a href="${appUrl}/login"
-            style="display: inline-block; padding: 10px 24px; background: #e8b84b; color: #111;
-                   font-weight: 700; border-radius: 4px; text-decoration: none; font-size: 15px;">
-            Se connecter →
-          </a>
-          <p style="margin: 24px 0 0; font-size: 12px; color: #555;">
-            Kronos SimSports · Ce message est envoyé automatiquement, merci de ne pas y répondre.
-          </p>
-        </div>
-      `,
+    // Send via Resend using plain fetch — same pattern as notify-admins
+    const res = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${process.env.RESEND_API_KEY}`,
+      },
+      body: JSON.stringify({
+        from: "Kronos Planner <noreply@kronos-simsports.com>",
+        to: driver.email,
+        subject: "Votre accès Kronos a été approuvé",
+        html: buildEmail({ name: driver.name, appUrl }),
+      }),
     });
 
-    if (emailErr) {
-      console.error("[notify-driver-approved] Resend error:", emailErr);
+    if (!res.ok) {
+      const text = await res.text();
+      console.error("[notify-driver-approved] Resend error:", text);
       return NextResponse.json({ success: false, reason: "email_failed" });
     }
 
     return NextResponse.json({ success: true });
   } catch (err) {
     console.error("[notify-driver-approved] Unexpected error:", err.message);
-    // Return 200 — approval already succeeded, don't surface email errors to the UI
+    // Return 200 — approval already succeeded in the DB, don't surface email errors
     return NextResponse.json({ success: false, reason: "unexpected_error" });
   }
+}
+
+function buildEmail({ name, appUrl }) {
+  return `<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Accès approuvé</title>
+</head>
+<body style="margin:0;padding:0;background:#0f0f13;font-family:'Segoe UI',Arial,sans-serif;color:#e8e8e8;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#0f0f13;padding:40px 16px;">
+    <tr>
+      <td align="center">
+        <table width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;">
+
+          <!-- Header -->
+          <tr>
+            <td style="padding-bottom:24px;text-align:center;">
+              <span style="font-size:1.6rem;font-weight:800;letter-spacing:0.06em;color:#e8c84b;">KRONOS</span>
+              <span style="font-size:1.6rem;font-weight:300;letter-spacing:0.06em;color:#e8e8e8;">&nbsp;PLANNER</span>
+            </td>
+          </tr>
+
+          <!-- Card -->
+          <tr>
+            <td style="background:#1a1a22;border:1px solid #2a2a35;border-radius:6px;padding:32px;">
+              <p style="font-size:2rem;margin:0 0 12px;text-align:center;">✅</p>
+              <h1 style="margin:0 0 8px;font-size:1.2rem;font-weight:700;color:#e8e8e8;text-align:center;">
+                Bienvenue, ${name} !
+              </h1>
+              <p style="margin:0 0 24px;font-size:0.9rem;color:#aaa;text-align:center;line-height:1.6;">
+                Votre compte Kronos SimSports a été approuvé par un administrateur.<br/>
+                Vous pouvez maintenant vous connecter et accéder à la plateforme.
+              </p>
+
+              <!-- CTA -->
+              <table width="100%" cellpadding="0" cellspacing="0">
+                <tr>
+                  <td align="center">
+                    <a href="${appUrl}/login"
+                      style="display:inline-block;background:#e8c84b;color:#0f0f13;
+                             font-weight:800;font-size:0.9rem;letter-spacing:0.06em;
+                             text-decoration:none;padding:12px 32px;border-radius:4px;">
+                      SE CONNECTER →
+                    </a>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td style="padding-top:20px;text-align:center;font-size:0.75rem;color:#555;">
+              Kronos SimSports — Cet email a été envoyé automatiquement, merci de ne pas y répondre.
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`;
 }
