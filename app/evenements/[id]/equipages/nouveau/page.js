@@ -15,6 +15,7 @@ const emptyForm = {
   bop_tank_size_percent: "",
   refuel_time_seconds: "30",
   tyre_change_time_seconds: "0",
+  notification_minutes_before: "5",
 };
 
 export default function NouvelEquipage({ params }) {
@@ -181,6 +182,10 @@ export default function NouvelEquipage({ params }) {
         : null,
       refuel_time_seconds: parseInt(form.refuel_time_seconds) || 30,
       tyre_change_time_seconds: parseInt(form.tyre_change_time_seconds) || 0,
+      // Minutes before stint end to trigger Discord handoff alert (null = disabled)
+      notification_minutes_before: form.notification_minutes_before
+        ? parseInt(form.notification_minutes_before)
+        : null,
     };
 
     const { data, error: err } = await supabase
@@ -626,6 +631,32 @@ export default function NouvelEquipage({ params }) {
                 min="0"
                 max="300"
               />
+            </div>
+            {/* ── Alerte relais Discord ── */}
+            <div className="form-group">
+              <label htmlFor="notification_minutes_before">
+                Alerte relais Discord (min)
+              </label>
+              <input
+                id="notification_minutes_before"
+                type="number"
+                value={form.notification_minutes_before}
+                onChange={set("notification_minutes_before")}
+                min="1"
+                max="60"
+                placeholder="5"
+              />
+              {/* Helper text — shown below the input */}
+              <div
+                style={{
+                  fontSize: "0.75rem",
+                  color: "var(--text-dim)",
+                  marginTop: "0.3rem",
+                }}
+              >
+                Le bot Discord alertera X minutes avant la fin de chaque relais.
+                Laisser vide pour désactiver.
+              </div>
             </div>
           </div>
         </div>
