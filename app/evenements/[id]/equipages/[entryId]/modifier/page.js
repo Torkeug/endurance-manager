@@ -5,6 +5,14 @@ import Link from "next/link";
 import { supabaseBrowser as supabase } from "../../../../../../lib/supabase-browser";
 import { formatTimeInZone } from "../../../../../../lib/timezone";
 
+// Extract a Twitch username from a full twitch.tv URL, or return the string as-is
+// if it doesn't look like a full URL (treat it as a raw username already).
+function extractTwitchUsername(url) {
+  if (!url) return "";
+  const match = url.match(/twitch\.tv\/([a-zA-Z0-9_]+)/i);
+  return match ? match[1] : url;
+}
+
 export default function ModifierEquipage({ params }) {
   const [eventTimezone, setEventTimezone] = useState("Europe/Paris");
   const router = useRouter();
@@ -18,8 +26,12 @@ export default function ModifierEquipage({ params }) {
   const [fetching, setFetching] = useState(true);
   const [error, setError] = useState(null);
   const [crewNames, setCrewNames] = useState([]);
-
   const [currentIsAdmin, setCurrentIsAdmin] = useState(false);
+
+  // Twitch: raw username (no URL prefix) — built into stream_url on submit
+  const [twitchUsername, setTwitchUsername] = useState("");
+  // Drivers in this event who have a linked Twitch account — offered as quick-pick
+  const [twitchDrivers, setTwitchDrivers] = useState([]);
 
   // Auth check — also sets currentIsAdmin to control delete button visibility
   useEffect(() => {
@@ -60,8 +72,7 @@ export default function ModifierEquipage({ params }) {
           return;
         }
 
-        // Fetch the parent event to check archived status and timezone.
-        // Archived events are read-only — redirect to detail page if archived.
+        // Fetch the parent event to check archived status, timezone, and format
         let filteredCars = carsData || [];
         const { data: evData } = await supabase
           .from("events")
@@ -101,6 +112,21 @@ export default function ModifierEquipage({ params }) {
           crewData?.map((c) => c.name).sort((a, b) => a.localeCompare(b)) || [],
         );
 
+        // Fetch signed-up drivers in this event who have a Twitch username linked
+        const { data: signupsData } = await supabase
+          .from("signups")
+          .select("drivers(id, name, twitch_username)")
+          .eq("event_id", entry.event_id);
+
+        const seen = new Set();
+        const withTwitch = (signupsData || [])
+          .map((s) => s.drivers)
+          .filter(
+            (d) => d && d.twitch_username && !seen.has(d.id) && seen.add(d.id),
+          )
+          .sort((a, b) => a.name.localeCompare(b.name));
+        setTwitchDrivers(withTwitch);
+
         supabase
           .from("event_start_times")
           .select("*")
@@ -108,12 +134,14 @@ export default function ModifierEquipage({ params }) {
           .order("irl_start")
           .then(({ data: stData }) => setStartTimes(stData || []));
 
+        // Pre-fill Twitch username from existing stream_url
+        setTwitchUsername(extractTwitchUsername(entry.stream_url || ""));
+
         setForm({
           crew_name: entry.crew_name ?? "",
           car_id: entry.car_id ?? "",
           class: entry.class ?? "",
           start_time_id: entry.start_time_id ?? "",
-          stream_url: entry.stream_url ?? "",
           bop_power_percent: entry.bop_power_percent ?? "100",
           bop_weight_kg: entry.bop_weight_kg ?? "0",
           bop_tank_size_percent: entry.bop_tank_size_percent ?? "",
@@ -165,7 +193,10 @@ export default function ModifierEquipage({ params }) {
       car_id: form.car_id || null,
       class: form.class || null,
       start_time_id: form.start_time_id,
-      stream_url: form.stream_url.trim() || null,
+      // Build full Twitch URL from username, or null if none entered
+      stream_url: twitchUsername.trim()
+        ? `https://twitch.tv/${twitchUsername.trim().toLowerCase()}`
+        : null,
       bop_power_percent: parseFloat(form.bop_power_percent) || 100,
       bop_weight_kg: parseFloat(form.bop_weight_kg) || 0,
       bop_tank_size_percent: form.bop_tank_size_percent
@@ -181,11 +212,11 @@ export default function ModifierEquipage({ params }) {
       .eq("id", entryId);
 
     if (err) {
-      if (err.code === "23505") {
-        setError("Cet équipage est déjà inscrit pour ce créneau de départ.");
-      } else {
-        setError(err.message);
-      }
+      setError(
+        err.code === "23505"
+          ? "Cet équipage est déjà inscrit pour ce créneau de départ."
+          : err.message,
+      );
       setLoading(false);
     } else {
       router.push(`/evenements/${id}/equipages/${entryId}`);
@@ -254,6 +285,7 @@ export default function ModifierEquipage({ params }) {
       </div>
 
       <form onSubmit={handleSubmit}>
+        {/* ── Équipage & voiture ── */}
         <div className="card" style={{ marginBottom: "1.25rem" }}>
           <h3 style={{ marginBottom: "1.25rem", color: "var(--text-dim)" }}>
             Équipage &amp; voiture
@@ -275,6 +307,7 @@ export default function ModifierEquipage({ params }) {
                 ))}
               </select>
             </div>
+
             <div className="form-group">
               <label htmlFor="car_id">Voiture *</label>
               <select id="car_id" value={form.car_id} onChange={set("car_id")}>
@@ -290,6 +323,7 @@ export default function ModifierEquipage({ params }) {
                 ))}
               </select>
             </div>
+
             {selectedCar && (
               <div className="form-group">
                 <label>Réservoir (auto-rempli)</label>
@@ -308,6 +342,7 @@ export default function ModifierEquipage({ params }) {
                 </div>
               </div>
             )}
+
             <div className="form-group">
               <label htmlFor="class">Classe *</label>
               {selectedCar ? (
@@ -340,18 +375,111 @@ export default function ModifierEquipage({ params }) {
                 </select>
               )}
             </div>
-            <div className="form-group">
-              <label htmlFor="stream_url">Lien stream</label>
-              <input
-                id="stream_url"
-                type="url"
-                value={form.stream_url}
-                onChange={set("stream_url")}
-              />
+
+            {/* ── Twitch stream picker ── */}
+            <div className="form-group" style={{ gridColumn: "1 / -1" }}>
+              <label>Lien stream Twitch</label>
+              {/* Quick-pick from drivers in this event who have a Twitch account */}
+              {twitchDrivers.length > 0 && (
+                <div
+                  style={{
+                    display: "flex",
+                    gap: "0.5rem",
+                    flexWrap: "wrap",
+                    marginBottom: "0.5rem",
+                  }}
+                >
+                  {twitchDrivers.map((d) => (
+                    <button
+                      key={d.id}
+                      type="button"
+                      onClick={() => setTwitchUsername(d.twitch_username)}
+                      style={{
+                        padding: "0.3rem 0.75rem",
+                        borderRadius: "3px",
+                        border: `1px solid ${twitchUsername === d.twitch_username ? "#9147ff" : "var(--border)"}`,
+                        background:
+                          twitchUsername === d.twitch_username
+                            ? "rgba(145,71,255,0.12)"
+                            : "var(--surface-2)",
+                        color:
+                          twitchUsername === d.twitch_username
+                            ? "#9147ff"
+                            : "var(--text-dim)",
+                        fontSize: "0.82rem",
+                        fontWeight: 600,
+                        cursor: "pointer",
+                      }}
+                    >
+                      {d.name} ({d.twitch_username})
+                    </button>
+                  ))}
+                  {twitchUsername && (
+                    <button
+                      type="button"
+                      onClick={() => setTwitchUsername("")}
+                      style={{
+                        padding: "0.3rem 0.75rem",
+                        borderRadius: "3px",
+                        border: "1px solid var(--border)",
+                        background: "var(--surface-2)",
+                        color: "var(--text-dim)",
+                        fontSize: "0.82rem",
+                        cursor: "pointer",
+                      }}
+                    >
+                      Effacer
+                    </button>
+                  )}
+                </div>
+              )}
+              {/* Manual username entry — twitch.tv/ prefix shown as read-only */}
+              <div style={{ display: "flex", alignItems: "center", gap: 0 }}>
+                <span
+                  style={{
+                    padding: "0.55rem 0.6rem",
+                    background: "var(--surface-2)",
+                    border: "1px solid var(--border)",
+                    borderRight: "none",
+                    borderRadius: "3px 0 0 3px",
+                    fontSize: "0.85rem",
+                    color: "var(--text-dim)",
+                    whiteSpace: "nowrap",
+                    fontFamily: "var(--font-mono), monospace",
+                  }}
+                >
+                  twitch.tv/
+                </span>
+                <input
+                  type="text"
+                  value={twitchUsername}
+                  onChange={(e) =>
+                    setTwitchUsername(
+                      e.target.value.replace(/\s/g, "").toLowerCase(),
+                    )
+                  }
+                  placeholder="nom_de_chaine"
+                  style={{ borderRadius: "0 3px 3px 0", flex: 1 }}
+                />
+              </div>
+              {/* Live preview of the constructed URL */}
+              {twitchUsername.trim() && (
+                <div style={{ marginTop: "0.35rem", fontSize: "0.78rem" }}>
+                  <a
+                    href={`https://twitch.tv/${twitchUsername.trim()}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{ color: "#9147ff" }}
+                  >
+                    https://twitch.tv/{twitchUsername.trim()} ↗
+                  </a>
+                </div>
+              )}
             </div>
           </div>
         </div>
 
+        {/* ── Horaire de départ ── */}
         <div className="card" style={{ marginBottom: "1.25rem" }}>
           <h3 style={{ marginBottom: "1.25rem", color: "var(--text-dim)" }}>
             Horaire de départ *
@@ -419,6 +547,7 @@ export default function ModifierEquipage({ params }) {
           )}
         </div>
 
+        {/* ── Paramètres stratégie ── */}
         <div className="card" style={{ marginBottom: "1.25rem" }}>
           <h3 style={{ marginBottom: "1.25rem", color: "var(--text-dim)" }}>
             Paramètres stratégie
