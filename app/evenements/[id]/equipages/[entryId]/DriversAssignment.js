@@ -10,7 +10,7 @@ function MismatchBadge({ signup, entryCarId, entryClass }) {
   if (prefCarIds.length > 0 && entryCarId && !prefCarIds.includes(entryCarId)) {
     return (
       <span
-        title={`Voiture préférée différente`}
+        title="Voiture préférée différente"
         style={{
           fontSize: "0.7rem",
           padding: "0.15rem 0.4rem",
@@ -57,29 +57,33 @@ export default function DriversAssignment({
   assignedDrivers,
   unassignedDrivers,
   currentDriver,
-  // archived — when true, all assign/unassign actions are hidden
+  // archived — when true all assign/unassign actions are hidden
   archived = false,
+  isInEvent = false,
+  // isInTeam: current driver is already in this team entry
+  isInTeam = false,
+  // isAdmin: passed explicitly from EquipageTabs so we don't recompute
+  isAdmin = false,
 }) {
   const router = useRouter();
   const [assigned, setAssigned] = useState(assignedDrivers);
   const [unassigned, setUnassigned] = useState(unassignedDrivers);
   const [error, setError] = useState(null);
-  // Stores the signup ID being assigned — used to show a loading state
-  // on the specific button clicked, not all buttons at once.
+  // Stores the signup ID being assigned — shows loading on the specific button
   const [assigning, setAssigning] = useState(null);
-  const isAdmin =
-    currentDriver?.role === "admin" || currentDriver?.role === "super_admin";
+
   const isExternal = currentDriver?.role === "external";
 
   const assign = async (signup) => {
     if (assigning || archived) return;
     setAssigning(signup.id);
-    const { error: err } = await supabase
+    const { data, error: err } = await supabase
       .from("signups")
       .update({ team_entry_id: entryId })
-      .eq("id", signup.id);
-    if (err) {
-      setError(err.message);
+      .eq("id", signup.id)
+      .select();
+    if (err || !data || data.length === 0) {
+      setError(err?.message || "Update failed (RLS ou contrainte)");
       setAssigning(null);
       return;
     }
@@ -104,17 +108,28 @@ export default function DriversAssignment({
     router.refresh();
   };
 
-  // Returns true only when the driver has expressed preferences AND they conflict
-  // with this team entry's car or class. No preferences = no mismatch.
   const hasMismatch = (signup) => {
     const prefCarIds = signup.preferred_car_ids || [];
     const prefClasses = signup.preferred_class || [];
     if (prefCarIds.length === 0 && prefClasses.length === 0) return false;
-    if (prefCarIds.length > 0) {
+    if (prefCarIds.length > 0)
       return entryCarId ? !prefCarIds.includes(entryCarId) : false;
-    }
     return entryClass ? !prefClasses.includes(entryClass) : false;
   };
+
+  // ── Unassigned list filtering ─────────────────────────────────────────────
+  // Admin: sees everyone not yet assigned to this team
+  // Event driver not in team (self-assign flow): sees only their own signup
+  // In team but not admin: sees no one (they're already in, only admins reassign others)
+  const visibleUnassigned = (() => {
+    if (archived) return [];
+    if (isAdmin) return unassigned;
+    if (isInEvent && !isInTeam) {
+      // Self-assign only — show the current driver's own unassigned signup
+      return unassigned.filter((s) => s.drivers?.id === currentDriver?.id);
+    }
+    return [];
+  })();
 
   return (
     <div>
@@ -124,6 +139,7 @@ export default function DriversAssignment({
         </div>
       )}
 
+      {/* ── Assigned drivers table ── */}
       {assigned.length === 0 ? (
         <div className="card" style={{ marginBottom: "1rem" }}>
           <div className="empty" style={{ padding: "1.5rem" }}>
@@ -139,7 +155,6 @@ export default function DriversAssignment({
                 <th>iRating</th>
                 <th>Préférences</th>
                 <th>Notes</th>
-                {/* Action column hidden when archived */}
                 {!archived && <th></th>}
               </tr>
             </thead>
@@ -181,8 +196,8 @@ export default function DriversAssignment({
                   >
                     {s.notes || "—"}
                   </td>
-                  {/* Retirer button hidden for archived events and external drivers.
-                      Only the driver themselves or an admin can remove a driver. */}
+                  {/* Retirer: only the driver themselves or an admin can remove.
+                      External drivers and engineers cannot unassign anyone. */}
                   {!archived && (
                     <td>
                       {!isExternal &&
@@ -204,8 +219,8 @@ export default function DriversAssignment({
         </div>
       )}
 
-      {/* Unassigned section hidden entirely when archived — no new assignments allowed */}
-      {!archived && unassigned.length > 0 && !isExternal && (
+      {/* ── Unassigned section ── */}
+      {visibleUnassigned.length > 0 && (
         <div>
           <div
             style={{
@@ -217,10 +232,12 @@ export default function DriversAssignment({
               marginBottom: "0.75rem",
             }}
           >
-            Pilotes inscrits sans équipe
+            {isAdmin
+              ? "Pilotes inscrits sans équipe"
+              : "Rejoindre cet équipage"}
           </div>
           <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem" }}>
-            {unassigned.map((s) => {
+            {visibleUnassigned.map((s) => {
               const mismatch = hasMismatch(s);
               return (
                 <button
