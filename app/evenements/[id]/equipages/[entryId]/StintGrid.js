@@ -108,12 +108,52 @@ function calcStint(
     : carTankSize;
   const raceStart = teamEntry?.event_start_times?.irl_start;
   const perf = driverPerf[stint.driver_id];
-  const lapTimeSec = stint.rain
-    ? perf?.lap_time_wet || perf?.lap_time_dry || null
-    : perf?.lap_time_dry || perf?.lap_time_wet || null;
-  const fuelPerLap = stint.rain
-    ? perf?.fuel_wet || perf?.fuel_dry || null
-    : perf?.fuel_dry || perf?.fuel_wet || null;
+
+  // Compute phase first so lap time selection can account for night conditions.
+  // stintIrlStart is defined here and reused throughout the rest of the function.
+  const stintIrlStart = irlStart;
+  const igStart = getIGTime(stintIrlStart, raceStart, igStartTime);
+  const phase = getPhase(igStart, igSunrise, igSunset);
+  const isNight = phase === "🌑";
+
+  // Night additive fallback — applied only when no specific night lap time data exists
+  const nightDryAdd = teamEntry?.night_dry_add_seconds || 0;
+  const nightWetAdd = teamEntry?.night_wet_add_seconds || 0;
+
+  // Lap time selection priority:
+  //   Night + rain:    lap_time_night_wet → (lap_time_wet + nightWetAdd) → (lap_time_dry + nightWetAdd)
+  //   Night + dry:     lap_time_night_dry → (lap_time_dry + nightDryAdd) → (lap_time_wet + nightDryAdd)
+  //   Day + rain:      lap_time_wet → lap_time_dry
+  //   Day + dry:       lap_time_dry → lap_time_wet
+  let lapTimeSec;
+  if (stint.rain) {
+    lapTimeSec = isNight
+      ? perf?.lap_time_night_wet ||
+        (perf?.lap_time_wet ? perf.lap_time_wet + nightWetAdd : null) ||
+        (perf?.lap_time_dry ? perf.lap_time_dry + nightWetAdd : null) ||
+        null
+      : perf?.lap_time_wet || perf?.lap_time_dry || null;
+  } else {
+    lapTimeSec = isNight
+      ? perf?.lap_time_night_dry ||
+        (perf?.lap_time_dry ? perf.lap_time_dry + nightDryAdd : null) ||
+        (perf?.lap_time_wet ? perf.lap_time_wet + nightDryAdd : null) ||
+        null
+      : perf?.lap_time_dry || perf?.lap_time_wet || null;
+  }
+
+  // Fuel selection: use night-specific fuel if available, otherwise fall back to day fuel
+  let fuelPerLap;
+  if (stint.rain) {
+    fuelPerLap = isNight
+      ? perf?.fuel_night_wet || perf?.fuel_wet || perf?.fuel_dry || null
+      : perf?.fuel_wet || perf?.fuel_dry || null;
+  } else {
+    fuelPerLap = isNight
+      ? perf?.fuel_night_dry || perf?.fuel_dry || perf?.fuel_wet || null
+      : perf?.fuel_dry || perf?.fuel_wet || null;
+  }
+
   const calcLaps =
     fuelPerLap && tankSize
       ? Math.max(1, Math.floor(tankSize / fuelPerLap))
@@ -132,7 +172,6 @@ function calcStint(
   const _durationIsDefault = !laps && !lapTimeSec && !stint.duration_minutes;
   const fuelUsed = laps && fuelPerLap ? laps * fuelPerLap : null;
   const pitStopSec = pitLane + refuel + (stint.tyre_change ? tyreChange : 0);
-  const stintIrlStart = irlStart;
   const stintIrlEnd =
     stintIrlStart && stintDurationSec
       ? new Date(stintIrlStart.getTime() + stintDurationSec * 1000)
@@ -140,8 +179,6 @@ function calcStint(
   const nextStart = stintIrlEnd
     ? new Date(stintIrlEnd.getTime() + pitStopSec * 1000)
     : null;
-  const igStart = getIGTime(stintIrlStart, raceStart, igStartTime);
-  const phase = getPhase(igStart, igSunrise, igSunset);
   return {
     ...stint,
     _irlStart: stintIrlStart,
@@ -696,7 +733,6 @@ export default function StintGrid({
               <th style={{ ...TH, minWidth: "130px" }}>Pilote</th>
               <th style={TH}>Départ IRL</th>
               <th style={TH}>Fin IRL</th>
-              {/* Fin réelle column hidden when archived */}
               {!archived && (
                 <th style={{ ...TH, minWidth: "110px" }}>Fin réelle</th>
               )}
@@ -725,7 +761,6 @@ export default function StintGrid({
                   {d.drivers?.name?.split(" ")[0]?.slice(0, 3)}
                 </th>
               ))}
-              {/* Delete column hidden when archived */}
               {!archived && <th style={{ ...TH, width: "36px" }}></th>}
             </tr>
           </thead>
@@ -751,7 +786,6 @@ export default function StintGrid({
                 stint._isLastStint && stint._adjustedIrlEnd
                   ? stint._adjustedIrlEnd
                   : stint._irlEnd;
-
               return (
                 <tr
                   key={stint.id}
@@ -805,7 +839,7 @@ export default function StintGrid({
                     </div>
                   </td>
 
-                  {/* Driver selector — disabled when archived */}
+                  {/* Driver selector */}
                   <td style={TD}>
                     <select
                       value={stint.driver_id || ""}
@@ -892,7 +926,7 @@ export default function StintGrid({
                       )}
                   </td>
 
-                  {/* Actual end — hidden when archived */}
+                  {/* Actual end */}
                   {!archived && (
                     <td
                       style={{ ...TD, padding: "4px 6px", minWidth: "110px" }}
@@ -1132,7 +1166,7 @@ export default function StintGrid({
                     );
                   })}
 
-                  {/* Delete button — hidden when archived */}
+                  {/* Delete button */}
                   {!archived && (
                     <td style={{ ...TD, textAlign: "center" }}>
                       <button
@@ -1151,7 +1185,7 @@ export default function StintGrid({
         </table>
       </div>
 
-      {/* Actions — hidden entirely when archived */}
+      {/* Actions */}
       {!archived && (
         <div
           style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}
