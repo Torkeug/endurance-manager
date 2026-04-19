@@ -3,12 +3,25 @@ import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { supabaseBrowser as supabase } from "../../../lib/supabase-browser";
-import { TIMEZONES } from "../../../lib/timezone";
+import { TIMEZONES, localToUTC } from "../../../lib/timezone";
+import { DateTime } from "luxon";
 
 function formatDuration(minutes) {
   const h = Math.floor(minutes / 60);
   const m = minutes % 60;
   return m === 0 ? `${h}h` : `${h}h${String(m).padStart(2, "0")}`;
+}
+
+// Auto-generate a label from date + time in the event timezone.
+// Mirrors the same function in StartTimesManager to keep labels consistent.
+function generateLabel(date, time, tz) {
+  const dt = DateTime.fromISO(`${date}T${time}:00`, { zone: tz }).setLocale(
+    "fr",
+  );
+  const dayName = dt.toFormat("EEEE");
+  const dayNum = dt.toFormat("d");
+  const month = dt.toFormat("MMMM yyyy");
+  return `${dayName.charAt(0).toUpperCase() + dayName.slice(1)} ${dayNum} ${month}`;
 }
 
 const emptyForm = {
@@ -39,6 +52,15 @@ export default function NouvelEvenement() {
   const [authChecked, setAuthChecked] = useState(false);
   // Track name lookup: iracing_track_id → track_name
   const [trackNameById, setTrackNameById] = useState({});
+
+  // Start time entries for non-special events — built before the event exists.
+  // Each entry: { id (local key), date, time }
+  const [startTimeEntries, setStartTimeEntries] = useState([]);
+  // Controls which entry row is showing its inline add/edit form
+  const [addingStartTime, setAddingStartTime] = useState(false);
+  const [newStartDate, setNewStartDate] = useState("");
+  const [newStartTime, setNewStartTime] = useState("");
+  const [startTimeError, setStartTimeError] = useState(null);
 
   // Auth checked client-side because this is a client component (needs form interactivity).
   // Redirects non-admins before rendering the form.
@@ -144,6 +166,44 @@ export default function NouvelEvenement() {
   // the active preset and style the custom h/m inputs as inactive.
   const isPreset = durations.some((d) => d.minutes === form.duration_minutes);
 
+  // ── Start time entry helpers ─────────────────────────────────────────────
+
+  const resetStartTimeForm = () => {
+    setAddingStartTime(false);
+    setNewStartDate("");
+    setNewStartTime("");
+    setStartTimeError(null);
+  };
+
+  const handleAddStartTime = () => {
+    if (!newStartDate) {
+      setStartTimeError("La date est obligatoire.");
+      return;
+    }
+    if (!newStartTime) {
+      setStartTimeError("L'heure est obligatoire.");
+      return;
+    }
+    setStartTimeEntries((prev) => [
+      ...prev,
+      { id: Date.now(), date: newStartDate, time: newStartTime },
+    ]);
+    resetStartTimeForm();
+  };
+
+  const removeStartTime = (id) => {
+    setStartTimeEntries((prev) => prev.filter((e) => e.id !== id));
+  };
+
+  // Sort entries chronologically for display
+  const sortedStartTimeEntries = [...startTimeEntries].sort((a, b) => {
+    const aVal = `${a.date}T${a.time}`;
+    const bVal = `${b.date}T${b.time}`;
+    return aVal.localeCompare(bVal);
+  });
+
+  // ── Submit ───────────────────────────────────────────────────────────────
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!form.name.trim()) {
@@ -193,36 +253,45 @@ export default function NouvelEvenement() {
     if (err) {
       setError(err.message);
       setLoading(false);
-    } else {
-      // Auto-generate start times for special events
-      if (isSpecial && weekendStartDate && specialStartTimes.length > 0) {
-        const { DateTime } = await import("luxon");
-        const friday = DateTime.fromISO(weekendStartDate, {
-          zone: form.timezone,
-        });
-        // Generate one start time row per predefined slot, offset from the Friday date.
-        // vendredi = +0 days, samedi = +1, dimanche = +2.
-        // Times are stored as UTC, converted from the event timezone.
-        const startTimeRows = specialStartTimes.map((st) => {
-          const dayOffset =
-            { vendredi: 0, samedi: 1, dimanche: 2 }[st.day_of_week] || 0;
-          const dt = friday.plus({ days: dayOffset }).set({
-            hour: st.hour,
-            minute: st.minute,
-            second: 0,
-            millisecond: 0,
-          });
-          return {
-            event_id: data.id,
-            label: `${st.day_of_week.charAt(0).toUpperCase() + st.day_of_week.slice(1)} ${dt.toFormat("d MMMM yyyy", { locale: "fr" })}`,
-            irl_start: dt.toUTC().toISO(),
-          };
-        });
-        await supabase.from("event_start_times").insert(startTimeRows);
-      }
-      router.push(`/evenements/${data.id}`);
-      router.refresh();
+      return;
     }
+
+    // Auto-generate start times for special events from predefined slots
+    if (isSpecial && weekendStartDate && specialStartTimes.length > 0) {
+      const friday = DateTime.fromISO(weekendStartDate, {
+        zone: form.timezone,
+      });
+      // vendredi = +0 days, samedi = +1, dimanche = +2
+      const startTimeRows = specialStartTimes.map((st) => {
+        const dayOffset =
+          { vendredi: 0, samedi: 1, dimanche: 2 }[st.day_of_week] || 0;
+        const dt = friday.plus({ days: dayOffset }).set({
+          hour: st.hour,
+          minute: st.minute,
+          second: 0,
+          millisecond: 0,
+        });
+        return {
+          event_id: data.id,
+          label: `${st.day_of_week.charAt(0).toUpperCase() + st.day_of_week.slice(1)} ${dt.toFormat("d MMMM yyyy", { locale: "fr" })}`,
+          irl_start: dt.toUTC().toISO(),
+        };
+      });
+      await supabase.from("event_start_times").insert(startTimeRows);
+    }
+
+    // Insert manually added start times for normal events
+    if (!isSpecial && startTimeEntries.length > 0) {
+      const rows = startTimeEntries.map((entry) => ({
+        event_id: data.id,
+        label: generateLabel(entry.date, entry.time, form.timezone),
+        irl_start: localToUTC(entry.date, entry.time, form.timezone),
+      }));
+      await supabase.from("event_start_times").insert(rows);
+    }
+
+    router.push(`/evenements/${data.id}`);
+    router.refresh();
   };
 
   const durationButtonStyle = (value) => ({
@@ -269,6 +338,7 @@ export default function NouvelEvenement() {
         <p style={{ color: "var(--text-dim)" }}>Vérification des droits…</p>
       </div>
     );
+
   return (
     <div className="page">
       <div className="page-header">
@@ -281,22 +351,8 @@ export default function NouvelEvenement() {
         </Link>
       </div>
 
-      <div
-        style={{
-          background: "var(--surface-2)",
-          border: "1px solid var(--border)",
-          borderRadius: "3px",
-          padding: "0.75rem 1rem",
-          marginBottom: "1.5rem",
-          fontSize: "0.85rem",
-          color: "var(--text-dim)",
-        }}
-      >
-        💡 Les horaires IRL de départ se configurent après création de
-        l&apos;événement.
-      </div>
-
       <form onSubmit={handleSubmit}>
+        {/* ── Informations générales ── */}
         <div className="card" style={{ marginBottom: "1.25rem" }}>
           <h3 style={{ marginBottom: "1.25rem", color: "var(--text-dim)" }}>
             Informations générales
@@ -408,6 +464,7 @@ export default function NouvelEvenement() {
                 )}
               </div>
             )}
+
             <div className="form-group">
               <label htmlFor="format">Format</label>
               <select id="format" value={form.format} onChange={set("format")}>
@@ -446,7 +503,6 @@ export default function NouvelEvenement() {
                   </button>
                 ))}
               </div>
-              {/* Custom: h + min inputs */}
               <div
                 style={{
                   display: "flex",
@@ -555,6 +611,7 @@ export default function NouvelEvenement() {
           </div>
         </div>
 
+        {/* ── Circuit ── */}
         <div className="card" style={{ marginBottom: "1.25rem" }}>
           <h3 style={{ marginBottom: "1.25rem", color: "var(--text-dim)" }}>
             Circuit
@@ -574,7 +631,6 @@ export default function NouvelEvenement() {
                   value={selectedBaseTrack}
                   onChange={(e) => {
                     setSelectedBaseTrack(e.target.value);
-                    // Reset layout selection when base track changes
                     setForm((prev) => ({ ...prev, circuit_id: "" }));
                   }}
                 >
@@ -595,7 +651,7 @@ export default function NouvelEvenement() {
                   )}
                 </select>
 
-                {/* Step 2 — layout (only shown when base track selected and has multiple layouts) */}
+                {/* Step 2 — layout (only shown when base track has multiple layouts) */}
                 {selectedBaseTrack &&
                   !selectedBaseTrack.startsWith("__direct__") &&
                   (() => {
@@ -603,7 +659,6 @@ export default function NouvelEvenement() {
                       circuitGroups.sorted.find(
                         ([name]) => name === selectedBaseTrack,
                       )?.[1] || [];
-                    // Single layout — auto-select it
                     if (
                       layouts.length === 1 &&
                       form.circuit_id !== layouts[0].id
@@ -662,6 +717,139 @@ export default function NouvelEvenement() {
           </div>
         </div>
 
+        {/* ── Horaires de départ IRL — hidden for special events (auto-generated) ── */}
+        {!isSpecial && (
+          <div className="card" style={{ marginBottom: "1.25rem" }}>
+            <h3 style={{ marginBottom: "0.25rem", color: "var(--text-dim)" }}>
+              Horaires de départ IRL
+            </h3>
+            <p
+              style={{
+                fontSize: "0.8rem",
+                color: "var(--text-dim)",
+                marginBottom: "1.25rem",
+              }}
+            >
+              Optionnel — peut aussi être configuré après création.
+            </p>
+
+            {sortedStartTimeEntries.length > 0 && (
+              <div className="table-wrap" style={{ marginBottom: "0.75rem" }}>
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Créneau de départ</th>
+                      <th></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {sortedStartTimeEntries.map((entry) => (
+                      <tr key={entry.id}>
+                        <td>
+                          {/* Preview label — same format as StartTimesManager */}
+                          <div style={{ fontWeight: 600 }}>
+                            {generateLabel(
+                              entry.date,
+                              entry.time,
+                              form.timezone,
+                            )}
+                          </div>
+                          <div
+                            className="mono"
+                            style={{
+                              fontSize: "0.82rem",
+                              color: "var(--accent)",
+                              marginTop: "0.1rem",
+                            }}
+                          >
+                            Départ à {entry.time}
+                          </div>
+                        </td>
+                        <td style={{ textAlign: "right" }}>
+                          <button
+                            type="button"
+                            onClick={() => removeStartTime(entry.id)}
+                            className="btn btn-danger btn-sm"
+                          >
+                            Supprimer
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+
+            {/* Inline add form — matches StartTimesManager inline form style */}
+            {addingStartTime ? (
+              <div className="card">
+                <h3 style={{ marginBottom: "1rem", color: "var(--text-dim)" }}>
+                  Nouveau créneau
+                </h3>
+                <div
+                  style={{ padding: "1rem", background: "var(--surface-2)" }}
+                >
+                  <div className="form-grid" style={{ marginBottom: "1rem" }}>
+                    <div className="form-group">
+                      <label>Date IRL</label>
+                      <input
+                        type="date"
+                        value={newStartDate}
+                        onChange={(e) => setNewStartDate(e.target.value)}
+                      />
+                    </div>
+                    <div className="form-group">
+                      <label>Heure IRL (24h)</label>
+                      <input
+                        type="time"
+                        value={newStartTime}
+                        onChange={(e) => setNewStartTime(e.target.value)}
+                      />
+                    </div>
+                  </div>
+                  {startTimeError && (
+                    <div
+                      className="alert alert-error"
+                      style={{ marginBottom: "0.75rem" }}
+                    >
+                      {startTimeError}
+                    </div>
+                  )}
+                  <div style={{ display: "flex", gap: "0.75rem" }}>
+                    <button
+                      type="button"
+                      onClick={handleAddStartTime}
+                      className="btn btn-primary"
+                    >
+                      ✓ Ajouter
+                    </button>
+                    <button
+                      type="button"
+                      onClick={resetStartTimeForm}
+                      className="btn btn-secondary"
+                    >
+                      Annuler
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => {
+                  setAddingStartTime(true);
+                  setStartTimeError(null);
+                }}
+                className="btn btn-secondary"
+              >
+                + Ajouter un créneau de départ
+              </button>
+            )}
+          </div>
+        )}
+
+        {/* ── Horaires in-game ── */}
         <div className="card" style={{ marginBottom: "1.25rem" }}>
           <h3 style={{ marginBottom: "0.5rem", color: "var(--text-dim)" }}>
             Horaires in-game
