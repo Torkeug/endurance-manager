@@ -6,7 +6,13 @@ export default async function PilotesPage() {
   const { driver: currentDriver } = await getSessionAndDriver();
   const admin = isAdmin(currentDriver);
   const isExternal = currentDriver?.role === "external";
-  let query = supabase.from("drivers").select("*").order("name");
+  // Test accounts are always hidden from the pilot list — admin-only visibility
+  // is handled in DriversManager.js instead.
+  let query = supabase
+    .from("drivers")
+    .select("*")
+    .eq("is_test_account", false)
+    .order("name");
   // External drivers can only see their own row — filter by their own ID.
   if (isExternal) {
     query = query.eq("id", currentDriver.id);

@@ -563,11 +563,13 @@ function InscriptionPage({ params }) {
 
   useEffect(() => {
     Promise.all([
-      // Engineers are staff — they don't sign up as drivers for events
+      // Engineers are staff — they don't sign up as drivers for events.
+      // Test accounts are hidden from all dropdowns outside the admin panel.
       supabase
         .from("drivers")
         .select("id, name")
         .eq("active", true)
+        .eq("is_test_account", false)
         .neq("role", "engineer")
         .order("name"),
       supabase
@@ -642,11 +644,9 @@ function InscriptionPage({ params }) {
         if (preselect) {
           setDriverId(preselect);
         } else {
+          // Auto-select the logged-in driver's own record.
           supabase.auth.getUser().then(async ({ data: { user } }) => {
-            if (!user) {
-              setRoleLoaded(true);
-              return;
-            }
+            if (!user) return;
 
             const { data: driver } = await supabase
               .from("drivers")
@@ -657,8 +657,6 @@ function InscriptionPage({ params }) {
             if (driver) {
               setDriverId(driver.id);
             }
-
-            setRoleLoaded(true);
           });
         }
       },
