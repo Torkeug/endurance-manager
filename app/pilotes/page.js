@@ -145,7 +145,13 @@ export default async function PilotesPage() {
                     </span>
                   </td>
                   <td>
-                    <div style={{ display: "flex", gap: "0.5rem" }}>
+                    <div
+                      style={{
+                        display: "flex",
+                        gap: "0.5rem",
+                        justifyContent: "flex-end",
+                      }}
+                    >
                       {/* Admins can edit anyone, drivers can only edit themselves */}
                       {(admin || currentDriver?.id === p.id) && (
                         <Link
