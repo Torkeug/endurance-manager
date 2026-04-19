@@ -127,22 +127,24 @@ export default function EquipageTabs({
       )}
 
       {/* Self-assign hint — shown when driver is in event but not yet in this team */}
-      {limitedToAssignment && !archived && (
-        <div
-          style={{
-            marginBottom: "1.25rem",
-            padding: "0.65rem 0.9rem",
-            background: "rgba(var(--accent-rgb),0.08)",
-            border: "1px solid var(--accent)",
-            borderRadius: "3px",
-            fontSize: "0.82rem",
-            color: "var(--accent)",
-          }}
-        >
-          💡 Rejoignez cet équipage via le tableau ci-dessous pour accéder aux
-          autres onglets.
-        </div>
-      )}
+      {limitedToAssignment &&
+        !archived &&
+        unassignedDrivers.some((s) => s.drivers?.id === currentDriver?.id) && (
+          <div
+            style={{
+              marginBottom: "1.25rem",
+              padding: "0.65rem 0.9rem",
+              background: "rgba(var(--accent-rgb),0.08)",
+              border: "1px solid var(--accent)",
+              borderRadius: "3px",
+              fontSize: "0.82rem",
+              color: "var(--accent)",
+            }}
+          >
+            💡 Rejoignez cet équipage via le tableau ci-dessous pour accéder aux
+            autres onglets.
+          </div>
+        )}
 
       {/* ── Tab: Pilotes ──────────────────────────────────────────────────── */}
       {activeTab === "pilotes" && (
