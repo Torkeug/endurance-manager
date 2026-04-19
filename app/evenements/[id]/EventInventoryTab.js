@@ -2,10 +2,16 @@
 import { useState, useEffect, useMemo, Fragment } from "react";
 import { supabaseBrowser as supabase } from "../../../lib/supabase-browser";
 
-// ── Column width constants (match InventoryMatrix for visual consistency) ──────
+// ── Column widths ─────────────────────────────────────────────────────────────
 const NAME_COL_WIDTH = 220;
 const COUNT_COL_WIDTH = 48;
 const DRIVER_COL_WIDTH = 36;
+
+// Height of the diagonal name header — enough headroom for ~14-char names at -45deg.
+// Adaptive: each extra char beyond 10 adds 3px.
+function headerHeight(maxNameLen) {
+  return Math.max(80, 60 + Math.max(0, maxNameLen - 10) * 3);
+}
 
 const nameColStyle = {
   position: "sticky",
@@ -22,6 +28,7 @@ const nameColStyle = {
   overflow: "hidden",
   textOverflow: "ellipsis",
   boxSizing: "border-box",
+  verticalAlign: "bottom",
 };
 
 const countCellStyle = {
@@ -45,7 +52,6 @@ const cellStyle = {
   boxSizing: "border-box",
 };
 
-// Group header row style
 const groupTdStyle = {
   position: "sticky",
   left: 0,
@@ -59,7 +65,7 @@ const groupTdStyle = {
   borderBottom: "1px solid var(--border)",
 };
 
-// Compact K badge for Kronos catalog cars — matches InventoryMatrix badge
+// Compact K badge for Kronos catalog cars
 function KBadge() {
   return (
     <span
@@ -79,8 +85,7 @@ function KBadge() {
   );
 }
 
-// Format driver name as "Prénom N." — first name(s) + initial of surname.
-// Matches the format used in InventoryMatrix.
+// Format as "Prénom N." — matches InventoryMatrix format
 function formatDriverName(name) {
   if (!name) return "?";
   const parts = name.trim().split(/\s+/);
@@ -90,44 +95,53 @@ function formatDriverName(name) {
   return `${firstName} ${lastInitial}.`;
 }
 
-// Inventory matrix filtered to cars available for this event's type,
-// with columns for all drivers assigned to any team entry in this event.
-// Data is fetched lazily on mount to avoid bloating the event page query.
 export default function EventInventoryTab({
-  teamEntries,
+  // eventSignups: the event.signups array (drivers (id, name, irating))
+  eventSignups,
   archived,
   eventFormat,
 }) {
-  // Cars come from the event type catalog (not from team entries)
   const [eventCars, setEventCars] = useState([]);
   const [carOwnershipSets, setCarOwnershipSets] = useState({});
   const [kronosCarsMap, setKronosCarsMap] = useState({});
   const [loaded, setLoaded] = useState(false);
   const [error, setError] = useState(null);
 
-  // Derive unique drivers from the event's team entries — who is actually racing
+  // Sort state: col = "name" | "count", dir = "asc" | "desc"
+  const [sort, setSort] = useState({ col: "name", dir: "asc" });
+
+  // Derive unique drivers from event inscriptions (signups with a driver record).
+  // Using signups means we include all registered pilots, not just those in a team entry.
   const matrixDrivers = useMemo(() => {
     const driverMap = new Map();
-    for (const entry of teamEntries) {
-      for (const signup of entry.signups || []) {
-        if (signup.drivers) {
-          driverMap.set(signup.drivers.id, signup.drivers);
-        }
+    for (const signup of eventSignups || []) {
+      if (signup.drivers) {
+        driverMap.set(signup.drivers.id, signup.drivers);
       }
     }
     return [...driverMap.values()].sort((a, b) => a.name.localeCompare(b.name));
-  }, [teamEntries]);
+  }, [eventSignups]);
 
-  // Fetch event type cars then ownership data.
-  // Sequential: event_types → event_type_cars → driver_car_ownership.
+  // Adaptive header height based on the longest formatted driver name
+  const maxNameLen = useMemo(
+    () =>
+      matrixDrivers.reduce(
+        (max, d) => Math.max(max, formatDriverName(d.name).length),
+        0,
+      ),
+    [matrixDrivers],
+  );
+  const hHeight = headerHeight(maxNameLen);
+
+  // Fetch event type cars then ownership data
   useEffect(() => {
     const load = async () => {
-      // Step 1: resolve event type ID from the event format name
       if (!eventFormat) {
         setLoaded(true);
         return;
       }
 
+      // Step 1: resolve event type ID from the format name
       const { data: eventType, error: typeErr } = await supabase
         .from("event_types")
         .select("id")
@@ -135,12 +149,11 @@ export default function EventInventoryTab({
         .single();
 
       if (typeErr || !eventType?.id) {
-        // No matching event type — show empty state
         setLoaded(true);
         return;
       }
 
-      // Step 2: fetch all cars linked to this event type
+      // Step 2: fetch all cars linked to this event type via event_type_cars
       const { data: typeCars, error: carsErr } = await supabase
         .from("event_type_cars")
         .select("cars (id, name, iracing_car_id, class)")
@@ -152,13 +165,13 @@ export default function EventInventoryTab({
         return;
       }
 
-      // Flatten and deduplicate by iracing_car_id
+      // Deduplicate by iracing_car_id (fallback to id)
       const carMap = new Map();
       for (const row of typeCars || []) {
         const car = row.cars;
-        if (car && !carMap.has(car.iracing_car_id ?? car.id)) {
-          carMap.set(car.iracing_car_id ?? car.id, car);
-        }
+        if (!car) continue;
+        const key = car.iracing_car_id ?? car.id;
+        if (!carMap.has(key)) carMap.set(key, car);
       }
       const cars = [...carMap.values()].sort((a, b) =>
         (a.name || "").localeCompare(b.name || ""),
@@ -175,20 +188,20 @@ export default function EventInventoryTab({
       }
 
       const [ownershipRes, kronosRes] = await Promise.all([
-        // Car ownership: which drivers own which cars (from iRacing sync)
+        // Which drivers own which cars (iRacing sync data)
         supabase
           .from("driver_car_ownership")
           .select("driver_id, iracing_car_id")
           .in("driver_id", driverIds)
           .in("iracing_car_id", carIds),
-        // Kronos catalog: used to show the K badge
+        // Kronos catalog for K badge
         supabase
           .from("cars")
           .select("iracing_car_id, class, car_type_label")
           .in("iracing_car_id", carIds),
       ]);
 
-      // Build driver_id → Set(iracing_car_id) for O(1) ownership lookup
+      // Build driver_id → Set(iracing_car_id)
       const ownershipMap = {};
       for (const row of ownershipRes.data || []) {
         if (!ownershipMap[row.driver_id])
@@ -197,20 +210,31 @@ export default function EventInventoryTab({
       }
       setCarOwnershipSets(ownershipMap);
 
-      // Build iracing_car_id → Kronos catalog entry
+      // Build iracing_car_id → Kronos entry
       const kronosMap = {};
       for (const car of kronosRes.data || []) {
         if (car.iracing_car_id) kronosMap[car.iracing_car_id] = car;
       }
       setKronosCarsMap(kronosMap);
-
       setLoaded(true);
     };
 
     load();
   }, [eventFormat, matrixDrivers]);
 
-  // Group event type cars by their Kronos class, sorted alphabetically
+  // Toggle sort — same col flips direction, new col defaults to desc for count, asc for name
+  const toggleSort = (col) => {
+    setSort((prev) => {
+      if (prev.col === col)
+        return { col, dir: prev.dir === "asc" ? "desc" : "asc" };
+      return { col, dir: col === "count" ? "desc" : "asc" };
+    });
+  };
+
+  const sortArrow = (col) =>
+    sort.col === col ? (sort.dir === "asc" ? " ↑" : " ↓") : "";
+
+  // Group cars by Kronos class, sorted; within each group apply the active sort
   const groupedCars = useMemo(() => {
     const classMap = {};
     for (const car of eventCars) {
@@ -218,16 +242,34 @@ export default function EventInventoryTab({
       if (!classMap[cls]) classMap[cls] = [];
       classMap[cls].push(car);
     }
+
     return Object.entries(classMap)
       .sort(([a], [b]) => a.localeCompare(b))
-      .map(([cls, cars]) => ({ cls, cars }));
-  }, [eventCars]);
+      .map(([cls, cars]) => {
+        const sorted = cars.slice().sort((a, b) => {
+          if (sort.col === "count") {
+            const aCount = matrixDrivers.filter((d) =>
+              carOwnershipSets[d.id]?.has(a.iracing_car_id),
+            ).length;
+            const bCount = matrixDrivers.filter((d) =>
+              carOwnershipSets[d.id]?.has(b.iracing_car_id),
+            ).length;
+            const diff = sort.dir === "asc" ? aCount - bCount : bCount - aCount;
+            return diff !== 0
+              ? diff
+              : (a.name || "").localeCompare(b.name || "");
+          }
+          // Sort by name
+          const diff = (a.name || "").localeCompare(b.name || "");
+          return sort.dir === "asc" ? diff : -diff;
+        });
+        return { cls, cars: sorted };
+      });
+    // Recalculate when ownership data or sort changes
+  }, [eventCars, sort, carOwnershipSets, matrixDrivers]);
 
   if (!loaded) return <div className="empty">Chargement...</div>;
-
-  if (error) {
-    return <div className="alert alert-error">{error}</div>;
-  }
+  if (error) return <div className="alert alert-error">{error}</div>;
 
   if (!eventFormat) {
     return (
@@ -238,7 +280,6 @@ export default function EventInventoryTab({
       </div>
     );
   }
-
   if (eventCars.length === 0) {
     return (
       <div className="table-wrap">
@@ -248,13 +289,10 @@ export default function EventInventoryTab({
       </div>
     );
   }
-
   if (matrixDrivers.length === 0) {
     return (
       <div className="table-wrap">
-        <div className="empty">
-          Aucun pilote assigné à un équipage pour le moment.
-        </div>
+        <div className="empty">Aucun pilote inscrit pour le moment.</div>
       </div>
     );
   }
@@ -264,7 +302,6 @@ export default function EventInventoryTab({
   return (
     <div style={{ overflowX: "auto" }}>
       <table style={{ borderCollapse: "collapse", tableLayout: "fixed" }}>
-        {/* colgroup enforces exact column widths */}
         <colgroup>
           <col style={{ width: `${NAME_COL_WIDTH}px` }} />
           <col style={{ width: `${COUNT_COL_WIDTH}px` }} />
@@ -275,8 +312,9 @@ export default function EventInventoryTab({
 
         <thead>
           <tr>
-            {/* Car name header — verticalAlign bottom matches driver name headers */}
+            {/* Voiture — sortable by name */}
             <th
+              onClick={() => toggleSort("name")}
               style={{
                 ...nameColStyle,
                 background: "var(--surface-2)",
@@ -284,16 +322,20 @@ export default function EventInventoryTab({
                 fontSize: "0.7rem",
                 letterSpacing: "0.08em",
                 textTransform: "uppercase",
-                color: "var(--text-dim)",
+                color:
+                  sort.col === "name" ? "var(--accent)" : "var(--text-dim)",
                 zIndex: 2,
                 borderBottom: "2px solid var(--border)",
-                verticalAlign: "bottom",
+                cursor: "pointer",
+                userSelect: "none",
               }}
             >
-              Voiture
+              Voiture{sortArrow("name")}
             </th>
-            {/* # header — same verticalAlign as Voiture for alignment consistency */}
+
+            {/* # — sortable by owner count, vertically aligned to match Voiture */}
             <th
+              onClick={() => toggleSort("count")}
               style={{
                 background: "var(--surface-2)",
                 borderBottom: "2px solid var(--border)",
@@ -301,77 +343,80 @@ export default function EventInventoryTab({
                 width: `${COUNT_COL_WIDTH}px`,
                 fontSize: "0.65rem",
                 fontWeight: 700,
-                color: "var(--text-dim)",
+                color:
+                  sort.col === "count" ? "var(--accent)" : "var(--text-dim)",
                 textAlign: "center",
                 verticalAlign: "bottom",
                 padding: "0.25rem",
+                cursor: "pointer",
+                userSelect: "none",
               }}
             >
-              #
+              #{sortArrow("count")}
             </th>
-            {/* Driver name headers — rotated vertically, aligned to bottom */}
-            {matrixDrivers.map((d) => (
-              <th
-                key={d.id}
-                style={{
-                  background: "var(--surface-2)",
-                  borderBottom: "2px solid var(--border)",
-                  verticalAlign: "bottom",
-                  width: `${DRIVER_COL_WIDTH}px`,
-                  boxSizing: "border-box",
-                  overflow: "hidden",
-                  padding: 0,
-                }}
-              >
-                <div
+
+            {/* Driver name headers — diagonal at -45deg for space efficiency */}
+            {matrixDrivers.map((d) => {
+              const label = formatDriverName(d.name);
+              return (
+                <th
+                  key={d.id}
                   style={{
-                    display: "flex",
-                    justifyContent: "center",
-                    alignItems: "flex-end",
-                    height: "80px",
-                    paddingBottom: "0.25rem",
+                    background: "var(--surface-2)",
+                    borderBottom: "2px solid var(--border)",
+                    verticalAlign: "bottom",
+                    width: `${DRIVER_COL_WIDTH}px`,
+                    height: `${hHeight}px`,
+                    boxSizing: "border-box",
+                    overflow: "visible",
+                    padding: 0,
+                    position: "relative",
                   }}
                 >
-                  <span
+                  {/*
+                    Diagonal name: anchored at bottom-center, rotated -45deg.
+                    transform-origin bottom left so the text swings up-left from its baseline.
+                    The wrapper is positioned so the rotation anchor sits at the cell bottom-center.
+                  */}
+                  <div
                     style={{
-                      writingMode: "vertical-rl",
-                      transform: "rotate(180deg)",
+                      position: "absolute",
+                      bottom: "6px",
+                      left: "50%",
+                      transformOrigin: "bottom left",
+                      transform: "rotate(-45deg)",
+                      whiteSpace: "nowrap",
                       fontSize: "0.68rem",
                       fontWeight: 700,
                       color: "var(--text-dim)",
-                      whiteSpace: "nowrap",
+                      lineHeight: 1,
                     }}
                   >
-                    {formatDriverName(d.name)}
-                  </span>
-                </div>
-              </th>
-            ))}
+                    {label}
+                  </div>
+                </th>
+              );
+            })}
           </tr>
         </thead>
 
         <tbody>
           {groupedCars.map(({ cls, cars }) => (
             <Fragment key={cls}>
-              {/* Class group header */}
               <tr>
                 <td colSpan={colCount} style={groupTdStyle}>
                   {cls}
                 </td>
               </tr>
-
-              {/* Car rows */}
               {cars.map((car) => {
                 const isKronos = !!kronosCarsMap[car.iracing_car_id];
                 const ownerCount = matrixDrivers.filter((d) =>
                   carOwnershipSets[d.id]?.has(car.iracing_car_id),
                 ).length;
-
                 return (
                   <tr key={car.iracing_car_id ?? car.id}>
                     <td style={nameColStyle}>
                       {car.name}
-                      {/* K badge for cars registered in the Kronos catalog */}
                       {isKronos && <KBadge />}
                     </td>
                     <td style={countCellStyle}>

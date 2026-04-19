@@ -581,7 +581,7 @@ export default function EventPageTabs({
       {/* ── Tab: Inventaire ───────────────────────────────────────────── */}
       {activeTab === "inventaire" && (
         <EventInventoryTab
-          teamEntries={event.team_entries || []}
+          eventSignups={event.signups || []}
           archived={event.archived}
           eventFormat={event.format}
         />
