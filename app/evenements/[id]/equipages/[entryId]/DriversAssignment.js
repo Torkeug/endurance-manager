@@ -123,12 +123,11 @@ export default function DriversAssignment({
   // In team but not admin: sees everyone not yet assigned to this team
   const visibleUnassigned = (() => {
     if (archived) return [];
+    if (isAdmin) return unassigned;
     if (!isInEvent) return [];
     if (!isInTeam) {
-      // Self-assign only — show just the current driver's own unassigned signup
       return unassigned.filter((s) => s.drivers?.id === currentDriver?.id);
     }
-    // In team → see everyone unassigned
     return unassigned;
   })();
 
