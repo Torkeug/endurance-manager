@@ -19,6 +19,7 @@ const TRACK_CATEGORY_LABELS = {
   other: "Autre",
 };
 
+// Format driver name as "Prénom N." — first name(s) + surname initial.
 function formatDriverName(name) {
   if (!name) return "?";
   const parts = name.trim().split(/\s+/);
@@ -26,6 +27,12 @@ function formatDriverName(name) {
   const firstName = parts.slice(0, -1).join(" ");
   const lastInitial = parts[parts.length - 1][0].toUpperCase();
   return `${firstName} ${lastInitial}.`;
+}
+
+// Adaptive header height for diagonal driver names.
+// Base 80px + 3px per char beyond 10 to give long names enough headroom.
+function calcHeaderHeight(maxNameLen) {
+  return Math.max(80, 60 + Math.max(0, maxNameLen - 10) * 3);
 }
 
 // Toggle filter pill
@@ -139,6 +146,15 @@ export default function InventoryMatrix({
   // Sort state per matrix: { col: "name"|"count", dir: "asc"|"desc" }
   const [carSort, setCarSort] = useState({ col: "name", dir: "asc" });
   const [trackSort, setTrackSort] = useState({ col: "name", dir: "asc" });
+
+  // Adaptive header height — based on the longest formatted driver name
+  const hHeight = useMemo(() => {
+    const maxLen = matrixDrivers.reduce(
+      (max, d) => Math.max(max, formatDriverName(d.name).length),
+      0,
+    );
+    return calcHeaderHeight(maxLen);
+  }, [matrixDrivers]);
 
   // Build O(1) lookup sets from serialized ownership arrays
   const carOwnershipSets = useMemo(() => {
@@ -482,6 +498,47 @@ export default function InventoryMatrix({
     opacity: muted ? 0.7 : 1,
   });
 
+  // Shared diagonal driver name <th> — used in both cars and tracks matrices.
+  // Anchored at bottom-center, rotated -45deg for compact horizontal space use.
+  // overflow: visible allows the rotated text to extend above the cell boundary.
+  const driverTh = (d) => (
+    <th
+      key={d.id}
+      style={{
+        background: "var(--surface-2)",
+        borderBottom: "2px solid var(--border)",
+        verticalAlign: "bottom",
+        width: `${DRIVER_COL_WIDTH}px`,
+        height: `${hHeight}px`,
+        boxSizing: "border-box",
+        overflow: "visible",
+        padding: 0,
+        position: "relative",
+      }}
+    >
+      {/*
+        Rotation anchor: bottom-left of the text baseline sits at cell bottom-center.
+        translateX(-50%) re-centers the anchor, then rotate(-45deg) swings the text up-left.
+      */}
+      <div
+        style={{
+          position: "absolute",
+          bottom: "6px",
+          left: "50%",
+          transformOrigin: "bottom left",
+          transform: "translateX(-50%) rotate(-45deg)",
+          whiteSpace: "nowrap",
+          fontSize: "0.68rem",
+          fontWeight: 700,
+          color: "var(--text-dim)",
+          lineHeight: 1,
+        }}
+      >
+        {formatDriverName(d.name)}
+      </div>
+    </th>
+  );
+
   return (
     <div>
       {/* Sub-tab switcher */}
@@ -582,7 +639,6 @@ export default function InventoryMatrix({
             </div>
           </div>
 
-          {/* Empty state */}
           {carMatrixRows.length === 0 && (
             <div className="card">
               <div className="empty">
@@ -591,7 +647,6 @@ export default function InventoryMatrix({
             </div>
           )}
 
-          {/* Cars matrix table */}
           {carMatrixRows.length > 0 && (
             <div style={{ overflowX: "auto" }}>
               <table
@@ -650,70 +705,28 @@ export default function InventoryMatrix({
                         padding: "0.25rem",
                         cursor: "pointer",
                         userSelect: "none",
-                        verticalAlign: "bottom",
                       }}
                     >
                       #{sortArrow(carSort, "count")}
                     </th>
-                    {matrixDrivers.map((d) => (
-                      <th
-                        key={d.id}
-                        style={{
-                          background: "var(--surface-2)",
-                          borderBottom: "2px solid var(--border)",
-                          verticalAlign: "bottom",
-                          width: `${DRIVER_COL_WIDTH}px`,
-                          boxSizing: "border-box",
-                          overflow: "hidden",
-                          padding: 0,
-                        }}
-                      >
-                        <div
-                          style={{
-                            display: "flex",
-                            justifyContent: "center",
-                            alignItems: "flex-end",
-                            height: "80px",
-                            paddingBottom: "0.25rem",
-                          }}
-                        >
-                          <span
-                            style={{
-                              writingMode: "vertical-rl",
-                              transform: "rotate(180deg)",
-                              fontSize: "0.68rem",
-                              fontWeight: 700,
-                              color: "var(--text-dim)",
-                              whiteSpace: "nowrap",
-                            }}
-                          >
-                            {formatDriverName(d.name)}
-                          </span>
-                        </div>
-                      </th>
-                    ))}
+                    {matrixDrivers.map(driverTh)}
                   </tr>
                 </thead>
                 <tbody>
                   {carMatrixRows.map(({ category, classes, legacy }) => (
                     <Fragment key={category}>
-                      {/* Category header row */}
                       <tr>
                         <td colSpan={colCount} style={groupTdStyle(0)}>
                           {CAR_CATEGORY_LABELS[category] || category}
                         </td>
                       </tr>
-
-                      {/* Classes and their cars */}
                       {classes.map(({ cls, cars }) => (
                         <Fragment key={`${category}|${cls}`}>
-                          {/* Class header row */}
                           <tr>
                             <td colSpan={colCount} style={groupTdStyle(1)}>
                               {cls}
                             </td>
                           </tr>
-                          {/* Car data rows */}
                           {cars.map((car) => {
                             const ownerCount = matrixDrivers.filter((d) =>
                               carOwnershipSets[d.id]?.has(car.iracing_car_id),
@@ -759,8 +772,6 @@ export default function InventoryMatrix({
                           })}
                         </Fragment>
                       ))}
-
-                      {/* Legacy & Retired sub-group */}
                       {legacy.length > 0 && (
                         <Fragment key={`${category}|legacy`}>
                           <tr>
@@ -839,7 +850,6 @@ export default function InventoryMatrix({
       {/* ── Tracks ────────────────────────────────────────────────────────── */}
       {subTab === "tracks" && (
         <>
-          {/* Category filter pills */}
           <div style={{ marginBottom: "1.25rem" }}>
             <div
               style={{
@@ -867,7 +877,6 @@ export default function InventoryMatrix({
             </div>
           </div>
 
-          {/* Empty state */}
           {trackMatrixRows.length === 0 && (
             <div className="card">
               <div className="empty">
@@ -876,7 +885,6 @@ export default function InventoryMatrix({
             </div>
           )}
 
-          {/* Tracks matrix table */}
           {trackMatrixRows.length > 0 && (
             <div style={{ overflowX: "auto" }}>
               <table
@@ -939,62 +947,21 @@ export default function InventoryMatrix({
                         padding: "0.25rem",
                         cursor: "pointer",
                         userSelect: "none",
-                        verticalAlign: "bottom",
                       }}
                     >
                       #{sortArrow(trackSort, "count")}
                     </th>
-
-                    {matrixDrivers.map((d) => (
-                      <th
-                        key={d.id}
-                        style={{
-                          background: "var(--surface-2)",
-                          borderBottom: "2px solid var(--border)",
-                          verticalAlign: "bottom",
-                          width: `${DRIVER_COL_WIDTH}px`,
-                          boxSizing: "border-box",
-                          overflow: "hidden",
-                          padding: 0,
-                        }}
-                      >
-                        <div
-                          style={{
-                            display: "flex",
-                            justifyContent: "center",
-                            alignItems: "flex-end",
-                            height: "80px",
-                            paddingBottom: "0.25rem",
-                          }}
-                        >
-                          <span
-                            style={{
-                              writingMode: "vertical-rl",
-                              transform: "rotate(180deg)",
-                              fontSize: "0.68rem",
-                              fontWeight: 700,
-                              color: "var(--text-dim)",
-                              whiteSpace: "nowrap",
-                            }}
-                          >
-                            {formatDriverName(d.name)}
-                          </span>
-                        </div>
-                      </th>
-                    ))}
+                    {matrixDrivers.map(driverTh)}
                   </tr>
                 </thead>
                 <tbody>
                   {trackMatrixRows.map(({ category, tracks, legacy }) => (
                     <Fragment key={category}>
-                      {/* Category header row */}
                       <tr>
                         <td colSpan={colCount} style={groupTdStyle(0)}>
                           {TRACK_CATEGORY_LABELS[category] || category}
                         </td>
                       </tr>
-
-                      {/* Normal tracks */}
                       {tracks.map((track) => {
                         const ownerCount = matrixDrivers.filter((d) =>
                           trackOwnershipSets[d.id]?.has(track.track_name),
@@ -1036,8 +1003,6 @@ export default function InventoryMatrix({
                           </tr>
                         );
                       })}
-
-                      {/* Legacy & Retired sub-group */}
                       {legacy.length > 0 && (
                         <Fragment key={`${category}|legacy`}>
                           <tr>
