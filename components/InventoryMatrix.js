@@ -29,10 +29,11 @@ function formatDriverName(name) {
   return `${firstName} ${lastInitial}.`;
 }
 
-// Adaptive header height for diagonal driver names.
-// Base 80px + 3px per char beyond 10 to give long names enough headroom.
+// Adaptive header height for vertical driver names.
+// With writing-mode: vertical-rl the cell height must fit the full text width.
+// At 0.68rem (~11px), each character is ~7px wide — add 16px padding on top.
 function calcHeaderHeight(maxNameLen) {
-  return Math.max(80, 60 + Math.max(0, maxNameLen - 10) * 3);
+  return Math.max(100, maxNameLen * 7 + 16);
 }
 
 // Toggle filter pill
@@ -498,9 +499,8 @@ export default function InventoryMatrix({
     opacity: muted ? 0.7 : 1,
   });
 
-  // Shared diagonal driver name <th> — used in both cars and tracks matrices.
-  // Anchored at bottom-center, rotated -45deg for compact horizontal space use.
-  // overflow: visible allows the rotated text to extend above the cell boundary.
+  // Shared vertical driver name <th> — used in both cars and tracks matrices.
+  // Adaptive height based on the longest name so no text gets clipped.
   const driverTh = (d) => (
     <th
       key={d.id}
@@ -509,32 +509,32 @@ export default function InventoryMatrix({
         borderBottom: "2px solid var(--border)",
         verticalAlign: "bottom",
         width: `${DRIVER_COL_WIDTH}px`,
-        height: `${hHeight}px`,
         boxSizing: "border-box",
-        overflow: "visible",
+        overflow: "hidden",
         padding: 0,
-        position: "relative",
       }}
     >
-      {/*
-        Rotation anchor: bottom-left of the text baseline sits at cell bottom-center.
-        translateX(-50%) re-centers the anchor, then rotate(-45deg) swings the text up-left.
-      */}
       <div
         style={{
-          position: "absolute",
-          bottom: "6px",
-          left: "50%",
-          transformOrigin: "bottom left",
-          transform: "translateX(-50%) rotate(-45deg)",
-          whiteSpace: "nowrap",
-          fontSize: "0.68rem",
-          fontWeight: 700,
-          color: "var(--text-dim)",
-          lineHeight: 1,
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "flex-end",
+          height: `${hHeight}px`,
+          paddingBottom: "0.25rem",
         }}
       >
-        {formatDriverName(d.name)}
+        <span
+          style={{
+            writingMode: "vertical-rl",
+            transform: "rotate(180deg)",
+            fontSize: "0.68rem",
+            fontWeight: 700,
+            color: "var(--text-dim)",
+            whiteSpace: "nowrap",
+          }}
+        >
+          {formatDriverName(d.name)}
+        </span>
       </div>
     </th>
   );

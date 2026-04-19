@@ -7,10 +7,11 @@ const NAME_COL_WIDTH = 220;
 const COUNT_COL_WIDTH = 48;
 const DRIVER_COL_WIDTH = 36;
 
-// Height of the diagonal name header — enough headroom for ~14-char names at -45deg.
-// Adaptive: each extra char beyond 10 adds 3px.
+// Adaptive header height for vertical driver names.
+// With writing-mode: vertical-rl the cell height must fit the full text width.
+// At 0.68rem (~11px), each character is ~7px wide — add 16px padding on top.
 function headerHeight(maxNameLen) {
-  return Math.max(80, 60 + Math.max(0, maxNameLen - 10) * 3);
+  return Math.max(100, maxNameLen * 7 + 16);
 }
 
 const nameColStyle = {
@@ -355,48 +356,44 @@ export default function EventInventoryTab({
               #{sortArrow("count")}
             </th>
 
-            {/* Driver name headers — diagonal at -45deg for space efficiency */}
-            {matrixDrivers.map((d) => {
-              const label = formatDriverName(d.name);
-              return (
-                <th
-                  key={d.id}
+            {/* Driver name headers — vertical, aligned to bottom, adaptive height */}
+            {matrixDrivers.map((d) => (
+              <th
+                key={d.id}
+                style={{
+                  background: "var(--surface-2)",
+                  borderBottom: "2px solid var(--border)",
+                  verticalAlign: "bottom",
+                  width: `${DRIVER_COL_WIDTH}px`,
+                  boxSizing: "border-box",
+                  overflow: "hidden",
+                  padding: 0,
+                }}
+              >
+                <div
                   style={{
-                    background: "var(--surface-2)",
-                    borderBottom: "2px solid var(--border)",
-                    verticalAlign: "bottom",
-                    width: `${DRIVER_COL_WIDTH}px`,
+                    display: "flex",
+                    justifyContent: "center",
+                    alignItems: "flex-end",
                     height: `${hHeight}px`,
-                    boxSizing: "border-box",
-                    overflow: "visible",
-                    padding: 0,
-                    position: "relative",
+                    paddingBottom: "0.25rem",
                   }}
                 >
-                  {/*
-                    Diagonal name: anchored at bottom-center, rotated -45deg.
-                    transform-origin bottom left so the text swings up-left from its baseline.
-                    The wrapper is positioned so the rotation anchor sits at the cell bottom-center.
-                  */}
-                  <div
+                  <span
                     style={{
-                      position: "absolute",
-                      bottom: "6px",
-                      left: "50%",
-                      transformOrigin: "bottom left",
-                      transform: "rotate(-45deg)",
-                      whiteSpace: "nowrap",
+                      writingMode: "vertical-rl",
+                      transform: "rotate(180deg)",
                       fontSize: "0.68rem",
                       fontWeight: 700,
                       color: "var(--text-dim)",
-                      lineHeight: 1,
+                      whiteSpace: "nowrap",
                     }}
                   >
-                    {label}
-                  </div>
-                </th>
-              );
-            })}
+                    {formatDriverName(d.name)}
+                  </span>
+                </div>
+              </th>
+            ))}
           </tr>
         </thead>
 
