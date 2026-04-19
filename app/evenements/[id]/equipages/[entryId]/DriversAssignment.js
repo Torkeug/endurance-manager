@@ -120,15 +120,16 @@ export default function DriversAssignment({
   // ── Unassigned list filtering ─────────────────────────────────────────────
   // Admin: sees everyone not yet assigned to this team
   // Event driver not in team (self-assign flow): sees only their own signup
-  // In team but not admin: sees no one (they're already in, only admins reassign others)
+  // In team but not admin: sees everyone not yet assigned to this team
   const visibleUnassigned = (() => {
     if (archived) return [];
-    if (isAdmin) return unassigned;
-    if (isInEvent && !isInTeam) {
-      // Self-assign only — show the current driver's own unassigned signup
+    if (!isInEvent) return [];
+    if (!isInTeam) {
+      // Self-assign only — show just the current driver's own unassigned signup
       return unassigned.filter((s) => s.drivers?.id === currentDriver?.id);
     }
-    return [];
+    // In team → see everyone unassigned
+    return unassigned;
   })();
 
   return (
