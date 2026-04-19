@@ -143,6 +143,15 @@ export default async function EvenementsPage() {
   );
   const championshipRounds = allEvents.filter((ev) => ev.championship_id);
 
+  // External drivers only see championships they have a round registered for.
+  // For all other roles, show all championships.
+  const visibleChampionshipIds = new Set(
+    championshipRounds.map((r) => r.championship_id),
+  );
+  const visibleChampionships = isExternal
+    ? (championships || []).filter((c) => visibleChampionshipIds.has(c.id))
+    : championships || [];
+
   return (
     <div className="page">
       <div className="page-header">
@@ -166,7 +175,7 @@ export default async function EvenementsPage() {
         normalEvents={normalEvents}
         specialEvents={specialEvents}
         championshipRounds={championshipRounds}
-        championships={championships || []}
+        championships={visibleChampionships}
         admin={admin}
       />
     </div>

@@ -382,9 +382,11 @@ export default function InventoryMatrix({
       const cat = car.car_category || "other";
       const cls = getCarClass(car);
       const legacy = car.isLegacy || isLegacyContent(car.car_name);
-      if (!catMap[cat]) catMap[cat] = { normal: {}, legacy: [] };
+      if (!catMap[cat]) catMap[cat] = { normal: {}, legacy: {} };
       if (legacy) {
-        catMap[cat].legacy.push(car);
+        // Group legacy cars by class — same grouping as normal cars
+        if (!catMap[cat].legacy[cls]) catMap[cat].legacy[cls] = [];
+        catMap[cat].legacy[cls].push(car);
       } else {
         if (!catMap[cat].normal[cls]) catMap[cat].normal[cls] = [];
         catMap[cat].normal[cls].push(car);
@@ -407,13 +409,19 @@ export default function InventoryMatrix({
               (c) => c.car_name,
             ),
           })),
-        legacy: sortItems(
-          legacy,
-          carSort,
-          carOwnershipSets,
-          (c) => c.iracing_car_id,
-          (c) => c.car_name,
-        ),
+        // Legacy cars grouped by class, each class sorted independently
+        legacy: Object.entries(legacy)
+          .sort(([a], [b]) => a.localeCompare(b))
+          .map(([cls, cars]) => ({
+            cls,
+            cars: sortItems(
+              cars,
+              carSort,
+              carOwnershipSets,
+              (c) => c.iracing_car_id,
+              (c) => c.car_name,
+            ),
+          })),
       }));
   }, [
     allCars,
@@ -772,17 +780,19 @@ export default function InventoryMatrix({
                           })}
                         </Fragment>
                       ))}
-                      {legacy.length > 0 && (
-                        <Fragment key={`${category}|legacy`}>
+                      {/* Legacy & Retired cars grouped by class */}
+                      {legacy.map(({ cls: legacyCls, cars: legacyCars }) => (
+                        <Fragment key={`${category}|legacy|${legacyCls}`}>
                           <tr>
                             <td
                               colSpan={colCount}
                               style={groupTdStyle(1, true)}
                             >
-                              Legacy & Retraités ({legacy.length})
+                              {legacyCls} — Legacy & Retraités (
+                              {legacyCars.length})
                             </td>
                           </tr>
-                          {legacy.map((car) => {
+                          {legacyCars.map((car) => {
                             const ownerCount = matrixDrivers.filter((d) =>
                               carOwnershipSets[d.id]?.has(car.iracing_car_id),
                             ).length;
@@ -837,7 +847,7 @@ export default function InventoryMatrix({
                             );
                           })}
                         </Fragment>
-                      )}
+                      ))}
                     </Fragment>
                   ))}
                 </tbody>
