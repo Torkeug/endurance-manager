@@ -526,21 +526,46 @@ export default function EventPageTabs({
                           )}
                         </td>
                         <td>
-                          {entry.stream_url ? (
-                            <a
-                              href={entry.stream_url}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              style={{
-                                color: "#9147ff",
-                                fontSize: "0.85rem",
-                              }}
-                            >
-                              Twitch ↗
-                            </a>
-                          ) : (
-                            "—"
-                          )}
+                          {/* Prefer stream_urls array; fall back to legacy stream_url */}
+                          {(() => {
+                            const urls = (entry.stream_urls || []).filter(
+                              Boolean,
+                            );
+                            if (urls.length === 0 && entry.stream_url)
+                              urls.push(entry.stream_url);
+                            if (urls.length === 0) return "—";
+                            return (
+                              <div
+                                style={{
+                                  display: "flex",
+                                  flexDirection: "column",
+                                  gap: "0.2rem",
+                                }}
+                              >
+                                {urls.map((url, i) => {
+                                  const username =
+                                    url.match(
+                                      /twitch\.tv\/([a-zA-Z0-9_]+)/i,
+                                    )?.[1] || `Stream ${i + 1}`;
+                                  return (
+                                    <a
+                                      key={url}
+                                      href={url}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      style={{
+                                        color: "#9147ff",
+                                        fontSize: "0.82rem",
+                                        whiteSpace: "nowrap",
+                                      }}
+                                    >
+                                      {username} ↗
+                                    </a>
+                                  );
+                                })}
+                              </div>
+                            );
+                          })()}
                         </td>
                         <td>
                           {(admin ||

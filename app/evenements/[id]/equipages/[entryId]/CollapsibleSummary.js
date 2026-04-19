@@ -6,7 +6,7 @@ export default function CollapsibleSummary({
   startTime,
   startLabel,
   infoItems,
-  streamUrl,
+  streamUrls,
 }) {
   const [collapsed, setCollapsed] = useState(false);
 
@@ -169,31 +169,37 @@ export default function CollapsibleSummary({
             ))}
           </div>
 
-          {/* Stream */}
-          {streamUrl && (
-            <div className="card" style={{ marginBottom: "1rem" }}>
-              <div
-                style={{
-                  fontSize: "0.7rem",
-                  fontWeight: 700,
-                  letterSpacing: "0.1em",
-                  textTransform: "uppercase",
-                  color: "var(--text-dim)",
-                  marginBottom: "0.4rem",
-                }}
-              >
-                Stream
-              </div>
-              <a
-                href={streamUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                style={{ color: "#9147ff", fontSize: "0.9rem" }}
-              >
-                {streamUrl} ↗
-              </a>
-            </div>
-          )}
+{/* Streams */}
+{streamUrls.length > 0 && (
+  <div className="card" style={{ marginBottom: "1rem" }}>
+    <div
+      style={{
+        fontSize: "0.7rem",
+        fontWeight: 700,
+        letterSpacing: "0.1em",
+        textTransform: "uppercase",
+        color: "var(--text-dim)",
+        marginBottom: "0.4rem",
+      }}
+    >
+      {streamUrls.length > 1 ? "Streams" : "Stream"}
+    </div>
+
+    <div style={{ display: "flex", flexDirection: "column", gap: "0.25rem" }}>
+      {streamUrls.map((url, idx) => (
+        <a
+          key={idx}
+          href={url}
+          target="_blank"
+          rel="noopener noreferrer"
+          style={{ color: "#9147ff", fontSize: "0.9rem" }}
+        >
+          {url} ↗
+        </a>
+      ))}
+    </div>
+  </div>
+)}
 
           {!startTime && (
             <div

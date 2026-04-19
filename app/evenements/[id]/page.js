@@ -45,7 +45,7 @@ export default async function EvenementDetail({ params }) {
           *,
           circuits (name, pit_lane_time_seconds),
           team_entries (
-            id, crew_name, class, stream_url, start_time_id,
+            id, crew_name, class, stream_url, stream_urls, start_time_id,
             car_name_snapshot,
             cars (id, name, iracing_car_id),
             event_start_times (irl_start, label),

@@ -154,7 +154,7 @@ export default async function EquipageDetail({ params }) {
             : null
         }
         startLabel={entry.event_start_times?.label}
-        streamUrl={entry.stream_url}
+        streamUrls={entry.stream_urls}
         infoItems={infoItems}
       />
 

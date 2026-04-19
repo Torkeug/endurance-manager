@@ -5,14 +5,6 @@ import Link from "next/link";
 import { supabaseBrowser as supabase } from "../../../../../lib/supabase-browser";
 import { formatTimeInZone } from "../../../../../lib/timezone";
 
-// Extract a Twitch username from a full twitch.tv URL, or return the string as-is
-// if it doesn't look like a full URL (treat it as a raw username already).
-function extractTwitchUsername(url) {
-  if (!url) return "";
-  const match = url.match(/twitch\.tv\/([a-zA-Z0-9_]+)/i);
-  return match ? match[1] : url;
-}
-
 const emptyForm = {
   crew_name: "",
   car_id: "",
@@ -39,8 +31,9 @@ export default function NouvelEquipage({ params }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  // Twitch: raw username (no URL prefix) — built into stream_url on submit
-  const [twitchUsername, setTwitchUsername] = useState("");
+  // Multiple Twitch streams — stored as array of raw usernames
+  const [twitchUsernames, setTwitchUsernames] = useState([]);
+  const [twitchInput, setTwitchInput] = useState("");
   // Drivers in this event who have a linked Twitch account — offered as quick-pick
   const [twitchDrivers, setTwitchDrivers] = useState([]);
 
@@ -58,7 +51,7 @@ export default function NouvelEquipage({ params }) {
         .eq("id", id)
         .single(),
       supabase.from("crew_names").select("name").order("sort_order"),
-      // Fetch signed-up drivers who have a Twitch username linked
+      // Fetch signed-up drivers who have a Twitch account linked
       supabase
         .from("signups")
         .select("drivers(id, name, twitch)")
@@ -78,13 +71,11 @@ export default function NouvelEquipage({ params }) {
           crewData?.map((c) => c.name).sort((a, b) => a.localeCompare(b)) || [],
         );
 
-        // Build unique list of drivers with a Twitch username from event signups
+        // Build unique list of drivers with a Twitch account from event signups
         const seen = new Set();
         const withTwitch = (signupsData || [])
           .map((s) => s.drivers)
-          .filter(
-            (d) => d && d.twitch && !seen.has(d.id) && seen.add(d.id),
-          )
+          .filter((d) => d && d.twitch && !seen.has(d.id) && seen.add(d.id))
           .sort((a, b) => a.name.localeCompare(b.name));
         setTwitchDrivers(withTwitch);
 
@@ -121,17 +112,36 @@ export default function NouvelEquipage({ params }) {
       return;
     }
     const car = cars.find((c) => c.id === form.car_id);
-    // When a car is selected, auto-fill its class — displayed as read-only.
     if (car) {
       setSelectedCar(car);
       setForm((prev) => ({ ...prev, class: car.class || "" }));
-    } else {
-      setSelectedCar(null);
-    }
+    } else setSelectedCar(null);
   }, [form?.car_id, cars]);
 
   const set = (field) => (e) =>
     setForm((prev) => ({ ...prev, [field]: e.target.value }));
+
+  // Add a username to the list if not already present
+  const addTwitchUsername = (username) => {
+    const clean = username.trim().toLowerCase();
+    if (!clean) return;
+    setTwitchUsernames((prev) =>
+      prev.includes(clean) ? prev : [...prev, clean],
+    );
+    setTwitchInput("");
+  };
+
+  // Toggle a driver's Twitch in/out of the list
+  const toggleTwitchDriver = (username) => {
+    const clean = username.trim().toLowerCase();
+    setTwitchUsernames((prev) =>
+      prev.includes(clean) ? prev.filter((u) => u !== clean) : [...prev, clean],
+    );
+  };
+
+  const removeTwitchUsername = (username) => {
+    setTwitchUsernames((prev) => prev.filter((u) => u !== username));
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -151,16 +161,18 @@ export default function NouvelEquipage({ params }) {
     setLoading(true);
     setError(null);
 
+    // Build full Twitch URLs from usernames array
+    const streamUrls = twitchUsernames.map((u) => `https://twitch.tv/${u}`);
+
     const payload = {
       event_id: id,
       crew_name: form.crew_name,
       car_id: form.car_id || null,
       class: form.class || null,
       start_time_id: form.start_time_id,
-      // Build full Twitch URL from username, or null if none entered
-      stream_url: twitchUsername.trim()
-        ? `https://twitch.tv/${twitchUsername.trim().toLowerCase()}`
-        : null,
+      stream_urls: streamUrls,
+      // Keep legacy stream_url as first entry for backward compatibility
+      stream_url: streamUrls[0] || null,
       bop_power_percent: parseFloat(form.bop_power_percent) || 100,
       bop_weight_kg: parseFloat(form.bop_weight_kg) || 0,
       // BoP tank size is optional — null means use the car's default tank size.
@@ -327,10 +339,66 @@ export default function NouvelEquipage({ params }) {
               )}
             </div>
 
-            {/* ── Twitch stream picker ── */}
+            {/* ── Twitch streams ── */}
             <div className="form-group" style={{ gridColumn: "1 / -1" }}>
-              <label>Lien stream Twitch</label>
-              {/* Quick-pick from drivers in this event who have a Twitch account */}
+              <label>Streams Twitch</label>
+
+              {/* Added streams as removable pills */}
+              {twitchUsernames.length > 0 && (
+                <div
+                  style={{
+                    display: "flex",
+                    gap: "0.5rem",
+                    flexWrap: "wrap",
+                    marginBottom: "0.75rem",
+                  }}
+                >
+                  {twitchUsernames.map((u) => (
+                    <div
+                      key={u}
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "0.4rem",
+                        padding: "0.25rem 0.5rem 0.25rem 0.75rem",
+                        borderRadius: "3px",
+                        background: "rgba(145,71,255,0.12)",
+                        border: "1px solid #9147ff",
+                      }}
+                    >
+                      <a
+                        href={`https://twitch.tv/${u}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{
+                          color: "#9147ff",
+                          fontSize: "0.82rem",
+                          fontWeight: 600,
+                        }}
+                      >
+                        {u}
+                      </a>
+                      <button
+                        type="button"
+                        onClick={() => removeTwitchUsername(u)}
+                        style={{
+                          background: "none",
+                          border: "none",
+                          color: "#9147ff",
+                          cursor: "pointer",
+                          fontSize: "0.9rem",
+                          padding: 0,
+                          lineHeight: 1,
+                        }}
+                      >
+                        ×
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Quick-pick from event signups with linked Twitch */}
               {twitchDrivers.length > 0 && (
                 <div
                   style={{
@@ -340,51 +408,37 @@ export default function NouvelEquipage({ params }) {
                     marginBottom: "0.5rem",
                   }}
                 >
-                  {twitchDrivers.map((d) => (
-                    <button
-                      key={d.id}
-                      type="button"
-                      onClick={() => setTwitchUsername(d.twitch)}
-                      style={{
-                        padding: "0.3rem 0.75rem",
-                        borderRadius: "3px",
-                        border: `1px solid ${twitchUsername === d.twitch ? "#9147ff" : "var(--border)"}`,
-                        background:
-                          twitchUsername === d.twitch
+                  {twitchDrivers.map((d) => {
+                    const selected = twitchUsernames.includes(
+                      d.twitch.toLowerCase(),
+                    );
+                    return (
+                      <button
+                        key={d.id}
+                        type="button"
+                        onClick={() => toggleTwitchDriver(d.twitch)}
+                        style={{
+                          padding: "0.3rem 0.75rem",
+                          borderRadius: "3px",
+                          border: `1px solid ${selected ? "#9147ff" : "var(--border)"}`,
+                          background: selected
                             ? "rgba(145,71,255,0.12)"
                             : "var(--surface-2)",
-                        color:
-                          twitchUsername === d.twitch
-                            ? "#9147ff"
-                            : "var(--text-dim)",
-                        fontSize: "0.82rem",
-                        fontWeight: 600,
-                        cursor: "pointer",
-                      }}
-                    >
-                      {d.name} ({d.twitch})
-                    </button>
-                  ))}
-                  {twitchUsername && (
-                    <button
-                      type="button"
-                      onClick={() => setTwitchUsername("")}
-                      style={{
-                        padding: "0.3rem 0.75rem",
-                        borderRadius: "3px",
-                        border: "1px solid var(--border)",
-                        background: "var(--surface-2)",
-                        color: "var(--text-dim)",
-                        fontSize: "0.82rem",
-                        cursor: "pointer",
-                      }}
-                    >
-                      Effacer
-                    </button>
-                  )}
+                          color: selected ? "#9147ff" : "var(--text-dim)",
+                          fontSize: "0.82rem",
+                          fontWeight: 600,
+                          cursor: "pointer",
+                        }}
+                      >
+                        {selected ? "✓ " : ""}
+                        {d.name} ({d.twitch})
+                      </button>
+                    );
+                  })}
                 </div>
               )}
-              {/* Manual username entry — twitch.tv/ prefix shown as read-only */}
+
+              {/* Manual username entry */}
               <div style={{ display: "flex", alignItems: "center", gap: 0 }}>
                 <span
                   style={{
@@ -403,29 +457,34 @@ export default function NouvelEquipage({ params }) {
                 </span>
                 <input
                   type="text"
-                  value={twitchUsername}
+                  value={twitchInput}
                   onChange={(e) =>
-                    setTwitchUsername(
+                    setTwitchInput(
                       e.target.value.replace(/\s/g, "").toLowerCase(),
                     )
                   }
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      addTwitchUsername(twitchInput);
+                    }
+                  }}
                   placeholder="nom_de_chaine"
-                  style={{ borderRadius: "0 3px 3px 0", flex: 1 }}
+                  style={{ borderRadius: 0, flex: 1 }}
                 />
+                <button
+                  type="button"
+                  onClick={() => addTwitchUsername(twitchInput)}
+                  className="btn btn-secondary"
+                  style={{
+                    borderRadius: "0 3px 3px 0",
+                    borderLeft: "none",
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  + Ajouter
+                </button>
               </div>
-              {/* Live preview of the constructed URL */}
-              {twitchUsername.trim() && (
-                <div style={{ marginTop: "0.35rem", fontSize: "0.78rem" }}>
-                  <a
-                    href={`https://twitch.tv/${twitchUsername.trim()}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    style={{ color: "#9147ff" }}
-                  >
-                    https://twitch.tv/{twitchUsername.trim()} ↗
-                  </a>
-                </div>
-              )}
             </div>
           </div>
         </div>
