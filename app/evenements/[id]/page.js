@@ -96,8 +96,21 @@ export default async function EvenementDetail({ params }) {
     { label: "Format", value: event.format || "—" },
     { label: "Durée", value: formatDuration(event.duration_minutes) },
     { label: "Départ IG", value: event.ig_start_time || "—" },
-    { label: "Pilotes inscrits", value: String(event.signups?.length ?? 0) },
-    { label: "Équipages", value: String(event.team_entries?.length ?? 0) },
+
+    // Hide counts for external users
+    ...(!isExternal
+      ? [
+          {
+            label: "Pilotes inscrits",
+            value: String(event.signups?.length ?? 0),
+          },
+          {
+            label: "Équipages",
+            value: String(event.team_entries?.length ?? 0),
+          },
+        ]
+      : []),
+
     { label: "Lever soleil", value: event.ig_sunrise || "—" },
     { label: "Coucher soleil", value: event.ig_sunset || "—" },
     {

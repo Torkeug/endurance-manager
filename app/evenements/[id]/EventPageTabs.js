@@ -101,7 +101,9 @@ export default function EventPageTabs({
   // Persist tab state per event — read in useEffect to avoid hydration mismatch.
   useEffect(() => {
     const saved = localStorage.getItem(`event-tab-${event.id}`);
-    if (saved && TAB_IDS.includes(saved)) setActiveTab(saved);
+    if (saved && tabs.some((t) => t.id === saved)) {
+      setActiveTab(saved);
+    }
   }, [event.id]);
 
   const switchTab = (tabId) => {
@@ -136,7 +138,7 @@ export default function EventPageTabs({
     { id: "inscriptions", label: "Inscriptions", count: signupCount },
     { id: "equipages", label: "Équipages", count: teamCount },
     { id: "horaires", label: "Horaires de départ" },
-    { id: "inventaire", label: "Inventaire" },
+    ...(!isExternal ? [{ id: "inventaire", label: "Inventaire" }] : []),
   ];
 
   const tz = event.timezone || "Europe/Paris";
@@ -186,7 +188,7 @@ export default function EventPageTabs({
           >
             {tab.label}
             {/* Count badge on Inscriptions and Équipages tabs */}
-            {tab.count !== undefined && tab.count > 0 && (
+            {!isExternal && tab.count !== undefined && tab.count > 0 && (
               <span
                 style={{
                   fontSize: "0.65rem",
@@ -219,11 +221,14 @@ export default function EventPageTabs({
             }}
           >
             <div style={{ fontSize: "0.85rem", color: "var(--text-dim)" }}>
-              {signupCount} pilote{signupCount !== 1 ? "s" : ""} inscrit
-              {signupCount !== 1 ? "s" : ""}
+              {isExternal
+                ? "Inscriptions"
+                : `${signupCount} pilote${signupCount !== 1 ? "s" : ""} inscrit${
+                    signupCount !== 1 ? "s" : ""
+                  }`}
             </div>
-            {/* Engineers don't sign up — they're staff, not drivers */}
-            {!event.archived && !engineer && (
+            {/* Engineers don't sign up — they're staff, not drivers, externals cannot sign up by themselves */}
+            {!event.archived && !engineer && !isExternal && (
               <Link
                 href={`/evenements/${event.id}/inscription`}
                 className="btn btn-primary"
@@ -343,7 +348,7 @@ export default function EventPageTabs({
                                 href={`/evenements/${event.id}/inscription?driver=${s.drivers?.id}`}
                                 className="btn btn-secondary btn-sm"
                               >
-                                Gérer
+                                {isExternal === true ? "Voir" : "Gérer"}
                               </Link>
                             )}
                         </td>
@@ -368,8 +373,11 @@ export default function EventPageTabs({
             }}
           >
             <div style={{ fontSize: "0.85rem", color: "var(--text-dim)" }}>
-              {teamCount} équipage{teamCount !== 1 ? "s" : ""} engagé
-              {teamCount !== 1 ? "s" : ""}
+              {isExternal
+                ? "Équipages"
+                : `${teamCount} équipage${teamCount !== 1 ? "s" : ""} engagé${
+                    teamCount !== 1 ? "s" : ""
+                  }`}
             </div>
             {/* Engineers cannot create team entries — admin only action */}
             {!event.archived && admin && !engineer && (
@@ -604,7 +612,7 @@ export default function EventPageTabs({
       )}
 
       {/* ── Tab: Inventaire ───────────────────────────────────────────── */}
-      {activeTab === "inventaire" && (
+      {!isExternal && activeTab === "inventaire" && (
         <EventInventoryTab
           eventSignups={event.signups || []}
           archived={event.archived}

@@ -559,6 +559,7 @@ function InscriptionPage({ params }) {
   const [existingSignups, setExistingSignups] = useState([]);
   const [editingSignup, setEditingSignup] = useState(null);
   const [error, setError] = useState(null);
+  const [isExternal, setIsExternal] = useState(false);
 
   useEffect(() => {
     Promise.all([
@@ -642,13 +643,22 @@ function InscriptionPage({ params }) {
           setDriverId(preselect);
         } else {
           supabase.auth.getUser().then(async ({ data: { user } }) => {
-            if (!user) return;
+            if (!user) {
+              setRoleLoaded(true);
+              return;
+            }
+
             const { data: driver } = await supabase
               .from("drivers")
-              .select("id")
+              .select("id, role")
               .eq("auth_user_id", user.id)
               .single();
-            if (driver) setDriverId(driver.id);
+
+            if (driver) {
+              setDriverId(driver.id);
+            }
+
+            setRoleLoaded(true);
           });
         }
       },
@@ -687,6 +697,19 @@ function InscriptionPage({ params }) {
       });
   };
 
+  useEffect(() => {
+    if (!driverId) return;
+
+    supabase
+      .from("drivers")
+      .select("role")
+      .eq("id", driverId)
+      .single()
+      .then(({ data }) => {
+        setIsExternal(data?.role === "external");
+      });
+  }, [driverId]);
+
   if (fetching)
     return (
       <div className="page">
@@ -718,42 +741,46 @@ function InscriptionPage({ params }) {
       </div>
 
       {/* Driver selector */}
-      <div className="card" style={{ marginBottom: "1.25rem" }}>
-        <h3 style={{ marginBottom: "1.25rem", color: "var(--text-dim)" }}>
-          Qui êtes-vous ?
-        </h3>
-        <div className="form-group">
-          <label htmlFor="driver_id">Votre nom *</label>
-          <select
-            id="driver_id"
-            value={driverId}
-            onChange={(e) => {
-              setDriverId(e.target.value);
-              setEditingSignup(null);
-            }}
-          >
-            <option value="">— Sélectionnez votre nom —</option>
-            {drivers.map((d) => (
-              <option key={d.id} value={d.id}>
-                {d.name}
-              </option>
-            ))}
-          </select>
+      {!isExternal && (
+        <div className="card" style={{ marginBottom: "1.25rem" }}>
+          <h3 style={{ marginBottom: "1.25rem", color: "var(--text-dim)" }}>
+            Qui êtes-vous ?
+          </h3>
+          <div className="form-group">
+            <label htmlFor="driver_id">Votre nom *</label>
+            <select
+              id="driver_id"
+              value={driverId}
+              onChange={(e) => {
+                setDriverId(e.target.value);
+                setEditingSignup(null);
+              }}
+            >
+              <option value="">— Sélectionnez votre nom —</option>
+              {drivers.map((d) => (
+                <option key={d.id} value={d.id}>
+                  {d.name}
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
-      </div>
+      )}
 
       {driverId && (
         <>
           {/* Helper text explaining multiple signups are allowed */}
-          <p
-            style={{
-              fontSize: "0.82rem",
-              color: "var(--text-dim)",
-              marginBottom: "1rem",
-            }}
-          >
-            Vous pouvez vous inscrire pour plusieurs équipes séparément.
-          </p>
+          {isExternal === false && (
+            <p
+              style={{
+                fontSize: "0.82rem",
+                color: "var(--text-dim)",
+                marginBottom: "1rem",
+              }}
+            >
+              Vous pouvez vous inscrire pour plusieurs équipes séparément.
+            </p>
+          )}
 
           {/* Existing signups */}
           {existingSignups.length > 0 && (
@@ -770,7 +797,7 @@ function InscriptionPage({ params }) {
               >
                 {existingSignups.map((signup) => (
                   <div key={signup.id}>
-                    {editingSignup?.id === signup.id ? (
+                    {!isExternal && editingSignup?.id === signup.id ? (
                       <div className="card">
                         <h3
                           style={{
@@ -878,12 +905,14 @@ function InscriptionPage({ params }) {
                             </div>
                           )}
                         </div>
-                        <button
-                          onClick={() => setEditingSignup(signup)}
-                          className="btn btn-secondary btn-sm"
-                        >
-                          Modifier
-                        </button>
+                        {!isExternal && (
+                          <button
+                            onClick={() => setEditingSignup(signup)}
+                            className="btn btn-secondary btn-sm"
+                          >
+                            Modifier
+                          </button>
+                        )}
                       </div>
                     )}
                   </div>
@@ -893,7 +922,7 @@ function InscriptionPage({ params }) {
           )}
 
           {/* New signup or add button */}
-          {editingSignup === "new" ? (
+          {!isExternal && editingSignup === "new" ? (
             <div className="card" style={{ marginBottom: "1.25rem" }}>
               <h3 style={{ marginBottom: "1rem", color: "var(--text-dim)" }}>
                 Nouvelle inscription
@@ -912,6 +941,7 @@ function InscriptionPage({ params }) {
               />
             </div>
           ) : (
+            !isExternal &&
             editingSignup === null && (
               <button
                 onClick={() => setEditingSignup("new")}
