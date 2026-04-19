@@ -115,14 +115,14 @@ export default function ModifierEquipage({ params }) {
         // Fetch signed-up drivers in this event who have a Twitch username linked
         const { data: signupsData } = await supabase
           .from("signups")
-          .select("drivers(id, name, twitch_username)")
+          .select("drivers(id, name, twitch)")
           .eq("event_id", entry.event_id);
 
         const seen = new Set();
         const withTwitch = (signupsData || [])
           .map((s) => s.drivers)
           .filter(
-            (d) => d && d.twitch_username && !seen.has(d.id) && seen.add(d.id),
+            (d) => d && d.twitch && !seen.has(d.id) && seen.add(d.id),
           )
           .sort((a, b) => a.name.localeCompare(b.name));
         setTwitchDrivers(withTwitch);
@@ -393,17 +393,17 @@ export default function ModifierEquipage({ params }) {
                     <button
                       key={d.id}
                       type="button"
-                      onClick={() => setTwitchUsername(d.twitch_username)}
+                      onClick={() => setTwitchUsername(d.twitch)}
                       style={{
                         padding: "0.3rem 0.75rem",
                         borderRadius: "3px",
-                        border: `1px solid ${twitchUsername === d.twitch_username ? "#9147ff" : "var(--border)"}`,
+                        border: `1px solid ${twitchUsername === d.twitch ? "#9147ff" : "var(--border)"}`,
                         background:
-                          twitchUsername === d.twitch_username
+                          twitchUsername === d.twitch
                             ? "rgba(145,71,255,0.12)"
                             : "var(--surface-2)",
                         color:
-                          twitchUsername === d.twitch_username
+                          twitchUsername === d.twitch
                             ? "#9147ff"
                             : "var(--text-dim)",
                         fontSize: "0.82rem",
@@ -411,7 +411,7 @@ export default function ModifierEquipage({ params }) {
                         cursor: "pointer",
                       }}
                     >
-                      {d.name} ({d.twitch_username})
+                      {d.name} ({d.twitch})
                     </button>
                   ))}
                   {twitchUsername && (
