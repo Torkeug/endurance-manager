@@ -88,6 +88,22 @@ function checkAvailability(availabilities, driverId, irlStart, irlEnd) {
   return "partial";
 }
 
+// ─── Fuel per lap selection ──────────────────────────────────────────────────
+// Extracted so it can be reused in calcStint and calcSkipLastStintTarget.
+// Priority mirrors calcStint: night-specific → day + additive → opposite condition.
+
+function selectFuelPerLap(perf, rain, isNight) {
+  if (!perf) return null;
+  if (rain) {
+    return isNight
+      ? perf.fuel_night_wet || perf.fuel_wet || perf.fuel_dry || null
+      : perf.fuel_wet || perf.fuel_dry || null;
+  }
+  return isNight
+    ? perf.fuel_night_dry || perf.fuel_dry || perf.fuel_wet || null
+    : perf.fuel_dry || perf.fuel_wet || null;
+}
+
 // ─── Stint calculation engine ───────────────────────────────────────────────
 
 function calcStint(
@@ -142,17 +158,8 @@ function calcStint(
       : perf?.lap_time_dry || perf?.lap_time_wet || null;
   }
 
-  // Fuel selection: use night-specific fuel if available, otherwise fall back to day fuel
-  let fuelPerLap;
-  if (stint.rain) {
-    fuelPerLap = isNight
-      ? perf?.fuel_night_wet || perf?.fuel_wet || perf?.fuel_dry || null
-      : perf?.fuel_wet || perf?.fuel_dry || null;
-  } else {
-    fuelPerLap = isNight
-      ? perf?.fuel_night_dry || perf?.fuel_dry || perf?.fuel_wet || null
-      : perf?.fuel_dry || perf?.fuel_wet || null;
-  }
+  // Fuel selection delegated to selectFuelPerLap for reuse
+  const fuelPerLap = selectFuelPerLap(perf, stint.rain, isNight);
 
   const calcLaps =
     fuelPerLap && tankSize
@@ -189,6 +196,7 @@ function calcStint(
     _calcLaps: calcLaps,
     _lapTimeSec: lapTimeSec,
     _fuelUsed: fuelUsed,
+    _fuelPerLap: fuelPerLap,
     _pitStopSec: pitStopSec,
     _stintDurationSec: stintDurationSec,
     _hasPerfData: !!lapTimeSec,
@@ -275,6 +283,101 @@ function calculateAllStints(
     }
   }
   return result;
+}
+
+// ─── Skip last pit stop target consumption ───────────────────────────────────
+// For a given stint index, computes the target fuel consumption (L/lap) that
+// would allow the car to cover all remaining laps (from next stint to end)
+// on the current tank, effectively eliminating the final pit stop.
+//
+// target = tankSize / Σ laps(stintIndex+1 → lastStint)
+// gap    = weightedActualConsumption − target  (always > 0: how much to reduce)
+// hasWarning = true if any remaining stint used averaged data (no driver/perf)
+
+function calcSkipLastStintTarget(
+  stintIndex,
+  calculated,
+  teamEntry,
+  driverPerf,
+  assignedDrivers,
+) {
+  const carTankSize = teamEntry?.cars?.tank_size_litres;
+  const tankSize = teamEntry?.bop_tank_size_percent
+    ? carTankSize * (teamEntry.bop_tank_size_percent / 100)
+    : carTankSize;
+  if (!tankSize) return null;
+
+  const lastIdx = calculated.findIndex((s) => s._isLastStint);
+  // Hide on the last stint itself — no pit stop to skip from there
+  if (lastIdx === -1 || stintIndex >= lastIdx) return null;
+
+  const lastStint = calculated[lastIdx];
+
+  // ── Fuel cost of the last stint (the stop we're trying to eliminate) ──
+  const lastIsNight = lastStint._phase === "🌑";
+  let lastFuelPerLap = lastStint._fuelPerLap;
+  let hasWarning = false;
+
+  if (!lastFuelPerLap) {
+    // Fall back to team average for last stint's condition
+    const fuels = assignedDrivers
+      .map((d) => d.drivers?.id)
+      .filter(Boolean)
+      .map((id) =>
+        selectFuelPerLap(driverPerf[id], lastStint.rain, lastIsNight),
+      )
+      .filter(Boolean);
+    if (fuels.length > 0)
+      lastFuelPerLap = fuels.reduce((s, f) => s + f, 0) / fuels.length;
+    hasWarning = true;
+  }
+
+  if (!lastFuelPerLap || !lastStint._laps) return null;
+
+  const lastStintFuel = lastStint._laps * lastFuelPerLap;
+
+  // ── Stints over which savings are spread: current stint → second-to-last ──
+  // Includes the current stint (stintIndex) so that the second-to-last row
+  // shows savings spread over 1 stint — the hardest case.
+  const middleStints = calculated.slice(stintIndex, lastIdx);
+  const lapsToSaveOver = middleStints.reduce(
+    (sum, s) => sum + (s._laps || 0),
+    0,
+  );
+  if (lapsToSaveOver === 0) return null;
+
+  const savingsPerLap = lastStintFuel / lapsToSaveOver;
+
+  // ── Weighted average actual consumption across the same window ──
+  let weightedFuelSum = 0;
+  let weightedLapSum = 0;
+
+  for (const st of middleStints) {
+    const isNight = st._phase === "🌑";
+    let fuelPerLap = st._fuelPerLap;
+    if (!fuelPerLap) {
+      const fuels = assignedDrivers
+        .map((d) => d.drivers?.id)
+        .filter(Boolean)
+        .map((id) => selectFuelPerLap(driverPerf[id], st.rain, isNight))
+        .filter(Boolean);
+      if (fuels.length > 0)
+        fuelPerLap = fuels.reduce((s, f) => s + f, 0) / fuels.length;
+      hasWarning = true;
+    }
+    if (fuelPerLap && st._laps) {
+      weightedFuelSum += fuelPerLap * st._laps;
+      weightedLapSum += st._laps;
+    }
+  }
+
+  const actualAvg =
+    weightedLapSum > 0 ? weightedFuelSum / weightedLapSum : null;
+  // Target: what average consumption needs to be across remaining stints
+  const targetConsumption =
+    actualAvg !== null ? actualAvg - savingsPerLap : null;
+
+  return { savingsPerLap, targetConsumption, hasWarning };
 }
 
 // ─── Auto-generation ────────────────────────────────────────────────────────
@@ -536,6 +639,12 @@ export default function StintGrid({
     width: "100%",
   };
 
+  // True when the last calculated stint covers the race end — this is the
+  // only context where the skip-last-pit feature is meaningful.
+  const raceCovered =
+    calculated.length > 0 &&
+    calculated.some((s) => s._isLastStint && !s._doesNotCoverRaceEnd);
+
   if (!teamEntry?.event_start_times?.irl_start)
     return (
       <div className="card">
@@ -739,6 +848,15 @@ export default function StintGrid({
               <th style={{ ...TH, width: "68px" }}>Durée</th>
               <th style={{ ...TH, width: "52px" }}>Tours</th>
               <th style={{ ...TH, width: "60px" }}>Conso</th>
+              {/* Skip last pit — only shown when race is fully covered */}
+              {raceCovered && (
+                <th
+                  style={{ ...TH, width: "90px" }}
+                  title="Conso cible pour supprimer le dernier arrêt"
+                >
+                  Skip fin
+                </th>
+              )}
               <th style={{ ...TH, width: "52px" }}>IG</th>
               <th style={{ ...TH, width: "24px" }}>⏱</th>
               <th style={{ ...TH, width: "24px" }} title="Pluie">
@@ -768,7 +886,12 @@ export default function StintGrid({
             {calculated.length === 0 && (
               <tr>
                 <td
-                  colSpan={11 + assignedDrivers.length + (archived ? 0 : 2)}
+                  colSpan={
+                    11 +
+                    assignedDrivers.length +
+                    (archived ? 0 : 2) +
+                    (raceCovered ? 1 : 0)
+                  }
                   style={{
                     ...TD,
                     textAlign: "center",
@@ -1069,6 +1192,72 @@ export default function StintGrid({
                       {stint._fuelUsed ? `${stint._fuelUsed.toFixed(1)}L` : "—"}
                     </span>
                   </td>
+
+                  {/* Skip last pit target consumption */}
+                  {raceCovered && (
+                    <td style={TD}>
+                      {(() => {
+                        // Last stint itself has no target — it is the stop being skipped
+                        if (stint._isLastStint)
+                          return (
+                            <span
+                              style={{
+                                color: "var(--text-dim)",
+                                fontSize: "0.72rem",
+                              }}
+                            >
+                              —
+                            </span>
+                          );
+                        const skip = calcSkipLastStintTarget(
+                          i,
+                          calculated,
+                          teamEntry,
+                          driverPerf,
+                          assignedDrivers,
+                        );
+                        if (!skip)
+                          return (
+                            <span
+                              style={{
+                                color: "var(--text-dim)",
+                                fontSize: "0.72rem",
+                              }}
+                            >
+                              —
+                            </span>
+                          );
+                        return (
+                          <div className="mono" style={{ fontSize: "0.72rem" }}>
+                            {/* Target consumption to skip last pit */}
+                            <div style={{ color: "var(--accent)" }}>
+                              {skip.targetConsumption !== null
+                                ? `${skip.targetConsumption.toFixed(2)} L/tr`
+                                : "—"}
+                            </div>
+                            {/* Savings needed per lap vs current plan */}
+                            <div
+                              style={{
+                                fontSize: "0.65rem",
+                                color: "var(--danger)",
+                                marginTop: "0.1rem",
+                              }}
+                            >
+                              −{skip.savingsPerLap.toFixed(2)} L/tr
+                              {skip.hasWarning && (
+                                <span
+                                  title="Données manquantes — moyenne utilisée"
+                                  style={{ marginLeft: "0.2rem" }}
+                                >
+                                  ⚠️
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })()}
+                    </td>
+                  )}
 
                   {/* IG start */}
                   <td style={TD}>
