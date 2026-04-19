@@ -143,6 +143,10 @@ export default function EventPageTabs({
 
   const tz = event.timezone || "Europe/Paris";
 
+  const isInEvent = (event.signups || []).some(
+    (s) => s.drivers?.id === currentDriver?.id,
+  );
+
   return (
     <div>
       {/* ── Tab bar ────────────────────────────────────────────────────── */}
@@ -379,8 +383,8 @@ export default function EventPageTabs({
                     teamCount !== 1 ? "s" : ""
                   }`}
             </div>
-            {/* Engineers cannot create team entries — admin only action */}
-            {!event.archived && admin && !engineer && (
+            {/* Engineers cannot create team entries */}
+            {!event.archived && !engineer && (
               <Link
                 href={`/evenements/${event.id}/equipages/nouveau`}
                 className="btn btn-primary"
@@ -576,19 +580,38 @@ export default function EventPageTabs({
                           })()}
                         </td>
                         <td>
-                          {(admin ||
-                            engineer ||
-                            (entry.signups || []).some(
-                              (s) => s.drivers?.id === currentDriver?.id,
-                            )) && (
-                            <Link
-                              href={`/evenements/${event.id}/equipages/${entry.id}`}
-                              className="btn btn-secondary btn-sm"
-                            >
-                              {/* Engineers always see "Voir" — they manage stints but not the entry itself */}
-                              {event.archived || engineer ? "Voir" : "Gérer"}
-                            </Link>
-                          )}
+                          {(() => {
+                            const driverId = currentDriver?.id;
+
+                            const isInEvent = (event.signups || []).some(
+                              (s) => s.drivers?.id === driverId,
+                            );
+
+                            const isInTeam = (entry.signups || []).some(
+                              (s) => s.drivers?.id === driverId,
+                            );
+
+                            const canAccess = admin || engineer || isInEvent;
+
+                            if (!canAccess) return null;
+
+                            const label = admin
+                              ? "Gérer"
+                              : engineer
+                                ? "Voir"
+                                : isInTeam
+                                  ? "Gérer"
+                                  : "Voir";
+
+                            return (
+                              <Link
+                                href={`/evenements/${event.id}/equipages/${entry.id}`}
+                                className="btn btn-secondary btn-sm"
+                              >
+                                {label}
+                              </Link>
+                            );
+                          })()}
                         </td>
                       </tr>
                     ))}
