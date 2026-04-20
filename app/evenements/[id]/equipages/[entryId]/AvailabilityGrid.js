@@ -440,6 +440,70 @@ export default function AvailabilityGrid({
         </div>
       )}
 
+      {/* Legend */}
+      <div
+        style={{
+          display: "flex",
+          gap: "1.25rem",
+          marginBottom: "0.75rem",
+          fontSize: "0.78rem",
+          color: "var(--text-dim)",
+          flexWrap: "wrap",
+          alignItems: "center",
+        }}
+      >
+        <span style={{ display: "flex", alignItems: "center", gap: "0.35rem" }}>
+          <span
+            style={{
+              width: 14,
+              height: 14,
+              background: "#1a3a1a",
+              border: "1px solid #2eb460",
+              borderRadius: 2,
+              display: "inline-block",
+            }}
+          />
+          Disponible
+        </span>
+        <span style={{ display: "flex", alignItems: "center", gap: "0.35rem" }}>
+          <span
+            style={{
+              width: 14,
+              height: 14,
+              background: "rgba(212, 144, 74, 0.15)",
+              border: "1px solid #d4904a",
+              borderRadius: 2,
+              display: "inline-block",
+            }}
+          />
+          Incertain
+        </span>
+        <span style={{ display: "flex", alignItems: "center", gap: "0.35rem" }}>
+          <span
+            style={{
+              width: 14,
+              height: 14,
+              background: "#3a1010",
+              border: "1px solid var(--danger)",
+              borderRadius: 2,
+              display: "inline-block",
+            }}
+          />
+          Indisponible
+        </span>
+        <span style={{ display: "flex", alignItems: "center", gap: "0.35rem" }}>
+          <Badge label="▶" bg="#2eb460" borderColor="#2eb460" />
+          Départ
+        </span>
+        <span style={{ display: "flex", alignItems: "center", gap: "0.35rem" }}>
+          <Badge label="■" bg="var(--danger)" borderColor="var(--danger)" />
+          Fin
+        </span>
+        {!archived && (
+          <span>Cliquez ou glissez pour appliquer le mode sélectionné.</span>
+        )}
+      </div>
+
       {/* Grid */}
       {loading ? (
         <div className="card">
@@ -679,70 +743,6 @@ export default function AvailabilityGrid({
           </table>
         </div>
       )}
-
-      {/* Legend */}
-      <div
-        style={{
-          display: "flex",
-          gap: "1.25rem",
-          marginTop: "0.75rem",
-          fontSize: "0.78rem",
-          color: "var(--text-dim)",
-          flexWrap: "wrap",
-          alignItems: "center",
-        }}
-      >
-        <span style={{ display: "flex", alignItems: "center", gap: "0.35rem" }}>
-          <span
-            style={{
-              width: 14,
-              height: 14,
-              background: "#1a3a1a",
-              border: "1px solid #2eb460",
-              borderRadius: 2,
-              display: "inline-block",
-            }}
-          />
-          Disponible
-        </span>
-        <span style={{ display: "flex", alignItems: "center", gap: "0.35rem" }}>
-          <span
-            style={{
-              width: 14,
-              height: 14,
-              background: "rgba(212, 144, 74, 0.15)",
-              border: "1px solid #d4904a",
-              borderRadius: 2,
-              display: "inline-block",
-            }}
-          />
-          Incertain
-        </span>
-        <span style={{ display: "flex", alignItems: "center", gap: "0.35rem" }}>
-          <span
-            style={{
-              width: 14,
-              height: 14,
-              background: "#3a1010",
-              border: "1px solid var(--danger)",
-              borderRadius: 2,
-              display: "inline-block",
-            }}
-          />
-          Indisponible
-        </span>
-        <span style={{ display: "flex", alignItems: "center", gap: "0.35rem" }}>
-          <Badge label="▶" bg="#2eb460" borderColor="#2eb460" />
-          Départ
-        </span>
-        <span style={{ display: "flex", alignItems: "center", gap: "0.35rem" }}>
-          <Badge label="■" bg="var(--danger)" borderColor="var(--danger)" />
-          Fin
-        </span>
-        {!archived && (
-          <span>Cliquez ou glissez pour appliquer le mode sélectionné.</span>
-        )}
-      </div>
     </div>
   );
 }

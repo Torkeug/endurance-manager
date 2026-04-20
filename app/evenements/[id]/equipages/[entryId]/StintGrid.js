@@ -881,6 +881,62 @@ export default function StintGrid({
           );
         })()}
 
+      {/* Legend */}
+      <div
+        style={{
+          display: "flex",
+          gap: "1rem",
+          marginBottom: "0.5rem",
+          fontSize: "0.72rem",
+          color: "var(--text-dim)",
+          flexWrap: "wrap",
+          alignItems: "center",
+        }}
+      >
+        <span style={{ fontWeight: 700, color: "var(--text)" }}>Dispo :</span>
+        {[
+          { color: "#2eb460", label: "Disponible" },
+          { color: "#c9a84c", label: "Partielle" },
+          { color: "#e05555", label: "Indisponible" },
+          { color: "#4a4a6a", label: "Incertain" },
+        ].map(({ color, label }) => (
+          <span
+            key={label}
+            style={{ display: "flex", alignItems: "center", gap: "0.3rem" }}
+          >
+            <span
+              style={{
+                width: 8,
+                height: 8,
+                borderRadius: "50%",
+                background: color,
+                display: "inline-block",
+                flexShrink: 0,
+              }}
+            />
+            {label}
+          </span>
+        ))}
+        <span style={{ marginLeft: "0.5rem" }}>
+          🛞 = Chgt pneus · 💧 = Pluie
+        </span>
+      </div>
+      <div
+        style={{
+          marginBottom: "0.5rem",
+          fontSize: "0.72rem",
+          color: "var(--text-dim)",
+        }}
+      >
+        Temps chgt pneus : {teamEntry?.tyre_change_time_seconds || 0}s
+        {teamEntry?.cars?.car_classes?.refuel_litres_per_second
+          ? ` — Ravitaillement : ${teamEntry.cars.car_classes.refuel_litres_per_second} L/s (variable)`
+          : ` — Ravitaillement : ${teamEntry?.refuel_time_seconds || 0}s (fixe)`}
+        {!archived &&
+          !teamEntry?.cars?.car_classes?.refuel_litres_per_second &&
+          " (configurable dans Modifier l'équipage)"}
+      </div>
+
       {/* Stint grid table */}
       <div
         style={{
@@ -1493,62 +1549,6 @@ export default function StintGrid({
           </div>
         </div>
       )}
-
-      {/* Legend */}
-      <div
-        style={{
-          display: "flex",
-          gap: "1rem",
-          marginTop: "1rem",
-          fontSize: "0.72rem",
-          color: "var(--text-dim)",
-          flexWrap: "wrap",
-          alignItems: "center",
-        }}
-      >
-        <span style={{ fontWeight: 700, color: "var(--text)" }}>Dispo :</span>
-        {[
-          { color: "#2eb460", label: "Disponible" },
-          { color: "#c9a84c", label: "Partielle" },
-          { color: "#e05555", label: "Indisponible" },
-          { color: "#4a4a6a", label: "Incertain" },
-        ].map(({ color, label }) => (
-          <span
-            key={label}
-            style={{ display: "flex", alignItems: "center", gap: "0.3rem" }}
-          >
-            <span
-              style={{
-                width: 8,
-                height: 8,
-                borderRadius: "50%",
-                background: color,
-                display: "inline-block",
-                flexShrink: 0,
-              }}
-            />
-            {label}
-          </span>
-        ))}
-        <span style={{ marginLeft: "0.5rem" }}>
-          🛞 = Chgt pneus · 💧 = Pluie
-        </span>
-      </div>
-      <div
-        style={{
-          marginTop: "0.35rem",
-          fontSize: "0.72rem",
-          color: "var(--text-dim)",
-        }}
-      >
-        Temps chgt pneus : {teamEntry?.tyre_change_time_seconds || 0}s
-        {teamEntry?.cars?.car_classes?.refuel_litres_per_second
-          ? ` — Ravitaillement : ${teamEntry.cars.car_classes.refuel_litres_per_second} L/s (variable)`
-          : ` — Ravitaillement : ${teamEntry?.refuel_time_seconds || 0}s (fixe)`}
-        {!archived &&
-          !teamEntry?.cars?.car_classes?.refuel_litres_per_second &&
-          " (configurable dans Modifier l'équipage)"}
-      </div>
     </div>
   );
 }
