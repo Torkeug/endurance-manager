@@ -458,7 +458,9 @@ function TeamView({
                     <ExpandableRow
                       key={rowKey}
                       label={champ.name}
-                      sublabel={champ.season ? `· Saison ${champ.season} ·` : undefined}
+                      sublabel={
+                        champ.season ? `· Saison ${champ.season} ·` : undefined
+                      }
                       car={carName(champEntries[0])}
                       cls={champEntries[0].class}
                       entries={champEntries}
@@ -489,7 +491,7 @@ export default function ChampionshipTeamsManager() {
   const [events, setEvents] = useState([]);
   const [entries, setEntries] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [view, setView] = useState("championship");
+  const [view, setView] = useState("team");
   const [expandedTop, setExpandedTop] = useState({});
   const [expandedRow, setExpandedRow] = useState({});
 
@@ -595,8 +597,8 @@ export default function ChampionshipTeamsManager() {
       {/* ── View toggle ─────────────────────────────────────────────────── */}
       <div style={{ display: "flex", gap: "0.5rem" }}>
         {[
-          { key: "championship", label: "Par championnat" },
           { key: "team", label: "Par équipe" },
+          { key: "championship", label: "Par championnat" },
         ].map(({ key, label }) => (
           <button
             key={key}
