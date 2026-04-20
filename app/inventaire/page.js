@@ -40,10 +40,12 @@ export default async function InventairePage({ searchParams }) {
       .order("car_name"),
     supabase
       .from("driver_car_ownership")
-      .select("driver_id, iracing_car_id, car_name, car_category, car_types"),
+      .select("driver_id, iracing_car_id, car_name, car_category, car_types")
+      .limit(50000),
     supabase
       .from("driver_track_ownership")
-      .select("driver_id, track_name, track_category"),
+      .select("driver_id, track_name, track_category")
+      .limit(50000),
     // Only fetch free tracks — used to build the freeTrackNames set
     supabase
       .from("iracing_tracks")
