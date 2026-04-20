@@ -525,25 +525,56 @@ export default function StintGrid({
   // Persist calculated IRL start/end times for conflict detection — skipped when archived
   useEffect(() => {
     if (calculated.length === 0 || archived) return;
-    const updates = calculated
-      .filter((s) => s._irlStart || s._irlEnd)
-      .map((s) => ({
+
+    // Compute skip-last-pit target per stint index so it can be persisted
+    const raceCoveredLocal = calculated.some(
+      (s) => s._isLastStint && !s._doesNotCoverRaceEnd,
+    );
+
+    const updates = calculated.map((s, i) => {
+      // Only compute skip target when race is covered (same condition as display)
+      const skip =
+        raceCoveredLocal && !s._isLastStint
+          ? calcSkipLastStintTarget(
+              i,
+              calculated,
+              teamEntry,
+              driverPerf,
+              assignedDrivers,
+            )
+          : null;
+      return {
         id: s.id,
         irl_start: s._irlStart ? s._irlStart.toISOString() : null,
         irl_end: s._irlEnd ? s._irlEnd.toISOString() : null,
-      }));
+        fuel_used_calc: s._fuelUsed ?? null,
+        target_consumption_skip_last: skip?.targetConsumption ?? null,
+      };
+    });
+
     if (updates.length === 0) return;
+
     Promise.all(
       updates.map((u) =>
         supabase
           .from("stints")
-          .update({ irl_start: u.irl_start, irl_end_planned: u.irl_end })
+          .update({
+            irl_start: u.irl_start,
+            irl_end_planned: u.irl_end,
+            fuel_used_calc: u.fuel_used_calc,
+            target_consumption_skip_last: u.target_consumption_skip_last,
+          })
           .eq("id", u.id),
       ),
     );
   }, [
     JSON.stringify(
-      calculated.map((s) => ({ id: s.id, start: s._irlStart, end: s._irlEnd })),
+      calculated.map((s) => ({
+        id: s.id,
+        start: s._irlStart,
+        end: s._irlEnd,
+        fuel: s._fuelUsed,
+      })),
     ),
   ]);
 
@@ -1184,12 +1215,17 @@ export default function StintGrid({
                       className="mono"
                       style={{
                         fontSize: "0.72rem",
+                        // Dim if using persisted fallback (no live perf data)
                         color: stint._fuelUsed
                           ? "var(--accent)"
-                          : "var(--text-dim)",
+                          : stint.fuel_used_calc
+                            ? "var(--text-dim)"
+                            : "var(--text-dim)",
                       }}
                     >
-                      {stint._fuelUsed ? `${stint._fuelUsed.toFixed(1)}L` : "—"}
+                      {(stint._fuelUsed ?? stint.fuel_used_calc)
+                        ? `${(stint._fuelUsed ?? stint.fuel_used_calc).toFixed(1)}L`
+                        : "—"}
                     </span>
                   </td>
 
@@ -1217,7 +1253,19 @@ export default function StintGrid({
                           assignedDrivers,
                         );
                         if (!skip)
-                          return (
+                          // Show persisted fallback if live calc unavailable (e.g. perf data missing)
+                          return stint.target_consumption_skip_last ? (
+                            <div
+                              className="mono"
+                              style={{
+                                fontSize: "0.72rem",
+                                color: "var(--text-dim)",
+                              }}
+                            >
+                              {stint.target_consumption_skip_last.toFixed(2)}{" "}
+                              L/tr
+                            </div>
+                          ) : (
                             <span
                               style={{
                                 color: "var(--text-dim)",
