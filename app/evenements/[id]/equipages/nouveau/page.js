@@ -37,6 +37,10 @@ export default function NouvelEquipage({ params }) {
   const [twitchInput, setTwitchInput] = useState("");
   // Drivers in this event who have a linked Twitch account — offered as quick-pick
   const [twitchDrivers, setTwitchDrivers] = useState([]);
+  // Unassigned event signups available for driver selection at creation time
+  const [eventSignups, setEventSignups] = useState([]);
+  // IDs of signups selected to be assigned immediately on team creation
+  const [selectedSignupIds, setSelectedSignupIds] = useState([]);
 
   useEffect(() => {
     Promise.all([
@@ -57,6 +61,14 @@ export default function NouvelEquipage({ params }) {
         .from("signups")
         .select("drivers(id, name, twitch)")
         .eq("event_id", id),
+      // Fetch unassigned event signups for the driver selection card
+      supabase
+        .from("signups")
+        .select(
+          "id, preferred_car_ids, preferred_class, preferred_start_time_ids, drivers(id, name, irating)",
+        )
+        .eq("event_id", id)
+        .is("team_entry_id", null),
     ]).then(
       async ([
         { data: carsData },
@@ -64,6 +76,7 @@ export default function NouvelEquipage({ params }) {
         { data: evData },
         { data: crewData },
         { data: signupsData },
+        { data: driverSignupsData },
       ]) => {
         setStartTimes(stData || []);
         setEventName(evData?.name || "");
@@ -79,6 +92,13 @@ export default function NouvelEquipage({ params }) {
           .filter((d) => d && d.twitch && !seen.has(d.id) && seen.add(d.id))
           .sort((a, b) => a.name.localeCompare(b.name));
         setTwitchDrivers(withTwitch);
+
+        // Store unassigned signups sorted by driver name
+        setEventSignups(
+          (driverSignupsData || [])
+            .filter((s) => s.drivers)
+            .sort((a, b) => a.drivers.name.localeCompare(b.drivers.name)),
+        );
 
         let filteredCars = carsData || [];
         // Filter cars to only those allowed for this event's format (event_type_cars).
@@ -144,6 +164,44 @@ export default function NouvelEquipage({ params }) {
     setTwitchUsernames((prev) => prev.filter((u) => u !== username));
   };
 
+  // Toggle a signup in/out of the selected drivers list
+  const toggleSignup = (signupId) => {
+    setSelectedSignupIds((prev) =>
+      prev.includes(signupId)
+        ? prev.filter((id) => id !== signupId)
+        : [...prev, signupId],
+    );
+  };
+
+  // Car/class mismatch: driver preferred a different car or class than this team entry
+  const getCarClassMismatch = (signup) => {
+    const prefCarIds = signup.preferred_car_ids || [];
+    const prefClasses = signup.preferred_class || [];
+    if (
+      prefCarIds.length > 0 &&
+      form.car_id &&
+      !prefCarIds.includes(form.car_id)
+    )
+      return "voiture";
+    if (
+      prefClasses.length > 0 &&
+      form.class &&
+      !prefClasses.includes(form.class)
+    )
+      return "classe";
+    return null;
+  };
+
+  // Start time mismatch: driver has preferences but none match the selected start time
+  const getStartTimeMismatch = (signup) => {
+    const prefs = signup.preferred_start_time_ids || [];
+    return (
+      prefs.length > 0 &&
+      !!form.start_time_id &&
+      !prefs.includes(form.start_time_id)
+    );
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!form.crew_name) {
@@ -200,6 +258,17 @@ export default function NouvelEquipage({ params }) {
       );
       setLoading(false);
     } else {
+      // Assign selected drivers to the new team entry before navigating
+      if (selectedSignupIds.length > 0) {
+        await Promise.all(
+          selectedSignupIds.map((signupId) =>
+            supabase
+              .from("signups")
+              .update({ team_entry_id: data.id })
+              .eq("id", signupId),
+          ),
+        );
+      }
       router.push(`/evenements/${id}/equipages/${data.id}`);
       router.refresh();
     }
@@ -557,6 +626,122 @@ export default function NouvelEquipage({ params }) {
                   </div>
                 </label>
               ))}
+            </div>
+          )}
+        </div>
+
+        {/* ── Pilotes ── */}
+        <div className="card" style={{ marginBottom: "1.25rem" }}>
+          <h3 style={{ marginBottom: "1.25rem", color: "var(--text-dim)" }}>
+            Pilotes{" "}
+            {selectedSignupIds.length > 0 && (
+              <span
+                style={{
+                  fontSize: "0.8rem",
+                  fontWeight: 400,
+                  color: "var(--accent)",
+                  marginLeft: "0.5rem",
+                }}
+              >
+                {selectedSignupIds.length} sélectionné
+                {selectedSignupIds.length > 1 ? "s" : ""}
+              </span>
+            )}
+          </h3>
+          {eventSignups.length === 0 ? (
+            <p style={{ color: "var(--text-dim)", fontSize: "0.9rem" }}>
+              Aucun pilote sans équipe pour cet événement.
+            </p>
+          ) : (
+            <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem" }}>
+              {eventSignups.map((s) => {
+                const selected = selectedSignupIds.includes(s.id);
+                const carClassMismatch = getCarClassMismatch(s);
+                const startTimeMismatch = getStartTimeMismatch(s);
+                const hasMismatch = carClassMismatch || startTimeMismatch;
+                return (
+                  <button
+                    key={s.id}
+                    type="button"
+                    onClick={() => toggleSignup(s.id)}
+                    className="btn btn-secondary"
+                    style={{
+                      display: "flex",
+                      flexDirection: "column",
+                      alignItems: "flex-start",
+                      gap: "0.25rem",
+                      borderColor: selected
+                        ? "var(--accent)"
+                        : hasMismatch
+                          ? "#a06020"
+                          : undefined,
+                      background: selected ? "var(--accent-dim)" : undefined,
+                    }}
+                  >
+                    <span
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "0.4rem",
+                      }}
+                    >
+                      {hasMismatch && (
+                        <span style={{ color: "#d4904a" }}>⚠️</span>
+                      )}
+                      <span style={{ fontWeight: 600 }}>
+                        {selected ? "✓ " : ""}
+                        {s.drivers?.name}
+                      </span>
+                    </span>
+                    {s.drivers?.irating && (
+                      <span
+                        className="mono"
+                        style={{ fontSize: "0.75rem", color: "var(--accent)" }}
+                      >
+                        {s.drivers.irating}
+                      </span>
+                    )}
+                    {hasMismatch && (
+                      <div
+                        style={{
+                          display: "flex",
+                          gap: "0.25rem",
+                          flexWrap: "wrap",
+                        }}
+                      >
+                        {carClassMismatch && (
+                          <span
+                            style={{
+                              fontSize: "0.7rem",
+                              padding: "0.1rem 0.35rem",
+                              background: "#2a1a00",
+                              border: "1px solid #a06020",
+                              borderRadius: "2px",
+                              color: "#d4904a",
+                            }}
+                          >
+                            ⚠️ {carClassMismatch}
+                          </span>
+                        )}
+                        {startTimeMismatch && (
+                          <span
+                            style={{
+                              fontSize: "0.7rem",
+                              padding: "0.1rem 0.35rem",
+                              background: "#2a1a00",
+                              border: "1px solid #a06020",
+                              borderRadius: "2px",
+                              color: "#d4904a",
+                            }}
+                          >
+                            ⚠️ horaire
+                          </span>
+                        )}
+                      </div>
+                    )}
+                  </button>
+                );
+              })}
             </div>
           )}
         </div>

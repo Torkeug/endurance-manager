@@ -50,6 +50,29 @@ function MismatchBadge({ signup, entryCarId, entryClass }) {
   return null;
 }
 
+// Badge shown when a driver's preferred start times don't include the team's start time
+function StartTimeMismatchBadge({ signup, teamStartTimeId }) {
+  if (!teamStartTimeId) return null;
+  const prefs = signup.preferred_start_time_ids || [];
+  if (prefs.length === 0 || prefs.includes(teamStartTimeId)) return null;
+  return (
+    <span
+      title="Horaire préféré différent"
+      style={{
+        fontSize: "0.7rem",
+        padding: "0.15rem 0.4rem",
+        background: "#2a1a00",
+        border: "1px solid #a06020",
+        borderRadius: "2px",
+        color: "#d4904a",
+        whiteSpace: "nowrap",
+      }}
+    >
+      ⚠️ horaire
+    </span>
+  );
+}
+
 export default function DriversAssignment({
   entryId,
   entryCarId,
@@ -64,6 +87,8 @@ export default function DriversAssignment({
   isInTeam = false,
   // isAdmin: passed explicitly from EquipageTabs so we don't recompute
   isAdmin = false,
+  // teamStartTimeId: used to flag drivers whose preferred start times don't match
+  teamStartTimeId = null,
 }) {
   const router = useRouter();
   const [assigned, setAssigned] = useState(assignedDrivers);
@@ -111,10 +136,22 @@ export default function DriversAssignment({
   const hasMismatch = (signup) => {
     const prefCarIds = signup.preferred_car_ids || [];
     const prefClasses = signup.preferred_class || [];
-    if (prefCarIds.length === 0 && prefClasses.length === 0) return false;
-    if (prefCarIds.length > 0)
-      return entryCarId ? !prefCarIds.includes(entryCarId) : false;
-    return entryClass ? !prefClasses.includes(entryClass) : false;
+    const prefStartTimes = signup.preferred_start_time_ids || [];
+    if (prefCarIds.length > 0 && entryCarId && !prefCarIds.includes(entryCarId))
+      return true;
+    if (
+      prefClasses.length > 0 &&
+      entryClass &&
+      !prefClasses.includes(entryClass)
+    )
+      return true;
+    if (
+      prefStartTimes.length > 0 &&
+      teamStartTimeId &&
+      !prefStartTimes.includes(teamStartTimeId)
+    )
+      return true;
+    return false;
   };
 
   // ── Unassigned list filtering ─────────────────────────────────────────────
@@ -175,6 +212,10 @@ export default function DriversAssignment({
                         signup={s}
                         entryCarId={entryCarId}
                         entryClass={entryClass}
+                      />
+                      <StartTimeMismatchBadge
+                        signup={s}
+                        teamStartTimeId={teamStartTimeId}
                       />
                     </div>
                   </td>
@@ -274,6 +315,25 @@ export default function DriversAssignment({
                     >
                       {s.drivers.irating}
                     </span>
+                  )}
+                  {mismatch && (
+                    <div
+                      style={{
+                        display: "flex",
+                        gap: "0.25rem",
+                        flexWrap: "wrap",
+                      }}
+                    >
+                      <MismatchBadge
+                        signup={s}
+                        entryCarId={entryCarId}
+                        entryClass={entryClass}
+                      />
+                      <StartTimeMismatchBadge
+                        signup={s}
+                        teamStartTimeId={teamStartTimeId}
+                      />
+                    </div>
                   )}
                 </button>
               );
