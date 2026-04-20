@@ -125,7 +125,10 @@ function calcStint(
     : carTankSize;
   // Variable refuel time: based on fuel needed to fill tank at class refuel rate.
   // Falls back to flat refuel_time_seconds if rate or tank size unavailable.
-  const refuelRate = teamEntry?.cars?.car_classes?.refuel_litres_per_second;
+  // Per-car rate takes priority over class rate — allows overrides for mixed classes
+  const refuelRate =
+    teamEntry?.cars?.refuel_litres_per_second ||
+    teamEntry?.cars?.car_classes?.refuel_litres_per_second;
   const fuelToAdd =
     fuelRemaining !== null && tankSizeForRefuel
       ? Math.max(0, tankSizeForRefuel - fuelRemaining)

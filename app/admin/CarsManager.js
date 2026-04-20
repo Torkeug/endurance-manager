@@ -102,6 +102,7 @@ function KronosEnduranceTab({ initialCars, iracingCars }) {
   const [form, setForm] = useState({
     tank_size_litres: "",
     car_type_label: "",
+    refuel_litres_per_second: "",
   });
   const [selectedIracingCar, setSelectedIracingCar] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
@@ -161,6 +162,10 @@ function KronosEnduranceTab({ initialCars, iracingCars }) {
           tank_size_litres: form.tank_size_litres
             ? parseFloat(form.tank_size_litres)
             : null,
+          // Per-car override — only set when different from class default
+          refuel_litres_per_second: form.refuel_litres_per_second
+            ? parseFloat(form.refuel_litres_per_second)
+            : null,
         },
       ])
       .select()
@@ -193,6 +198,10 @@ function KronosEnduranceTab({ initialCars, iracingCars }) {
         car_type_label: form.car_type_label || null,
         tank_size_litres: form.tank_size_litres
           ? parseFloat(form.tank_size_litres)
+          : null,
+        // Per-car override — only set when different from class default
+        refuel_litres_per_second: form.refuel_litres_per_second
+          ? parseFloat(form.refuel_litres_per_second)
           : null,
       })
       .eq("id", editingId)
@@ -248,6 +257,10 @@ function KronosEnduranceTab({ initialCars, iracingCars }) {
     setForm({
       tank_size_litres: String(car.tank_size_litres),
       car_type_label: car.car_type_label || "",
+      refuel_litres_per_second:
+        car.refuel_litres_per_second != null
+          ? String(car.refuel_litres_per_second)
+          : "",
     });
     setAdding(false);
     setError(null);
@@ -375,6 +388,29 @@ function KronosEnduranceTab({ initialCars, iracingCars }) {
           step="0.1"
           style={{ maxWidth: "150px" }}
         />
+      </div>
+
+      {/* Per-car refuel rate override — only needed when different from class default */}
+      <div className="form-group" style={{ marginBottom: "1rem" }}>
+        <label>Taux de ravitaillement (L/s)</label>
+        <input
+          type="number"
+          value={form.refuel_litres_per_second}
+          onChange={set("refuel_litres_per_second")}
+          placeholder="—"
+          min="0"
+          step="0.05"
+          style={{ maxWidth: "150px" }}
+        />
+        <div
+          style={{
+            fontSize: "0.75rem",
+            color: "var(--text-dim)",
+            marginTop: "0.3rem",
+          }}
+        >
+          Laisser vide pour utiliser le taux de la classe.
+        </div>
       </div>
 
       <p
