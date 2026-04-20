@@ -183,6 +183,8 @@ export default function RaceMode({
   const [driverPerf, setDriverPerf] = useState({});
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  // Dev-only state override — allows forcing race state without waiting for real IRL times
+  const [devState, setDevState] = useState(null); // null = use real time
   // Ticks every second — drives all countdowns and live state
   const [now, setNow] = useState(new Date());
 
@@ -251,7 +253,7 @@ export default function RaceMode({
       : null;
 
   // ── Derived: race state ────────────────────────────────────────────────────
-  const raceState = getRaceState(now, raceStart, raceEnd, stints);
+  const raceState = devState ?? getRaceState(now, raceStart, raceEnd, stints);
   const isPreRace = raceState === "PRE_RACE";
   const isFinished = raceState === "FINISHED";
   const isInRace = raceState === "IN_RACE";
@@ -517,7 +519,7 @@ export default function RaceMode({
           {isFinished
             ? "🏁 Course terminée"
             : isPreRace
-              ? `⏳ Avant course — Relais 1 / ${stints.length}`
+              ? "⏳ Avant course"
               : isOvertime
                 ? `⚠️ Dépassement — Relais ${activeStint?.stint_number ?? "?"} / ${stints.length}`
                 : inPitWindow
@@ -951,6 +953,56 @@ export default function RaceMode({
           >
             ↩ Annuler dernier arrêt
           </button>
+        </div>
+      )}
+      {/* ── Dev state override — development only ─────────────────────── */}
+      {process.env.NODE_ENV === "development" && (
+        <div
+          style={{
+            marginTop: "0.5rem",
+            padding: "0.75rem 1rem",
+            border: "1px dashed #555",
+            borderRadius: "4px",
+            display: "flex",
+            alignItems: "center",
+            gap: "0.75rem",
+            flexWrap: "wrap",
+          }}
+        >
+          <span
+            style={{
+              fontSize: "0.7rem",
+              fontWeight: 700,
+              letterSpacing: "0.08em",
+              textTransform: "uppercase",
+              color: "#555",
+            }}
+          >
+            DEV
+          </span>
+          {[
+            { key: null, label: "Réel" },
+            { key: "PRE_RACE", label: "Avant course" },
+            { key: "IN_RACE", label: "En course" },
+            { key: "FINISHED", label: "Terminée" },
+          ].map(({ key, label }) => (
+            <button
+              key={String(key)}
+              onClick={() => setDevState(key)}
+              style={{
+                padding: "0.2rem 0.6rem",
+                fontSize: "0.75rem",
+                borderRadius: "3px",
+                border: `1px solid ${devState === key ? "var(--accent)" : "#555"}`,
+                background:
+                  devState === key ? "var(--accent-dim)" : "transparent",
+                color: devState === key ? "var(--accent)" : "#555",
+                cursor: "pointer",
+              }}
+            >
+              {label}
+            </button>
+          ))}
         </div>
       )}
     </div>
