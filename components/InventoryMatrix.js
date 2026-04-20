@@ -2,6 +2,7 @@
 import { useState, useEffect, useMemo, Fragment } from "react";
 import { isLegacyContent } from "../lib/car-types";
 import { KBadge, FreeBadge, BadgeLegend } from "./InventoryBadges";
+import { supabaseBrowser as supabase } from "../lib/supabase-browser";
 
 const CAR_CATEGORY_LABELS = {
   sports_car: "Sports Car",
@@ -121,20 +122,26 @@ const currentDriverCellStyle = {
 
 export default function InventoryMatrix({
   matrixDrivers,
-  allCars,
-  allTracks,
-  carOwnership,
-  trackOwnership,
+  // Large data (allCars, allTracks, carOwnership, trackOwnership, iracingLabelById,
+  // freeCarIds, freeTrackNames) is fetched client-side to avoid Next.js serialization limits
   kronosCarsMap,
-  iracingLabelById,
   kronosCircuitsByTrackId,
   kronosCircuitNames,
-  freeCarIds: freeCarIdsArr = [],
-  freeTrackNames: freeTrackNamesArr = [],
   currentDriverId = null,
+  currentDriverHasIracingId = false,
 }) {
   const [subTab, setSubTab] = useState("cars");
   const [loaded, setLoaded] = useState(false);
+
+  // Large data fetched client-side — avoids Next.js serialization boundary limits
+  const [allCars, setAllCars] = useState([]);
+  const [allTracks, setAllTracks] = useState([]);
+  const [carOwnership, setCarOwnership] = useState({});
+  const [trackOwnership, setTrackOwnership] = useState({});
+  const [iracingLabelById, setIracingLabelById] = useState({});
+  const [freeCarIdsArr, setFreeCarIdsArr] = useState([]);
+  const [freeTrackNamesArr, setFreeTrackNamesArr] = useState([]);
+  const [fetchError, setFetchError] = useState(null);
 
   // Filter state — starts empty, populated from localStorage in useEffect
   const [selectedCarCats, setSelectedCarCats] = useState([]);
@@ -144,6 +151,136 @@ export default function InventoryMatrix({
   // Sort state per matrix: { col: "name"|"count", dir: "asc"|"desc" }
   const [carSort, setCarSort] = useState({ col: "name", dir: "asc" });
   const [trackSort, setTrackSort] = useState({ col: "name", dir: "asc" });
+
+  // ── Client-side data fetch ─────────────────────────────────────────────────
+  // Large ownership/catalog data fetched here to avoid Next.js serialization limits.
+  // Runs once on mount — matrixDrivers is small and safe to pass as a prop.
+  useEffect(() => {
+    const driverIds = matrixDrivers.map((d) => d.id);
+
+    const load = async () => {
+      try {
+        const [
+          carOwnershipRes,
+          trackOwnershipRes,
+          iracingCarsRes,
+          iracingTracksFreeRes,
+        ] = await Promise.all([
+          // All car ownership rows — no server-side limit applied
+          supabase
+            .from("driver_car_ownership")
+            .select(
+              "driver_id, iracing_car_id, car_name, car_category, car_types",
+            )
+            .in("driver_id", driverIds.length > 0 ? driverIds : ["none"]),
+          // All track ownership rows
+          supabase
+            .from("driver_track_ownership")
+            .select("driver_id, track_name, track_category")
+            .in("driver_id", driverIds.length > 0 ? driverIds : ["none"]),
+          // iRacing catalog — for class labels + free_with_subscription badge
+          supabase
+            .from("iracing_cars")
+            .select(
+              "iracing_car_id, car_name, car_types, car_type_label, free_with_subscription",
+            )
+            .order("car_name"),
+          // Free tracks — minimal payload
+          supabase
+            .from("iracing_tracks")
+            .select("track_name, free_with_subscription")
+            .eq("free_with_subscription", true),
+        ]);
+
+        if (carOwnershipRes.error) throw carOwnershipRes.error;
+        if (trackOwnershipRes.error) throw trackOwnershipRes.error;
+        if (iracingCarsRes.error) throw iracingCarsRes.error;
+
+        // ── Build allCars — unique cars from ownership data ──────────────────
+        const carMap = new Map();
+        for (const row of carOwnershipRes.data || []) {
+          if (!carMap.has(row.iracing_car_id)) {
+            carMap.set(row.iracing_car_id, {
+              iracing_car_id: row.iracing_car_id,
+              car_name: row.car_name,
+              car_category: row.car_category,
+              car_types: row.car_types,
+              isLegacy: isLegacyContent(row.car_name),
+            });
+          }
+        }
+        setAllCars(
+          [...carMap.values()].sort((a, b) =>
+            a.car_name.localeCompare(b.car_name),
+          ),
+        );
+
+        // ── Build allTracks — unique tracks from ownership data ──────────────
+        const trackMap = new Map();
+        for (const row of trackOwnershipRes.data || []) {
+          if (!trackMap.has(row.track_name)) {
+            trackMap.set(row.track_name, {
+              track_name: row.track_name,
+              track_category: row.track_category,
+              isLegacy: isLegacyContent(row.track_name),
+            });
+          }
+        }
+        setAllTracks(
+          [...trackMap.values()].sort((a, b) =>
+            a.track_name.localeCompare(b.track_name),
+          ),
+        );
+
+        // ── Car ownership map: driver_id → iracing_car_id[] ─────────────────
+        const carOwnershipMap = {};
+        for (const row of carOwnershipRes.data || []) {
+          if (!carOwnershipMap[row.driver_id])
+            carOwnershipMap[row.driver_id] = [];
+          carOwnershipMap[row.driver_id].push(row.iracing_car_id);
+        }
+        setCarOwnership(carOwnershipMap);
+
+        // ── Track ownership map: driver_id → track_name[] ───────────────────
+        const trackOwnershipMap = {};
+        for (const row of trackOwnershipRes.data || []) {
+          if (!trackOwnershipMap[row.driver_id])
+            trackOwnershipMap[row.driver_id] = [];
+          if (!trackOwnershipMap[row.driver_id].includes(row.track_name)) {
+            trackOwnershipMap[row.driver_id].push(row.track_name);
+          }
+        }
+        setTrackOwnership(trackOwnershipMap);
+
+        // ── iRacing catalog label map ────────────────────────────────────────
+        const labelMap = {};
+        for (const car of iracingCarsRes.data || []) {
+          if (car.car_type_label)
+            labelMap[car.iracing_car_id] = car.car_type_label;
+        }
+        setIracingLabelById(labelMap);
+
+        // ── Free content arrays ──────────────────────────────────────────────
+        setFreeCarIdsArr(
+          (iracingCarsRes.data || [])
+            .filter((c) => c.free_with_subscription)
+            .map((c) => c.iracing_car_id),
+        );
+        setFreeTrackNamesArr(
+          (iracingTracksFreeRes.data || []).map((t) => t.track_name),
+        );
+      } catch (err) {
+        console.error("InventoryMatrix fetch error:", err);
+        setFetchError("Erreur lors du chargement des données d'inventaire.");
+      }
+    };
+
+    if (driverIds.length > 0) {
+      load();
+    }
+    // matrixDrivers identity is stable — JSON.stringify used to avoid re-fetch on re-render
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [JSON.stringify(matrixDrivers.map((d) => d.id))]);
 
   // Adaptive header height — based on the longest formatted driver name
   const hHeight = useMemo(() => {
@@ -488,8 +625,16 @@ export default function InventoryMatrix({
     loaded,
   ]);
 
-  if (!loaded) {
+  // Show loading until both localStorage filters are initialized AND data is fetched
+  if (
+    !loaded ||
+    (allCars.length === 0 && allTracks.length === 0 && !fetchError)
+  ) {
     return <div className="empty">Chargement...</div>;
+  }
+
+  if (fetchError) {
+    return <div className="alert alert-error">{fetchError}</div>;
   }
 
   // Group header td — sticky left so category/class labels stay visible on horizontal scroll.
