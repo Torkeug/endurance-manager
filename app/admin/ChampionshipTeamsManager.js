@@ -36,7 +36,6 @@ function groupBy(arr, keyFn) {
 function CarNumberInput({ value, onSave }) {
   const [val, setVal] = useState(value ?? "");
 
-  // Sync when external value changes (e.g. after a save from another row)
   useEffect(() => setVal(value ?? ""), [value]);
 
   return (
@@ -47,12 +46,19 @@ function CarNumberInput({ value, onSave }) {
       value={val}
       onChange={(e) => setVal(e.target.value)}
       onBlur={() => onSave(val)}
-      // Stop click from bubbling up to the row toggle
       onClick={(e) => e.stopPropagation()}
-      className="w-16 bg-gray-700 border border-gray-600 rounded px-2 py-0.5 text-sm
-                 text-white text-center focus:outline-none focus:border-kronos-accent
-                 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none
-                 [&::-webkit-inner-spin-button]:appearance-none"
+      style={{
+        width: "4rem",
+        background: "var(--surface-2)",
+        border: "1px solid var(--border)",
+        borderRadius: "3px",
+        padding: "0.25rem 0.5rem",
+        fontSize: "0.85rem",
+        color: "var(--accent)",
+        fontFamily: "var(--font-mono), monospace",
+        textAlign: "center",
+        appearance: "textfield",
+      }}
       placeholder="—"
     />
   );
@@ -60,18 +66,6 @@ function CarNumberInput({ value, onSave }) {
 
 // ─────────────────────────────────────────────────────────────────────────────
 // ExpandableRow — reusable row used in both views
-// Props:
-//   label        — main left label (crew name or championship name)
-//   sublabel     — secondary label (season, etc.)
-//   car          — car display string
-//   cls          — class string
-//   entries      — team_entries array for this group
-//   events       — all events (to resolve round labels)
-//   expandKey    — unique string key for expand state
-//   expanded     — bool from parent state
-//   autoExpanded — bool, true when car numbers vary (forces open)
-//   onToggle     — function(expandKey) to toggle expand state
-//   onSave       — function(entryId, rawVal) to save car number
 // ─────────────────────────────────────────────────────────────────────────────
 
 function ExpandableRow({
@@ -89,55 +83,130 @@ function ExpandableRow({
 }) {
   const consistent = isConsistent(entries);
   const sharedNumber = consistent ? entries[0].car_number : null;
-
-  // Auto-expanded if inconsistent; otherwise driven by expand state
   const isOpen = autoExpanded || expanded;
 
   return (
-    <div className="border-b border-gray-700/50 last:border-0">
+    <div style={{ borderBottom: "1px solid var(--border)" }}>
       {/* ── Collapsed row ─────────────────────────────────────────────── */}
       <div
-        className="flex items-center gap-3 px-4 py-2.5 hover:bg-gray-700/30 cursor-pointer text-sm select-none"
         onClick={() => onToggle(expandKey)}
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: "0.75rem",
+          padding: "0.6rem 1rem",
+          cursor: "pointer",
+          fontSize: "0.88rem",
+          userSelect: "none",
+          transition: "background 0.1s",
+        }}
+        onMouseEnter={(e) =>
+          (e.currentTarget.style.background = "var(--surface-2)")
+        }
+        onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
       >
-        {/* Expand / collapse chevron */}
-        <span className="text-gray-500 text-xs w-3 shrink-0">
+        {/* Chevron */}
+        <span
+          style={{
+            color: "var(--text-dim)",
+            fontSize: "0.65rem",
+            width: "0.75rem",
+            flexShrink: 0,
+          }}
+        >
           {isOpen ? "▼" : "▶"}
         </span>
 
         {/* Team / championship label */}
-        <span className="font-medium text-white w-44 truncate">{label}</span>
+        <span
+          style={{
+            fontWeight: 600,
+            color: "var(--text)",
+            width: "11rem",
+            flexShrink: 0,
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+            whiteSpace: "nowrap",
+          }}
+        >
+          {label}
+        </span>
+
         {sublabel && (
-          <span className="text-gray-500 text-xs shrink-0">{sublabel}</span>
+          <span
+            style={{
+              color: "var(--text-dim)",
+              fontSize: "0.8rem",
+              flexShrink: 0,
+            }}
+          >
+            {sublabel}
+          </span>
         )}
 
         {/* Car name */}
-        <span className="text-gray-400 flex-1 truncate">{car}</span>
+        <span
+          style={{
+            color: "var(--text-dim)",
+            flex: 1,
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+            whiteSpace: "nowrap",
+          }}
+        >
+          {car}
+        </span>
 
         {/* Class */}
-        <span className="text-gray-500 text-xs w-16 text-right shrink-0">
+        <span
+          style={{
+            color: "var(--text-dim)",
+            fontSize: "0.8rem",
+            width: "4rem",
+            textAlign: "right",
+            flexShrink: 0,
+          }}
+        >
           {cls || "—"}
         </span>
 
-        {/* Car number — consistent shows value, inconsistent shows warning */}
-        <span className="w-16 text-right shrink-0">
+        {/* Car number */}
+        <span
+          style={{
+            width: "4rem",
+            textAlign: "right",
+            flexShrink: 0,
+            fontFamily: "var(--font-mono), monospace",
+          }}
+        >
           {consistent ? (
-            <span className="text-kronos-accent font-mono text-sm">
-              {sharedNumber != null ? (
-                `#${sharedNumber}`
-              ) : (
-                <span className="text-gray-600">—</span>
-              )}
+            <span
+              style={{
+                color:
+                  sharedNumber != null ? "var(--accent)" : "var(--text-dim)",
+              }}
+            >
+              {sharedNumber != null ? `#${sharedNumber}` : "—"}
             </span>
           ) : (
-            <span className="text-yellow-500 text-xs italic">varie</span>
+            <span
+              style={{
+                color: "#f59e0b",
+                fontSize: "0.78rem",
+                fontStyle: "italic",
+              }}
+            >
+              varie
+            </span>
           )}
         </span>
       </div>
 
       {/* ── Expanded: per-round rows ───────────────────────────────────── */}
       {isOpen && (
-        <div className="bg-gray-800/40 pb-1">
+        <div
+          style={{ background: "var(--surface-2)", paddingBottom: "0.25rem" }}
+        >
           {entries.map((entry) => {
             const event = events.find((ev) => ev.id === entry.event_id);
             const roundLabel = event
@@ -147,9 +216,23 @@ function ExpandableRow({
             return (
               <div
                 key={entry.id}
-                className="flex items-center gap-3 px-4 py-1.5 text-sm pl-10"
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "0.75rem",
+                  padding: "0.4rem 1rem 0.4rem 2.5rem",
+                  fontSize: "0.85rem",
+                }}
               >
-                <span className="text-gray-500 flex-1 truncate">
+                <span
+                  style={{
+                    color: "var(--text-dim)",
+                    flex: 1,
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                    whiteSpace: "nowrap",
+                  }}
+                >
                   {roundLabel}
                 </span>
                 <CarNumberInput
@@ -166,7 +249,7 @@ function ExpandableRow({
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// ChampionshipView — groups by championship, then by team within each
+// ChampionshipView
 // ─────────────────────────────────────────────────────────────────────────────
 
 function ChampionshipView({
@@ -180,9 +263,8 @@ function ChampionshipView({
   onSave,
 }) {
   return (
-    <div className="space-y-4">
+    <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
       {championships.map((champ) => {
-        // Entries belonging to this championship's events
         const champEventIds = events
           .filter((ev) => ev.championship_id === champ.id)
           .map((ev) => ev.id);
@@ -190,29 +272,61 @@ function ChampionshipView({
           champEventIds.includes(e.event_id),
         );
 
-        // Group by crew_name within this championship
-        const byTeam = groupBy(champEntries, (e) => e.crew_name);
+        // Skip championships with no team entries
+        if (champEntries.length === 0) return null;
 
-        // Default open (undefined = open, false = closed)
+        const byTeam = groupBy(champEntries, (e) => e.crew_name);
         const isChampOpen = expandedTop[champ.id] !== false;
 
         return (
           <div
             key={champ.id}
-            className="bg-gray-800 rounded-lg overflow-hidden"
+            style={{
+              border: "1px solid var(--border)",
+              borderRadius: "4px",
+              overflow: "hidden",
+            }}
           >
-            {/* Championship header row */}
+            {/* Championship header */}
             <div
-              className="flex items-center gap-3 px-4 py-3 bg-gray-700/60 cursor-pointer
-                         hover:bg-gray-700/80 select-none"
               onClick={() => toggleTop(champ.id)}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "0.75rem",
+                padding: "0.75rem 1rem",
+                background: "var(--surface-2)",
+                borderBottom: isChampOpen ? "1px solid var(--border)" : "none",
+                cursor: "pointer",
+                userSelect: "none",
+              }}
+              onMouseEnter={(e) => (e.currentTarget.style.opacity = "0.85")}
+              onMouseLeave={(e) => (e.currentTarget.style.opacity = "1")}
             >
-              <span className="text-gray-400 text-xs">
+              <span style={{ color: "var(--text-dim)", fontSize: "0.65rem" }}>
                 {isChampOpen ? "▼" : "▶"}
               </span>
-              <span className="font-semibold text-white">{champ.name}</span>
-              <span className="text-gray-500 text-sm">· {champ.season}</span>
-              <span className="ml-auto text-gray-500 text-xs">
+              <span
+                style={{
+                  fontWeight: 700,
+                  color: "var(--text)",
+                  fontFamily: "var(--font-rajdhani), sans-serif",
+                  letterSpacing: "0.04em",
+                  fontSize: "0.95rem",
+                }}
+              >
+                {champ.name}
+              </span>
+              <span style={{ color: "var(--text-dim)", fontSize: "0.85rem" }}>
+                · {champ.season}
+              </span>
+              <span
+                style={{
+                  marginLeft: "auto",
+                  color: "var(--text-dim)",
+                  fontSize: "0.78rem",
+                }}
+              >
                 {byTeam.size} équipe{byTeam.size !== 1 ? "s" : ""}
               </span>
             </div>
@@ -222,7 +336,6 @@ function ChampionshipView({
               <div>
                 {[...byTeam.entries()].map(([crewName, teamEntries]) => {
                   const rowKey = `champ-${champ.id}-team-${crewName}`;
-                  const consistent = isConsistent(teamEntries);
                   return (
                     <ExpandableRow
                       key={rowKey}
@@ -233,7 +346,7 @@ function ChampionshipView({
                       events={events}
                       expandKey={rowKey}
                       expanded={expandedRow[rowKey]}
-                      autoExpanded={!consistent}
+                      autoExpanded={!isConsistent(teamEntries)}
                       onToggle={toggleRow}
                       onSave={onSave}
                     />
@@ -249,7 +362,7 @@ function ChampionshipView({
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// TeamView — groups by team, then by championship within each team
+// TeamView
 // ─────────────────────────────────────────────────────────────────────────────
 
 function TeamView({
@@ -262,50 +375,83 @@ function TeamView({
   toggleRow,
   onSave,
 }) {
-  // Group all entries by crew_name
   const byTeam = groupBy(entries, (e) => e.crew_name);
 
   return (
-    <div className="space-y-4">
+    <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
       {[...byTeam.entries()].map(([crewName, teamEntries]) => {
-        // Default open (undefined = open, false = closed)
         const teamKey = `team-${crewName}`;
         const isTeamOpen = expandedTop[teamKey] !== false;
 
-        // Group this team's entries by championship_id
-        const byChamp = groupBy(teamEntries, (e) => {
-          const ev = events.find((ev) => ev.id === e.event_id);
-          return ev?.championship_id;
-        });
+        // Group by championship_id — skip entries where the event or championship can't be resolved
+        const byChamp = groupBy(
+          teamEntries.filter((e) => {
+            const ev = events.find((ev) => ev.id === e.event_id);
+            return ev?.championship_id != null;
+          }),
+          (e) => events.find((ev) => ev.id === e.event_id)?.championship_id,
+        );
+
+        if (byChamp.size === 0) return null;
 
         return (
           <div
             key={crewName}
-            className="bg-gray-800 rounded-lg overflow-hidden"
+            style={{
+              border: "1px solid var(--border)",
+              borderRadius: "4px",
+              overflow: "hidden",
+            }}
           >
-            {/* Team header row */}
+            {/* Team header */}
             <div
-              className="flex items-center gap-3 px-4 py-3 bg-gray-700/60 cursor-pointer
-                         hover:bg-gray-700/80 select-none"
               onClick={() => toggleTop(teamKey)}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "0.75rem",
+                padding: "0.75rem 1rem",
+                background: "var(--surface-2)",
+                borderBottom: isTeamOpen ? "1px solid var(--border)" : "none",
+                cursor: "pointer",
+                userSelect: "none",
+              }}
+              onMouseEnter={(e) => (e.currentTarget.style.opacity = "0.85")}
+              onMouseLeave={(e) => (e.currentTarget.style.opacity = "1")}
             >
-              <span className="text-gray-400 text-xs">
+              <span style={{ color: "var(--text-dim)", fontSize: "0.65rem" }}>
                 {isTeamOpen ? "▼" : "▶"}
               </span>
-              <span className="font-semibold text-white">{crewName}</span>
-              <span className="ml-auto text-gray-500 text-xs">
+              <span
+                style={{
+                  fontWeight: 700,
+                  color: "var(--text)",
+                  fontFamily: "var(--font-rajdhani), sans-serif",
+                  letterSpacing: "0.04em",
+                  fontSize: "0.95rem",
+                }}
+              >
+                {crewName}
+              </span>
+              <span
+                style={{
+                  marginLeft: "auto",
+                  color: "var(--text-dim)",
+                  fontSize: "0.78rem",
+                }}
+              >
                 {byChamp.size} championnat{byChamp.size !== 1 ? "s" : ""}
               </span>
             </div>
 
-            {/* Championship rows within this team */}
+            {/* Championship rows */}
             {isTeamOpen && (
               <div>
                 {[...byChamp.entries()].map(([champId, champEntries]) => {
                   const champ = championships.find((c) => c.id === champId);
+                  // Guard: skip if championship not found (shouldn't happen after filter above)
                   if (!champ) return null;
                   const rowKey = `team-${crewName}-champ-${champId}`;
-                  const consistent = isConsistent(champEntries);
                   return (
                     <ExpandableRow
                       key={rowKey}
@@ -317,7 +463,7 @@ function TeamView({
                       events={events}
                       expandKey={rowKey}
                       expanded={expandedRow[rowKey]}
-                      autoExpanded={!consistent}
+                      autoExpanded={!isConsistent(champEntries)}
                       onToggle={toggleRow}
                       onSave={onSave}
                     />
@@ -341,18 +487,11 @@ export default function ChampionshipTeamsManager() {
   const [events, setEvents] = useState([]);
   const [entries, setEntries] = useState([]);
   const [loading, setLoading] = useState(true);
-
-  // 'championship' | 'team'
   const [view, setView] = useState("championship");
-
-  // Top-level group headers: undefined = expanded, false = collapsed
   const [expandedTop, setExpandedTop] = useState({});
-  // Inner rows: undefined/false = collapsed, true = expanded
   const [expandedRow, setExpandedRow] = useState({});
 
-  // ── Data fetch ─────────────────────────────────────────────────────────────
   const fetchData = useCallback(async () => {
-    // 1. Active (non-archived) championships only
     const { data: champs, error: champErr } = await supabaseBrowser
       .from("championships")
       .select("id, name, season")
@@ -366,7 +505,6 @@ export default function ChampionshipTeamsManager() {
 
     const champIds = champs.map((c) => c.id);
 
-    // 2. Events belonging to these championships
     const { data: evs } = await supabaseBrowser
       .from("events")
       .select("id, name, weekend_start_date, round_number, championship_id")
@@ -381,7 +519,6 @@ export default function ChampionshipTeamsManager() {
 
     const eventIds = evs.map((e) => e.id);
 
-    // 3. Team entries for those events, with car name join as fallback
     const { data: ents } = await supabaseBrowser
       .from("team_entries")
       .select(
@@ -400,58 +537,45 @@ export default function ChampionshipTeamsManager() {
     fetchData();
   }, [fetchData]);
 
-  // ── Car number save ────────────────────────────────────────────────────────
   const handleSave = async (entryId, rawVal) => {
     const number = rawVal === "" ? null : parseInt(rawVal, 10);
-
-    // Reject non-numeric input (but allow clearing to null)
     if (rawVal !== "" && isNaN(number)) return;
-
     const { error } = await supabaseBrowser
       .from("team_entries")
       .update({ car_number: number })
       .eq("id", entryId);
-
     if (!error) {
-      // Optimistic local update
       setEntries((prev) =>
         prev.map((e) => (e.id === entryId ? { ...e, car_number: number } : e)),
       );
     }
   };
 
-  // ── Expand toggles ─────────────────────────────────────────────────────────
-
-  // Top-level: default open (undefined = open), toggle to false/true
   const toggleTop = (key) =>
     setExpandedTop((prev) => ({
       ...prev,
       [key]: prev[key] !== false ? false : true,
     }));
 
-  // Inner rows: default closed (undefined = false)
   const toggleRow = (key) =>
     setExpandedRow((prev) => ({ ...prev, [key]: !prev[key] }));
 
-  // ── Render ─────────────────────────────────────────────────────────────────
-
-  if (loading) {
-    return <p className="text-sm text-gray-400 p-4">Chargement...</p>;
-  }
-
-  if (!championships.length) {
+  if (loading)
     return (
-      <p className="text-sm text-gray-400 p-4">Aucun championnat actif.</p>
+      <p style={{ color: "var(--text-dim)", padding: "1rem" }}>Chargement...</p>
     );
-  }
-
-  if (!entries.length) {
+  if (!championships.length)
     return (
-      <p className="text-sm text-gray-400 p-4">
+      <p style={{ color: "var(--text-dim)", padding: "1rem" }}>
+        Aucun championnat actif.
+      </p>
+    );
+  if (!entries.length)
+    return (
+      <p style={{ color: "var(--text-dim)", padding: "1rem" }}>
         Aucune équipe inscrite dans les championnats actifs.
       </p>
     );
-  }
 
   const sharedProps = {
     championships,
@@ -465,9 +589,9 @@ export default function ChampionshipTeamsManager() {
   };
 
   return (
-    <div className="space-y-6">
+    <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
       {/* ── View toggle ─────────────────────────────────────────────────── */}
-      <div className="flex gap-2">
+      <div style={{ display: "flex", gap: "0.5rem" }}>
         {[
           { key: "championship", label: "Par championnat" },
           { key: "team", label: "Par équipe" },
@@ -475,11 +599,18 @@ export default function ChampionshipTeamsManager() {
           <button
             key={key}
             onClick={() => setView(key)}
-            className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors ${
-              view === key
-                ? "bg-kronos-accent text-white"
-                : "bg-gray-700 text-gray-400 hover:text-white"
-            }`}
+            style={{
+              padding: "0.35rem 1rem",
+              borderRadius: "999px",
+              border: "1px solid",
+              borderColor: view === key ? "var(--accent)" : "var(--border)",
+              background: view === key ? "var(--accent-dim)" : "transparent",
+              color: view === key ? "var(--accent)" : "var(--text-dim)",
+              fontSize: "0.85rem",
+              fontWeight: 600,
+              cursor: "pointer",
+              transition: "all 0.15s",
+            }}
           >
             {label}
           </button>
