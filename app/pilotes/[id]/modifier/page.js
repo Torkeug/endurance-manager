@@ -201,7 +201,7 @@ export default function ModifierPilote({ params }) {
                 required
               />
             </div>
-            <div className="form-group">
+            <div className="form-group" style={{ gridColumn: "1 / -1" }}>
               <label>Email</label>
               {/* Email is managed by Supabase Auth and cannot be changed here.
               Displayed as read-only for reference only. */}
