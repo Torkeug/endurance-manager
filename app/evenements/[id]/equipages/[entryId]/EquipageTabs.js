@@ -4,12 +4,14 @@ import DriversAssignment from "./DriversAssignment";
 import AvailabilityGrid from "./AvailabilityGrid";
 import PerformanceData from "./PerformanceData";
 import StintGrid from "./StintGrid";
+import RaceMode from "./RaceMode";
 
 const TABS = [
   { id: "pilotes", label: "Pilotes" },
   { id: "disponibilites", label: "Disponibilités" },
   { id: "relais", label: "Relais" },
   { id: "performances", label: "Performances" },
+  { id: "course", label: "🏁 Course" },
 ];
 
 export default function EquipageTabs({
@@ -234,6 +236,16 @@ export default function EquipageTabs({
             archived={archived || isEngineer}
           />
         </>
+      )}
+
+      {/* ── Tab: Course (Race Mode) ───────────────────────────────────────────── */}
+      {activeTab === "course" && (
+        <RaceMode
+          teamEntryId={entryId}
+          teamEntry={teamEntry}
+          assignedDrivers={assignedDrivers}
+          archived={archived}
+        />
       )}
     </div>
   );
