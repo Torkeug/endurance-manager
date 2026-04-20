@@ -111,11 +111,11 @@ export default function ModifierEquipage({ params }) {
           crewData?.map((c) => c.name).sort((a, b) => a.localeCompare(b)) || [],
         );
 
-        // Fetch signed-up drivers in this event who have a Twitch account linked
+        // Only fetch drivers assigned to this team entry for Twitch quick-pick
         const { data: signupsData } = await supabase
           .from("signups")
           .select("drivers(id, name, twitch)")
-          .eq("event_id", entry.event_id);
+          .eq("team_entry_id", entryId);
 
         const seen = new Set();
         const withTwitch = (signupsData || [])
@@ -397,154 +397,6 @@ export default function ModifierEquipage({ params }) {
                 </select>
               )}
             </div>
-
-            {/* ── Twitch streams ── */}
-            <div className="form-group" style={{ gridColumn: "1 / -1" }}>
-              <label>Streams Twitch</label>
-
-              {/* Added streams as removable pills */}
-              {twitchUsernames.length > 0 && (
-                <div
-                  style={{
-                    display: "flex",
-                    gap: "0.5rem",
-                    flexWrap: "wrap",
-                    marginBottom: "0.75rem",
-                  }}
-                >
-                  {twitchUsernames.map((u) => (
-                    <div
-                      key={u}
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "0.4rem",
-                        padding: "0.25rem 0.5rem 0.25rem 0.75rem",
-                        borderRadius: "3px",
-                        background: "rgba(145,71,255,0.12)",
-                        border: "1px solid #9147ff",
-                      }}
-                    >
-                      <a
-                        href={`https://twitch.tv/${u}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        style={{
-                          color: "#9147ff",
-                          fontSize: "0.82rem",
-                          fontWeight: 600,
-                        }}
-                      >
-                        {u}
-                      </a>
-                      <button
-                        type="button"
-                        onClick={() => removeTwitchUsername(u)}
-                        style={{
-                          background: "none",
-                          border: "none",
-                          color: "#9147ff",
-                          cursor: "pointer",
-                          fontSize: "0.9rem",
-                          padding: 0,
-                          lineHeight: 1,
-                        }}
-                      >
-                        ×
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              {/* Quick-pick from event signups with linked Twitch */}
-              {twitchDrivers.length > 0 && (
-                <div
-                  style={{
-                    display: "flex",
-                    gap: "0.5rem",
-                    flexWrap: "wrap",
-                    marginBottom: "0.5rem",
-                  }}
-                >
-                  {twitchDrivers.map((d) => {
-                    const selected = twitchUsernames.includes(
-                      d.twitch.toLowerCase(),
-                    );
-                    return (
-                      <button
-                        key={d.id}
-                        type="button"
-                        onClick={() => toggleTwitchDriver(d.twitch)}
-                        style={{
-                          padding: "0.3rem 0.75rem",
-                          borderRadius: "3px",
-                          border: `1px solid ${selected ? "#9147ff" : "var(--border)"}`,
-                          background: selected
-                            ? "rgba(145,71,255,0.12)"
-                            : "var(--surface-2)",
-                          color: selected ? "#9147ff" : "var(--text-dim)",
-                          fontSize: "0.82rem",
-                          fontWeight: 600,
-                          cursor: "pointer",
-                        }}
-                      >
-                        {selected ? "✓ " : ""}
-                        {d.name} ({d.twitch})
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
-
-              {/* Manual username entry */}
-              <div style={{ display: "flex", alignItems: "center", gap: 0 }}>
-                <span
-                  style={{
-                    padding: "0.55rem 0.6rem",
-                    background: "var(--surface-2)",
-                    border: "1px solid var(--border)",
-                    borderRight: "none",
-                    borderRadius: "3px 0 0 3px",
-                    fontSize: "0.85rem",
-                    color: "var(--text-dim)",
-                    whiteSpace: "nowrap",
-                    fontFamily: "var(--font-mono), monospace",
-                  }}
-                >
-                  twitch.tv/
-                </span>
-                <input
-                  type="text"
-                  value={twitchInput}
-                  onChange={(e) =>
-                    setTwitchInput(
-                      e.target.value.replace(/\s/g, "").toLowerCase(),
-                    )
-                  }
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      e.preventDefault();
-                      addTwitchUsername(twitchInput);
-                    }
-                  }}
-                  placeholder="nom_de_chaine"
-                  style={{ borderRadius: 0, flex: 1 }}
-                />
-                <button
-                  type="button"
-                  onClick={() => addTwitchUsername(twitchInput)}
-                  className="btn btn-secondary"
-                  style={{
-                    borderRadius: "0 3px 3px 0",
-                    borderLeft: "none",
-                    whiteSpace: "nowrap",
-                  }}
-                >
-                  + Ajouter
-                </button>
-              </div>
-            </div>
           </div>
         </div>
 
@@ -614,6 +466,164 @@ export default function ModifierEquipage({ params }) {
               ))}
             </div>
           )}
+        </div>
+
+        {/* ── Twitch streams ── */}
+        <div className="card" style={{ marginBottom: "1.25rem" }}>
+          <h3 style={{ marginBottom: "1.25rem", color: "var(--text-dim)" }}>
+            Streams Twitch
+          </h3>
+
+          {/* Added streams as removable pills */}
+          {twitchUsernames.length > 0 && (
+            <div
+              style={{
+                display: "flex",
+                gap: "0.5rem",
+                flexWrap: "wrap",
+                marginBottom: "0.75rem",
+              }}
+            >
+              {twitchUsernames.map((u) => (
+                <div
+                  key={u}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "0.4rem",
+                    padding: "0.25rem 0.5rem 0.25rem 0.75rem",
+                    borderRadius: "3px",
+                    background: "rgba(145,71,255,0.12)",
+                    border: "1px solid #9147ff",
+                  }}
+                >
+                  <a
+                    href={`https://twitch.tv/${u}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{
+                      color: "#9147ff",
+                      fontSize: "0.82rem",
+                      fontWeight: 600,
+                    }}
+                  >
+                    {u}
+                  </a>
+                  <button
+                    type="button"
+                    onClick={() => removeTwitchUsername(u)}
+                    style={{
+                      background: "none",
+                      border: "none",
+                      color: "#9147ff",
+                      cursor: "pointer",
+                      fontSize: "0.9rem",
+                      padding: 0,
+                      lineHeight: 1,
+                    }}
+                  >
+                    ×
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Quick-pick from team drivers with linked Twitch */}
+          {twitchDrivers.length > 0 && (
+            <div
+              style={{
+                display: "flex",
+                gap: "0.5rem",
+                flexWrap: "wrap",
+                marginBottom: "0.5rem",
+              }}
+            >
+              {twitchDrivers.map((d) => {
+                const selected = twitchUsernames.includes(
+                  d.twitch.toLowerCase(),
+                );
+                return (
+                  <button
+                    key={d.id}
+                    type="button"
+                    onClick={() => toggleTwitchDriver(d.twitch)}
+                    style={{
+                      padding: "0.3rem 0.75rem",
+                      borderRadius: "3px",
+                      border: `1px solid ${selected ? "#9147ff" : "var(--border)"}`,
+                      background: selected
+                        ? "rgba(145,71,255,0.12)"
+                        : "var(--surface-2)",
+                      color: selected ? "#9147ff" : "var(--text-dim)",
+                      fontSize: "0.82rem",
+                      fontWeight: 600,
+                      cursor: "pointer",
+                    }}
+                  >
+                    {selected ? "✓ " : ""}
+                    {d.name} ({d.twitch})
+                  </button>
+                );
+              })}
+            </div>
+          )}
+
+          {/* Manual username entry */}
+          <div style={{ display: "flex", alignItems: "stretch", gap: 0 }}>
+            <span
+              style={{
+                padding: "0.55rem 0.6rem",
+                background: "var(--surface-2)",
+                border: "1px solid var(--border)",
+                borderRight: "none",
+                borderRadius: "3px 0 0 3px",
+                fontSize: "0.85rem",
+                color: "var(--text-dim)",
+                whiteSpace: "nowrap",
+                fontFamily: "var(--font-mono), monospace",
+              }}
+            >
+              twitch.tv/
+            </span>
+            <input
+              type="text"
+              value={twitchInput}
+              onChange={(e) =>
+                setTwitchInput(e.target.value.replace(/\s/g, "").toLowerCase())
+              }
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  addTwitchUsername(twitchInput);
+                }
+              }}
+              placeholder="nom_de_chaine"
+              style={{
+                borderRadius: 0,
+                flex: 1,
+                background: "var(--surface-2)",
+                border: "1px solid var(--border)",
+                borderLeft: "none",
+                color: "var(--text)",
+                padding: "0.55rem 0.75rem",
+                fontFamily: "inherit",
+                fontSize: "0.9rem",
+              }}
+            />
+            <button
+              type="button"
+              onClick={() => addTwitchUsername(twitchInput)}
+              className="btn btn-secondary"
+              style={{
+                borderRadius: "0 3px 3px 0",
+                borderLeft: "none",
+                whiteSpace: "nowrap",
+              }}
+            >
+              + Ajouter
+            </button>
+          </div>
         </div>
 
         {/* ── Paramètres stratégie ── */}
