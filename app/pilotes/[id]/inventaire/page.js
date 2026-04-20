@@ -21,17 +21,21 @@ export default async function InventairePage({ params, searchParams }) {
 
   if (error || !driver) notFound();
 
+  // .range(0, 9999) prevents PostgREST's 1000-row default cap from silently
+  // truncating ownership data for drivers with large iRacing libraries
   const { data: ownedCars } = await supabase
     .from("driver_car_ownership")
     .select("*")
     .eq("driver_id", id)
-    .order("car_name");
+    .order("car_name")
+    .range(0, 9999);
 
   const { data: ownedTracks } = await supabase
     .from("driver_track_ownership")
     .select("*")
     .eq("driver_id", id)
-    .order("track_name");
+    .order("track_name")
+    .range(0, 9999);
 
   // Fetch Kronos cars with iRacing link — used for badge and class grouping
   const { data: kronosCars } = await supabase
