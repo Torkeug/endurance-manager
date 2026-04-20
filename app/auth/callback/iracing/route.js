@@ -118,11 +118,7 @@ async function syncOneDriver(
     .update({ irating, iracing_synced_at: now })
     .eq("id", driverId);
 
-  // Replace car ownership: delete then reinsert for this driver
-  await supabase
-    .from("driver_car_ownership")
-    .delete()
-    .eq("driver_id", driverId);
+  // Replace car ownership — only proceed if iRacing returned car data
   const carRows = [...ownedCarIds]
     .map((carId) => {
       const car = carLookup.get(carId);
@@ -138,14 +134,15 @@ async function syncOneDriver(
     })
     .filter(Boolean);
   if (carRows.length > 0) {
+    await supabase
+      .from("driver_car_ownership")
+      .delete()
+      .eq("driver_id", driverId);
     await supabase.from("driver_car_ownership").insert(carRows);
   }
 
-  // Replace track ownership: delete then reinsert for this driver
-  await supabase
-    .from("driver_track_ownership")
-    .delete()
-    .eq("driver_id", driverId);
+  // Replace track ownership — only proceed if iRacing returned track data.
+  // Never delete existing ownership if the API returned nothing (avoids wipe on empty response).
   const trackRows = [...ownedTrackIds]
     .map((trackId) => {
       const track = trackLookup.get(trackId);
@@ -160,7 +157,12 @@ async function syncOneDriver(
       };
     })
     .filter(Boolean);
+  // Only replace ownership when we have confirmed data from iRacing
   if (trackRows.length > 0) {
+    await supabase
+      .from("driver_track_ownership")
+      .delete()
+      .eq("driver_id", driverId);
     await supabase.from("driver_track_ownership").insert(trackRows);
   }
 }
