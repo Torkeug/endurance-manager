@@ -479,6 +479,7 @@ function KronosEnduranceTab({ initialCars, iracingCars }) {
               <th>Classe</th>
               <th>Type iRacing</th>
               <th>Réservoir</th>
+              <th>Ravit.</th>
               <th />
             </tr>
           </thead>
@@ -487,7 +488,7 @@ function KronosEnduranceTab({ initialCars, iracingCars }) {
               <React.Fragment key={`class-${cls}`}>
                 <tr style={{ background: "var(--surface-2)" }}>
                   <td
-                    colSpan={5}
+                    colSpan={6}
                     style={{
                       fontSize: "0.72rem",
                       fontWeight: 700,
@@ -532,6 +533,17 @@ function KronosEnduranceTab({ initialCars, iracingCars }) {
                       <td className="mono" style={{ color: "var(--accent)" }}>
                         {car.tank_size_litres}L
                       </td>
+                      <td className="mono" style={{ fontSize: "0.82rem" }}>
+                        {car.refuel_litres_per_second != null ? (
+                          <span style={{ color: "var(--accent)" }}>
+                            {car.refuel_litres_per_second} L/s
+                          </span>
+                        ) : (
+                          <span style={{ color: "var(--text-dim)" }}>
+                            classe
+                          </span>
+                        )}
+                      </td>
                       <td style={{ textAlign: "right" }}>
                         <div
                           style={{
@@ -557,7 +569,7 @@ function KronosEnduranceTab({ initialCars, iracingCars }) {
                     </tr>
                     {editingId === car.id && (
                       <tr>
-                        <td colSpan={5}>{editForm}</td>
+                        <td colSpan={6}>{editForm}</td>
                       </tr>
                     )}
                   </React.Fragment>
@@ -569,7 +581,7 @@ function KronosEnduranceTab({ initialCars, iracingCars }) {
               <React.Fragment key="unclassed">
                 <tr style={{ background: "var(--surface-2)" }}>
                   <td
-                    colSpan={5}
+                    colSpan={6}
                     style={{
                       fontSize: "0.72rem",
                       fontWeight: 700,
@@ -621,6 +633,17 @@ function KronosEnduranceTab({ initialCars, iracingCars }) {
                       <td className="mono" style={{ color: "var(--accent)" }}>
                         {car.tank_size_litres}L
                       </td>
+                      <td className="mono" style={{ fontSize: "0.82rem" }}>
+                        {car.refuel_litres_per_second != null ? (
+                          <span style={{ color: "var(--accent)" }}>
+                            {car.refuel_litres_per_second} L/s
+                          </span>
+                        ) : (
+                          <span style={{ color: "var(--text-dim)" }}>
+                            classe
+                          </span>
+                        )}
+                      </td>
                       <td style={{ textAlign: "right" }}>
                         <div
                           style={{
@@ -646,7 +669,7 @@ function KronosEnduranceTab({ initialCars, iracingCars }) {
                     </tr>
                     {editingId === car.id && (
                       <tr>
-                        <td colSpan={5}>{editForm}</td>
+                        <td colSpan={6}>{editForm}</td>
                       </tr>
                     )}
                   </React.Fragment>
@@ -656,7 +679,7 @@ function KronosEnduranceTab({ initialCars, iracingCars }) {
 
             {cars.length === 0 && (
               <tr>
-                <td colSpan={5} className="empty">
+                <td colSpan={6} className="empty">
                   Aucune voiture.
                 </td>
               </tr>
