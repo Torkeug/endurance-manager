@@ -248,7 +248,7 @@ export default async function InventairePage({ params, searchParams }) {
     : null;
 
   const hasData =
-    (ownedCars || []).length > 0 || (ownedTracks || []).length > 0;
+    ownedCars.length > 0 || ownedTracks.length > 0;
 
   return (
     <div className="page">
