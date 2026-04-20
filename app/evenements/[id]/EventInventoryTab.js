@@ -19,6 +19,7 @@ function headerHeight(maxNameLen) {
   return Math.max(100, maxNameLen * 7 + 16);
 }
 
+// Name column — sticky left, overflow on td; text+badge handled by inner flex div
 const nameColStyle = {
   position: "sticky",
   left: 0,
@@ -30,14 +31,17 @@ const nameColStyle = {
   fontSize: "0.8rem",
   width: `${NAME_COL_WIDTH}px`,
   maxWidth: `${NAME_COL_WIDTH}px`,
-  whiteSpace: "nowrap",
   overflow: "hidden",
-  textOverflow: "ellipsis",
   boxSizing: "border-box",
   verticalAlign: "bottom",
 };
 
+// Count column — sticky at NAME_COL_WIDTH so it freezes alongside the name column
 const countCellStyle = {
+  position: "sticky",
+  left: `${NAME_COL_WIDTH}px`,
+  background: "var(--surface)",
+  zIndex: 1,
   padding: "0.25rem 0.4rem",
   textAlign: "center",
   borderBottom: "1px solid var(--border)",
@@ -58,6 +62,13 @@ const cellStyle = {
   boxSizing: "border-box",
 };
 
+// Current driver column highlight
+const currentDriverCellStyle = {
+  ...cellStyle,
+  background: "var(--accent-dim)",
+};
+
+// Class group header — sticky left
 const groupTdStyle = {
   position: "sticky",
   left: 0,
@@ -71,6 +82,15 @@ const groupTdStyle = {
   borderBottom: "1px solid var(--border)",
 };
 
+// Count cell for group rows — sticky at NAME_COL_WIDTH
+const groupCountTdStyle = {
+  position: "sticky",
+  left: `${NAME_COL_WIDTH}px`,
+  background: "var(--surface-2)",
+  borderBottom: "1px solid var(--border)",
+  borderRight: "1px solid var(--border)",
+};
+
 // Format as "Prénom N." — matches InventoryMatrix format
 function formatDriverName(name) {
   if (!name) return "?";
@@ -82,10 +102,10 @@ function formatDriverName(name) {
 }
 
 export default function EventInventoryTab({
-  // eventSignups: the event.signups array (drivers (id, name, irating))
   eventSignups,
   archived,
   eventFormat,
+  currentDriverId = null, // highlights the current user's column
 }) {
   const [eventCars, setEventCars] = useState([]);
   const [carOwnershipSets, setCarOwnershipSets] = useState({});
@@ -300,8 +320,6 @@ export default function EventInventoryTab({
     );
   }
 
-  const colCount = matrixDrivers.length + 2;
-
   return (
     <div>
       {/* Badge legend — explains K (Kronos) and iR+ (free with subscription) */}
@@ -317,13 +335,18 @@ export default function EventInventoryTab({
             ))}
           </colgroup>
 
-          <thead>
+          {/* thead sticky top — keeps headers visible during vertical scroll */}
+          <thead style={{ position: "sticky", top: 0, zIndex: 2 }}>
             <tr>
               {/* Voiture — sortable by name */}
+              {/* Name header — sticky top+left corner */}
               <th
                 onClick={() => toggleSort("name")}
                 style={{
                   ...nameColStyle,
+                  position: "sticky",
+                  top: 0,
+                  left: 0,
                   background: "var(--surface-2)",
                   fontWeight: 700,
                   fontSize: "0.7rem",
@@ -331,7 +354,7 @@ export default function EventInventoryTab({
                   textTransform: "uppercase",
                   color:
                     sort.col === "name" ? "var(--accent)" : "var(--text-dim)",
-                  zIndex: 2,
+                  zIndex: 3,
                   borderBottom: "2px solid var(--border)",
                   cursor: "pointer",
                   userSelect: "none",
@@ -341,9 +364,13 @@ export default function EventInventoryTab({
               </th>
 
               {/* # — sortable by owner count, vertically aligned to match Voiture */}
+              {/* Count header — sticky top+left, offset by name col width */}
               <th
                 onClick={() => toggleSort("count")}
                 style={{
+                  position: "sticky",
+                  top: 0,
+                  left: `${NAME_COL_WIDTH}px`,
                   background: "var(--surface-2)",
                   borderBottom: "2px solid var(--border)",
                   borderRight: "1px solid var(--border)",
@@ -357,6 +384,7 @@ export default function EventInventoryTab({
                   padding: "0.25rem",
                   cursor: "pointer",
                   userSelect: "none",
+                  zIndex: 3,
                 }}
               >
                 #{sortArrow("count")}
@@ -367,7 +395,10 @@ export default function EventInventoryTab({
                 <th
                   key={d.id}
                   style={{
-                    background: "var(--surface-2)",
+                    background:
+                      d.id === currentDriverId
+                        ? "var(--accent-dim)"
+                        : "var(--surface-2)",
                     borderBottom: "2px solid var(--border)",
                     verticalAlign: "bottom",
                     width: `${DRIVER_COL_WIDTH}px`,
@@ -407,9 +438,18 @@ export default function EventInventoryTab({
             {groupedCars.map(({ cls, cars }) => (
               <Fragment key={cls}>
                 <tr>
-                  <td colSpan={colCount} style={groupTdStyle}>
-                    {cls}
-                  </td>
+                  {/* Name cell sticky left, count cell sticky at NAME_COL_WIDTH */}
+                  <td style={groupTdStyle}>{cls}</td>
+                  <td style={groupCountTdStyle} />
+                  {matrixDrivers.map((d) => (
+                    <td
+                      key={d.id}
+                      style={{
+                        borderBottom: "1px solid var(--border)",
+                        background: "var(--surface-2)",
+                      }}
+                    />
+                  ))}
                 </tr>
                 {cars.map((car) => {
                   const isKronos = !!kronosCarsMap[car.iracing_car_id];
@@ -419,11 +459,28 @@ export default function EventInventoryTab({
                   return (
                     <tr key={car.iracing_car_id ?? car.id}>
                       <td style={nameColStyle}>
-                        {car.name}
-                        {/* K badge — car is in Kronos catalog */}
-                        {isKronos && <KBadge />}
-                        {/* iR+ badge — car is free with iRacing subscription */}
-                        {freeCarIds.has(car.iracing_car_id) && <FreeBadge />}
+                        {/* Flex wrapper: name truncates, badges always visible */}
+                        <div
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            minWidth: 0,
+                          }}
+                        >
+                          <span
+                            title={car.name}
+                            style={{
+                              whiteSpace: "nowrap",
+                              overflow: "hidden",
+                              textOverflow: "ellipsis",
+                              minWidth: 0,
+                            }}
+                          >
+                            {car.name}
+                          </span>
+                          {isKronos && <KBadge />}
+                          {freeCarIds.has(car.iracing_car_id) && <FreeBadge />}
+                        </div>
                       </td>
                       <td style={countCellStyle}>
                         {car.iracing_car_id
@@ -431,7 +488,14 @@ export default function EventInventoryTab({
                           : "—"}
                       </td>
                       {matrixDrivers.map((d) => (
-                        <td key={d.id} style={cellStyle}>
+                        <td
+                          key={d.id}
+                          style={
+                            d.id === currentDriverId
+                              ? currentDriverCellStyle
+                              : cellStyle
+                          }
+                        >
                           {car.iracing_car_id &&
                           carOwnershipSets[d.id]?.has(car.iracing_car_id) ? (
                             <span

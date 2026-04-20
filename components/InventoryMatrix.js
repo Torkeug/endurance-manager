@@ -67,6 +67,8 @@ const NAME_COL_WIDTH = 220;
 const COUNT_COL_WIDTH = 48;
 const DRIVER_COL_WIDTH = 36;
 
+// Name column — sticky left, overflow hidden on the td itself.
+// Text truncation + badge visibility handled by inner flex div (see nameCell helper).
 const nameColStyle = {
   position: "sticky",
   left: 0,
@@ -78,21 +80,16 @@ const nameColStyle = {
   fontSize: "0.8rem",
   width: `${NAME_COL_WIDTH}px`,
   maxWidth: `${NAME_COL_WIDTH}px`,
-  whiteSpace: "nowrap",
   overflow: "hidden",
-  textOverflow: "ellipsis",
   boxSizing: "border-box",
 };
 
-const cellStyle = {
-  padding: "0.25rem 0",
-  textAlign: "center",
-  borderBottom: "1px solid var(--border)",
-  width: `${DRIVER_COL_WIDTH}px`,
-  boxSizing: "border-box",
-};
-
+// Count column — sticky at NAME_COL_WIDTH so it freezes alongside the name column
 const countCellStyle = {
+  position: "sticky",
+  left: `${NAME_COL_WIDTH}px`,
+  background: "var(--surface)",
+  zIndex: 1,
   padding: "0.25rem 0.4rem",
   textAlign: "center",
   borderBottom: "1px solid var(--border)",
@@ -105,6 +102,21 @@ const countCellStyle = {
   color: "var(--accent)",
 };
 
+// Driver data cell — faint accent tint applied dynamically for current driver column
+const cellStyle = {
+  padding: "0.25rem 0",
+  textAlign: "center",
+  borderBottom: "1px solid var(--border)",
+  width: `${DRIVER_COL_WIDTH}px`,
+  boxSizing: "border-box",
+};
+
+// Current driver column highlight — applied on top of cellStyle
+const currentDriverCellStyle = {
+  ...cellStyle,
+  background: "var(--accent-dim)",
+};
+
 export default function InventoryMatrix({
   matrixDrivers,
   allCars,
@@ -115,8 +127,9 @@ export default function InventoryMatrix({
   iracingLabelById,
   kronosCircuitsByTrackId,
   kronosCircuitNames,
-  freeCarIds: freeCarIdsArr = [], // iracing_car_id[] — cars free with subscription
-  freeTrackNames: freeTrackNamesArr = [], // track_name[] — tracks free with subscription
+  freeCarIds: freeCarIdsArr = [],
+  freeTrackNames: freeTrackNamesArr = [],
+  currentDriverId = null, // highlights the current user's column
 }) {
   const [subTab, setSubTab] = useState("cars");
   const [loaded, setLoaded] = useState(false);
@@ -477,10 +490,8 @@ export default function InventoryMatrix({
     return <div className="empty">Chargement...</div>;
   }
 
-  // +1 for name col, +1 for count col, + drivers
-  const colCount = matrixDrivers.length + 2;
-
-  // Reusable group header row style
+  // Group header td — sticky left so category/class labels stay visible on horizontal scroll.
+  // count td beside it must also be sticky at NAME_COL_WIDTH (rendered inline in JSX).
   const groupTdStyle = (indent = 0, muted = false) => ({
     position: "sticky",
     left: 0,
@@ -496,13 +507,26 @@ export default function InventoryMatrix({
     opacity: muted ? 0.7 : 1,
   });
 
+  // Sticky count cell for group rows — same left offset as data count cells
+  const groupCountTdStyle = (indent = 0, muted = false) => ({
+    position: "sticky",
+    left: `${NAME_COL_WIDTH}px`,
+    padding: "0.4rem 0.4rem",
+    background: indent === 0 ? "var(--surface-2)" : "var(--surface)",
+    borderBottom: "1px solid var(--border)",
+    borderRight: "1px solid var(--border)",
+    opacity: muted ? 0.7 : 1,
+  });
+
   // Shared vertical driver name <th> — used in both cars and tracks matrices.
   // Adaptive height based on the longest name so no text gets clipped.
+  // Vertical driver name header — sticky top; accent tint if this is the current driver
   const driverTh = (d) => (
     <th
       key={d.id}
       style={{
-        background: "var(--surface-2)",
+        background:
+          d.id === currentDriverId ? "var(--accent-dim)" : "var(--surface-2)",
         borderBottom: "2px solid var(--border)",
         verticalAlign: "bottom",
         width: `${DRIVER_COL_WIDTH}px`,
@@ -615,15 +639,38 @@ export default function InventoryMatrix({
           <div style={{ marginBottom: "1.25rem" }}>
             <div
               style={{
-                fontSize: "0.7rem",
-                fontWeight: 700,
-                color: "var(--text-dim)",
-                letterSpacing: "0.08em",
-                textTransform: "uppercase",
+                display: "flex",
+                alignItems: "center",
+                gap: "0.5rem",
                 marginBottom: "0.4rem",
               }}
             >
-              Classe
+              <span
+                style={{
+                  fontSize: "0.7rem",
+                  fontWeight: 700,
+                  color: "var(--text-dim)",
+                  letterSpacing: "0.08em",
+                  textTransform: "uppercase",
+                }}
+              >
+                Classe
+              </span>
+              {/* Quick-select buttons — Tout selects all visible classes, Aucune clears */}
+              <button
+                onClick={() => setSelectedCarClasses(allCarClasses)}
+                className="btn btn-secondary"
+                style={{ fontSize: "0.65rem", padding: "0.1rem 0.4rem" }}
+              >
+                Tout
+              </button>
+              <button
+                onClick={() => setSelectedCarClasses([])}
+                className="btn btn-secondary"
+                style={{ fontSize: "0.65rem", padding: "0.1rem 0.4rem" }}
+              >
+                Aucune
+              </button>
             </div>
             <div style={{ display: "flex", gap: "0.4rem", flexWrap: "wrap" }}>
               {allCarClasses.map((cls) => (
@@ -663,12 +710,17 @@ export default function InventoryMatrix({
                     />
                   ))}
                 </colgroup>
-                <thead>
+                {/* thead sticky top — keeps headers visible during vertical scroll */}
+                <thead style={{ position: "sticky", top: 0, zIndex: 2 }}>
                   <tr>
+                    {/* Name header — sticky top+left corner */}
                     <th
                       onClick={() => toggleSort(carSort, "name", setCarSort)}
                       style={{
                         ...nameColStyle,
+                        position: "sticky",
+                        top: 0,
+                        left: 0,
                         background: "var(--surface-2)",
                         fontWeight: 700,
                         fontSize: "0.7rem",
@@ -678,7 +730,7 @@ export default function InventoryMatrix({
                           carSort.col === "name"
                             ? "var(--accent)"
                             : "var(--text-dim)",
-                        zIndex: 2,
+                        zIndex: 3, // above sticky-left cells and sticky-top driver headers
                         borderBottom: "2px solid var(--border)",
                         cursor: "pointer",
                         userSelect: "none",
@@ -687,9 +739,13 @@ export default function InventoryMatrix({
                     >
                       Voiture{sortArrow(carSort, "name")}
                     </th>
+                    {/* Count header — sticky top+left, offset by name col width */}
                     <th
                       onClick={() => toggleSort(carSort, "count", setCarSort)}
                       style={{
+                        position: "sticky",
+                        top: 0,
+                        left: `${NAME_COL_WIDTH}px`,
                         background: "var(--surface-2)",
                         borderBottom: "2px solid var(--border)",
                         borderRight: "1px solid var(--border)",
@@ -705,6 +761,7 @@ export default function InventoryMatrix({
                         padding: "0.25rem",
                         cursor: "pointer",
                         userSelect: "none",
+                        zIndex: 3,
                       }}
                     >
                       #{sortArrow(carSort, "count")}
@@ -716,16 +773,35 @@ export default function InventoryMatrix({
                   {carMatrixRows.map(({ category, classes, legacy }) => (
                     <Fragment key={category}>
                       <tr>
-                        <td colSpan={colCount} style={groupTdStyle(0)}>
+                        {/* Name cell sticky left, count cell sticky at NAME_COL_WIDTH */}
+                        <td style={groupTdStyle(0)}>
                           {CAR_CATEGORY_LABELS[category] || category}
                         </td>
+                        <td style={groupCountTdStyle(0)} />
+                        {matrixDrivers.map((d) => (
+                          <td
+                            key={d.id}
+                            style={{
+                              borderBottom: "1px solid var(--border)",
+                              background: "var(--surface-2)",
+                            }}
+                          />
+                        ))}
                       </tr>
                       {classes.map(({ cls, cars }) => (
                         <Fragment key={`${category}|${cls}`}>
                           <tr>
-                            <td colSpan={colCount} style={groupTdStyle(1)}>
-                              {cls}
-                            </td>
+                            <td style={groupTdStyle(1)}>{cls}</td>
+                            <td style={groupCountTdStyle(1)} />
+                            {matrixDrivers.map((d) => (
+                              <td
+                                key={d.id}
+                                style={{
+                                  borderBottom: "1px solid var(--border)",
+                                  background: "var(--surface)",
+                                }}
+                              />
+                            ))}
                           </tr>
                           {cars.map((car) => {
                             const ownerCount = matrixDrivers.filter((d) =>
@@ -734,21 +810,45 @@ export default function InventoryMatrix({
                             return (
                               <tr key={car.iracing_car_id}>
                                 <td style={nameColStyle}>
-                                  {car.car_name}
-                                  {/* K badge — car is in Kronos catalog */}
-                                  {!!(kronosCarsMap || {})[
-                                    car.iracing_car_id
-                                  ] && <KBadge />}
-                                  {/* iR+ badge — car is free with iRacing subscription */}
-                                  {freeCarIdSet.has(car.iracing_car_id) && (
-                                    <FreeBadge />
-                                  )}
+                                  {/* Flex wrapper: name truncates, badges always visible */}
+                                  <div
+                                    style={{
+                                      display: "flex",
+                                      alignItems: "center",
+                                      minWidth: 0,
+                                    }}
+                                  >
+                                    <span
+                                      title={car.car_name}
+                                      style={{
+                                        whiteSpace: "nowrap",
+                                        overflow: "hidden",
+                                        textOverflow: "ellipsis",
+                                        minWidth: 0,
+                                      }}
+                                    >
+                                      {car.car_name}
+                                    </span>
+                                    {!!(kronosCarsMap || {})[
+                                      car.iracing_car_id
+                                    ] && <KBadge />}
+                                    {freeCarIdSet.has(car.iracing_car_id) && (
+                                      <FreeBadge />
+                                    )}
+                                  </div>
                                 </td>
                                 <td style={countCellStyle}>
                                   {ownerCount}/{matrixDrivers.length}
                                 </td>
                                 {matrixDrivers.map((d) => (
-                                  <td key={d.id} style={cellStyle}>
+                                  <td
+                                    key={d.id}
+                                    style={
+                                      d.id === currentDriverId
+                                        ? currentDriverCellStyle
+                                        : cellStyle
+                                    }
+                                  >
                                     {carOwnershipSets[d.id]?.has(
                                       car.iracing_car_id,
                                     ) ? (
@@ -781,13 +881,21 @@ export default function InventoryMatrix({
                       {legacy.map(({ cls: legacyCls, cars: legacyCars }) => (
                         <Fragment key={`${category}|legacy|${legacyCls}`}>
                           <tr>
-                            <td
-                              colSpan={colCount}
-                              style={groupTdStyle(1, true)}
-                            >
+                            <td style={groupTdStyle(1, true)}>
                               {legacyCls} — Legacy & Retraités (
                               {legacyCars.length})
                             </td>
+                            <td style={groupCountTdStyle(1, true)} />
+                            {matrixDrivers.map((d) => (
+                              <td
+                                key={d.id}
+                                style={{
+                                  borderBottom: "1px solid var(--border)",
+                                  background: "var(--surface)",
+                                  opacity: 0.7,
+                                }}
+                              />
+                            ))}
                           </tr>
                           {legacyCars.map((car) => {
                             const ownerCount = matrixDrivers.filter((d) =>
@@ -802,13 +910,31 @@ export default function InventoryMatrix({
                                     fontStyle: "italic",
                                   }}
                                 >
-                                  {car.car_name}
-                                  {!!(kronosCarsMap || {})[
-                                    car.iracing_car_id
-                                  ] && <KBadge />}
-                                  {freeCarIdSet.has(car.iracing_car_id) && (
-                                    <FreeBadge />
-                                  )}
+                                  <div
+                                    style={{
+                                      display: "flex",
+                                      alignItems: "center",
+                                      minWidth: 0,
+                                    }}
+                                  >
+                                    <span
+                                      title={car.car_name}
+                                      style={{
+                                        whiteSpace: "nowrap",
+                                        overflow: "hidden",
+                                        textOverflow: "ellipsis",
+                                        minWidth: 0,
+                                      }}
+                                    >
+                                      {car.car_name}
+                                    </span>
+                                    {!!(kronosCarsMap || {})[
+                                      car.iracing_car_id
+                                    ] && <KBadge />}
+                                    {freeCarIdSet.has(car.iracing_car_id) && (
+                                      <FreeBadge />
+                                    )}
+                                  </div>
                                 </td>
                                 <td
                                   style={{ ...countCellStyle, opacity: 0.55 }}
@@ -818,7 +944,12 @@ export default function InventoryMatrix({
                                 {matrixDrivers.map((d) => (
                                   <td
                                     key={d.id}
-                                    style={{ ...cellStyle, opacity: 0.55 }}
+                                    style={{
+                                      ...(d.id === currentDriverId
+                                        ? currentDriverCellStyle
+                                        : cellStyle),
+                                      opacity: 0.55,
+                                    }}
                                   >
                                     {carOwnershipSets[d.id]?.has(
                                       car.iracing_car_id,
@@ -911,14 +1042,18 @@ export default function InventoryMatrix({
                     />
                   ))}
                 </colgroup>
-                <thead>
+                <thead style={{ position: "sticky", top: 0, zIndex: 2 }}>
                   <tr>
+                    {/* Circuit header — sticky top+left corner */}
                     <th
                       onClick={() =>
                         toggleSort(trackSort, "name", setTrackSort)
                       }
                       style={{
                         ...nameColStyle,
+                        position: "sticky",
+                        top: 0,
+                        left: 0,
                         background: "var(--surface-2)",
                         fontWeight: 700,
                         fontSize: "0.7rem",
@@ -928,7 +1063,7 @@ export default function InventoryMatrix({
                           trackSort.col === "name"
                             ? "var(--accent)"
                             : "var(--text-dim)",
-                        zIndex: 2,
+                        zIndex: 3,
                         borderBottom: "2px solid var(--border)",
                         cursor: "pointer",
                         userSelect: "none",
@@ -937,11 +1072,15 @@ export default function InventoryMatrix({
                     >
                       Circuit{sortArrow(trackSort, "name")}
                     </th>
+                    {/* Count header — sticky top+left, offset by name col width */}
                     <th
                       onClick={() =>
                         toggleSort(trackSort, "count", setTrackSort)
                       }
                       style={{
+                        position: "sticky",
+                        top: 0,
+                        left: `${NAME_COL_WIDTH}px`,
                         background: "var(--surface-2)",
                         borderBottom: "2px solid var(--border)",
                         borderRight: "1px solid var(--border)",
@@ -957,6 +1096,7 @@ export default function InventoryMatrix({
                         padding: "0.25rem",
                         cursor: "pointer",
                         userSelect: "none",
+                        zIndex: 3,
                       }}
                     >
                       #{sortArrow(trackSort, "count")}
@@ -968,9 +1108,19 @@ export default function InventoryMatrix({
                   {trackMatrixRows.map(({ category, tracks, legacy }) => (
                     <Fragment key={category}>
                       <tr>
-                        <td colSpan={colCount} style={groupTdStyle(0)}>
+                        <td style={groupTdStyle(0)}>
                           {TRACK_CATEGORY_LABELS[category] || category}
                         </td>
+                        <td style={groupCountTdStyle(0)} />
+                        {matrixDrivers.map((d) => (
+                          <td
+                            key={d.id}
+                            style={{
+                              borderBottom: "1px solid var(--border)",
+                              background: "var(--surface-2)",
+                            }}
+                          />
+                        ))}
                       </tr>
                       {tracks.map((track) => {
                         const ownerCount = matrixDrivers.filter((d) =>
@@ -979,19 +1129,42 @@ export default function InventoryMatrix({
                         return (
                           <tr key={track.track_name}>
                             <td style={nameColStyle}>
-                              {track.track_name}
-                              {/* K badge — circuit is in Kronos catalog */}
-                              {isKronosTrack(track) && <KBadge />}
-                              {/* iR+ badge — circuit is free with iRacing subscription */}
-                              {freeTrackNameSet.has(track.track_name) && (
-                                <FreeBadge />
-                              )}
+                              <div
+                                style={{
+                                  display: "flex",
+                                  alignItems: "center",
+                                  minWidth: 0,
+                                }}
+                              >
+                                <span
+                                  title={track.track_name}
+                                  style={{
+                                    whiteSpace: "nowrap",
+                                    overflow: "hidden",
+                                    textOverflow: "ellipsis",
+                                    minWidth: 0,
+                                  }}
+                                >
+                                  {track.track_name}
+                                </span>
+                                {isKronosTrack(track) && <KBadge />}
+                                {freeTrackNameSet.has(track.track_name) && (
+                                  <FreeBadge />
+                                )}
+                              </div>
                             </td>
                             <td style={countCellStyle}>
                               {ownerCount}/{matrixDrivers.length}
                             </td>
                             {matrixDrivers.map((d) => (
-                              <td key={d.id} style={cellStyle}>
+                              <td
+                                key={d.id}
+                                style={
+                                  d.id === currentDriverId
+                                    ? currentDriverCellStyle
+                                    : cellStyle
+                                }
+                              >
                                 {trackOwnershipSets[d.id]?.has(
                                   track.track_name,
                                 ) ? (
@@ -1021,12 +1194,20 @@ export default function InventoryMatrix({
                       {legacy.length > 0 && (
                         <Fragment key={`${category}|legacy`}>
                           <tr>
-                            <td
-                              colSpan={colCount}
-                              style={groupTdStyle(1, true)}
-                            >
+                            <td style={groupTdStyle(1, true)}>
                               Legacy & Retraités ({legacy.length})
                             </td>
+                            <td style={groupCountTdStyle(1, true)} />
+                            {matrixDrivers.map((d) => (
+                              <td
+                                key={d.id}
+                                style={{
+                                  borderBottom: "1px solid var(--border)",
+                                  background: "var(--surface)",
+                                  opacity: 0.7,
+                                }}
+                              />
+                            ))}
                           </tr>
                           {legacy.map((track) => {
                             const ownerCount = matrixDrivers.filter((d) =>
@@ -1041,11 +1222,29 @@ export default function InventoryMatrix({
                                     fontStyle: "italic",
                                   }}
                                 >
-                                  {track.track_name}
-                                  {isKronosTrack(track) && <KBadge />}
-                                  {freeTrackNameSet.has(track.track_name) && (
-                                    <FreeBadge />
-                                  )}
+                                  <div
+                                    style={{
+                                      display: "flex",
+                                      alignItems: "center",
+                                      minWidth: 0,
+                                    }}
+                                  >
+                                    <span
+                                      title={track.track_name}
+                                      style={{
+                                        whiteSpace: "nowrap",
+                                        overflow: "hidden",
+                                        textOverflow: "ellipsis",
+                                        minWidth: 0,
+                                      }}
+                                    >
+                                      {track.track_name}
+                                    </span>
+                                    {isKronosTrack(track) && <KBadge />}
+                                    {freeTrackNameSet.has(track.track_name) && (
+                                      <FreeBadge />
+                                    )}
+                                  </div>
                                 </td>
                                 <td
                                   style={{ ...countCellStyle, opacity: 0.55 }}
@@ -1055,7 +1254,12 @@ export default function InventoryMatrix({
                                 {matrixDrivers.map((d) => (
                                   <td
                                     key={d.id}
-                                    style={{ ...cellStyle, opacity: 0.55 }}
+                                    style={{
+                                      ...(d.id === currentDriverId
+                                        ? currentDriverCellStyle
+                                        : cellStyle),
+                                      opacity: 0.55,
+                                    }}
                                   >
                                     {trackOwnershipSets[d.id]?.has(
                                       track.track_name,

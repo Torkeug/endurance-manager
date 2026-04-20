@@ -719,6 +719,8 @@ export default function EventPageTabs({
           eventSignups={event.signups || []}
           archived={event.archived}
           eventFormat={event.format}
+          // Passed down so the current driver's column can be highlighted
+          currentDriverId={currentDriver?.id}
         />
       )}
     </div>

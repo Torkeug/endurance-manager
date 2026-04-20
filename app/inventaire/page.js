@@ -169,6 +169,7 @@ export default async function InventairePage() {
         kronosCircuitNames={kronosCircuitNames}
         freeCarIds={freeCarIds}
         freeTrackNames={freeTrackNames}
+        currentDriverId={currentDriver?.id}
       />
     </div>
   );
