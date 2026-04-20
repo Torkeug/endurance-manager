@@ -400,11 +400,11 @@ export default function RaceMode({
               ? preRaceCountdownSec !== null
                 ? `Départ dans ${formatCountdown(preRaceCountdownSec)}`
                 : "—"
-              : raceRemainingSec !== null
-                ? raceRemainingSec > 0
+              : isFinished
+                ? "Course terminée"
+                : raceRemainingSec !== null
                   ? `−${formatCountdown(raceRemainingSec)}`
-                  : "Course terminée"
-                : "—"}
+                  : "—"}
           </span>
         </div>
         <div
