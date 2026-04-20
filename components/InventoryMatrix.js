@@ -3,6 +3,7 @@ import { useState, useEffect, useMemo, Fragment } from "react";
 import { isLegacyContent } from "../lib/car-types";
 import { KBadge, FreeBadge, BadgeLegend } from "./InventoryBadges";
 import { supabaseBrowser as supabase } from "../lib/supabase-browser";
+import { fetchAllRows } from "../lib/db-utils";
 
 const CAR_CATEGORY_LABELS = {
   sports_car: "Sports Car",
@@ -157,23 +158,6 @@ export default function InventoryMatrix({
   // Runs once on mount — matrixDrivers is small and safe to pass as a prop.
   useEffect(() => {
     const driverIds = matrixDrivers.map((d) => d.id);
-
-    // Paginate through a table in chunks of 1000 to bypass PostgREST's row cap.
-    // Supabase enforces a server-side max regardless of .range() — pagination is the only workaround.
-    const fetchAllRows = async (buildQuery) => {
-      const PAGE_SIZE = 1000;
-      let from = 0;
-      let allRows = [];
-      while (true) {
-        const { data, error } = await buildQuery(from, from + PAGE_SIZE - 1);
-        if (error) throw error;
-        allRows = [...allRows, ...(data || [])];
-        // If we got fewer rows than PAGE_SIZE, we've reached the last page
-        if (!data || data.length < PAGE_SIZE) break;
-        from += PAGE_SIZE;
-      }
-      return allRows;
-    };
 
     const load = async () => {
       try {

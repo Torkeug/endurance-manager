@@ -4,6 +4,7 @@ import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
 import InventaireDisplay from "./InventaireDisplay";
 import { isLegacyContent } from "../../../../lib/car-types";
+import { fetchAllRows } from "../../../../lib/db-utils";
 
 export default async function InventairePage({ params, searchParams }) {
   const { id } = await params;
@@ -21,21 +22,26 @@ export default async function InventairePage({ params, searchParams }) {
 
   if (error || !driver) notFound();
 
-  // .range(0, 9999) prevents PostgREST's 1000-row default cap from silently
-  // truncating ownership data for drivers with large iRacing libraries
-  const { data: ownedCars } = await supabase
-    .from("driver_car_ownership")
-    .select("*")
-    .eq("driver_id", id)
-    .order("car_name")
-    .range(0, 9999);
-
-  const { data: ownedTracks } = await supabase
-    .from("driver_track_ownership")
-    .select("*")
-    .eq("driver_id", id)
-    .order("track_name")
-    .range(0, 9999);
+  // Paginated fetches — PostgREST enforces a 1000-row cap per request regardless
+  // of key type or .range() call. fetchAllRows chunks requests until exhausted.
+  const [ownedCars, ownedTracks] = await Promise.all([
+    fetchAllRows((from, to) =>
+      supabase
+        .from("driver_car_ownership")
+        .select("*")
+        .eq("driver_id", id)
+        .order("car_name")
+        .range(from, to),
+    ),
+    fetchAllRows((from, to) =>
+      supabase
+        .from("driver_track_ownership")
+        .select("*")
+        .eq("driver_id", id)
+        .order("track_name")
+        .range(from, to),
+    ),
+  ]);
 
   // Fetch Kronos cars with iRacing link — used for badge and class grouping
   const { data: kronosCars } = await supabase
