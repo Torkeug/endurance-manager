@@ -470,8 +470,13 @@ export default function NouvelEquipage({ params }) {
                 </div>
               )}
 
-              {/* Quick-pick from event signups with linked Twitch */}
-              {twitchDrivers.length > 0 && (
+              {/* Quick-pick from team signups with linked Twitch */}
+              {twitchDrivers.filter((d) =>
+                eventSignups.some(
+                  (s) =>
+                    selectedSignupIds.includes(s.id) && s.drivers?.id === d.id,
+                ),
+              ).length > 0 && (
                 <div
                   style={{
                     display: "flex",
@@ -480,33 +485,41 @@ export default function NouvelEquipage({ params }) {
                     marginBottom: "0.5rem",
                   }}
                 >
-                  {twitchDrivers.map((d) => {
-                    const selected = twitchUsernames.includes(
-                      d.twitch.toLowerCase(),
-                    );
-                    return (
-                      <button
-                        key={d.id}
-                        type="button"
-                        onClick={() => toggleTwitchDriver(d.twitch)}
-                        style={{
-                          padding: "0.3rem 0.75rem",
-                          borderRadius: "3px",
-                          border: `1px solid ${selected ? "#9147ff" : "var(--border)"}`,
-                          background: selected
-                            ? "rgba(145,71,255,0.12)"
-                            : "var(--surface-2)",
-                          color: selected ? "#9147ff" : "var(--text-dim)",
-                          fontSize: "0.82rem",
-                          fontWeight: 600,
-                          cursor: "pointer",
-                        }}
-                      >
-                        {selected ? "✓ " : ""}
-                        {d.name} ({d.twitch})
-                      </button>
-                    );
-                  })}
+                  {twitchDrivers
+                    .filter((d) =>
+                      eventSignups.some(
+                        (s) =>
+                          selectedSignupIds.includes(s.id) &&
+                          s.drivers?.id === d.id,
+                      ),
+                    )
+                    .map((d) => {
+                      const selected = twitchUsernames.includes(
+                        d.twitch.toLowerCase(),
+                      );
+                      return (
+                        <button
+                          key={d.id}
+                          type="button"
+                          onClick={() => toggleTwitchDriver(d.twitch)}
+                          style={{
+                            padding: "0.3rem 0.75rem",
+                            borderRadius: "3px",
+                            border: `1px solid ${selected ? "#9147ff" : "var(--border)"}`,
+                            background: selected
+                              ? "rgba(145,71,255,0.12)"
+                              : "var(--surface-2)",
+                            color: selected ? "#9147ff" : "var(--text-dim)",
+                            fontSize: "0.82rem",
+                            fontWeight: 600,
+                            cursor: "pointer",
+                          }}
+                        >
+                          {selected ? "✓ " : ""}
+                          {d.name} ({d.twitch})
+                        </button>
+                      );
+                    })}
                 </div>
               )}
 
