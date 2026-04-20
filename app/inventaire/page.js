@@ -191,7 +191,9 @@ export default async function InventairePage({ searchParams }) {
         freeCarIds={freeCarIds}
         freeTrackNames={freeTrackNames}
         currentDriverId={currentDriver?.id}
-        currentDriverHasIracingId={!!currentDriver?.iracing_id}
+        currentDriverHasIracingId={
+          !!(drivers || []).find((d) => d.id === currentDriver?.id)?.iracing_id
+        }
       />
     </div>
   );
