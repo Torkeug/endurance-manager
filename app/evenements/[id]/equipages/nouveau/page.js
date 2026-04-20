@@ -9,6 +9,7 @@ const emptyForm = {
   crew_name: "",
   car_id: "",
   class: "",
+  car_number: "",
   start_time_id: "",
   bop_power_percent: "100",
   bop_weight_kg: "0",
@@ -31,6 +32,7 @@ export default function NouvelEquipage({ params }) {
   const [eventName, setEventName] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [isChampionship, setIsChampionship] = useState(false);
 
   // Multiple Twitch streams — stored as array of raw usernames
   const [twitchUsernames, setTwitchUsernames] = useState([]);
@@ -52,7 +54,7 @@ export default function NouvelEquipage({ params }) {
         .order("irl_start"),
       supabase
         .from("events")
-        .select("name, format, timezone")
+        .select("name, format, timezone, championship_id")
         .eq("id", id)
         .single(),
       supabase.from("crew_names").select("name").order("sort_order"),
@@ -81,6 +83,7 @@ export default function NouvelEquipage({ params }) {
         setStartTimes(stData || []);
         setEventName(evData?.name || "");
         setEventTimezone(evData?.timezone || "Europe/Paris");
+        setIsChampionship(!!evData?.championship_id);
         setCrewNames(
           crewData?.map((c) => c.name).sort((a, b) => a.localeCompare(b)) || [],
         );
@@ -242,6 +245,10 @@ export default function NouvelEquipage({ params }) {
       notification_minutes_before: form.notification_minutes_before
         ? parseInt(form.notification_minutes_before)
         : null,
+      car_number:
+        isChampionship && form.car_number !== ""
+          ? parseInt(form.car_number)
+          : null,
     };
 
     const { data, error: err } = await supabase
@@ -410,6 +417,21 @@ export default function NouvelEquipage({ params }) {
                 </select>
               )}
             </div>
+            {/* ── Numéro de course — only shown for championship events ── */}
+            {isChampionship && (
+              <div className="form-group">
+                <label htmlFor="car_number">Numéro de course</label>
+                <input
+                  id="car_number"
+                  type="number"
+                  min={0}
+                  max={999}
+                  value={form.car_number}
+                  onChange={set("car_number")}
+                  placeholder="—"
+                />
+              </div>
+            )}
           </div>
         </div>
 

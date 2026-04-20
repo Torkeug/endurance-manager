@@ -26,6 +26,7 @@ export default function ModifierEquipage({ params }) {
   const [error, setError] = useState(null);
   const [crewNames, setCrewNames] = useState([]);
   const [currentIsAdmin, setCurrentIsAdmin] = useState(false);
+  const [isChampionship, setIsChampionship] = useState(false);
 
   // Multiple Twitch streams — stored as array of raw usernames
   const [twitchUsernames, setTwitchUsernames] = useState([]);
@@ -75,7 +76,7 @@ export default function ModifierEquipage({ params }) {
         let filteredCars = carsData || [];
         const { data: evData } = await supabase
           .from("events")
-          .select("format, timezone, archived")
+          .select("format, timezone, archived, championship_id")
           .eq("id", entry.event_id)
           .single();
 
@@ -106,6 +107,7 @@ export default function ModifierEquipage({ params }) {
           }
         }
         setEventTimezone(evData?.timezone || "Europe/Paris");
+        setIsChampionship(!!evData?.championship_id);
         setCars(filteredCars);
         setCrewNames(
           crewData?.map((c) => c.name).sort((a, b) => a.localeCompare(b)) || [],
@@ -141,6 +143,7 @@ export default function ModifierEquipage({ params }) {
           crew_name: entry.crew_name ?? "",
           car_id: entry.car_id ?? "",
           class: entry.class ?? "",
+          car_number: entry.car_number ?? "",
           start_time_id: entry.start_time_id ?? "",
           bop_power_percent: entry.bop_power_percent ?? "100",
           bop_weight_kg: entry.bop_weight_kg ?? "0",
@@ -213,6 +216,10 @@ export default function ModifierEquipage({ params }) {
       crew_name: form.crew_name,
       car_id: form.car_id || null,
       class: form.class || null,
+      car_number:
+        isChampionship && form.car_number !== ""
+          ? parseInt(form.car_number)
+          : null,
       start_time_id: form.start_time_id,
       stream_urls: streamUrls,
       bop_power_percent: parseFloat(form.bop_power_percent) || 100,
@@ -397,6 +404,21 @@ export default function ModifierEquipage({ params }) {
                 </select>
               )}
             </div>
+            {/* ── Numéro de course — only shown for championship events ── */}
+            {isChampionship && (
+              <div className="form-group">
+                <label htmlFor="car_number">Numéro de course</label>
+                <input
+                  id="car_number"
+                  type="number"
+                  min={0}
+                  max={999}
+                  value={form.car_number}
+                  onChange={set("car_number")}
+                  placeholder="—"
+                />
+              </div>
+            )}
           </div>
         </div>
 

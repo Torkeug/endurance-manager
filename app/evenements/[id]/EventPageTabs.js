@@ -489,6 +489,7 @@ export default function EventPageTabs({
                     <th>Équipage</th>
                     <th>Voiture</th>
                     <th>Classe</th>
+                    {event.championship_id && <th>#</th>}
                     <th>Pilotes</th>
                     <th>SoF</th>
                     <th>Départ IRL</th>
@@ -526,6 +527,19 @@ export default function EventPageTabs({
                             </span>
                           )}
                         </td>
+                        {event.championship_id && (
+                          <td
+                            className="mono"
+                            style={{
+                              color: "var(--accent)",
+                              fontSize: "0.85rem",
+                            }}
+                          >
+                            {entry.car_number != null
+                              ? `#${entry.car_number}`
+                              : "—"}
+                          </td>
+                        )}
                         <td>
                           <div
                             style={{
