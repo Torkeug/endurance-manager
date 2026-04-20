@@ -18,8 +18,8 @@ export default async function EquipageDetail({ params }) {
       `
       *,
       cars (id, name, tank_size_litres, class, refuel_litres_per_second, car_classes(refuel_litres_per_second)),
-      events (name, duration_minutes, ig_start_time, ig_sunrise, ig_sunset, timezone, archived,
-        circuits (name, pit_lane_time_seconds)),
+      events (name, duration_minutes, ig_start_time, ig_sunrise, ig_sunset, timezone, archived, championship_id,
+      circuits (name, pit_lane_time_seconds)),
       event_start_times (irl_start, label)
     `,
     )
@@ -65,6 +65,14 @@ export default async function EquipageDetail({ params }) {
         (archived ? entry.car_name_snapshot : null) || entry.cars?.name || "—",
     },
     { label: "Classe", value: entryClass || "—" },
+    ...(entry.events?.championship_id
+      ? [
+          {
+            label: "#",
+            value: entry.car_number != null ? `#${entry.car_number}` : "—",
+          },
+        ]
+      : []),
     { label: "SoF", value: avgIrating ? `${avgIrating} iR` : "—" },
     // If BoP tank size is set, show the reduced capacity and the percentage.
     // Otherwise show the car's default full tank size.
