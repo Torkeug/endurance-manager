@@ -4,6 +4,7 @@ import Link from "next/link";
 import StartTimesManager from "./StartTimesManager";
 import EventInventoryTab from "./EventInventoryTab";
 import { formatTimeInZone } from "../../../lib/timezone";
+import { useSearchParams } from "next/navigation";
 
 // ── Crew name coloring ────────────────────────────────────────────────────────
 // Deterministic hash → one of 8 palette entries. Colors are chosen to be legible
@@ -97,12 +98,19 @@ export default function EventPageTabs({
   crewColorsMap = {},
 }) {
   const [activeTab, setActiveTab] = useState("inscriptions");
+  const searchParams = useSearchParams();
 
   // Tracks which driver group is hovered — shared across all rows in the group
   const [hoveredGroup, setHoveredGroup] = useState(null);
 
   // Persist tab state per event — read in useEffect to avoid hydration mismatch.
   useEffect(() => {
+    // Query param takes priority over persisted tab (e.g. ?tab=horaires from a redirect)
+    const paramTab = searchParams.get("tab");
+    if (paramTab && tabs.some((t) => t.id === paramTab)) {
+      setActiveTab(paramTab);
+      return;
+    }
     const saved = localStorage.getItem(`event-tab-${event.id}`);
     if (saved && tabs.some((t) => t.id === saved)) {
       setActiveTab(saved);

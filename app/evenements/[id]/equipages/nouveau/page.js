@@ -318,7 +318,7 @@ export default function NouvelEquipage({ params }) {
         <div className="alert alert-error" style={{ marginBottom: "1.5rem" }}>
           Aucun horaire de départ configuré pour cet événement.{" "}
           <Link
-            href={`/evenements/${id}`}
+            href={`/evenements/${id}?tab=horaires`}
             style={{ color: "inherit", fontWeight: 700 }}
           >
             Ajoutez-en un d&apos;abord →
