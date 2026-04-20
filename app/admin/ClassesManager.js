@@ -301,22 +301,69 @@ export default function ClassesManager({ initialClasses, initialCars }) {
                     {carsInClass.length} voiture
                     {carsInClass.length !== 1 ? "s" : ""}
                   </span>
-                  {/* Refuel rate — inline editable, saves on blur */}
-                  <span
+                </div>
+                <div
+                  style={{
+                    display: "flex",
+                    gap: "0.5rem",
+                    alignItems: "center",
+                    flexWrap: "wrap",
+                  }}
+                >
+                  {/* Refuel rate — custom +/− stepper, saves on blur */}
+                  <div
                     style={{
-                      marginLeft: "1rem",
-                      display: "inline-flex",
-                      alignItems: "center",
-                      gap: "0.35rem",
+                      display: "flex",
+                      alignItems: "stretch",
                       fontSize: "0.8rem",
-                      color: "var(--text-dim)",
                     }}
                   >
-                    Ravitaillement :
+                    <span
+                      style={{
+                        padding: "0.3rem 0.5rem",
+                        background: "var(--surface-2)",
+                        border: "1px solid var(--border)",
+                        borderRight: "none",
+                        borderRadius: "3px 0 0 3px",
+                        color: "var(--text-dim)",
+                        whiteSpace: "nowrap",
+                        display: "flex",
+                        alignItems: "center",
+                      }}
+                    >
+                      Ravit.
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const val = Math.max(
+                          0,
+                          parseFloat(refuelRates[cls.id] || 0) - 0.05,
+                        );
+                        const rounded = Math.round(val * 100) / 100;
+                        setRefuelRates((prev) => ({
+                          ...prev,
+                          [cls.id]: rounded,
+                        }));
+                        handleRefuelRate(cls.id, rounded);
+                      }}
+                      style={{
+                        padding: "0.3rem 0.5rem",
+                        background: "var(--surface-2)",
+                        border: "1px solid var(--border)",
+                        borderRight: "none",
+                        color: "var(--text-dim)",
+                        cursor: "pointer",
+                        fontSize: "0.9rem",
+                        lineHeight: 1,
+                      }}
+                    >
+                      −
+                    </button>
                     <input
                       type="number"
                       min="0"
-                      step="0.1"
+                      step="0.05"
                       value={refuelRates[cls.id] ?? ""}
                       onChange={(e) =>
                         setRefuelRates((prev) => ({
@@ -326,22 +373,59 @@ export default function ClassesManager({ initialClasses, initialCars }) {
                       }
                       onBlur={(e) => handleRefuelRate(cls.id, e.target.value)}
                       placeholder="—"
+                      className="no-arrows"
                       style={{
-                        width: "64px",
+                        width: "56px",
                         background: "var(--surface)",
                         border: "1px solid var(--border)",
-                        borderRadius: "3px",
+                        borderRadius: 0,
                         color: "var(--text)",
                         fontFamily: "var(--font-mono), monospace",
                         fontSize: "0.8rem",
-                        padding: "0.2rem 0.4rem",
-                        textAlign: "right",
+                        padding: "0.3rem 0.4rem",
+                        textAlign: "center",
                       }}
                     />
-                    L/s
-                  </span>
-                </div>
-                <div style={{ display: "flex", gap: "0.5rem" }}>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const val = parseFloat(refuelRates[cls.id] || 0) + 0.05;
+                        const rounded = Math.round(val * 100) / 100;
+                        setRefuelRates((prev) => ({
+                          ...prev,
+                          [cls.id]: rounded,
+                        }));
+                        handleRefuelRate(cls.id, rounded);
+                      }}
+                      style={{
+                        padding: "0.3rem 0.5rem",
+                        background: "var(--surface-2)",
+                        border: "1px solid var(--border)",
+                        borderLeft: "none",
+                        color: "var(--text-dim)",
+                        cursor: "pointer",
+                        fontSize: "0.9rem",
+                        lineHeight: 1,
+                      }}
+                    >
+                      +
+                    </button>
+                    <span
+                      style={{
+                        padding: "0.3rem 0.5rem",
+                        background: "var(--surface-2)",
+                        border: "1px solid var(--border)",
+                        borderLeft: "none",
+                        borderRadius: "0 3px 3px 0",
+                        color: "var(--text-dim)",
+                        display: "flex",
+                        alignItems: "center",
+                        fontSize: "0.8rem",
+                      }}
+                    >
+                      L/s
+                    </span>
+                  </div>
                   <button
                     onClick={() => setExpandedId(isExpanded ? null : cls.id)}
                     className="btn btn-secondary btn-sm"
