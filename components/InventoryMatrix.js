@@ -172,12 +172,14 @@ export default function InventoryMatrix({
             .select(
               "driver_id, iracing_car_id, car_name, car_category, car_types",
             )
-            .in("driver_id", driverIds.length > 0 ? driverIds : ["none"]),
+            .in("driver_id", driverIds.length > 0 ? driverIds : ["none"])
+            .range(0, 99999),
           // All track ownership rows
           supabase
             .from("driver_track_ownership")
             .select("driver_id, track_name, track_category")
-            .in("driver_id", driverIds.length > 0 ? driverIds : ["none"]),
+            .in("driver_id", driverIds.length > 0 ? driverIds : ["none"])
+            .range(0, 99999),
           // iRacing catalog — for class labels + free_with_subscription badge
           supabase
             .from("iracing_cars")
