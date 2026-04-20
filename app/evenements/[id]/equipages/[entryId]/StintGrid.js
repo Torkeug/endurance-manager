@@ -790,8 +790,11 @@ export default function StintGrid({
   teamEntryId,
   teamEntry,
   assignedDrivers,
-  // archived — when true all inputs are disabled and action buttons are hidden
   archived = false,
+  // When true, automatically opens the recalc modal (triggered from Race Mode)
+  autoOpenRecalc = false,
+  // Called after auto-open so EquipageTabs can reset the flag
+  onAutoOpenHandled = null,
 }) {
   const [stints, setStints] = useState([]);
   const [driverPerf, setDriverPerf] = useState({});
@@ -946,6 +949,19 @@ export default function StintGrid({
       })),
     ),
   ]);
+
+  // Auto-open recalc modal when triggered from Race Mode
+  useEffect(() => {
+    if (!autoOpenRecalc || loading) return;
+    // Only open if there are completed and remaining stints
+    if (
+      calculated.some(isStintCompleted) &&
+      calculated.some((s) => !isStintCompleted(s))
+    ) {
+      openRecalcModal();
+      onAutoOpenHandled?.();
+    }
+  }, [autoOpenRecalc, loading]);
 
   // ── Open recalc modal ──────────────────────────────────────────────────────
   // Splits calculated stints into completed vs remaining, extracts actual perf,
@@ -1383,6 +1399,60 @@ export default function StintGrid({
           !teamEntry?.cars?.car_classes?.refuel_litres_per_second &&
           " (configurable dans Modifier l'équipage)"}
       </div>
+
+      {/* ── Recalc banner — visible when completed stints exist ──────────── */}
+      {!archived &&
+        calculated.some(isStintCompleted) &&
+        calculated.some((s) => !isStintCompleted(s)) && (
+          <div
+            onClick={openRecalcModal}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              padding: "0.65rem 1rem",
+              marginBottom: "0.75rem",
+              background: "rgba(var(--accent-rgb), 0.06)",
+              border: "1px solid var(--accent-dim)",
+              borderRadius: "4px",
+              cursor: "pointer",
+              transition: "background 0.15s",
+            }}
+            onMouseEnter={(e) =>
+              (e.currentTarget.style.background =
+                "rgba(var(--accent-rgb), 0.12)")
+            }
+            onMouseLeave={(e) =>
+              (e.currentTarget.style.background =
+                "rgba(var(--accent-rgb), 0.06)")
+            }
+          >
+            <div>
+              <div
+                style={{
+                  fontSize: "0.85rem",
+                  fontWeight: 700,
+                  color: "var(--accent)",
+                }}
+              >
+                ↻ Recalculer la stratégie
+              </div>
+              <div
+                style={{
+                  fontSize: "0.72rem",
+                  color: "var(--text-dim)",
+                  marginTop: "0.1rem",
+                }}
+              >
+                {calculated.filter(isStintCompleted).length} relais complétés ·
+                données réelles disponibles
+              </div>
+            </div>
+            <span style={{ color: "var(--accent)", fontSize: "0.85rem" }}>
+              →
+            </span>
+          </div>
+        )}
 
       {/* Stint grid table */}
       <div
@@ -1985,13 +2055,6 @@ export default function StintGrid({
             <button onClick={addStint} className="btn btn-secondary">
               + Ajouter un relais
             </button>
-            {/* Recalc button — shown when at least one stint is completed and one remains */}
-            {calculated.some(isStintCompleted) &&
-              calculated.some((s) => !isStintCompleted(s)) && (
-                <button onClick={openRecalcModal} className="btn btn-secondary">
-                  ↻ Recalculer la stratégie
-                </button>
-              )}
             {stints.length > 0 && (
               <button
                 onClick={clearAllStints}

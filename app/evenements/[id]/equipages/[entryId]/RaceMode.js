@@ -178,6 +178,7 @@ export default function RaceMode({
   teamEntry,
   assignedDrivers,
   archived,
+  onRequestRecalc = null,
 }) {
   const [stints, setStints] = useState([]);
   const [driverPerf, setDriverPerf] = useState({});
@@ -939,6 +940,53 @@ export default function RaceMode({
               </div>
             ))}
           </div>
+        </div>
+      )}
+
+      {/* ── Recalc strategy — only shown during race with completed stints ── */}
+      {!archived && onRequestRecalc && completedStints.length > 0 && (
+        <div
+          onClick={onRequestRecalc}
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            padding: "0.65rem 1rem",
+            background: "rgba(var(--accent-rgb), 0.06)",
+            border: "1px solid var(--accent-dim)",
+            borderRadius: "4px",
+            cursor: "pointer",
+            transition: "background 0.15s",
+          }}
+          onMouseEnter={(e) =>
+            (e.currentTarget.style.background = "rgba(var(--accent-rgb), 0.12)")
+          }
+          onMouseLeave={(e) =>
+            (e.currentTarget.style.background = "rgba(var(--accent-rgb), 0.06)")
+          }
+        >
+          <div>
+            <div
+              style={{
+                fontSize: "0.85rem",
+                fontWeight: 700,
+                color: "var(--accent)",
+              }}
+            >
+              ↻ Recalculer la stratégie
+            </div>
+            <div
+              style={{
+                fontSize: "0.72rem",
+                color: "var(--text-dim)",
+                marginTop: "0.1rem",
+              }}
+            >
+              {completedStints.length} relais complétés · voir l&apos;onglet
+              Relais
+            </div>
+          </div>
+          <span style={{ color: "var(--accent)", fontSize: "0.85rem" }}>→</span>
         </div>
       )}
 

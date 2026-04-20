@@ -61,6 +61,9 @@ export default function EquipageTabs({
     limitedToAssignment ? "pilotes" : "relais",
   );
 
+  // When true: switches to relais tab and tells StintGrid to auto-open the recalc modal
+  const [recalcRequested, setRecalcRequested] = useState(false);
+
   const visibleTabs = limitedToAssignment
     ? TABS.filter((t) => t.id === "pilotes")
     : TABS;
@@ -212,6 +215,8 @@ export default function EquipageTabs({
             teamEntry={teamEntry}
             assignedDrivers={assignedDrivers}
             archived={archived}
+            autoOpenRecalc={recalcRequested}
+            onAutoOpenHandled={() => setRecalcRequested(false)}
           />
         </>
       )}
@@ -245,6 +250,10 @@ export default function EquipageTabs({
           teamEntry={teamEntry}
           assignedDrivers={assignedDrivers}
           archived={archived}
+          onRequestRecalc={() => {
+            setRecalcRequested(true);
+            setActiveTab("relais");
+          }}
         />
       )}
     </div>
