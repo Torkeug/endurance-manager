@@ -133,9 +133,12 @@ export default function EventPageTabs({
 
   const signupCount = event.signups?.length ?? 0;
   const teamCount = event.team_entries?.length ?? 0;
+  const uniqueDriverCount = new Set(
+    (event.signups || []).map((s) => s.drivers?.id || s.driver_name_snapshot),
+  ).size;
 
   const tabs = [
-    { id: "inscriptions", label: "Inscriptions", count: signupCount },
+    { id: "inscriptions", label: "Inscriptions", count: uniqueDriverCount },
     { id: "equipages", label: "Équipages", count: teamCount },
     { id: "horaires", label: "Horaires de départ" },
     ...(!isExternal ? [{ id: "inventaire", label: "Inventaire" }] : []),
@@ -227,8 +230,8 @@ export default function EventPageTabs({
             <div style={{ fontSize: "0.85rem", color: "var(--text-dim)" }}>
               {isExternal
                 ? "Inscriptions"
-                : `${signupCount} pilote${signupCount !== 1 ? "s" : ""} inscrit${
-                    signupCount !== 1 ? "s" : ""
+                : `${uniqueDriverCount} pilote${uniqueDriverCount !== 1 ? "s" : ""} inscrit${
+                    uniqueDriverCount !== 1 ? "s" : ""
                   }`}
             </div>
             {/* Engineers don't sign up — they're staff, not drivers, externals cannot sign up by themselves */}
@@ -263,101 +266,226 @@ export default function EventPageTabs({
                   </tr>
                 </thead>
                 <tbody>
-                  {(event.signups || [])
-                    // External drivers can only see their own signup row
-                    .filter(
+                  {(() => {
+                    // Group signups by driver — drivers with multiple signups
+                    // (one per team entry) are merged into a single row.
+                    const filtered = (event.signups || []).filter(
                       (s) => !isExternal || s.drivers?.id === currentDriver?.id,
-                    )
-                    .sort((a, b) =>
-                      (a.drivers?.name || "").localeCompare(
-                        b.drivers?.name || "",
+                    );
+
+                    // Build ordered map: driverId → [signups]
+                    const grouped = [];
+                    const seen = new Map();
+                    for (const s of filtered) {
+                      const key =
+                        s.drivers?.id || s.driver_name_snapshot || s.id;
+                      if (!seen.has(key)) {
+                        seen.set(key, []);
+                        grouped.push({ key, signups: seen.get(key) });
+                      }
+                      seen.get(key).push(s);
+                    }
+
+                    // Sort groups by driver name
+                    grouped.sort((a, b) =>
+                      (a.signups[0]?.drivers?.name || "").localeCompare(
+                        b.signups[0]?.drivers?.name || "",
                       ),
-                    )
-                    .map((s) => (
-                      <tr key={s.id}>
-                        <td style={{ fontWeight: 600 }}>
-                          {(event.archived ? s.driver_name_snapshot : null) ||
-                            s.drivers?.name ||
-                            "—"}
-                        </td>
-                        <td
-                          className="mono"
-                          style={{
-                            color: "var(--accent)",
-                            fontSize: "0.85rem",
-                          }}
-                        >
-                          {s.drivers?.irating ?? "—"}
-                        </td>
-                        {/* Colored crew name pill — DB color takes priority over hash */}
-                        <td>
-                          <CrewPill
-                            name={s.team_entries?.crew_name}
-                            color={crewColorsMap[s.team_entries?.crew_name]}
-                          />
-                        </td>
-                        <td
-                          style={{
-                            color: "var(--text-dim)",
-                            fontSize: "0.85rem",
-                            maxWidth: "200px",
-                          }}
-                        >
-                          {formatPreferences(s)}
-                        </td>
-                        <td style={{ fontSize: "0.85rem" }}>
-                          {(s.preferred_start_time_ids || []).length > 0 ? (
-                            (s.preferred_start_time_ids || [])
-                              .map((stId) =>
-                                (event.event_start_times || []).find(
-                                  (st) => st.id === stId,
-                                ),
-                              )
-                              .filter(Boolean)
-                              .map((st) => (
-                                <div key={st.id}>
-                                  <div style={{ fontWeight: 600 }}>
-                                    {st.label}
-                                  </div>
+                    );
+
+                    return grouped.map(({ key, signups: group }) => {
+                      const first = group[0];
+                      const driverName =
+                        (event.archived ? first.driver_name_snapshot : null) ||
+                        first.drivers?.name ||
+                        "—";
+                      const multi = group.length > 1;
+
+                      return (
+                        <tr key={key}>
+                          {/* Pilote — shown once per driver */}
+                          <td style={{ fontWeight: 600 }}>{driverName}</td>
+                          {/* iRating — shown once per driver */}
+                          <td
+                            className="mono"
+                            style={{
+                              color: "var(--accent)",
+                              fontSize: "0.85rem",
+                            }}
+                          >
+                            {first.drivers?.irating ?? "—"}
+                          </td>
+                          {/* Per-signup columns — stacked when driver has multiple signups */}
+                          {/* Équipe, Préférences, Créneaux, Notes —
+                              stacked in bordered blocks when driver has multiple signups */}
+                          {multi ? (
+                            <td colSpan={4} style={{ padding: "0.5rem" }}>
+                              <div
+                                style={{
+                                  display: "flex",
+                                  flexDirection: "column",
+                                  gap: "0.5rem",
+                                }}
+                              >
+                                {group.map((s) => (
                                   <div
-                                    className="mono"
+                                    key={s.id}
                                     style={{
-                                      fontSize: "0.78rem",
-                                      color: "var(--accent)",
+                                      display: "grid",
+                                      gridTemplateColumns: "1fr 1fr 1fr 1fr",
+                                      gap: "0.5rem",
+                                      padding: "0.5rem 0.75rem",
+                                      background: "var(--surface-2)",
+                                      border: "1px solid var(--border)",
+                                      borderRadius: "3px",
+                                      fontSize: "0.85rem",
                                     }}
                                   >
-                                    Départ à{" "}
-                                    {formatTimeInZone(st.irl_start, tz)}
+                                    <div>
+                                      <CrewPill
+                                        name={s.team_entries?.crew_name}
+                                        color={
+                                          crewColorsMap[
+                                            s.team_entries?.crew_name
+                                          ]
+                                        }
+                                      />
+                                    </div>
+                                    <div style={{ color: "var(--text-dim)" }}>
+                                      {formatPreferences(s)}
+                                    </div>
+                                    <div>
+                                      {(s.preferred_start_time_ids || [])
+                                        .length > 0 ? (
+                                        (s.preferred_start_time_ids || [])
+                                          .map((stId) =>
+                                            (
+                                              event.event_start_times || []
+                                            ).find((st) => st.id === stId),
+                                          )
+                                          .filter(Boolean)
+                                          .map((st) => (
+                                            <div key={st.id}>
+                                              <div style={{ fontWeight: 600 }}>
+                                                {st.label}
+                                              </div>
+                                              <div
+                                                className="mono"
+                                                style={{
+                                                  fontSize: "0.78rem",
+                                                  color: "var(--accent)",
+                                                }}
+                                              >
+                                                Départ à{" "}
+                                                {formatTimeInZone(
+                                                  st.irl_start,
+                                                  tz,
+                                                )}
+                                              </div>
+                                            </div>
+                                          ))
+                                      ) : (
+                                        <span
+                                          style={{ color: "var(--text-dim)" }}
+                                        >
+                                          —
+                                        </span>
+                                      )}
+                                    </div>
+                                    <div
+                                      style={{
+                                        color: "var(--text-dim)",
+                                        maxWidth: "160px",
+                                      }}
+                                    >
+                                      {s.notes || "—"}
+                                    </div>
                                   </div>
-                                </div>
-                              ))
+                                ))}
+                              </div>
+                            </td>
                           ) : (
-                            <span style={{ color: "var(--text-dim)" }}>—</span>
-                          )}
-                        </td>
-                        <td
-                          style={{
-                            color: "var(--text-dim)",
-                            fontSize: "0.85rem",
-                            maxWidth: "160px",
-                          }}
-                        >
-                          {s.notes || "—"}
-                        </td>
-                        <td>
-                          {!event.archived &&
-                            (admin || currentDriver?.id === s.drivers?.id) &&
-                            s.drivers?.id && (
-                              <Link
-                                href={`/evenements/${event.id}/inscription?driver=${s.drivers?.id}`}
-                                className="btn btn-secondary btn-sm"
+                            <>
+                              <td>
+                                <CrewPill
+                                  name={group[0].team_entries?.crew_name}
+                                  color={
+                                    crewColorsMap[
+                                      group[0].team_entries?.crew_name
+                                    ]
+                                  }
+                                />
+                              </td>
+                              <td
+                                style={{
+                                  color: "var(--text-dim)",
+                                  fontSize: "0.85rem",
+                                  maxWidth: "200px",
+                                }}
                               >
-                                {isExternal === true ? "Voir" : "Gérer"}
-                              </Link>
-                            )}
-                        </td>
-                      </tr>
-                    ))}
+                                {formatPreferences(group[0])}
+                              </td>
+                              <td style={{ fontSize: "0.85rem" }}>
+                                {(group[0].preferred_start_time_ids || [])
+                                  .length > 0 ? (
+                                  (group[0].preferred_start_time_ids || [])
+                                    .map((stId) =>
+                                      (event.event_start_times || []).find(
+                                        (st) => st.id === stId,
+                                      ),
+                                    )
+                                    .filter(Boolean)
+                                    .map((st) => (
+                                      <div key={st.id}>
+                                        <div style={{ fontWeight: 600 }}>
+                                          {st.label}
+                                        </div>
+                                        <div
+                                          className="mono"
+                                          style={{
+                                            fontSize: "0.78rem",
+                                            color: "var(--accent)",
+                                          }}
+                                        >
+                                          Départ à{" "}
+                                          {formatTimeInZone(st.irl_start, tz)}
+                                        </div>
+                                      </div>
+                                    ))
+                                ) : (
+                                  <span style={{ color: "var(--text-dim)" }}>
+                                    —
+                                  </span>
+                                )}
+                              </td>
+                              <td
+                                style={{
+                                  color: "var(--text-dim)",
+                                  fontSize: "0.85rem",
+                                  maxWidth: "160px",
+                                }}
+                              >
+                                {group[0].notes || "—"}
+                              </td>
+                            </>
+                          )}
+                          <td>
+                            {!event.archived &&
+                              (admin ||
+                                currentDriver?.id === first.drivers?.id) &&
+                              first.drivers?.id && (
+                                <Link
+                                  href={`/evenements/${event.id}/inscription?driver=${first.drivers.id}`}
+                                  className="btn btn-secondary btn-sm"
+                                >
+                                  {isExternal === true ? "Voir" : "Gérer"}
+                                </Link>
+                              )}
+                          </td>
+                        </tr>
+                      );
+                    });
+                  })()}
                 </tbody>
               </table>
             </div>
