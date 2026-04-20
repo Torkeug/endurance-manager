@@ -114,11 +114,26 @@ function calcStint(
   igSunrise,
   igSunset,
   irlStart,
+  // fuelRemaining: fuel left in tank at end of previous stint (null for first stint)
+  fuelRemaining = null,
 ) {
   const pitLane = teamEntry?.events?.circuits?.pit_lane_time_seconds || 0;
-  const refuel = teamEntry?.refuel_time_seconds || 0;
   const tyreChange = teamEntry?.tyre_change_time_seconds || 0;
   const carTankSize = teamEntry?.cars?.tank_size_litres;
+  const tankSizeForRefuel = teamEntry?.bop_tank_size_percent
+    ? carTankSize * (teamEntry.bop_tank_size_percent / 100)
+    : carTankSize;
+  // Variable refuel time: based on fuel needed to fill tank at class refuel rate.
+  // Falls back to flat refuel_time_seconds if rate or tank size unavailable.
+  const refuelRate = teamEntry?.cars?.car_classes?.refuel_litres_per_second;
+  const fuelToAdd =
+    fuelRemaining !== null && tankSizeForRefuel
+      ? Math.max(0, tankSizeForRefuel - fuelRemaining)
+      : (tankSizeForRefuel ?? 0); // first stint or unknown: assume full tank fill
+  const refuel =
+    refuelRate && fuelToAdd > 0
+      ? fuelToAdd / refuelRate
+      : teamEntry?.refuel_time_seconds || 0;
   const tankSize = teamEntry?.bop_tank_size_percent
     ? carTankSize * (teamEntry.bop_tank_size_percent / 100)
     : carTankSize;
@@ -203,6 +218,13 @@ function calcStint(
     _nextStart: nextStart,
     _durationFromPerf,
     _durationIsDefault,
+    // Fuel state for next stint's refuel calculation
+    _fuelToAdd: fuelToAdd,
+    _refuelTime: refuel,
+    _fuelRemaining:
+      fuelUsed !== null && tankSizeForRefuel
+        ? Math.max(0, tankSizeForRefuel - (fuelUsed || 0))
+        : null,
   };
 }
 
@@ -223,6 +245,8 @@ function calculateAllStints(
         )
       : null;
   let currentTime = raceStart ? new Date(raceStart) : null;
+  // fuelRemaining tracks fuel left at end of each stint for variable refuel calc
+  let fuelRemaining = null;
   const result = [];
   for (const stint of stints) {
     const calc = calcStint(
@@ -233,8 +257,11 @@ function calculateAllStints(
       igSunrise,
       igSunset,
       currentTime,
+      fuelRemaining,
     );
     result.push(calc);
+    // Carry fuel remaining forward to next stint
+    fuelRemaining = calc._fuelRemaining;
     const effectiveEnd = calc.irl_end_actual
       ? new Date(calc.irl_end_actual)
       : calc._irlEnd;
@@ -1511,9 +1538,13 @@ export default function StintGrid({
           color: "var(--text-dim)",
         }}
       >
-        Temps chgt pneus : {teamEntry?.tyre_change_time_seconds || 0}s{" — "}
-        Ravitaillement : {teamEntry?.refuel_time_seconds || 0}s
-        {!archived && " (configurables dans Modifier l'équipage)"}
+        Temps chgt pneus : {teamEntry?.tyre_change_time_seconds || 0}s
+        {teamEntry?.cars?.car_classes?.refuel_litres_per_second
+          ? ` — Ravitaillement : ${teamEntry.cars.car_classes.refuel_litres_per_second} L/s (variable)`
+          : ` — Ravitaillement : ${teamEntry?.refuel_time_seconds || 0}s (fixe)`}
+        {!archived &&
+          !teamEntry?.cars?.car_classes?.refuel_litres_per_second &&
+          " (configurable dans Modifier l'équipage)"}
       </div>
     </div>
   );

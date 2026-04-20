@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { supabaseBrowser as supabase } from '../../lib/supabase-browser'
+import { supabaseBrowser as supabase } from "../../lib/supabase-browser";
 
 export default function ClassesManager({ initialClasses, initialCars }) {
   const router = useRouter();
@@ -12,6 +12,12 @@ export default function ClassesManager({ initialClasses, initialCars }) {
   const [expandedId, setExpandedId] = useState(null);
   const [newName, setNewName] = useState("");
   const [saving, setSaving] = useState(false);
+  // Tracks refuel rate edits per class — key is class id, value is input string
+  const [refuelRates, setRefuelRates] = useState(
+    Object.fromEntries(
+      initialClasses.map((c) => [c.id, c.refuel_litres_per_second ?? ""]),
+    ),
+  );
   const [error, setError] = useState(null);
 
   const reset = () => {
@@ -70,7 +76,13 @@ export default function ClassesManager({ initialClasses, initialCars }) {
     setSaving(true);
     const { data, error: err } = await supabase
       .from("car_classes")
-      .insert([{ name: newName.trim(), sort_order: (classes.length + 1) * 10 }])
+      .insert([
+        {
+          name: newName.trim(),
+          sort_order: (classes.length + 1) * 10,
+          refuel_litres_per_second: null,
+        },
+      ])
       .select()
       .single();
     if (err) {
@@ -83,6 +95,7 @@ export default function ClassesManager({ initialClasses, initialCars }) {
       return;
     }
     setClasses((prev) => [...prev, data]);
+    setRefuelRates((prev) => ({ ...prev, [data.id]: "" }));
     reset();
     setSaving(false);
     router.refresh();
@@ -174,6 +187,17 @@ export default function ClassesManager({ initialClasses, initialCars }) {
     setNewName(cls.name);
     setAdding(false);
     setError(null);
+  };
+
+  // Save refuel rate for a class immediately on blur
+  const handleRefuelRate = async (classId, value) => {
+    const parsed = value ? parseFloat(value) : null;
+    const { error: err } = await supabase
+      .from("car_classes")
+      .update({ refuel_litres_per_second: parsed })
+      .eq("id", classId);
+    if (err) setError(err.message);
+    else router.refresh();
   };
 
   const unclassedCars = getUnclassedCars();
@@ -276,6 +300,45 @@ export default function ClassesManager({ initialClasses, initialCars }) {
                   >
                     {carsInClass.length} voiture
                     {carsInClass.length !== 1 ? "s" : ""}
+                  </span>
+                  {/* Refuel rate — inline editable, saves on blur */}
+                  <span
+                    style={{
+                      marginLeft: "1rem",
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: "0.35rem",
+                      fontSize: "0.8rem",
+                      color: "var(--text-dim)",
+                    }}
+                  >
+                    Ravitaillement :
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.1"
+                      value={refuelRates[cls.id] ?? ""}
+                      onChange={(e) =>
+                        setRefuelRates((prev) => ({
+                          ...prev,
+                          [cls.id]: e.target.value,
+                        }))
+                      }
+                      onBlur={(e) => handleRefuelRate(cls.id, e.target.value)}
+                      placeholder="—"
+                      style={{
+                        width: "64px",
+                        background: "var(--surface)",
+                        border: "1px solid var(--border)",
+                        borderRadius: "3px",
+                        color: "var(--text)",
+                        fontFamily: "var(--font-mono), monospace",
+                        fontSize: "0.8rem",
+                        padding: "0.2rem 0.4rem",
+                        textAlign: "right",
+                      }}
+                    />
+                    L/s
                   </span>
                 </div>
                 <div style={{ display: "flex", gap: "0.5rem" }}>

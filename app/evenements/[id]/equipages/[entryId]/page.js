@@ -17,7 +17,7 @@ export default async function EquipageDetail({ params }) {
     .select(
       `
       *,
-      cars (id, name, tank_size_litres, class),
+      cars (id, name, tank_size_litres, class, car_classes(refuel_litres_per_second)),
       events (name, duration_minutes, ig_start_time, ig_sunrise, ig_sunset, timezone, archived,
         circuits (name, pit_lane_time_seconds)),
       event_start_times (irl_start, label)
