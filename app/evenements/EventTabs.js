@@ -389,7 +389,7 @@ function ChampionshipSection({ championship, rounds, admin }) {
                 marginTop: "0.15rem",
               }}
             >
-              {championship.season}
+              Saison {championship.season}
             </div>
           )}
           <div

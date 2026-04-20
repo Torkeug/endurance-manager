@@ -473,7 +473,6 @@ export default function ModifierEquipage({ params }) {
           <h3 style={{ marginBottom: "1.25rem", color: "var(--text-dim)" }}>
             Streams Twitch
           </h3>
-
           {/* Added streams as removable pills */}
           {twitchUsernames.length > 0 && (
             <div
@@ -528,7 +527,6 @@ export default function ModifierEquipage({ params }) {
               ))}
             </div>
           )}
-
           {/* Quick-pick from team drivers with linked Twitch */}
           {twitchDrivers.length > 0 && (
             <div
@@ -568,58 +566,61 @@ export default function ModifierEquipage({ params }) {
               })}
             </div>
           )}
-
           {/* Manual username entry */}
-          <div style={{ display: "flex", alignItems: "stretch", gap: 0 }}>
-            <span
-              style={{
-                padding: "0.55rem 0.6rem",
-                background: "var(--surface-2)",
-                border: "1px solid var(--border)",
-                borderRight: "none",
-                borderRadius: "3px 0 0 3px",
-                fontSize: "0.85rem",
-                color: "var(--text-dim)",
-                whiteSpace: "nowrap",
-                fontFamily: "var(--font-mono), monospace",
-              }}
-            >
-              twitch.tv/
-            </span>
-            <input
-              type="text"
-              value={twitchInput}
-              onChange={(e) =>
-                setTwitchInput(e.target.value.replace(/\s/g, "").toLowerCase())
-              }
-              onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                  e.preventDefault();
-                  addTwitchUsername(twitchInput);
+          {/* Outer: column on mobile, row on sm+ */}
+          <div className="flex flex-col gap-2 sm:flex-row sm:gap-0 sm:items-stretch">
+            {/* Row 1: twitch.tv/ prefix joined to input — always a flex row */}
+            <div style={{ display: "flex", flex: 1 }}>
+              <span
+                style={{
+                  padding: "0.55rem 0.6rem",
+                  background: "var(--surface-2)",
+                  border: "1px solid var(--border)",
+                  borderRight: "none",
+                  borderRadius: "3px 0 0 3px",
+                  fontSize: "0.85rem",
+                  color: "var(--text-dim)",
+                  whiteSpace: "nowrap",
+                  fontFamily: "var(--font-mono), monospace",
+                }}
+              >
+                twitch.tv/
+              </span>
+              <input
+                type="text"
+                value={twitchInput}
+                onChange={(e) =>
+                  setTwitchInput(
+                    e.target.value.replace(/\s/g, "").toLowerCase(),
+                  )
                 }
-              }}
-              placeholder="nom_de_chaine"
-              style={{
-                borderRadius: 0,
-                flex: 1,
-                background: "var(--surface-2)",
-                border: "1px solid var(--border)",
-                borderLeft: "none",
-                color: "var(--text)",
-                padding: "0.55rem 0.75rem",
-                fontFamily: "inherit",
-                fontSize: "0.9rem",
-              }}
-            />
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    addTwitchUsername(twitchInput);
+                  }
+                }}
+                placeholder="nom_de_chaine"
+                style={{
+                  flex: 1,
+                  background: "var(--surface-2)",
+                  border: "1px solid var(--border)",
+                  borderLeft: "none",
+                  borderRadius: "0 3px 3px 0",
+                  color: "var(--text)",
+                  padding: "0.55rem 0.75rem",
+                  fontFamily: "inherit",
+                  fontSize: "0.9rem",
+                }}
+              />
+            </div>
+
+            {/* Row 2 on mobile, inline right on desktop */}
             <button
               type="button"
               onClick={() => addTwitchUsername(twitchInput)}
               className="btn btn-secondary"
-              style={{
-                borderRadius: "0 3px 3px 0",
-                borderLeft: "none",
-                whiteSpace: "nowrap",
-              }}
+              style={{ whiteSpace: "nowrap" }}
             >
               + Ajouter
             </button>
