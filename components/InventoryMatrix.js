@@ -158,28 +158,50 @@ export default function InventoryMatrix({
   useEffect(() => {
     const driverIds = matrixDrivers.map((d) => d.id);
 
+    // Paginate through a table in chunks of 1000 to bypass PostgREST's row cap.
+    // Supabase enforces a server-side max regardless of .range() — pagination is the only workaround.
+    const fetchAllRows = async (buildQuery) => {
+      const PAGE_SIZE = 1000;
+      let from = 0;
+      let allRows = [];
+      while (true) {
+        const { data, error } = await buildQuery(from, from + PAGE_SIZE - 1);
+        if (error) throw error;
+        allRows = [...allRows, ...(data || [])];
+        // If we got fewer rows than PAGE_SIZE, we've reached the last page
+        if (!data || data.length < PAGE_SIZE) break;
+        from += PAGE_SIZE;
+      }
+      return allRows;
+    };
+
     const load = async () => {
       try {
+        // Paginated ownership queries — single fetch for catalog (small enough)
         const [
-          carOwnershipRes,
-          trackOwnershipRes,
+          carOwnershipRows,
+          trackOwnershipRows,
           iracingCarsRes,
           iracingTracksFreeRes,
         ] = await Promise.all([
-          // All car ownership rows — no server-side limit applied
-          supabase
-            .from("driver_car_ownership")
-            .select(
-              "driver_id, iracing_car_id, car_name, car_category, car_types",
-            )
-            .in("driver_id", driverIds.length > 0 ? driverIds : ["none"])
-            .range(0, 99999),
-          // All track ownership rows
-          supabase
-            .from("driver_track_ownership")
-            .select("driver_id, track_name, track_category")
-            .in("driver_id", driverIds.length > 0 ? driverIds : ["none"])
-            .range(0, 99999),
+          // Car ownership — paginated to handle large teams
+          fetchAllRows((from, to) =>
+            supabase
+              .from("driver_car_ownership")
+              .select(
+                "driver_id, iracing_car_id, car_name, car_category, car_types",
+              )
+              .in("driver_id", driverIds.length > 0 ? driverIds : ["none"])
+              .range(from, to),
+          ),
+          // Track ownership — paginated, most likely to exceed 1000 rows
+          fetchAllRows((from, to) =>
+            supabase
+              .from("driver_track_ownership")
+              .select("driver_id, track_name, track_category")
+              .in("driver_id", driverIds.length > 0 ? driverIds : ["none"])
+              .range(from, to),
+          ),
           // iRacing catalog — for class labels + free_with_subscription badge
           supabase
             .from("iracing_cars")
@@ -194,13 +216,11 @@ export default function InventoryMatrix({
             .eq("free_with_subscription", true),
         ]);
 
-        if (carOwnershipRes.error) throw carOwnershipRes.error;
-        if (trackOwnershipRes.error) throw trackOwnershipRes.error;
         if (iracingCarsRes.error) throw iracingCarsRes.error;
 
         // ── Build allCars — unique cars from ownership data ──────────────────
         const carMap = new Map();
-        for (const row of carOwnershipRes.data || []) {
+        for (const row of carOwnershipRows || []) {
           if (!carMap.has(row.iracing_car_id)) {
             carMap.set(row.iracing_car_id, {
               iracing_car_id: row.iracing_car_id,
@@ -219,7 +239,7 @@ export default function InventoryMatrix({
 
         // ── Build allTracks — unique tracks from ownership data ──────────────
         const trackMap = new Map();
-        for (const row of trackOwnershipRes.data || []) {
+        for (const row of trackOwnershipRows || []) {
           if (!trackMap.has(row.track_name)) {
             trackMap.set(row.track_name, {
               track_name: row.track_name,
@@ -236,7 +256,7 @@ export default function InventoryMatrix({
 
         // ── Car ownership map: driver_id → iracing_car_id[] ─────────────────
         const carOwnershipMap = {};
-        for (const row of carOwnershipRes.data || []) {
+        for (const row of carOwnershipRows || []) {
           if (!carOwnershipMap[row.driver_id])
             carOwnershipMap[row.driver_id] = [];
           carOwnershipMap[row.driver_id].push(row.iracing_car_id);
@@ -245,7 +265,7 @@ export default function InventoryMatrix({
 
         // ── Track ownership map: driver_id → track_name[] ───────────────────
         const trackOwnershipMap = {};
-        for (const row of trackOwnershipRes.data || []) {
+        for (const row of trackOwnershipRows || []) {
           if (!trackOwnershipMap[row.driver_id])
             trackOwnershipMap[row.driver_id] = [];
           if (!trackOwnershipMap[row.driver_id].includes(row.track_name)) {
