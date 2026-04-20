@@ -1,6 +1,7 @@
 "use client";
 import { useState, useEffect, useMemo, Fragment } from "react";
 import { isLegacyContent } from "../lib/car-types";
+import { KBadge, FreeBadge, BadgeLegend } from "./InventoryBadges";
 
 const CAR_CATEGORY_LABELS = {
   sports_car: "Sports Car",
@@ -104,27 +105,6 @@ const countCellStyle = {
   color: "var(--accent)",
 };
 
-// Kronos badge — compact K for matrix use
-function KBadge() {
-  return (
-    <span
-      style={{
-        marginLeft: "0.35rem",
-        fontSize: "0.58rem",
-        fontWeight: 700,
-        color: "var(--accent)",
-        border: "1px solid var(--accent)",
-        borderRadius: "2px",
-        padding: "0 0.2rem",
-        verticalAlign: "middle",
-        flexShrink: 0,
-      }}
-    >
-      K
-    </span>
-  );
-}
-
 export default function InventoryMatrix({
   matrixDrivers,
   allCars,
@@ -135,6 +115,8 @@ export default function InventoryMatrix({
   iracingLabelById,
   kronosCircuitsByTrackId,
   kronosCircuitNames,
+  freeCarIds: freeCarIdsArr = [], // iracing_car_id[] — cars free with subscription
+  freeTrackNames: freeTrackNamesArr = [], // track_name[] — tracks free with subscription
 }) {
   const [subTab, setSubTab] = useState("cars");
   const [loaded, setLoaded] = useState(false);
@@ -221,6 +203,13 @@ export default function InventoryMatrix({
   const kronosCircuitSet = useMemo(
     () => new Set(kronosCircuitNames || []),
     [kronosCircuitNames],
+  );
+
+  // O(1) lookup sets built from serialized prop arrays
+  const freeCarIdSet = useMemo(() => new Set(freeCarIdsArr), [freeCarIdsArr]);
+  const freeTrackNameSet = useMemo(
+    () => new Set(freeTrackNamesArr),
+    [freeTrackNamesArr],
   );
 
   const isKronosTrack = (track) =>
@@ -549,6 +538,9 @@ export default function InventoryMatrix({
 
   return (
     <div>
+      {/* Badge legend — explains K (Kronos) and iR+ (free with subscription) */}
+      <BadgeLegend />
+
       {/* Sub-tab switcher */}
       <div
         style={{
@@ -743,9 +735,14 @@ export default function InventoryMatrix({
                               <tr key={car.iracing_car_id}>
                                 <td style={nameColStyle}>
                                   {car.car_name}
+                                  {/* K badge — car is in Kronos catalog */}
                                   {!!(kronosCarsMap || {})[
                                     car.iracing_car_id
                                   ] && <KBadge />}
+                                  {/* iR+ badge — car is free with iRacing subscription */}
+                                  {freeCarIdSet.has(car.iracing_car_id) && (
+                                    <FreeBadge />
+                                  )}
                                 </td>
                                 <td style={countCellStyle}>
                                   {ownerCount}/{matrixDrivers.length}
@@ -809,6 +806,9 @@ export default function InventoryMatrix({
                                   {!!(kronosCarsMap || {})[
                                     car.iracing_car_id
                                   ] && <KBadge />}
+                                  {freeCarIdSet.has(car.iracing_car_id) && (
+                                    <FreeBadge />
+                                  )}
                                 </td>
                                 <td
                                   style={{ ...countCellStyle, opacity: 0.55 }}
@@ -980,7 +980,12 @@ export default function InventoryMatrix({
                           <tr key={track.track_name}>
                             <td style={nameColStyle}>
                               {track.track_name}
+                              {/* K badge — circuit is in Kronos catalog */}
                               {isKronosTrack(track) && <KBadge />}
+                              {/* iR+ badge — circuit is free with iRacing subscription */}
+                              {freeTrackNameSet.has(track.track_name) && (
+                                <FreeBadge />
+                              )}
                             </td>
                             <td style={countCellStyle}>
                               {ownerCount}/{matrixDrivers.length}
@@ -1038,6 +1043,9 @@ export default function InventoryMatrix({
                                 >
                                   {track.track_name}
                                   {isKronosTrack(track) && <KBadge />}
+                                  {freeTrackNameSet.has(track.track_name) && (
+                                    <FreeBadge />
+                                  )}
                                 </td>
                                 <td
                                   style={{ ...countCellStyle, opacity: 0.55 }}

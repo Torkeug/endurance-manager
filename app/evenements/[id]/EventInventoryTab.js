@@ -1,6 +1,11 @@
 "use client";
 import { useState, useEffect, useMemo, Fragment } from "react";
 import { supabaseBrowser as supabase } from "../../../lib/supabase-browser";
+import {
+  KBadge,
+  FreeBadge,
+  BadgeLegend,
+} from "../../../components/InventoryBadges";
 
 // ── Column widths ─────────────────────────────────────────────────────────────
 const NAME_COL_WIDTH = 220;
@@ -66,26 +71,6 @@ const groupTdStyle = {
   borderBottom: "1px solid var(--border)",
 };
 
-// Compact K badge for Kronos catalog cars
-function KBadge() {
-  return (
-    <span
-      style={{
-        marginLeft: "0.35rem",
-        fontSize: "0.58rem",
-        fontWeight: 700,
-        color: "var(--accent)",
-        border: "1px solid var(--accent)",
-        borderRadius: "2px",
-        padding: "0 0.2rem",
-        verticalAlign: "middle",
-      }}
-    >
-      K
-    </span>
-  );
-}
-
 // Format as "Prénom N." — matches InventoryMatrix format
 function formatDriverName(name) {
   if (!name) return "?";
@@ -110,6 +95,8 @@ export default function EventInventoryTab({
 
   // Sort state: col = "name" | "count", dir = "asc" | "desc"
   const [sort, setSort] = useState({ col: "name", dir: "asc" });
+  // Set of iracing_car_ids that are free with iRacing subscription
+  const [freeCarIds, setFreeCarIds] = useState(new Set());
 
   // Derive unique drivers from event inscriptions (signups with a driver record).
   // Using signups means we include all registered pilots, not just those in a team entry.
@@ -188,7 +175,7 @@ export default function EventInventoryTab({
         return;
       }
 
-      const [ownershipRes, kronosRes] = await Promise.all([
+      const [ownershipRes, kronosRes, freeRes] = await Promise.all([
         // Which drivers own which cars (iRacing sync data)
         supabase
           .from("driver_car_ownership")
@@ -199,6 +186,11 @@ export default function EventInventoryTab({
         supabase
           .from("cars")
           .select("iracing_car_id, class, car_type_label")
+          .in("iracing_car_id", carIds),
+        // iRacing catalog for iR+ badge — only fetch relevant car IDs
+        supabase
+          .from("iracing_cars")
+          .select("iracing_car_id, free_with_subscription")
           .in("iracing_car_id", carIds),
       ]);
 
@@ -217,6 +209,16 @@ export default function EventInventoryTab({
         if (car.iracing_car_id) kronosMap[car.iracing_car_id] = car;
       }
       setKronosCarsMap(kronosMap);
+
+      // Build free car ID set from iRacing catalog response
+      setFreeCarIds(
+        new Set(
+          (freeRes.data || [])
+            .filter((c) => c.free_with_subscription)
+            .map((c) => c.iracing_car_id),
+        ),
+      );
+
       setLoaded(true);
     };
 
@@ -301,151 +303,165 @@ export default function EventInventoryTab({
   const colCount = matrixDrivers.length + 2;
 
   return (
-    <div style={{ overflowX: "auto" }}>
-      <table style={{ borderCollapse: "collapse", tableLayout: "fixed" }}>
-        <colgroup>
-          <col style={{ width: `${NAME_COL_WIDTH}px` }} />
-          <col style={{ width: `${COUNT_COL_WIDTH}px` }} />
-          {matrixDrivers.map((d) => (
-            <col key={d.id} style={{ width: `${DRIVER_COL_WIDTH}px` }} />
-          ))}
-        </colgroup>
+    <div>
+      {/* Badge legend — explains K (Kronos) and iR+ (free with subscription) */}
+      <BadgeLegend />
 
-        <thead>
-          <tr>
-            {/* Voiture — sortable by name */}
-            <th
-              onClick={() => toggleSort("name")}
-              style={{
-                ...nameColStyle,
-                background: "var(--surface-2)",
-                fontWeight: 700,
-                fontSize: "0.7rem",
-                letterSpacing: "0.08em",
-                textTransform: "uppercase",
-                color:
-                  sort.col === "name" ? "var(--accent)" : "var(--text-dim)",
-                zIndex: 2,
-                borderBottom: "2px solid var(--border)",
-                cursor: "pointer",
-                userSelect: "none",
-              }}
-            >
-              Voiture{sortArrow("name")}
-            </th>
-
-            {/* # — sortable by owner count, vertically aligned to match Voiture */}
-            <th
-              onClick={() => toggleSort("count")}
-              style={{
-                background: "var(--surface-2)",
-                borderBottom: "2px solid var(--border)",
-                borderRight: "1px solid var(--border)",
-                width: `${COUNT_COL_WIDTH}px`,
-                fontSize: "0.65rem",
-                fontWeight: 700,
-                color:
-                  sort.col === "count" ? "var(--accent)" : "var(--text-dim)",
-                textAlign: "center",
-                verticalAlign: "bottom",
-                padding: "0.25rem",
-                cursor: "pointer",
-                userSelect: "none",
-              }}
-            >
-              #{sortArrow("count")}
-            </th>
-
-            {/* Driver name headers — vertical, aligned to bottom, adaptive height */}
+      <div style={{ overflowX: "auto" }}>
+        <table style={{ borderCollapse: "collapse", tableLayout: "fixed" }}>
+          <colgroup>
+            <col style={{ width: `${NAME_COL_WIDTH}px` }} />
+            <col style={{ width: `${COUNT_COL_WIDTH}px` }} />
             {matrixDrivers.map((d) => (
+              <col key={d.id} style={{ width: `${DRIVER_COL_WIDTH}px` }} />
+            ))}
+          </colgroup>
+
+          <thead>
+            <tr>
+              {/* Voiture — sortable by name */}
               <th
-                key={d.id}
+                onClick={() => toggleSort("name")}
+                style={{
+                  ...nameColStyle,
+                  background: "var(--surface-2)",
+                  fontWeight: 700,
+                  fontSize: "0.7rem",
+                  letterSpacing: "0.08em",
+                  textTransform: "uppercase",
+                  color:
+                    sort.col === "name" ? "var(--accent)" : "var(--text-dim)",
+                  zIndex: 2,
+                  borderBottom: "2px solid var(--border)",
+                  cursor: "pointer",
+                  userSelect: "none",
+                }}
+              >
+                Voiture{sortArrow("name")}
+              </th>
+
+              {/* # — sortable by owner count, vertically aligned to match Voiture */}
+              <th
+                onClick={() => toggleSort("count")}
                 style={{
                   background: "var(--surface-2)",
                   borderBottom: "2px solid var(--border)",
+                  borderRight: "1px solid var(--border)",
+                  width: `${COUNT_COL_WIDTH}px`,
+                  fontSize: "0.65rem",
+                  fontWeight: 700,
+                  color:
+                    sort.col === "count" ? "var(--accent)" : "var(--text-dim)",
+                  textAlign: "center",
                   verticalAlign: "bottom",
-                  width: `${DRIVER_COL_WIDTH}px`,
-                  boxSizing: "border-box",
-                  overflow: "hidden",
-                  padding: 0,
+                  padding: "0.25rem",
+                  cursor: "pointer",
+                  userSelect: "none",
                 }}
               >
-                <div
+                #{sortArrow("count")}
+              </th>
+
+              {/* Driver name headers — vertical, aligned to bottom, adaptive height */}
+              {matrixDrivers.map((d) => (
+                <th
+                  key={d.id}
                   style={{
-                    display: "flex",
-                    justifyContent: "center",
-                    alignItems: "flex-end",
-                    height: `${hHeight}px`,
-                    paddingBottom: "0.25rem",
+                    background: "var(--surface-2)",
+                    borderBottom: "2px solid var(--border)",
+                    verticalAlign: "bottom",
+                    width: `${DRIVER_COL_WIDTH}px`,
+                    boxSizing: "border-box",
+                    overflow: "hidden",
+                    padding: 0,
                   }}
                 >
-                  <span
+                  <div
                     style={{
-                      writingMode: "vertical-rl",
-                      transform: "rotate(180deg)",
-                      fontSize: "0.68rem",
-                      fontWeight: 700,
-                      color: "var(--text-dim)",
-                      whiteSpace: "nowrap",
+                      display: "flex",
+                      justifyContent: "center",
+                      alignItems: "flex-end",
+                      height: `${hHeight}px`,
+                      paddingBottom: "0.25rem",
                     }}
                   >
-                    {formatDriverName(d.name)}
-                  </span>
-                </div>
-              </th>
-            ))}
-          </tr>
-        </thead>
+                    <span
+                      style={{
+                        writingMode: "vertical-rl",
+                        transform: "rotate(180deg)",
+                        fontSize: "0.68rem",
+                        fontWeight: 700,
+                        color: "var(--text-dim)",
+                        whiteSpace: "nowrap",
+                      }}
+                    >
+                      {formatDriverName(d.name)}
+                    </span>
+                  </div>
+                </th>
+              ))}
+            </tr>
+          </thead>
 
-        <tbody>
-          {groupedCars.map(({ cls, cars }) => (
-            <Fragment key={cls}>
-              <tr>
-                <td colSpan={colCount} style={groupTdStyle}>
-                  {cls}
-                </td>
-              </tr>
-              {cars.map((car) => {
-                const isKronos = !!kronosCarsMap[car.iracing_car_id];
-                const ownerCount = matrixDrivers.filter((d) =>
-                  carOwnershipSets[d.id]?.has(car.iracing_car_id),
-                ).length;
-                return (
-                  <tr key={car.iracing_car_id ?? car.id}>
-                    <td style={nameColStyle}>
-                      {car.name}
-                      {isKronos && <KBadge />}
-                    </td>
-                    <td style={countCellStyle}>
-                      {car.iracing_car_id
-                        ? `${ownerCount}/${matrixDrivers.length}`
-                        : "—"}
-                    </td>
-                    {matrixDrivers.map((d) => (
-                      <td key={d.id} style={cellStyle}>
-                        {car.iracing_car_id &&
-                        carOwnershipSets[d.id]?.has(car.iracing_car_id) ? (
-                          <span
-                            style={{ color: "var(--accent)", fontWeight: 700 }}
-                          >
-                            ✓
-                          </span>
-                        ) : (
-                          <span
-                            style={{ color: "var(--text-dim)", opacity: 0.35 }}
-                          >
-                            —
-                          </span>
-                        )}
+          <tbody>
+            {groupedCars.map(({ cls, cars }) => (
+              <Fragment key={cls}>
+                <tr>
+                  <td colSpan={colCount} style={groupTdStyle}>
+                    {cls}
+                  </td>
+                </tr>
+                {cars.map((car) => {
+                  const isKronos = !!kronosCarsMap[car.iracing_car_id];
+                  const ownerCount = matrixDrivers.filter((d) =>
+                    carOwnershipSets[d.id]?.has(car.iracing_car_id),
+                  ).length;
+                  return (
+                    <tr key={car.iracing_car_id ?? car.id}>
+                      <td style={nameColStyle}>
+                        {car.name}
+                        {/* K badge — car is in Kronos catalog */}
+                        {isKronos && <KBadge />}
+                        {/* iR+ badge — car is free with iRacing subscription */}
+                        {freeCarIds.has(car.iracing_car_id) && <FreeBadge />}
                       </td>
-                    ))}
-                  </tr>
-                );
-              })}
-            </Fragment>
-          ))}
-        </tbody>
-      </table>
+                      <td style={countCellStyle}>
+                        {car.iracing_car_id
+                          ? `${ownerCount}/${matrixDrivers.length}`
+                          : "—"}
+                      </td>
+                      {matrixDrivers.map((d) => (
+                        <td key={d.id} style={cellStyle}>
+                          {car.iracing_car_id &&
+                          carOwnershipSets[d.id]?.has(car.iracing_car_id) ? (
+                            <span
+                              style={{
+                                color: "var(--accent)",
+                                fontWeight: 700,
+                              }}
+                            >
+                              ✓
+                            </span>
+                          ) : (
+                            <span
+                              style={{
+                                color: "var(--text-dim)",
+                                opacity: 0.35,
+                              }}
+                            >
+                              —
+                            </span>
+                          )}
+                        </td>
+                      ))}
+                    </tr>
+                  );
+                })}
+              </Fragment>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }

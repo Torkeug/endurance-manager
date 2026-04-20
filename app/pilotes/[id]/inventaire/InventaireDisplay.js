@@ -1,5 +1,10 @@
 "use client";
 import { useState } from "react";
+import {
+  KronosBadge,
+  FreeSubscriptionBadge,
+  BadgeLegend,
+} from "../../../../components/InventoryBadges";
 
 const CAR_CATEGORY_LABELS = {
   sports_car: "Sports Car",
@@ -94,28 +99,16 @@ function CollapseHeader({
   );
 }
 
-function KronosBadge() {
-  return (
-    <span
-      style={{
-        fontSize: "0.62rem",
-        fontWeight: 700,
-        letterSpacing: "0.08em",
-        textTransform: "uppercase",
-        color: "var(--accent)",
-        border: "1px solid var(--accent)",
-        borderRadius: "3px",
-        padding: "0.1rem 0.35rem",
-        flexShrink: 0,
-      }}
-    >
-      Kronos
-    </span>
-  );
-}
-
 // Renders a single base track row — collapsible with its config list
-function BaseTrackRow({ baseTrack, isKronos, expanded, onToggle, isLast }) {
+// isFree — track is included with iRacing subscription
+function BaseTrackRow({
+  baseTrack,
+  isKronos,
+  isFree,
+  expanded,
+  onToggle,
+  isLast,
+}) {
   return (
     <div>
       {/* Base track header — always collapsible */}
@@ -163,9 +156,11 @@ function BaseTrackRow({ baseTrack, isKronos, expanded, onToggle, isLast }) {
             {baseTrack.count}
           </span>
         </button>
-        {isKronos && (
-          <div style={{ paddingRight: "1rem" }}>
-            <KronosBadge />
+        {/* Kronos and/or iR+ badge — right-aligned in the track row */}
+        {(isKronos || isFree) && (
+          <div style={{ paddingRight: "1rem", display: "flex", gap: "0.3rem" }}>
+            {isKronos && <KronosBadge />}
+            {isFree && <FreeSubscriptionBadge />}
           </div>
         )}
       </div>
@@ -214,12 +209,17 @@ export default function InventaireDisplay({
   kronosCarIdsArr,
   kronosTrackIdsArr,
   kronosCircuitNamesArr,
+  freeCarIdsArr = [], // iracing_car_id[] — cars free with subscription
+  freeTrackNamesArr = [], // track_name[] — tracks free with subscription
 }) {
   // iracing_car_id integers — exact match, no string comparison fragility
   const kronosCarIds = new Set(kronosCarIdsArr);
   // Exact iracing_track_id match + name fallback for unlinked circuits
   const kronosTrackIds = new Set(kronosTrackIdsArr || []);
   const kronosCircuitNames = new Set(kronosCircuitNamesArr || []);
+  // Sets for free content — built from serialized prop arrays
+  const freeCarIds = new Set(freeCarIdsArr);
+  const freeTrackNames = new Set(freeTrackNamesArr);
 
   // All collapsed by default
   const [expandedCarCats, setExpandedCarCats] = useState(new Set());
@@ -245,6 +245,9 @@ export default function InventaireDisplay({
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "2.5rem" }}>
+      {/* Badge legend — explains K (Kronos) and iR+ (free with subscription) */}
+      <BadgeLegend />
+
       {/* ── Cars ─────────────────────────────────────────────────────── */}
       {carData.length > 0 && (
         <section>
@@ -313,6 +316,9 @@ export default function InventaireDisplay({
                                 {kronosCarIds.has(car.iracing_car_id) && (
                                   <KronosBadge />
                                 )}
+                                {freeCarIds.has(car.iracing_car_id) && (
+                                  <FreeSubscriptionBadge />
+                                )}
                               </div>
                             ))}
                         </div>
@@ -358,6 +364,9 @@ export default function InventaireDisplay({
                             </span>
                             {kronosCarIds.has(car.iracing_car_id) && (
                               <KronosBadge />
+                            )}
+                            {freeCarIds.has(car.iracing_car_id) && (
+                              <FreeSubscriptionBadge />
                             )}
                           </div>
                         ))}
@@ -424,6 +433,7 @@ export default function InventaireDisplay({
                             key={baseTrack.track_name}
                             baseTrack={baseTrack}
                             isKronos={isKronos}
+                            isFree={freeTrackNames.has(baseTrack.track_name)}
                             expanded={expandedBaseTracks.has(trackKey)}
                             onToggle={() =>
                               toggle(setExpandedBaseTracks, trackKey)
@@ -462,6 +472,9 @@ export default function InventaireDisplay({
                                   key={baseTrack.track_name}
                                   baseTrack={baseTrack}
                                   isKronos={isKronos}
+                                  isFree={freeTrackNames.has(
+                                    baseTrack.track_name,
+                                  )}
                                   expanded={expandedBaseTracks.has(trackKey)}
                                   onToggle={() =>
                                     toggle(setExpandedBaseTracks, trackKey)

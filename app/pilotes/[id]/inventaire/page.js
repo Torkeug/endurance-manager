@@ -45,8 +45,14 @@ export default async function InventairePage({ params }) {
   // Fetch iRacing catalog labels — used for non-Kronos car grouping in inventory
   const { data: iracingCatalog } = await supabase
     .from("iracing_cars")
-    .select("iracing_car_id, car_type_label")
+    .select("iracing_car_id, car_type_label, free_with_subscription")
     .not("car_type_label", "is", null);
+
+  // Fetch only free tracks — minimal payload, matched by track_name in display
+  const { data: iracingTracksFree } = await supabase
+    .from("iracing_tracks")
+    .select("track_name")
+    .eq("free_with_subscription", true);
 
   // Kronos track IDs for exact badge matching
   const kronosTrackIds = new Set(
@@ -70,6 +76,13 @@ export default async function InventairePage({ params }) {
   for (const car of iracingCatalog || []) {
     iracingLabelById.set(car.iracing_car_id, car.car_type_label);
   }
+
+  // Build arrays of free content IDs/names — serialized for client component props
+  const freeCarIdsArr = (iracingCatalog || [])
+    .filter((c) => c.free_with_subscription)
+    .map((c) => c.iracing_car_id);
+
+  const freeTrackNamesArr = (iracingTracksFree || []).map((t) => t.track_name);
 
   // ── Car type priority lookup ──────────────────────────────────────────────
   // iRacing's car class system is series-based and unreliable for grouping.
@@ -283,10 +296,11 @@ export default async function InventairePage({ params }) {
         <InventaireDisplay
           carData={carData}
           trackData={trackData}
-          // Pass iracing_car_ids for exact Kronos badge matching
           kronosCarIdsArr={[...kronosCarsById.keys()]}
           kronosTrackIdsArr={[...kronosTrackIds]}
           kronosCircuitNamesArr={kronosCircuitNamesFallback}
+          freeCarIdsArr={freeCarIdsArr}
+          freeTrackNamesArr={freeTrackNamesArr}
         />
       )}
     </div>

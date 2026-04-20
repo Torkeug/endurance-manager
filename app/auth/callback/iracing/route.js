@@ -33,6 +33,8 @@ async function buildCarLookup(token) {
     car_name: car.car_name,
     car_categories: car.categories || [],
     car_types: (car.car_types || []).map((t) => t.car_type),
+    // Persist iRacing's subscription flag — false if not provided
+    free_with_subscription: car.free_with_subscription ?? false,
   }));
   // Batch in groups of 100 to avoid payload size limits
   for (let i = 0; i < carRows.length; i += 100) {
@@ -63,6 +65,8 @@ async function buildTrackLookup(token) {
     track_name: track.track_name,
     config_name: track.config_name || null,
     track_category: track.category || null,
+    // Persist iRacing's subscription flag — false if not provided
+    free_with_subscription: track.free_with_subscription ?? false,
   }));
   for (let i = 0; i < trackRows.length; i += 100) {
     await supabase

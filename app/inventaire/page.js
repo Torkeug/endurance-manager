@@ -19,6 +19,7 @@ export default async function InventairePage() {
     { data: iracingCars },
     { data: allCarOwnership },
     { data: allTrackOwnership },
+    { data: iracingTracksFree }, // track subscription flags
   ] = await Promise.all([
     supabase.from("circuits").select("*, iracing_track_id").order("name"),
     supabase.from("cars").select("*").order("class").order("name"),
@@ -26,9 +27,12 @@ export default async function InventairePage() {
       .from("drivers")
       .select("id, name, email, role, approved, refused, iracing_synced_at")
       .order("name"),
+    // Include free_with_subscription for car badge rendering
     supabase
       .from("iracing_cars")
-      .select("iracing_car_id, car_name, car_types, car_type_label")
+      .select(
+        "iracing_car_id, car_name, car_types, car_type_label, free_with_subscription",
+      )
       .order("car_name"),
     supabase
       .from("driver_car_ownership")
@@ -36,6 +40,11 @@ export default async function InventairePage() {
     supabase
       .from("driver_track_ownership")
       .select("driver_id, track_name, track_category"),
+    // Only fetch free tracks — used to build the freeTrackNames set
+    supabase
+      .from("iracing_tracks")
+      .select("track_name, free_with_subscription")
+      .eq("free_with_subscription", true),
   ]);
 
   // Only drivers with a completed iRacing sync appear as matrix columns
@@ -109,6 +118,14 @@ export default async function InventairePage() {
       iracingLabelById[car.iracing_car_id] = car.car_type_label;
   }
 
+  // Set of car IDs free with iRacing subscription — serialized as array for client prop
+  const freeCarIds = (iracingCars || [])
+    .filter((c) => c.free_with_subscription)
+    .map((c) => c.iracing_car_id);
+
+  // Set of track names free with iRacing subscription — serialized as array for client prop
+  const freeTrackNames = (iracingTracksFree || []).map((t) => t.track_name);
+
   // Kronos circuits map: iracing_track_id → circuit (for exact badge matching)
   const kronosCircuitsByTrackId = {};
   for (const circuit of circuits || []) {
@@ -150,6 +167,8 @@ export default async function InventairePage() {
         iracingLabelById={iracingLabelById}
         kronosCircuitsByTrackId={kronosCircuitsByTrackId}
         kronosCircuitNames={kronosCircuitNames}
+        freeCarIds={freeCarIds}
+        freeTrackNames={freeTrackNames}
       />
     </div>
   );
