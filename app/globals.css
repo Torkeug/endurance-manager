@@ -364,3 +364,8 @@ tbody td {
     display: none;
   }
 }
+
+/* Inscriptions table — disable per-row hover so rowSpan groups don't flicker */
+.inscriptions-table tbody tr:hover {
+  background: transparent;
+}

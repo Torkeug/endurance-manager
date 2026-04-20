@@ -98,6 +98,9 @@ export default function EventPageTabs({
 }) {
   const [activeTab, setActiveTab] = useState("inscriptions");
 
+  // Tracks which driver group is hovered — shared across all rows in the group
+  const [hoveredGroup, setHoveredGroup] = useState(null);
+
   // Persist tab state per event — read in useEffect to avoid hydration mismatch.
   useEffect(() => {
     const saved = localStorage.getItem(`event-tab-${event.id}`);
@@ -252,7 +255,7 @@ export default function EventPageTabs({
               </div>
             </div>
           ) : (
-            <div className="table-wrap">
+            <div className="table-wrap inscriptions-table">
               <table>
                 <thead>
                   <tr>
@@ -293,126 +296,67 @@ export default function EventPageTabs({
                       ),
                     );
 
-                    return grouped.map(({ key, signups: group }) => {
-                      const first = group[0];
-                      const driverName =
-                        (event.archived ? first.driver_name_snapshot : null) ||
-                        first.drivers?.name ||
-                        "—";
-                      const multi = group.length > 1;
+                    return grouped.flatMap(
+                      ({ key, signups: group }, groupIdx) => {
+                        const first = group[0];
+                        const driverName =
+                          (event.archived
+                            ? first.driver_name_snapshot
+                            : null) ||
+                          first.drivers?.name ||
+                          "—";
+                        // Stronger top border separates driver groups visually
+                        const groupBorder =
+                          groupIdx > 0 ? "2px solid var(--border)" : undefined;
 
-                      return (
-                        <tr key={key}>
-                          {/* Pilote — shown once per driver */}
-                          <td style={{ fontWeight: 600 }}>{driverName}</td>
-                          {/* iRating — shown once per driver */}
-                          <td
-                            className="mono"
-                            style={{
-                              color: "var(--accent)",
-                              fontSize: "0.85rem",
-                            }}
-                          >
-                            {first.drivers?.irating ?? "—"}
-                          </td>
-                          {/* Per-signup columns — stacked when driver has multiple signups */}
-                          {/* Équipe, Préférences, Créneaux, Notes —
-                              stacked in bordered blocks when driver has multiple signups */}
-                          {multi ? (
-                            <td colSpan={4} style={{ padding: "0.5rem" }}>
-                              <div
+                        return group.map((s, rowIdx) => {
+                          const isFirstRow = rowIdx === 0;
+                          // Within a group, suppress the border between rows so they read as one block.
+                          // The group separator (groupBorder) is applied on the first row's cells only.
+                          const cellBorderTop = isFirstRow
+                            ? groupBorder
+                            : "none";
+
+                          return (
+                            <tr
+                              key={s.id}
+                              onMouseEnter={() => setHoveredGroup(key)}
+                              onMouseLeave={() => setHoveredGroup(null)}
+                              style={{
+                                background:
+                                  hoveredGroup === key
+                                    ? "var(--surface-2)"
+                                    : "transparent",
+                              }}
+                            >
+                              {/* Pilote — content only in first row, empty cell otherwise */}
+                              <td
                                 style={{
-                                  display: "flex",
-                                  flexDirection: "column",
-                                  gap: "0.5rem",
+                                  fontWeight: 600,
+                                  borderTop: cellBorderTop,
                                 }}
                               >
-                                {group.map((s) => (
-                                  <div
-                                    key={s.id}
-                                    style={{
-                                      display: "grid",
-                                      gridTemplateColumns: "1fr 1fr 1fr 1fr",
-                                      gap: "0.5rem",
-                                      padding: "0.5rem 0.75rem",
-                                      background: "var(--surface-2)",
-                                      border: "1px solid var(--border)",
-                                      borderRadius: "3px",
-                                      fontSize: "0.85rem",
-                                    }}
-                                  >
-                                    <div>
-                                      <CrewPill
-                                        name={s.team_entries?.crew_name}
-                                        color={
-                                          crewColorsMap[
-                                            s.team_entries?.crew_name
-                                          ]
-                                        }
-                                      />
-                                    </div>
-                                    <div style={{ color: "var(--text-dim)" }}>
-                                      {formatPreferences(s)}
-                                    </div>
-                                    <div>
-                                      {(s.preferred_start_time_ids || [])
-                                        .length > 0 ? (
-                                        (s.preferred_start_time_ids || [])
-                                          .map((stId) =>
-                                            (
-                                              event.event_start_times || []
-                                            ).find((st) => st.id === stId),
-                                          )
-                                          .filter(Boolean)
-                                          .map((st) => (
-                                            <div key={st.id}>
-                                              <div style={{ fontWeight: 600 }}>
-                                                {st.label}
-                                              </div>
-                                              <div
-                                                className="mono"
-                                                style={{
-                                                  fontSize: "0.78rem",
-                                                  color: "var(--accent)",
-                                                }}
-                                              >
-                                                Départ à{" "}
-                                                {formatTimeInZone(
-                                                  st.irl_start,
-                                                  tz,
-                                                )}
-                                              </div>
-                                            </div>
-                                          ))
-                                      ) : (
-                                        <span
-                                          style={{ color: "var(--text-dim)" }}
-                                        >
-                                          —
-                                        </span>
-                                      )}
-                                    </div>
-                                    <div
-                                      style={{
-                                        color: "var(--text-dim)",
-                                        maxWidth: "160px",
-                                      }}
-                                    >
-                                      {s.notes || "—"}
-                                    </div>
-                                  </div>
-                                ))}
-                              </div>
-                            </td>
-                          ) : (
-                            <>
-                              <td>
+                                {isFirstRow ? driverName : ""}
+                              </td>
+                              {/* iRating — content only in first row */}
+                              <td
+                                className="mono"
+                                style={{
+                                  color: "var(--accent)",
+                                  fontSize: "0.85rem",
+                                  borderTop: cellBorderTop,
+                                }}
+                              >
+                                {isFirstRow
+                                  ? (first.drivers?.irating ?? "—")
+                                  : ""}
+                              </td>
+                              {/* Per-signup columns — rendered on every row */}
+                              <td style={{ borderTop: cellBorderTop }}>
                                 <CrewPill
-                                  name={group[0].team_entries?.crew_name}
+                                  name={s.team_entries?.crew_name}
                                   color={
-                                    crewColorsMap[
-                                      group[0].team_entries?.crew_name
-                                    ]
+                                    crewColorsMap[s.team_entries?.crew_name]
                                   }
                                 />
                               </td>
@@ -421,14 +365,20 @@ export default function EventPageTabs({
                                   color: "var(--text-dim)",
                                   fontSize: "0.85rem",
                                   maxWidth: "200px",
+                                  borderTop: cellBorderTop,
                                 }}
                               >
-                                {formatPreferences(group[0])}
+                                {formatPreferences(s)}
                               </td>
-                              <td style={{ fontSize: "0.85rem" }}>
-                                {(group[0].preferred_start_time_ids || [])
-                                  .length > 0 ? (
-                                  (group[0].preferred_start_time_ids || [])
+                              <td
+                                style={{
+                                  fontSize: "0.85rem",
+                                  borderTop: cellBorderTop,
+                                }}
+                              >
+                                {(s.preferred_start_time_ids || []).length >
+                                0 ? (
+                                  (s.preferred_start_time_ids || [])
                                     .map((stId) =>
                                       (event.event_start_times || []).find(
                                         (st) => st.id === stId,
@@ -463,28 +413,31 @@ export default function EventPageTabs({
                                   color: "var(--text-dim)",
                                   fontSize: "0.85rem",
                                   maxWidth: "160px",
+                                  borderTop: cellBorderTop,
                                 }}
                               >
-                                {group[0].notes || "—"}
+                                {s.notes || "—"}
                               </td>
-                            </>
-                          )}
-                          <td>
-                            {!event.archived &&
-                              (admin ||
-                                currentDriver?.id === first.drivers?.id) &&
-                              first.drivers?.id && (
-                                <Link
-                                  href={`/evenements/${event.id}/inscription?driver=${first.drivers.id}`}
-                                  className="btn btn-secondary btn-sm"
-                                >
-                                  {isExternal === true ? "Voir" : "Gérer"}
-                                </Link>
-                              )}
-                          </td>
-                        </tr>
-                      );
-                    });
+                              {/* Gérer — content only in first row */}
+                              <td style={{ borderTop: cellBorderTop }}>
+                                {isFirstRow &&
+                                  !event.archived &&
+                                  (admin ||
+                                    currentDriver?.id === first.drivers?.id) &&
+                                  first.drivers?.id && (
+                                    <Link
+                                      href={`/evenements/${event.id}/inscription?driver=${first.drivers.id}`}
+                                      className="btn btn-secondary btn-sm"
+                                    >
+                                      {isExternal === true ? "Voir" : "Gérer"}
+                                    </Link>
+                                  )}
+                              </td>
+                            </tr>
+                          );
+                        });
+                      },
+                    );
                   })()}
                 </tbody>
               </table>
