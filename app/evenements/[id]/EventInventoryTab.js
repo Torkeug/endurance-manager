@@ -325,7 +325,7 @@ export default function EventInventoryTab({
       {/* Badge legend — explains K (Kronos) and iR+ (free with subscription) */}
       <BadgeLegend />
 
-      <div style={{ overflowX: "auto" }}>
+      <div style={{ overflowX: "auto", overflowY: "auto", maxHeight: "70vh" }}>
         <table style={{ borderCollapse: "collapse", tableLayout: "fixed" }}>
           <colgroup>
             <col style={{ width: `${NAME_COL_WIDTH}px` }} />

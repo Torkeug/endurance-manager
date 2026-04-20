@@ -700,7 +700,7 @@ export default function InventoryMatrix({
           )}
 
           {carMatrixRows.length > 0 && (
-            <div style={{ overflowX: "auto" }}>
+            <div style={{ overflowX: "auto", overflowY: "auto", maxHeight: "70vh" }}>
               <table
                 style={{ borderCollapse: "collapse", tableLayout: "fixed" }}
               >
@@ -1032,7 +1032,7 @@ export default function InventoryMatrix({
           )}
 
           {trackMatrixRows.length > 0 && (
-            <div style={{ overflowX: "auto" }}>
+            <div style={{ overflowX: "auto", overflowY: "auto", maxHeight: "70vh" }}>
               <table
                 style={{ borderCollapse: "collapse", tableLayout: "fixed" }}
               >
