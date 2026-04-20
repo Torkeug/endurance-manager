@@ -1,6 +1,6 @@
 "use client";
 import { useState } from "react";
-import CrewNamesManager from "./CrewNamesManager";
+import EquipagesManager from "./EquipagesManager";
 import CarsManager from "./CarsManager";
 import ClassesManager from "./ClassesManager";
 import CircuitsManager from "./CircuitsManager";
@@ -107,7 +107,7 @@ export default function AdminTabs({
         />
       )}
       {activeTab === "equipages" && (
-        <CrewNamesManager initialCrewNames={crewNames} />
+        <EquipagesManager initialCrewNames={crewNames} />
       )}
       {activeTab === "voitures" && (
         <CarsManager initialCars={cars} iracingCars={iracingCars} />
