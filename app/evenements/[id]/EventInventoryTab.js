@@ -26,7 +26,7 @@ const nameColStyle = {
   background: "var(--surface)",
   zIndex: 1,
   padding: "0.35rem 0.75rem",
-  borderRight: "1px solid var(--border)",
+  boxShadow: "inset -1px 0 0 var(--border)",
   borderBottom: "1px solid var(--border)",
   fontSize: "0.8rem",
   width: `${NAME_COL_WIDTH}px`,
@@ -45,7 +45,7 @@ const countCellStyle = {
   padding: "0.25rem 0.4rem",
   textAlign: "center",
   borderBottom: "1px solid var(--border)",
-  borderRight: "1px solid var(--border)",
+  boxShadow: "inset -1px 0 0 var(--border)",
   width: `${COUNT_COL_WIDTH}px`,
   boxSizing: "border-box",
   fontSize: "0.72rem",
@@ -88,7 +88,7 @@ const groupCountTdStyle = {
   left: `${NAME_COL_WIDTH}px`,
   background: "var(--surface-2)",
   borderBottom: "1px solid var(--border)",
-  borderRight: "1px solid var(--border)",
+  boxShadow: "inset -1px 0 0 var(--border)",
 };
 
 // Format as "Prénom N." — matches InventoryMatrix format
@@ -336,7 +336,7 @@ export default function EventInventoryTab({
           </colgroup>
 
           {/* thead sticky top — keeps headers visible during vertical scroll */}
-          <thead style={{ position: "sticky", top: 0, zIndex: 2 }}>
+          <thead>
             <tr>
               {/* Voiture — sortable by name */}
               {/* Name header — sticky top+left corner */}
@@ -364,7 +364,7 @@ export default function EventInventoryTab({
               </th>
 
               {/* # — sortable by owner count, vertically aligned to match Voiture */}
-              {/* Count header — sticky top+left, offset by name col width */}
+              {/* Count header — sticky top+left, inset shadow for right border */}
               <th
                 onClick={() => toggleSort("count")}
                 style={{
@@ -373,7 +373,7 @@ export default function EventInventoryTab({
                   left: `${NAME_COL_WIDTH}px`,
                   background: "var(--surface-2)",
                   borderBottom: "2px solid var(--border)",
-                  borderRight: "1px solid var(--border)",
+                  boxShadow: "inset -1px 0 0 var(--border)",
                   width: `${COUNT_COL_WIDTH}px`,
                   fontSize: "0.65rem",
                   fontWeight: 700,
@@ -395,6 +395,9 @@ export default function EventInventoryTab({
                 <th
                   key={d.id}
                   style={{
+                    position: "sticky",
+                    top: 0,
+                    zIndex: 2,
                     background:
                       d.id === currentDriverId
                         ? "var(--accent-dim)"

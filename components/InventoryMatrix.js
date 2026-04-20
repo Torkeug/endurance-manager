@@ -75,7 +75,8 @@ const nameColStyle = {
   background: "var(--surface)",
   zIndex: 1,
   padding: "0.35rem 0.75rem",
-  borderRight: "1px solid var(--border)",
+  // inset shadow instead of borderRight — borderRight gets clipped by scroll container on sticky cells
+  boxShadow: "inset -1px 0 0 var(--border)",
   borderBottom: "1px solid var(--border)",
   fontSize: "0.8rem",
   width: `${NAME_COL_WIDTH}px`,
@@ -93,7 +94,8 @@ const countCellStyle = {
   padding: "0.25rem 0.4rem",
   textAlign: "center",
   borderBottom: "1px solid var(--border)",
-  borderRight: "1px solid var(--border)",
+  // inset shadow instead of borderRight — same sticky clipping fix
+  boxShadow: "inset -1px 0 0 var(--border)",
   width: `${COUNT_COL_WIDTH}px`,
   boxSizing: "border-box",
   fontSize: "0.72rem",
@@ -514,17 +516,19 @@ export default function InventoryMatrix({
     padding: "0.4rem 0.4rem",
     background: indent === 0 ? "var(--surface-2)" : "var(--surface)",
     borderBottom: "1px solid var(--border)",
-    borderRight: "1px solid var(--border)",
+    boxShadow: "inset -1px 0 0 var(--border)",
     opacity: muted ? 0.7 : 1,
   });
 
   // Shared vertical driver name <th> — used in both cars and tracks matrices.
   // Adaptive height based on the longest name so no text gets clipped.
-  // Vertical driver name header — sticky top; accent tint if this is the current driver
+  // Driver name header — sticky top only; accent tint for current driver
   const driverTh = (d) => (
     <th
       key={d.id}
       style={{
+        position: "sticky",
+        top: 0,
         background:
           d.id === currentDriverId ? "var(--accent-dim)" : "var(--surface-2)",
         borderBottom: "2px solid var(--border)",
@@ -533,6 +537,7 @@ export default function InventoryMatrix({
         boxSizing: "border-box",
         overflow: "hidden",
         padding: 0,
+        zIndex: 2,
       }}
     >
       <div
@@ -711,9 +716,9 @@ export default function InventoryMatrix({
                   ))}
                 </colgroup>
                 {/* thead sticky top — keeps headers visible during vertical scroll */}
-                <thead style={{ position: "sticky", top: 0, zIndex: 2 }}>
+                <thead>
                   <tr>
-                    {/* Name header — sticky top+left corner */}
+                    {/* Name header — sticky top+left corner, zIndex 3 to sit above both axes */}
                     <th
                       onClick={() => toggleSort(carSort, "name", setCarSort)}
                       style={{
@@ -730,7 +735,7 @@ export default function InventoryMatrix({
                           carSort.col === "name"
                             ? "var(--accent)"
                             : "var(--text-dim)",
-                        zIndex: 3, // above sticky-left cells and sticky-top driver headers
+                        zIndex: 3,
                         borderBottom: "2px solid var(--border)",
                         cursor: "pointer",
                         userSelect: "none",
@@ -739,7 +744,7 @@ export default function InventoryMatrix({
                     >
                       Voiture{sortArrow(carSort, "name")}
                     </th>
-                    {/* Count header — sticky top+left, offset by name col width */}
+                    {/* Count header — sticky top+left, inset shadow for right border */}
                     <th
                       onClick={() => toggleSort(carSort, "count", setCarSort)}
                       style={{
@@ -748,7 +753,7 @@ export default function InventoryMatrix({
                         left: `${NAME_COL_WIDTH}px`,
                         background: "var(--surface-2)",
                         borderBottom: "2px solid var(--border)",
-                        borderRight: "1px solid var(--border)",
+                        boxShadow: "inset -1px 0 0 var(--border)",
                         width: `${COUNT_COL_WIDTH}px`,
                         fontSize: "0.65rem",
                         fontWeight: 700,
@@ -1042,7 +1047,7 @@ export default function InventoryMatrix({
                     />
                   ))}
                 </colgroup>
-                <thead style={{ position: "sticky", top: 0, zIndex: 2 }}>
+                <thead>
                   <tr>
                     {/* Circuit header — sticky top+left corner */}
                     <th
@@ -1072,7 +1077,7 @@ export default function InventoryMatrix({
                     >
                       Circuit{sortArrow(trackSort, "name")}
                     </th>
-                    {/* Count header — sticky top+left, offset by name col width */}
+                    {/* Count header — sticky top+left, inset shadow for right border */}
                     <th
                       onClick={() =>
                         toggleSort(trackSort, "count", setTrackSort)
@@ -1083,7 +1088,7 @@ export default function InventoryMatrix({
                         left: `${NAME_COL_WIDTH}px`,
                         background: "var(--surface-2)",
                         borderBottom: "2px solid var(--border)",
-                        borderRight: "1px solid var(--border)",
+                        boxShadow: "inset -1px 0 0 var(--border)",
                         width: `${COUNT_COL_WIDTH}px`,
                         fontSize: "0.65rem",
                         fontWeight: 700,
