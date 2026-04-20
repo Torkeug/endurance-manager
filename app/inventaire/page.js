@@ -176,6 +176,16 @@ export default async function InventairePage({ searchParams }) {
             Aperçu des voitures et circuits possédés par les pilotes
           </p>
         </div>
+        {/* Sync button — only shown when current driver has a linked iRacing account */}
+        {!!(drivers || []).find((d) => d.id === currentDriver?.id)
+          ?.iracing_id && (
+          <a
+            href="/auth/iracing?mode=driver&returnTo=/inventaire"
+            className="btn btn-secondary btn-sm"
+          >
+            🔄 Mettre à jour mon inventaire
+          </a>
+        )}
       </div>
 
       <InventoryMatrix

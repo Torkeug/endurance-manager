@@ -132,7 +132,6 @@ export default function InventoryMatrix({
   freeCarIds: freeCarIdsArr = [],
   freeTrackNames: freeTrackNamesArr = [],
   currentDriverId = null,
-  currentDriverHasIracingId = false, // shows sync button when true
 }) {
   const [subTab, setSubTab] = useState("cars");
   const [loaded, setLoaded] = useState(false);
@@ -568,24 +567,6 @@ export default function InventoryMatrix({
 
   return (
     <div>
-      {/* Sync button — only shown when the current user has a linked iRacing account */}
-      {currentDriverId && currentDriverHasIracingId && (
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "flex-end",
-            marginBottom: "1rem",
-          }}
-        >
-          <a
-            href={`/auth/iracing?mode=driver&returnTo=/inventaire`}
-            className="btn btn-secondary btn-sm"
-          >
-            🔄 Mettre à jour mon inventaire
-          </a>
-        </div>
-      )}
-
       {/* Sub-tab switcher */}
       <div
         style={{
