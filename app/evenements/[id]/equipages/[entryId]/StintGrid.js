@@ -410,6 +410,95 @@ function calcSkipLastStintTarget(
   return { savingsPerLap, targetConsumption, hasWarning };
 }
 
+// ─── Completed stint detection ───────────────────────────────────────────────
+// A stint is completed if stamped via Race Mode (irl_end_actual),
+// OR its calculated end time has already passed.
+
+function isStintCompleted(calcStint) {
+  if (calcStint.irl_end_actual) return true;
+  if (calcStint._irlEnd && calcStint._irlEnd < new Date()) return true;
+  return false;
+}
+
+// ─── Extract and merge actual performance from completed stints ──────────────
+// Derives actual lap time and fuel per lap from completed stints, grouped by
+// driver and condition (dry/wet/night_dry/night_wet).
+// Returns a merged driverPerf map where actuals override planned data.
+
+function extractAndMergeActualPerf(completedCalcStints, driverPerf) {
+  // Build readings: driverId → condition → [{ lapTime, fuel }]
+  const actuals = {};
+
+  for (const stint of completedCalcStints) {
+    if (!stint.driver_id || !stint.irl_start) continue;
+
+    // Use actual end if stamped, otherwise the calculated planned end
+    const actualEnd = stint.irl_end_actual
+      ? new Date(stint.irl_end_actual)
+      : stint._irlEnd;
+    if (!actualEnd) continue;
+
+    const actualDurationSec = (actualEnd - new Date(stint.irl_start)) / 1000;
+    // Prefer laps_planned (confirmed by user); fall back to calculated laps
+    const laps = stint.laps_planned || stint._laps;
+    if (!laps || laps === 0) continue;
+
+    const actualLapTime = actualDurationSec / laps;
+    // fuel_used_calc is persisted by StintGrid's persist useEffect
+    const actualFuelPerLap =
+      stint.fuel_used_calc != null ? stint.fuel_used_calc / laps : null;
+
+    const isNight = stint._phase === "🌑";
+    const condition = stint.rain
+      ? isNight
+        ? "night_wet"
+        : "wet"
+      : isNight
+        ? "night_dry"
+        : "dry";
+
+    if (!actuals[stint.driver_id]) actuals[stint.driver_id] = {};
+    if (!actuals[stint.driver_id][condition])
+      actuals[stint.driver_id][condition] = [];
+    actuals[stint.driver_id][condition].push({
+      lapTime: actualLapTime,
+      fuel: actualFuelPerLap,
+    });
+  }
+
+  // Deep-copy driverPerf so we don't mutate the original
+  const merged = Object.fromEntries(
+    Object.entries(driverPerf).map(([id, perf]) => [id, { ...perf }]),
+  );
+
+  // Map condition keys to driver_performance field names
+  const fieldMap = {
+    dry: { lap: "lap_time_dry", fuel: "fuel_dry" },
+    wet: { lap: "lap_time_wet", fuel: "fuel_wet" },
+    night_dry: { lap: "lap_time_night_dry", fuel: "fuel_night_dry" },
+    night_wet: { lap: "lap_time_night_wet", fuel: "fuel_night_wet" },
+  };
+
+  for (const [driverId, conditions] of Object.entries(actuals)) {
+    if (!merged[driverId]) merged[driverId] = {};
+    for (const [condition, readings] of Object.entries(conditions)) {
+      const avgLapTime =
+        readings.reduce((s, r) => s + r.lapTime, 0) / readings.length;
+      const fuelReadings = readings.filter((r) => r.fuel !== null);
+      const avgFuel =
+        fuelReadings.length > 0
+          ? fuelReadings.reduce((s, r) => s + r.fuel, 0) / fuelReadings.length
+          : null;
+
+      const fields = fieldMap[condition];
+      merged[driverId][fields.lap] = avgLapTime;
+      if (avgFuel !== null) merged[driverId][fields.fuel] = avgFuel;
+    }
+  }
+
+  return merged;
+}
+
 // ─── Auto-generation ────────────────────────────────────────────────────────
 
 function estimateStintCount(teamEntry, driverPerf, assignedDrivers) {
@@ -450,6 +539,251 @@ function hasConflict(calc, otherStints) {
   return null;
 }
 
+// ─── Recalc preview modal ────────────────────────────────────────────────────
+
+function RecalcModal({ diffs, raceEndDiff, onConfirm, onCancel, saving }) {
+  const hasChanges = diffs.some((d) => d.newLaps !== d.oldLaps);
+
+  return (
+    <div
+      style={{
+        position: "fixed",
+        inset: 0,
+        background: "rgba(0,0,0,0.75)",
+        zIndex: 1000,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        padding: "1rem",
+      }}
+    >
+      <div
+        style={{
+          background: "var(--surface)",
+          border: "1px solid var(--border)",
+          borderRadius: "6px",
+          padding: "1.5rem",
+          maxWidth: "560px",
+          width: "100%",
+          maxHeight: "80vh",
+          overflowY: "auto",
+        }}
+      >
+        {/* Header */}
+        <div style={{ marginBottom: "1.25rem" }}>
+          <h3
+            style={{
+              fontFamily: "var(--font-rajdhani), sans-serif",
+              letterSpacing: "0.04em",
+              marginBottom: "0.25rem",
+            }}
+          >
+            Révision de stratégie
+          </h3>
+          <p style={{ fontSize: "0.82rem", color: "var(--text-dim)" }}>
+            Basée sur les données réelles des relais complétés. Seuls les relais
+            restants sont modifiés.
+          </p>
+        </div>
+
+        {!hasChanges ? (
+          <div
+            style={{
+              color: "var(--text-dim)",
+              fontSize: "0.85rem",
+              marginBottom: "1.25rem",
+              padding: "0.75rem",
+              background: "var(--surface-2)",
+              borderRadius: "3px",
+            }}
+          >
+            ✓ Aucun changement — la stratégie actuelle correspond aux données
+            réelles.
+          </div>
+        ) : (
+          <div style={{ marginBottom: "1.25rem" }}>
+            {/* Diff table */}
+            <table
+              style={{
+                width: "100%",
+                borderCollapse: "collapse",
+                fontSize: "0.82rem",
+              }}
+            >
+              <thead>
+                <tr>
+                  {["#", "Pilote", "Actuel", "Révisé", "Écart"].map((h) => (
+                    <th
+                      key={h}
+                      style={{
+                        padding: "0.4rem 0.5rem",
+                        background: "var(--surface-2)",
+                        color: "var(--text-dim)",
+                        fontSize: "0.68rem",
+                        fontWeight: 700,
+                        letterSpacing: "0.06em",
+                        textTransform: "uppercase",
+                        textAlign: "left",
+                        borderBottom: "2px solid var(--border)",
+                        whiteSpace: "nowrap",
+                      }}
+                    >
+                      {h}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {diffs.map((d) => {
+                  const diff =
+                    d.newLaps != null && d.oldLaps != null
+                      ? d.newLaps - d.oldLaps
+                      : null;
+                  const changed = diff !== null && diff !== 0;
+                  return (
+                    <tr
+                      key={d.stintId}
+                      style={{
+                        background: changed
+                          ? diff > 0
+                            ? "rgba(46,180,96,0.06)"
+                            : "rgba(224,85,85,0.06)"
+                          : "transparent",
+                        borderBottom: "1px solid var(--border)",
+                      }}
+                    >
+                      <td
+                        style={{
+                          padding: "0.4rem 0.5rem",
+                          fontFamily: "var(--font-mono), monospace",
+                          color: "var(--text-dim)",
+                          fontSize: "0.78rem",
+                        }}
+                      >
+                        {d.stintNumber}
+                      </td>
+                      <td style={{ padding: "0.4rem 0.5rem", fontWeight: 600 }}>
+                        {d.driverName}
+                      </td>
+                      <td
+                        style={{
+                          padding: "0.4rem 0.5rem",
+                          fontFamily: "var(--font-mono), monospace",
+                          color: "var(--text-dim)",
+                        }}
+                      >
+                        {d.oldLaps ?? "—"}
+                      </td>
+                      <td
+                        style={{
+                          padding: "0.4rem 0.5rem",
+                          fontFamily: "var(--font-mono), monospace",
+                          fontWeight: changed ? 700 : 400,
+                          color: changed
+                            ? diff > 0
+                              ? "#2eb460"
+                              : "var(--danger)"
+                            : "var(--text)",
+                        }}
+                      >
+                        {d.newLaps ?? "—"}
+                      </td>
+                      <td
+                        style={{
+                          padding: "0.4rem 0.5rem",
+                          fontFamily: "var(--font-mono), monospace",
+                          fontWeight: 700,
+                          color: changed
+                            ? diff > 0
+                              ? "#2eb460"
+                              : "var(--danger)"
+                            : "var(--text-dim)",
+                        }}
+                      >
+                        {diff === null
+                          ? "—"
+                          : diff === 0
+                            ? "—"
+                            : diff > 0
+                              ? `+${diff}`
+                              : `${diff}`}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+
+            {/* Race end diff */}
+            {raceEndDiff && (
+              <div
+                style={{
+                  marginTop: "0.75rem",
+                  padding: "0.5rem 0.75rem",
+                  background: "var(--surface-2)",
+                  borderRadius: "3px",
+                  fontSize: "0.82rem",
+                  display: "flex",
+                  gap: "0.75rem",
+                  flexWrap: "wrap",
+                  alignItems: "center",
+                }}
+              >
+                <span style={{ color: "var(--text-dim)" }}>Fin prévue :</span>
+                <span
+                  className="mono"
+                  style={{
+                    color: "var(--text-dim)",
+                    textDecoration: "line-through",
+                  }}
+                >
+                  {raceEndDiff.old}
+                </span>
+                <span style={{ color: "var(--text-dim)" }}>→</span>
+                <span
+                  className="mono"
+                  style={{
+                    color: raceEndDiff.improved ? "#2eb460" : "var(--danger)",
+                    fontWeight: 700,
+                  }}
+                >
+                  {raceEndDiff.new}
+                </span>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Actions */}
+        <div
+          style={{
+            display: "flex",
+            gap: "0.75rem",
+            justifyContent: "flex-end",
+          }}
+        >
+          <button
+            onClick={onCancel}
+            className="btn btn-secondary"
+            disabled={saving}
+          >
+            Annuler
+          </button>
+          {hasChanges && (
+            <button
+              onClick={onConfirm}
+              className="btn btn-primary"
+              disabled={saving}
+            >
+              {saving ? "Application…" : "✓ Appliquer"}
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── Main component ──────────────────────────────────────────────────────────
 
 export default function StintGrid({
@@ -466,6 +800,11 @@ export default function StintGrid({
   const [saving, setSaving] = useState(null);
   const [autoGenDone, setAutoGenDone] = useState(false);
   const [conflictStints, setConflictStints] = useState([]);
+  const [showRecalcModal, setShowRecalcModal] = useState(false);
+  const [recalcDiffs, setRecalcDiffs] = useState([]);
+  const [recalcRaceEndDiff, setRecalcRaceEndDiff] = useState(null);
+  const [recalcMergedPerf, setRecalcMergedPerf] = useState(null);
+  const [recalcSaving, setRecalcSaving] = useState(false);
 
   const event = teamEntry?.events;
   const igStartTime = event?.ig_start_time;
@@ -607,6 +946,114 @@ export default function StintGrid({
       })),
     ),
   ]);
+
+  // ── Open recalc modal ──────────────────────────────────────────────────────
+  // Splits calculated stints into completed vs remaining, extracts actual perf,
+  // reruns the calc engine, then builds a diff for the preview modal.
+
+  const openRecalcModal = () => {
+    const completedCalc = calculated.filter(isStintCompleted);
+    const remainingCalc = calculated.filter((s) => !isStintCompleted(s));
+    if (completedCalc.length === 0 || remainingCalc.length === 0) return;
+
+    // Build driver id → name lookup
+    const driverMap = {};
+    assignedDrivers.forEach((d) => {
+      if (d.drivers?.id) driverMap[d.drivers.id] = d.drivers.name;
+    });
+
+    // Merge actual perf from completed stints into driverPerf
+    const mergedPerf = extractAndMergeActualPerf(completedCalc, driverPerf);
+
+    // Rerun calculation with merged perf
+    const recalculated = calculateAllStints(
+      stints,
+      teamEntry,
+      mergedPerf,
+      igStartTime,
+      igSunrise,
+      igSunset,
+    );
+
+    // Build diff for remaining stints only
+    const diffs = remainingCalc.map((orig) => {
+      const revised = recalculated.find((s) => s.id === orig.id);
+      return {
+        stintId: orig.id,
+        stintNumber: orig.stint_number,
+        driverName: driverMap[orig.driver_id] || "—",
+        oldLaps: orig.laps_planned ?? orig._laps ?? null,
+        newLaps: revised?.laps_planned ?? revised?._laps ?? null,
+      };
+    });
+
+    // Race end diff — compare last projected finish
+    const oldLast = calculated[calculated.length - 1];
+    const newLast = recalculated[recalculated.length - 1];
+    const oldEnd = oldLast?._adjustedIrlEnd || oldLast?._irlEnd;
+    const newEnd = newLast?._adjustedIrlEnd || newLast?._irlEnd;
+    const raceEndDiff =
+      oldEnd && newEnd
+        ? {
+            old: formatDatetime(oldEnd),
+            new: formatDatetime(newEnd),
+            // "improved" = new finish is closer to (but not over) the actual race end
+            improved: raceEndTime
+              ? Math.abs(newEnd - raceEndTime) < Math.abs(oldEnd - raceEndTime)
+              : newEnd <= oldEnd,
+          }
+        : null;
+
+    setRecalcMergedPerf(mergedPerf);
+    setRecalcDiffs(diffs);
+    setRecalcRaceEndDiff(raceEndDiff);
+    setShowRecalcModal(true);
+  };
+
+  // ── Apply recalc ───────────────────────────────────────────────────────────
+  // Writes new laps_planned to DB for remaining stints only.
+
+  const applyRecalc = async () => {
+    if (!recalcMergedPerf) return;
+    setRecalcSaving(true);
+
+    // Rerun with merged perf to get final laps
+    const recalculated = calculateAllStints(
+      stints,
+      teamEntry,
+      recalcMergedPerf,
+      igStartTime,
+      igSunrise,
+      igSunset,
+    );
+
+    const remainingCalc = recalculated.filter((s) => !isStintCompleted(s));
+
+    // Persist new laps_planned for remaining stints that have a calculated value
+    await Promise.all(
+      remainingCalc
+        .filter((s) => s._laps != null)
+        .map((s) =>
+          supabase
+            .from("stints")
+            .update({ laps_planned: s._laps })
+            .eq("id", s.id),
+        ),
+    );
+
+    // Update local state so StintGrid rerenders immediately
+    setStints((prev) =>
+      prev.map((s) => {
+        const revised = remainingCalc.find((r) => r.id === s.id);
+        if (!revised || revised._laps == null) return s;
+        return { ...s, laps_planned: revised._laps };
+      }),
+    );
+
+    setRecalcSaving(false);
+    setShowRecalcModal(false);
+    setRecalcMergedPerf(null);
+  };
 
   const addStint = async () => {
     if (archived) return;
@@ -1538,6 +1985,13 @@ export default function StintGrid({
             <button onClick={addStint} className="btn btn-secondary">
               + Ajouter un relais
             </button>
+            {/* Recalc button — shown when at least one stint is completed and one remains */}
+            {calculated.some(isStintCompleted) &&
+              calculated.some((s) => !isStintCompleted(s)) && (
+                <button onClick={openRecalcModal} className="btn btn-secondary">
+                  ↻ Recalculer la stratégie
+                </button>
+              )}
             {stints.length > 0 && (
               <button
                 onClick={clearAllStints}
@@ -1548,6 +2002,19 @@ export default function StintGrid({
             )}
           </div>
         </div>
+      )}
+      {/* Recalc preview modal */}
+      {showRecalcModal && (
+        <RecalcModal
+          diffs={recalcDiffs}
+          raceEndDiff={recalcRaceEndDiff}
+          onConfirm={applyRecalc}
+          onCancel={() => {
+            setShowRecalcModal(false);
+            setRecalcMergedPerf(null);
+          }}
+          saving={recalcSaving}
+        />
       )}
     </div>
   );
