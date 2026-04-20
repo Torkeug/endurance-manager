@@ -4,8 +4,9 @@ import { redirect } from "next/navigation";
 import InventoryMatrix from "../../components/InventoryMatrix";
 import { isLegacyContent } from "../../lib/car-types";
 
-export default async function InventairePage() {
+export default async function InventairePage({ searchParams }) {
   const { driver: currentDriver } = await getSessionAndDriver();
+  const { iracing_synced, error: syncError } = await searchParams;
 
   // External drivers cannot see inventaire
   if (!currentDriver || currentDriver.role === "external") {
@@ -25,7 +26,10 @@ export default async function InventairePage() {
     supabase.from("cars").select("*").order("class").order("name"),
     supabase
       .from("drivers")
-      .select("id, name, email, role, approved, refused, iracing_synced_at")
+      // Include iracing_id so we can check if current driver has linked their account
+      .select(
+        "id, name, email, role, approved, refused, iracing_synced_at, iracing_id",
+      )
       .order("name"),
     // Include free_with_subscription for car badge rendering
     supabase
@@ -141,6 +145,21 @@ export default async function InventairePage() {
 
   return (
     <div className="page">
+      {/* Re-sync success banner */}
+      {iracing_synced === "true" && (
+        <div className="alert alert-success" style={{ marginBottom: "1rem" }}>
+          ✓ Synchronisation réussie — inventaire mis à jour.
+        </div>
+      )}
+      {/* Sync error banner */}
+      {syncError && (
+        <div className="alert alert-error" style={{ marginBottom: "1rem" }}>
+          {syncError === "iracing_sync_failed"
+            ? "Erreur lors de la synchronisation iRacing. Vos données n'ont pas été modifiées."
+            : "Une erreur iRacing est survenue. Veuillez réessayer."}
+        </div>
+      )}
+
       <div className="page-header">
         <div>
           <h1>Inventaire</h1>
@@ -170,6 +189,7 @@ export default async function InventairePage() {
         freeCarIds={freeCarIds}
         freeTrackNames={freeTrackNames}
         currentDriverId={currentDriver?.id}
+        currentDriverHasIracingId={!!currentDriver?.iracing_id}
       />
     </div>
   );

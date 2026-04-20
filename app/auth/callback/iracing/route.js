@@ -186,8 +186,8 @@ export async function GET(request) {
     return NextResponse.redirect(`${origin}/login?error=iracing_no_code`);
   }
 
-  // State encodes PKCE verifier and mode separated by |
-  const [verifier, mode = "driver"] = state.split("|");
+  // State encodes PKCE verifier, mode, and return path — pipe-separated
+  const [verifier, mode = "driver", returnTo = "/pilotes"] = state.split("|");
 
   try {
     // Session-aware client for auth.getUser() only
@@ -272,17 +272,37 @@ export async function GET(request) {
         buildCarLookup(accessToken),
         buildTrackLookup(accessToken),
       ]);
-      await syncOneDriver(
-        accessToken,
-        driver.id,
-        iracingCustId,
-        carLookup,
-        trackLookup,
-      );
 
-      return NextResponse.redirect(
-        `${origin}/pilotes/${driver.id}?iracing_linked=true`,
-      );
+      // Determine if this is a first-time link or a re-sync
+      const isFirstLink =
+        !existing &&
+        !(await supabase
+          .from("driver_car_ownership")
+          .select("driver_id", { count: "exact", head: true })
+          .eq("driver_id", driver.id)
+          .then(({ count }) => count > 0));
+
+      try {
+        await syncOneDriver(
+          accessToken,
+          driver.id,
+          iracingCustId,
+          carLookup,
+          trackLookup,
+        );
+      } catch (syncErr) {
+        // Sync failed after OAuth — redirect back with error param
+        console.error("syncOneDriver failed:", syncErr);
+        return NextResponse.redirect(
+          `${origin}${returnTo}?error=iracing_sync_failed`,
+        );
+      }
+
+      // First link → iracing_linked, re-sync → iracing_synced
+      const successParam = isFirstLink
+        ? "iracing_linked=true"
+        : "iracing_synced=true";
+      return NextResponse.redirect(`${origin}${returnTo}?${successParam}`);
     }
 
     // ── Syncall mode ─────────────────────────────────────────────────────────

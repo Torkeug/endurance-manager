@@ -13,7 +13,11 @@ function formatDuration(minutes) {
 
 export default async function DriverDetail({ params, searchParams }) {
   const { id } = await params;
-  const { iracing_linked } = await searchParams;
+  const {
+    iracing_linked,
+    iracing_synced,
+    error: syncError,
+  } = await searchParams;
   const { driver: currentDriver } = await getSessionAndDriver();
   const admin = isAdmin(currentDriver);
 
@@ -170,10 +174,38 @@ export default async function DriverDetail({ params, searchParams }) {
         </Link>
       </div>
 
-      {/* iRacing link success alert */}
+      {/* iRacing first-link success */}
       {iracing_linked === "true" && (
         <div className="alert alert-success" style={{ marginBottom: "1rem" }}>
           ✓ Compte iRacing lié avec succès.
+        </div>
+      )}
+      {/* iRacing re-sync success */}
+      {iracing_synced === "true" && (
+        <div className="alert alert-success" style={{ marginBottom: "1rem" }}>
+          ✓ Synchronisation réussie — inventaire mis à jour.
+        </div>
+      )}
+      {/* iRacing sync/OAuth error */}
+      {syncError && (
+        <div className="alert alert-error" style={{ marginBottom: "1rem" }}>
+          {syncError === "iracing_sync_failed" &&
+            "Erreur lors de la synchronisation iRacing. Vos données n'ont pas été modifiées."}
+          {syncError === "iracing_token" &&
+            "Erreur d'authentification iRacing. Veuillez réessayer."}
+          {syncError === "iracing_profile" &&
+            "Impossible de récupérer le profil iRacing. Veuillez réessayer."}
+          {syncError === "iracing_already_linked" &&
+            "Ce compte iRacing est déjà lié à un autre pilote."}
+          {syncError === "iracing_denied" && "Autorisation iRacing refusée."}
+          {![
+            "iracing_sync_failed",
+            "iracing_token",
+            "iracing_profile",
+            "iracing_already_linked",
+            "iracing_denied",
+          ].includes(syncError) &&
+            "Une erreur iRacing est survenue. Veuillez réessayer."}
         </div>
       )}
 
@@ -207,7 +239,7 @@ export default async function DriverDetail({ params, searchParams }) {
                   ✓ iRacing lié
                 </span>
                 <a
-                  href="/auth/iracing?mode=driver"
+                  href={`/auth/iracing?mode=driver&returnTo=/pilotes/${id}`}
                   className="btn btn-secondary btn-sm"
                 >
                   🔄 Mettre à jour
@@ -215,7 +247,7 @@ export default async function DriverDetail({ params, searchParams }) {
               </>
             ) : (
               <a
-                href="/auth/iracing?mode=driver"
+                href={`/auth/iracing?mode=driver&returnTo=/pilotes/${id}`}
                 className="btn btn-primary btn-sm"
               >
                 🏎️ Lier iRacing

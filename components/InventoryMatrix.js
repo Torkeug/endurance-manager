@@ -131,7 +131,8 @@ export default function InventoryMatrix({
   kronosCircuitNames,
   freeCarIds: freeCarIdsArr = [],
   freeTrackNames: freeTrackNamesArr = [],
-  currentDriverId = null, // highlights the current user's column
+  currentDriverId = null,
+  currentDriverHasIracingId = false, // shows sync button when true
 }) {
   const [subTab, setSubTab] = useState("cars");
   const [loaded, setLoaded] = useState(false);
@@ -567,8 +568,23 @@ export default function InventoryMatrix({
 
   return (
     <div>
-      {/* Badge legend — explains K (Kronos) and iR+ (free with subscription) */}
-      <BadgeLegend />
+      {/* Sync button — only shown when the current user has a linked iRacing account */}
+      {currentDriverId && currentDriverHasIracingId && (
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "flex-end",
+            marginBottom: "1rem",
+          }}
+        >
+          <a
+            href={`/auth/iracing?mode=driver&returnTo=/inventaire`}
+            className="btn btn-secondary btn-sm"
+          >
+            🔄 Mettre à jour mon inventaire
+          </a>
+        </div>
+      )}
 
       {/* Sub-tab switcher */}
       <div
@@ -691,6 +707,9 @@ export default function InventoryMatrix({
             </div>
           </div>
 
+          {/* Legend sits between filters and table */}
+          <BadgeLegend />
+
           {carMatrixRows.length === 0 && (
             <div className="card">
               <div className="empty">
@@ -700,7 +719,13 @@ export default function InventoryMatrix({
           )}
 
           {carMatrixRows.length > 0 && (
-            <div style={{ overflowX: "auto", overflowY: "auto", maxHeight: "70vh" }}>
+            <div
+              style={{
+                overflowX: "auto",
+                overflowY: "auto",
+                maxHeight: "70vh",
+              }}
+            >
               <table
                 style={{ borderCollapse: "collapse", tableLayout: "fixed" }}
               >
@@ -1023,6 +1048,9 @@ export default function InventoryMatrix({
             </div>
           </div>
 
+          {/* Legend sits between filters and table */}
+          <BadgeLegend />
+
           {trackMatrixRows.length === 0 && (
             <div className="card">
               <div className="empty">
@@ -1032,7 +1060,13 @@ export default function InventoryMatrix({
           )}
 
           {trackMatrixRows.length > 0 && (
-            <div style={{ overflowX: "auto", overflowY: "auto", maxHeight: "70vh" }}>
+            <div
+              style={{
+                overflowX: "auto",
+                overflowY: "auto",
+                maxHeight: "70vh",
+              }}
+            >
               <table
                 style={{ borderCollapse: "collapse", tableLayout: "fixed" }}
               >

@@ -4,7 +4,6 @@ import crypto from "crypto";
 const IRACING_AUTH_URL = "https://oauth.iracing.com/oauth2/authorize";
 const CLIENT_ID = "kronos-team";
 const REDIRECT_URI = `${process.env.NEXT_PUBLIC_APP_URL}/auth/callback/iracing`;
-// iracing.profile grants access to /oauth2/iracing/profile (identity)
 const SCOPE = "iracing.profile iracing.auth";
 
 // Generate PKCE code verifier and challenge
@@ -22,6 +21,12 @@ export async function GET(request) {
   // mode=driver  → link/update own iRacing account (default, all roles)
   // mode=syncall → admin syncs all linked drivers in one OAuth flow
   const mode = searchParams.get("mode") || "driver";
+  // returnTo — path to redirect back to after sync (e.g. /pilotes/123 or /inventaire)
+  // Defaults to /pilotes if not provided. Must not contain | (used as state separator).
+  const returnTo = (searchParams.get("returnTo") || "/pilotes").replace(
+    /\|/g,
+    "",
+  );
 
   const { verifier, challenge } = generatePKCE();
 
@@ -32,9 +37,9 @@ export async function GET(request) {
     scope: SCOPE,
     code_challenge: challenge,
     code_challenge_method: "S256",
-    // State encodes both the PKCE verifier and the mode, separated by |
-    // The callback splits on | to recover both. Verifier must not contain |.
-    state: `${verifier}|${mode}`,
+    // State encodes PKCE verifier, mode, and return path — pipe-separated.
+    // Verifier is base64url (no pipes), returnTo is sanitized above.
+    state: `${verifier}|${mode}|${returnTo}`,
   });
 
   return NextResponse.redirect(`${IRACING_AUTH_URL}?${params}`);

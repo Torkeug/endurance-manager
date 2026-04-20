@@ -5,8 +5,9 @@ import Link from "next/link";
 import InventaireDisplay from "./InventaireDisplay";
 import { isLegacyContent } from "../../../../lib/car-types";
 
-export default async function InventairePage({ params }) {
+export default async function InventairePage({ params, searchParams }) {
   const { id } = await params;
+  const { iracing_synced, error: syncError } = await searchParams;
   const { driver: currentDriver } = await getSessionAndDriver();
   const admin = isAdmin(currentDriver);
 
@@ -241,6 +242,21 @@ export default async function InventairePage({ params }) {
 
   return (
     <div className="page">
+      {/* Re-sync success banner */}
+      {iracing_synced === "true" && (
+        <div className="alert alert-success" style={{ marginBottom: "1rem" }}>
+          ✓ Synchronisation réussie — inventaire mis à jour.
+        </div>
+      )}
+      {/* Sync error banner */}
+      {syncError && (
+        <div className="alert alert-error" style={{ marginBottom: "1rem" }}>
+          {syncError === "iracing_sync_failed"
+            ? "Erreur lors de la synchronisation iRacing. Vos données n'ont pas été modifiées."
+            : "Une erreur iRacing est survenue. Veuillez réessayer."}
+        </div>
+      )}
+
       <div className="page-header">
         <div>
           <h1>Inventaire — {driver.name}</h1>
@@ -260,7 +276,7 @@ export default async function InventairePage({ params }) {
         <div style={{ display: "flex", gap: "0.75rem" }}>
           {currentDriver?.id === id && (
             <a
-              href="/auth/iracing?mode=driver"
+              href={`/auth/iracing?mode=driver&returnTo=/pilotes/${id}/inventaire`}
               className="btn btn-primary btn-sm"
             >
               🔄 Mettre à jour
