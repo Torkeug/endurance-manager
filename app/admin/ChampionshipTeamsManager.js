@@ -317,9 +317,11 @@ function ChampionshipView({
               >
                 {champ.name}
               </span>
-              <span style={{ color: "var(--text-dim)", fontSize: "0.85rem" }}>
-                · {champ.season}
-              </span>
+              {champ.season && (
+                <span style={{ color: "var(--text-dim)", fontSize: "0.85rem" }}>
+                  · Saison {champ.season}
+                </span>
+              )}
               <span
                 style={{
                   marginLeft: "auto",
@@ -456,7 +458,7 @@ function TeamView({
                     <ExpandableRow
                       key={rowKey}
                       label={champ.name}
-                      sublabel={`· ${champ.season}`}
+                      sublabel={champ.season ? `· Saison ${champ.season} ·` : undefined}
                       car={carName(champEntries[0])}
                       cls={champEntries[0].class}
                       entries={champEntries}
