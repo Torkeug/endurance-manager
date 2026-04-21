@@ -253,7 +253,16 @@ export default function DriverStats({
   const [dateRange, setDateRange] = useState("all");
 
   // Chart data for selected category
-  const rawChartData = historyByCategory[selectedCategory] || [];
+  let rawChartData = historyByCategory[selectedCategory] || [];
+
+  // Sports Car special case: include Road data before the split (March 2024)
+  if (selectedCategory === 5) {
+    const roadData = (historyByCategory[2] || []).filter(
+      (h) => new Date(h.recorded_at) < new Date("2024-03-15"),
+    );
+    rawChartData = [...roadData, ...rawChartData];
+  }
+
   const chartData = (() => {
     if (rawChartData.length === 0 && !currentIrating) return [];
 
