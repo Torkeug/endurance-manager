@@ -54,55 +54,55 @@ async function buildCarLookup(token) {
   return map;
 }
 
+// ─── Backfill iRating history ────────────────────────────────────────────────
+// Fetches full iRating history from iRacing for a driver and inserts any
+// missing entries into irating_history. Safe to call multiple times —
+// only inserts if no existing history rows exist for this driver.
+
+async function backfillIratingHistory(token, driverId, iracingCustId) {
+  // Skip if history already exists for this driver
+  const { count } = await supabase
+    .from("irating_history")
+    .select("id", { count: "exact", head: true })
+    .eq("driver_id", driverId);
+
+  if (count > 0) return;
+
+  try {
+    const chartData = await fetchIracingS3(
+      `/data/member/chart_data?cust_id=${iracingCustId}&category_id=5&chart_type=1`,
+      token,
+    );
+
+    if (!chartData?.success || !Array.isArray(chartData.data)) return;
+
+    const rows = chartData.data
+      .filter((p) => typeof p.value === "number" && p.when)
+      .map((p) => ({
+        driver_id: driverId,
+        irating: p.value,
+        recorded_at: new Date(p.when).toISOString(),
+      }));
+
+    if (rows.length === 0) return;
+
+    // Insert in batches of 100 to avoid payload limits
+    for (let i = 0; i < rows.length; i += 100) {
+      await supabase.from("irating_history").insert(rows.slice(i, i + 100));
+    }
+  } catch (err) {
+    // Non-fatal — log and continue, regular sync still succeeds
+    console.error(
+      `iRating history backfill failed for driver ${driverId}:`,
+      err.message,
+    );
+  }
+}
+
 // Build Map<track_id → { track_name, track_config, track_category }> from /data/track/get.
 // Also upserts the full iRacing track catalog into iracing_tracks for admin use.
 async function buildTrackLookup(token) {
   const tracks = await fetchIracingS3("/data/track/get", token);
-
-  // ─── Backfill iRating history ────────────────────────────────────────────────
-  // Fetches full iRating history from iRacing for a driver and inserts any
-  // missing entries into irating_history. Safe to call multiple times —
-  // only inserts if no existing history rows exist for this driver.
-
-  async function backfillIratingHistory(token, driverId, iracingCustId) {
-    // Skip if history already exists for this driver
-    const { count } = await supabase
-      .from("irating_history")
-      .select("id", { count: "exact", head: true })
-      .eq("driver_id", driverId);
-
-    if (count > 0) return;
-
-    try {
-      const chartData = await fetchIracingS3(
-        `/data/member/chart_data?cust_id=${iracingCustId}&category_id=5&chart_type=1`,
-        token,
-      );
-
-      if (!chartData?.success || !Array.isArray(chartData.data)) return;
-
-      const rows = chartData.data
-        .filter((p) => typeof p.value === "number" && p.when)
-        .map((p) => ({
-          driver_id: driverId,
-          irating: p.value,
-          recorded_at: new Date(p.when).toISOString(),
-        }));
-
-      if (rows.length === 0) return;
-
-      // Insert in batches of 100 to avoid payload limits
-      for (let i = 0; i < rows.length; i += 100) {
-        await supabase.from("irating_history").insert(rows.slice(i, i + 100));
-      }
-    } catch (err) {
-      // Non-fatal — log and continue, regular sync still succeeds
-      console.error(
-        `iRating history backfill failed for driver ${driverId}:`,
-        err.message,
-      );
-    }
-  }
 
   // Upsert entire catalog into iracing_tracks — done once per sync, not per driver
   const trackRows = tracks.map((track) => ({
