@@ -238,6 +238,28 @@ export default function DriverStats({
   const nightStintsCount = (stints || []).filter(isNightStint).length;
   const nightPct = totalStints > 0 ? (nightStintsCount / totalStints) * 100 : 0;
 
+  // ── Most used circuits ─────────────────────────────────────────────────────
+  const circuitCounts = {};
+  (signups || []).forEach((s) => {
+    const name = s.events?.circuits?.name;
+    if (!name) return;
+    circuitCounts[name] = (circuitCounts[name] || 0) + 1;
+  });
+  const sortedCircuits = Object.entries(circuitCounts)
+    .map(([name, count]) => ({ name, count }))
+    .sort((a, b) => b.count - a.count);
+
+  // ── Most used cars ─────────────────────────────────────────────────────────
+  const carCounts = {};
+  (signups || []).forEach((s) => {
+    const name = s.team_entries?.cars?.name;
+    if (!name) return;
+    carCounts[name] = (carCounts[name] || 0) + 1;
+  });
+  const sortedCars = Object.entries(carCounts)
+    .map(([name, count]) => ({ name, count }))
+    .sort((a, b) => b.count - a.count);
+
   // ── Lap times by circuit ───────────────────────────────────────────────────
   // Group performance records by circuit, keep best (lowest) lap times per condition
   const circuitMap = {};
@@ -808,6 +830,70 @@ export default function DriverStats({
                 : `Voir tous (${sortedTeammates.length})`}
             </button>
           )}
+        </div>
+      )}
+
+      {/* ── Most used circuits ────────────────────────────────────────── */}
+      {sortedCircuits.length > 0 && (
+        <div>
+          <SectionHeader title="Circuits" />
+          <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem" }}>
+            {sortedCircuits.map((c) => (
+              <div
+                key={c.name}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "0.4rem",
+                  padding: "0.3rem 0.6rem",
+                  background: "var(--surface-2)",
+                  border: "1px solid var(--border)",
+                  borderRadius: "3px",
+                  fontSize: "0.82rem",
+                }}
+              >
+                <span style={{ fontWeight: 600 }}>{c.name}</span>
+                <span
+                  className="mono"
+                  style={{ fontSize: "0.72rem", color: "var(--accent)" }}
+                >
+                  ×{c.count}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* ── Most used cars ────────────────────────────────────────────── */}
+      {sortedCars.length > 0 && (
+        <div>
+          <SectionHeader title="Voitures" />
+          <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem" }}>
+            {sortedCars.map((c) => (
+              <div
+                key={c.name}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "0.4rem",
+                  padding: "0.3rem 0.6rem",
+                  background: "var(--surface-2)",
+                  border: "1px solid var(--border)",
+                  borderRadius: "3px",
+                  fontSize: "0.82rem",
+                }}
+              >
+                <span style={{ fontWeight: 600 }}>{c.name}</span>
+                <span
+                  className="mono"
+                  style={{ fontSize: "0.72rem", color: "var(--accent)" }}
+                >
+                  ×{c.count}
+                </span>
+              </div>
+            ))}
+          </div>
         </div>
       )}
     </div>
