@@ -22,21 +22,106 @@ async function fetchIracingS3(path, token) {
   return s3Res.json();
 }
 
+// ─── Backfill iRating history ────────────────────────────────────────────────
+// Fetches FULL historical iRating data for all 6 categories.
+// Only runs once per driver — skipped if any history already exists.
+
+async function backfillIratingHistory(token, driverId, iracingCustId) {
+  const { count } = await supabase
+    .from("irating_history")
+    .select("id", { count: "exact", head: true })
+    .eq("driver_id", driverId);
+
+  if (count > 0) return;
+
+  const categoryIds = [1, 2, 3, 4, 5, 6];
+  await Promise.all(
+    categoryIds.map(async (categoryId) => {
+      try {
+        const chartData = await fetchIracingS3(
+          `/data/member/chart_data?cust_id=${iracingCustId}&category_id=${categoryId}&chart_type=1`,
+          token,
+        );
+
+        if (!chartData?.success || !Array.isArray(chartData.data)) return;
+
+        const rows = chartData.data
+          .filter((p) => typeof p.value === "number" && p.when)
+          .map((p) => ({
+            driver_id: driverId,
+            irating: p.value,
+            category_id: categoryId,
+            recorded_at: new Date(p.when).toISOString(),
+          }));
+
+        if (rows.length === 0) return;
+
+        for (let i = 0; i < rows.length; i += 100) {
+          await supabase.from("irating_history").insert(rows.slice(i, i + 100));
+        }
+      } catch (err) {
+        console.error(
+          `iRating history backfill failed for driver ${driverId} category ${categoryId}:`,
+          err.message,
+        );
+      }
+    }),
+  );
+}
+
+// ─── Sync latest iRating for all categories ──────────────────────────────────
+// Fetches the most recent iRating point for all 6 categories and inserts it.
+// Called on every sync — both driver mode and syncall.
+
+async function syncAllCategoryIratings(token, driverId, iracingCustId) {
+  const categoryIds = [1, 2, 3, 4, 5, 6];
+  await Promise.all(
+    categoryIds.map(async (categoryId) => {
+      try {
+        const chartData = await fetchIracingS3(
+          `/data/member/chart_data?cust_id=${iracingCustId}&category_id=${categoryId}&chart_type=1`,
+          token,
+        );
+
+        if (
+          !chartData?.success ||
+          !Array.isArray(chartData.data) ||
+          chartData.data.length === 0
+        )
+          return;
+
+        // Only insert the most recent point
+        const latest = chartData.data[chartData.data.length - 1];
+        if (typeof latest.value !== "number") return;
+
+        await supabase.from("irating_history").insert({
+          driver_id: driverId,
+          irating: latest.value,
+          category_id: categoryId,
+          recorded_at: new Date(latest.when).toISOString(),
+        });
+      } catch (err) {
+        console.error(
+          `Category ${categoryId} iRating sync failed for driver ${driverId}:`,
+          err.message,
+        );
+      }
+    }),
+  );
+}
+
 // Build Map<car_id → { car_name, car_category, car_types }> from /data/car/get.
 // Also upserts the full iRacing car catalog into iracing_cars for admin use.
 async function buildCarLookup(token) {
   const cars = await fetchIracingS3("/data/car/get", token);
 
-  // Upsert entire catalog into iracing_cars — done once per sync, not per driver
   const carRows = cars.map((car) => ({
     iracing_car_id: car.car_id,
     car_name: car.car_name,
     car_categories: car.categories || [],
     car_types: (car.car_types || []).map((t) => t.car_type),
-    // Persist iRacing's subscription flag — false if not provided
     free_with_subscription: car.free_with_subscription ?? false,
   }));
-  // Batch in groups of 100 to avoid payload size limits
   for (let i = 0; i < carRows.length; i += 100) {
     await supabase
       .from("iracing_cars")
@@ -54,63 +139,16 @@ async function buildCarLookup(token) {
   return map;
 }
 
-// ─── Backfill iRating history ────────────────────────────────────────────────
-// Fetches full iRating history from iRacing for a driver and inserts any
-// missing entries into irating_history. Safe to call multiple times —
-// only inserts if no existing history rows exist for this driver.
-
-async function backfillIratingHistory(token, driverId, iracingCustId) {
-  // Skip if history already exists for this driver
-  const { count } = await supabase
-    .from("irating_history")
-    .select("id", { count: "exact", head: true })
-    .eq("driver_id", driverId);
-
-  if (count > 0) return;
-
-  try {
-    const chartData = await fetchIracingS3(
-      `/data/member/chart_data?cust_id=${iracingCustId}&category_id=5&chart_type=1`,
-      token,
-    );
-
-    if (!chartData?.success || !Array.isArray(chartData.data)) return;
-
-    const rows = chartData.data
-      .filter((p) => typeof p.value === "number" && p.when)
-      .map((p) => ({
-        driver_id: driverId,
-        irating: p.value,
-        recorded_at: new Date(p.when).toISOString(),
-      }));
-
-    if (rows.length === 0) return;
-
-    // Insert in batches of 100 to avoid payload limits
-    for (let i = 0; i < rows.length; i += 100) {
-      await supabase.from("irating_history").insert(rows.slice(i, i + 100));
-    }
-  } catch (err) {
-    // Non-fatal — log and continue, regular sync still succeeds
-    console.error(
-      `iRating history backfill failed for driver ${driverId}:`,
-      err.message,
-    );
-  }
-}
-
 // Build Map<track_id → { track_name, track_config, track_category }> from /data/track/get.
 // Also upserts the full iRacing track catalog into iracing_tracks for admin use.
 async function buildTrackLookup(token) {
   const tracks = await fetchIracingS3("/data/track/get", token);
 
-  // Upsert entire catalog into iracing_tracks — done once per sync, not per driver
   const trackRows = tracks.map((track) => ({
     iracing_track_id: track.track_id,
     track_name: track.track_name,
     config_name: track.config_name || null,
     track_category: track.category || null,
-    // Persist iRacing's subscription flag — false if not provided
     free_with_subscription: track.free_with_subscription ?? false,
   }));
   for (let i = 0; i < trackRows.length; i += 100) {
@@ -147,7 +185,6 @@ async function syncOneDriver(
   // Sports car iRating — licenses is a keyed object, not an array
   const irating = memberData.licenses?.sports_car?.irating ?? null;
 
-  // Flatten all package content_ids into sets of owned IDs
   const ownedCarIds = new Set(
     (memberData.car_packages || []).flatMap((pkg) => pkg.content_ids || []),
   );
@@ -163,20 +200,11 @@ async function syncOneDriver(
     .update({ irating, iracing_synced_at: now })
     .eq("id", driverId);
 
-  // Record iRating history — only when we have a valid value
-  if (typeof irating === "number") {
-    // Backfill full history first if this driver has none yet
-    await backfillIratingHistory(token, driverId, iracingCustId);
+  // Backfill full history on first sync, then record latest for all categories
+  await backfillIratingHistory(token, driverId, iracingCustId);
+  await syncAllCategoryIratings(token, driverId, iracingCustId);
 
-    // Then insert current reading
-    await supabase.from("irating_history").insert({
-      driver_id: driverId,
-      irating,
-      recorded_at: now,
-    });
-  }
-
-  // Replace car ownership — only proceed if iRacing returned car data
+  // Replace car ownership
   const carRows = [...ownedCarIds]
     .map((carId) => {
       const car = carLookup.get(carId);
@@ -199,8 +227,7 @@ async function syncOneDriver(
     await supabase.from("driver_car_ownership").insert(carRows);
   }
 
-  // Replace track ownership — only proceed if iRacing returned track data.
-  // Never delete existing ownership if the API returned nothing (avoids wipe on empty response).
+  // Replace track ownership
   const trackRows = [...ownedTrackIds]
     .map((trackId) => {
       const track = trackLookup.get(trackId);
@@ -215,7 +242,6 @@ async function syncOneDriver(
       };
     })
     .filter(Boolean);
-  // Only replace ownership when we have confirmed data from iRacing
   if (trackRows.length > 0) {
     await supabase
       .from("driver_track_ownership")
@@ -227,10 +253,6 @@ async function syncOneDriver(
 
 // ─── Route handler ───────────────────────────────────────────────────────────
 
-// iRacing OAuth callback — two modes:
-// driver   → links iRacing account and syncs own iRating + car/track ownership
-// syncall  → admin only: batch-updates iRating for all linked drivers (no car/track —
-//            ownership can only be read for the authenticated user, not others)
 export async function GET(request) {
   const { searchParams, origin } = new URL(request.url);
   const code = searchParams.get("code");
@@ -244,11 +266,9 @@ export async function GET(request) {
     return NextResponse.redirect(`${origin}/login?error=iracing_no_code`);
   }
 
-  // State encodes PKCE verifier, mode, and return path — pipe-separated
   const [verifier, mode = "driver", returnTo = "/pilotes"] = state.split("|");
 
   try {
-    // Session-aware client for auth.getUser() only
     const authClient = await createClient();
     const {
       data: { user },
@@ -259,7 +279,6 @@ export async function GET(request) {
       );
     }
 
-    // Exchange authorization code for access token
     const tokenRes = await fetch(IRACING_TOKEN_URL, {
       method: "POST",
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
@@ -278,10 +297,7 @@ export async function GET(request) {
     const { access_token: accessToken } = await tokenRes.json();
 
     // ── Driver mode ──────────────────────────────────────────────────────────
-    // Links the iRacing account and syncs own iRating + car/track ownership.
-    // Car/track lookups are only needed here — ownership is per authenticated user.
     if (mode === "driver") {
-      // Confirm iRacing identity of the person who just authenticated
       const profileRes = await fetch(IRACING_PROFILE_URL, {
         headers: { Authorization: `Bearer ${accessToken}` },
       });
@@ -294,7 +310,6 @@ export async function GET(request) {
         return NextResponse.redirect(`${origin}/pilotes?error=iracing_no_id`);
       }
 
-      // Check this iRacing ID isn't already linked to a different Kronos account
       const { data: existing } = await supabase
         .from("drivers")
         .select("id, name")
@@ -307,7 +322,6 @@ export async function GET(request) {
         );
       }
 
-      // Find the Kronos driver record for the logged-in user
       const { data: driver } = await supabase
         .from("drivers")
         .select("id")
@@ -319,19 +333,16 @@ export async function GET(request) {
         );
       }
 
-      // Link the iRacing ID
       await supabase
         .from("drivers")
         .update({ iracing_id: iracingCustId })
         .eq("id", driver.id);
 
-      // Build car/track catalogues then sync this driver's full data
       const [carLookup, trackLookup] = await Promise.all([
         buildCarLookup(accessToken),
         buildTrackLookup(accessToken),
       ]);
 
-      // Determine if this is a first-time link or a re-sync
       const isFirstLink =
         !existing &&
         !(await supabase
@@ -349,14 +360,12 @@ export async function GET(request) {
           trackLookup,
         );
       } catch (syncErr) {
-        // Sync failed after OAuth — redirect back with error param
         console.error("syncOneDriver failed:", syncErr);
         return NextResponse.redirect(
           `${origin}${returnTo}?error=iracing_sync_failed`,
         );
       }
 
-      // First link → iracing_linked, re-sync → iracing_synced
       const successParam = isFirstLink
         ? "iracing_linked=true"
         : "iracing_synced=true";
@@ -364,11 +373,7 @@ export async function GET(request) {
     }
 
     // ── Syncall mode ─────────────────────────────────────────────────────────
-    // Admin only. Batch-fetches iRating for all linked drivers using the public
-    // /data/member/get endpoint — does NOT touch car/track ownership since
-    // iRacing only exposes ownership data for the authenticated user.
     if (mode === "syncall") {
-      // Server-side role check — admins and super_admins only
       const { data: requestingDriver } = await supabase
         .from("drivers")
         .select("id, role")
@@ -383,7 +388,6 @@ export async function GET(request) {
         );
       }
 
-      // Fetch all drivers who have a linked iRacing account
       const { data: linkedDrivers } = await supabase
         .from("drivers")
         .select("id, iracing_id")
@@ -393,42 +397,34 @@ export async function GET(request) {
         return NextResponse.redirect(`${origin}/admin?iracing_synced=0`);
       }
 
-      // Fetch iRating per driver using /data/member/profile?cust_id=X —
-      // this endpoint is public (works for any cust_id) and returns licenses
-      // as an array inside member_info. Sports car category_id = 5.
       const now = new Date().toISOString();
       let syncCount = 0;
+
       for (const d of linkedDrivers) {
         try {
           const profileData = await fetchIracingS3(
             `/data/member/profile?cust_id=${d.iracing_id}`,
             accessToken,
           );
-          // licenses is an array — find sports car by category_id 5
           const sportsCar = (profileData.member_info?.licenses || []).find(
             (l) => l.category_id === 5,
           );
           const irating = sportsCar?.irating;
-          // Only update if we got a valid iRating — never overwrite with null
           if (typeof irating !== "number") continue;
+
           const { error: updateErr } = await supabase
             .from("drivers")
             .update({ irating, iracing_synced_at: now })
             .eq("id", d.id);
+
           if (!updateErr) {
             syncCount++;
-            // Backfill full history if this driver has none yet
+            // Backfill full history on first sync for this driver
             await backfillIratingHistory(accessToken, d.id, d.iracing_id);
-
-            // Insert current reading
-            await supabase.from("irating_history").insert({
-              driver_id: d.id,
-              irating,
-              recorded_at: now,
-            });
+            // Insert latest iRating for all categories
+            await syncAllCategoryIratings(accessToken, d.id, d.iracing_id);
           }
         } catch (err) {
-          // Log per-driver errors but continue syncing remaining drivers
           console.error(`iRacing sync failed for driver ${d.id}:`, err.message);
         }
       }
@@ -438,7 +434,6 @@ export async function GET(request) {
       );
     }
 
-    // Unknown mode
     return NextResponse.redirect(`${origin}/pilotes?error=iracing_error`);
   } catch (err) {
     console.error("iRacing OAuth error:", err);
