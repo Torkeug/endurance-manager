@@ -920,6 +920,7 @@ export default function StintGrid({
         irl_start: s._irlStart ? s._irlStart.toISOString() : null,
         irl_end: s._irlEnd ? s._irlEnd.toISOString() : null,
         fuel_used_calc: s._fuelUsed ?? null,
+        fuel_remaining_calc: s._fuelRemaining ?? null,
         target_consumption_skip_last: skip?.targetConsumption ?? null,
       };
     });
@@ -934,6 +935,7 @@ export default function StintGrid({
             irl_start: u.irl_start,
             irl_end_planned: u.irl_end,
             fuel_used_calc: u.fuel_used_calc,
+            fuel_remaining_calc: u.fuel_remaining_calc,
             target_consumption_skip_last: u.target_consumption_skip_last,
           })
           .eq("id", u.id),

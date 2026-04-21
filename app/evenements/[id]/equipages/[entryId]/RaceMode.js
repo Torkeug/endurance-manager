@@ -98,8 +98,6 @@ function selectLapTime(perf, rain, isNight, nightDryAdd, nightWetAdd) {
 }
 
 // ─── Compute actual fuel stats for a completed stint ────────────────────────
-// Returns { actualLaps, actualFuel, plannedFuel, drift, hasPerfData }
-// or null if insufficient data.
 
 function calcActualFuel(stint, driverPerf, teamEntry) {
   if (!stint.irl_end_actual || !stint.irl_start) return null;
@@ -112,7 +110,6 @@ function calcActualFuel(stint, driverPerf, teamEntry) {
   const nightDryAdd = teamEntry?.night_dry_add_seconds || 0;
   const nightWetAdd = teamEntry?.night_wet_add_seconds || 0;
 
-  // Determine phase at stint start for condition-aware fuel/lap selection
   const igTime = getIGTime(stint.irl_start, raceStart, igStartTime);
   const phase = getPhase(igTime, igSunrise, igSunset);
   const isNight = phase === "🌑";
@@ -126,22 +123,15 @@ function calcActualFuel(stint, driverPerf, teamEntry) {
   );
   const fuelPerLap = selectFuelPerLap(perf, stint.rain, isNight);
 
-  // Actual stint duration in seconds
   const actualDurationSec =
     (new Date(stint.irl_end_actual) - new Date(stint.irl_start)) / 1000;
-
-  // Actual laps derived from real duration and planned lap time
   const actualLaps =
     lapTimeSec && actualDurationSec > 0
       ? Math.round(actualDurationSec / lapTimeSec)
       : null;
-
   const actualFuel =
     actualLaps !== null && fuelPerLap ? actualLaps * fuelPerLap : null;
-
-  // Planned fuel from persisted calculation
   const plannedFuel = stint.fuel_used_calc ?? null;
-
   const drift =
     actualFuel !== null && plannedFuel !== null
       ? actualFuel - plannedFuel
@@ -158,9 +148,6 @@ function calcActualFuel(stint, driverPerf, teamEntry) {
 }
 
 // ─── Race state ──────────────────────────────────────────────────────────────
-// PRE_RACE  : now < raceStart
-// IN_RACE   : raceStart <= now < raceEnd (or stints remaining)
-// FINISHED  : now >= raceEnd or all stints have irl_end_actual
 
 function getRaceState(now, raceStart, raceEnd, stints) {
   if (!raceStart) return "PRE_RACE";
@@ -184,10 +171,10 @@ export default function RaceMode({
   const [driverPerf, setDriverPerf] = useState({});
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  // Dev-only state override — allows forcing race state without waiting for real IRL times
-  const [devState, setDevState] = useState(null); // null = use real time
-  // Ticks every second — drives all countdowns and live state
   const [now, setNow] = useState(new Date());
+
+  // Dev-only state override
+  const [devState, setDevState] = useState(null);
 
   // ── Clock tick ─────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -209,7 +196,6 @@ export default function RaceMode({
         .eq("team_entry_id", teamEntryId),
     ]);
 
-    // Build driver_id → perf map
     const perfMap = {};
     (perfData || []).forEach((p) => {
       perfMap[p.driver_id] = p;
@@ -224,7 +210,7 @@ export default function RaceMode({
     fetchData();
   }, [fetchData]);
 
-  // ── Realtime subscription — keeps all open tabs in sync during the race ────
+  // ── Realtime subscription ──────────────────────────────────────────────────
   useEffect(() => {
     const channel = supabase
       .channel(`race-mode-${teamEntryId}`)
@@ -266,7 +252,6 @@ export default function RaceMode({
   });
 
   // ── Derived: active stint (IRL-time based) ─────────────────────────────────
-  // First stint where irl_start <= now AND no actual end recorded
   const activeStint = isInRace
     ? (stints.find(
         (s) => s.irl_start && new Date(s.irl_start) <= now && !s.irl_end_actual,
@@ -308,13 +293,26 @@ export default function RaceMode({
     stintRemainingSec >= 0 &&
     stintRemainingSec <= 300;
 
+  // ── Derived: fuel to add at next pit stop ─────────────────────────────────
+  // fuel_remaining_calc is persisted by StintGrid — it represents how much
+  // fuel is left in the tank at the end of this stint.
+  // Fuel to add = tankSize − fuelRemaining (capped at tankSize).
+  const carTankSize = teamEntry?.cars?.tank_size_litres;
+  const tankSize =
+    carTankSize && teamEntry?.bop_tank_size_percent
+      ? carTankSize * (teamEntry.bop_tank_size_percent / 100)
+      : (carTankSize ?? null);
+  const fuelToAdd =
+    activeStint?.fuel_remaining_calc != null && tankSize != null
+      ? Math.max(0, tankSize - activeStint.fuel_remaining_calc)
+      : null;
+
   // ── Derived: fuel stats for completed stints ──────────────────────────────
   const completedWithFuel = completedStints.map((s) => ({
     ...s,
     _fuel: calcActualFuel(s, driverPerf, teamEntry),
   }));
 
-  // Cumulative fuel drift across all completed stints that have data
   const fuelDriftStints = completedWithFuel.filter(
     (s) => s._fuel?.drift !== null,
   );
@@ -329,9 +327,16 @@ export default function RaceMode({
   const markPitStop = async () => {
     if (!activeStint || archived || saving || !isInRace) return;
     setSaving(true);
+    const actualEnd = new Date().toISOString();
+    // Optimistic update — instant UI response before realtime confirms
+    setStints((prev) =>
+      prev.map((s) =>
+        s.id === activeStint.id ? { ...s, irl_end_actual: actualEnd } : s,
+      ),
+    );
     await supabase
       .from("stints")
-      .update({ irl_end_actual: new Date().toISOString() })
+      .update({ irl_end_actual: actualEnd })
       .eq("id", activeStint.id);
     setSaving(false);
   };
@@ -342,6 +347,10 @@ export default function RaceMode({
     if (!last) return;
     if (!confirm("Annuler le dernier arrêt au stand ?")) return;
     setSaving(true);
+    // Optimistic update — instant UI response before realtime confirms
+    setStints((prev) =>
+      prev.map((s) => (s.id === last.id ? { ...s, irl_end_actual: null } : s)),
+    );
     await supabase
       .from("stints")
       .update({ irl_end_actual: null })
@@ -350,7 +359,6 @@ export default function RaceMode({
   };
 
   // ── Shared styles ──────────────────────────────────────────────────────────
-
   const labelStyle = {
     fontSize: "0.65rem",
     fontWeight: 700,
@@ -361,7 +369,6 @@ export default function RaceMode({
   };
 
   // ── Render guards ──────────────────────────────────────────────────────────
-
   if (loading) {
     return (
       <div className="card">
@@ -381,7 +388,6 @@ export default function RaceMode({
   }
 
   // ── Render ─────────────────────────────────────────────────────────────────
-
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
       {/* ── Race progress bar ──────────────────────────────────────────── */}
@@ -449,7 +455,7 @@ export default function RaceMode({
 
       {/* ── Stint progress pills ───────────────────────────────────────── */}
       <div style={{ display: "flex", gap: "0.25rem", flexWrap: "wrap" }}>
-        {stints.map((s, i) => {
+        {stints.map((s) => {
           const isActive = s.id === activeStint?.id;
           const isDone = !!s.irl_end_actual;
           return (
@@ -622,12 +628,24 @@ export default function RaceMode({
                       : "—"}
                   </div>
                 </div>
+                {/* Fuel to add at next pit stop */}
+                {fuelToAdd !== null && (
+                  <div>
+                    <div style={labelStyle}>Carburant prochain arrêt</div>
+                    <div
+                      className="mono"
+                      style={{ fontSize: "0.95rem", color: "var(--accent)" }}
+                    >
+                      ~{fuelToAdd.toFixed(1)}L
+                    </div>
+                  </div>
+                )}
               </>
             )}
           </div>
         )}
 
-        {/* Pit stop button — disabled pre-race and post-race */}
+        {/* Pit stop button */}
         {!archived && (
           <button
             onClick={markPitStop}
@@ -747,7 +765,61 @@ export default function RaceMode({
         </div>
       )}
 
-      {/* ── Fuel summary — only shown when perf data exists ───────────── */}
+      {/* ── Recalc strategy card — only during race with completed stints ── */}
+      {!archived &&
+        onRequestRecalc &&
+        isInRace &&
+        completedStints.length > 0 && (
+          <div
+            onClick={onRequestRecalc}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              padding: "0.65rem 1rem",
+              background: "rgba(var(--accent-rgb), 0.06)",
+              border: "1px solid var(--accent-dim)",
+              borderRadius: "4px",
+              cursor: "pointer",
+              transition: "background 0.15s",
+            }}
+            onMouseEnter={(e) =>
+              (e.currentTarget.style.background =
+                "rgba(var(--accent-rgb), 0.12)")
+            }
+            onMouseLeave={(e) =>
+              (e.currentTarget.style.background =
+                "rgba(var(--accent-rgb), 0.06)")
+            }
+          >
+            <div>
+              <div
+                style={{
+                  fontSize: "0.85rem",
+                  fontWeight: 700,
+                  color: "var(--accent)",
+                }}
+              >
+                ↻ Recalculer la stratégie
+              </div>
+              <div
+                style={{
+                  fontSize: "0.72rem",
+                  color: "var(--text-dim)",
+                  marginTop: "0.1rem",
+                }}
+              >
+                {completedStints.length} relais complétés · voir l&apos;onglet
+                Relais
+              </div>
+            </div>
+            <span style={{ color: "var(--accent)", fontSize: "0.85rem" }}>
+              →
+            </span>
+          </div>
+        )}
+
+      {/* ── Fuel summary ──────────────────────────────────────────────── */}
       {hasFuelData && (
         <div className="card">
           <div
@@ -759,7 +831,6 @@ export default function RaceMode({
             }}
           >
             <div style={labelStyle}>Bilan carburant</div>
-            {/* Cumulative drift badge */}
             {cumulativeDrift !== null && (
               <span
                 style={{
@@ -794,10 +865,12 @@ export default function RaceMode({
               </span>
             )}
           </div>
-
-          {/* Per-stint fuel rows */}
           <div
-            style={{ display: "flex", flexDirection: "column", gap: "0.4rem" }}
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              gap: "0.4rem",
+            }}
           >
             {completedWithFuel
               .filter((s) => s._fuel)
@@ -826,23 +899,18 @@ export default function RaceMode({
                       flexWrap: "wrap",
                     }}
                   >
-                    {/* Stint + driver */}
                     <span style={{ color: "var(--text-dim)", flexShrink: 0 }}>
                       #{s.stint_number}{" "}
                       <span style={{ color: "var(--text)", fontWeight: 600 }}>
                         {driverMap[s.driver_id] || "—"}
                       </span>
                     </span>
-
-                    {/* Duration */}
                     <span
                       className="mono"
                       style={{ color: "var(--text-dim)", fontSize: "0.75rem" }}
                     >
                       {formatDuration(f.actualDurationSec)}
                     </span>
-
-                    {/* Laps */}
                     {f.actualLaps !== null && (
                       <span
                         className="mono"
@@ -854,8 +922,6 @@ export default function RaceMode({
                         {f.actualLaps} tours
                       </span>
                     )}
-
-                    {/* Fuel actual vs planned */}
                     <span className="mono" style={{ fontSize: "0.75rem" }}>
                       {f.actualFuel !== null ? (
                         <>
@@ -873,8 +939,6 @@ export default function RaceMode({
                         <span style={{ color: "var(--text-dim)" }}>— L</span>
                       )}
                     </span>
-
-                    {/* Drift */}
                     {f.drift !== null && (
                       <span
                         className="mono"
@@ -889,11 +953,9 @@ export default function RaceMode({
                         {f.drift.toFixed(1)}L
                       </span>
                     )}
-
-                    {/* Warning: no perf data */}
                     {!f.hasPerfData && (
                       <span
-                        title="Données de performance manquantes — calcul approximatif"
+                        title="Données de performance manquantes"
                         style={{ fontSize: "0.75rem" }}
                       >
                         ⚠️
@@ -913,7 +975,11 @@ export default function RaceMode({
             Relais complétés ({completedStints.length})
           </div>
           <div
-            style={{ display: "flex", flexDirection: "column", gap: "0.25rem" }}
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              gap: "0.25rem",
+            }}
           >
             {completedStints.map((s) => (
               <div
@@ -943,53 +1009,6 @@ export default function RaceMode({
         </div>
       )}
 
-      {/* ── Recalc strategy — only shown during race with completed stints ── */}
-      {!archived && onRequestRecalc && completedStints.length > 0 && (
-        <div
-          onClick={onRequestRecalc}
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            padding: "0.65rem 1rem",
-            background: "rgba(var(--accent-rgb), 0.06)",
-            border: "1px solid var(--accent-dim)",
-            borderRadius: "4px",
-            cursor: "pointer",
-            transition: "background 0.15s",
-          }}
-          onMouseEnter={(e) =>
-            (e.currentTarget.style.background = "rgba(var(--accent-rgb), 0.12)")
-          }
-          onMouseLeave={(e) =>
-            (e.currentTarget.style.background = "rgba(var(--accent-rgb), 0.06)")
-          }
-        >
-          <div>
-            <div
-              style={{
-                fontSize: "0.85rem",
-                fontWeight: 700,
-                color: "var(--accent)",
-              }}
-            >
-              ↻ Recalculer la stratégie
-            </div>
-            <div
-              style={{
-                fontSize: "0.72rem",
-                color: "var(--text-dim)",
-                marginTop: "0.1rem",
-              }}
-            >
-              {completedStints.length} relais complétés · voir l&apos;onglet
-              Relais
-            </div>
-          </div>
-          <span style={{ color: "var(--accent)", fontSize: "0.85rem" }}>→</span>
-        </div>
-      )}
-
       {/* ── Undo button ────────────────────────────────────────────────── */}
       {!archived && completedStints.length > 0 && (
         <div style={{ textAlign: "right" }}>
@@ -1003,7 +1022,8 @@ export default function RaceMode({
           </button>
         </div>
       )}
-      {/* ── Dev state override — development only ─────────────────────── */}
+
+      {/* ── Dev state override ─────────────────────────────────────────── */}
       {process.env.NODE_ENV === "development" && (
         <div
           style={{
