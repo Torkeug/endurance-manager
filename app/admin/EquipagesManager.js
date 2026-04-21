@@ -6,7 +6,7 @@ import ChampionshipTeamsManager from "./ChampionshipTeamsManager";
 
 // Sub-tab definitions for the Équipages admin section
 const TABS = [
-  { key: "numeros", label: "Gestion des championnats" },
+  { key: "numeros", label: "Équipages utilisés en championnats" },
   { key: "noms", label: "Configuration" },
 ];
 
