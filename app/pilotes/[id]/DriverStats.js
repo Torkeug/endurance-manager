@@ -435,46 +435,44 @@ export default function DriverStats({
           <SectionHeader title="Évolution iRating" />
 
           {/* Category tab selector */}
-          {availableCategories.length > 1 && (
-            <div
-              style={{
-                display: "flex",
-                gap: "0.5rem",
-                flexWrap: "wrap",
-                marginBottom: "0.75rem",
-              }}
-            >
-              {availableCategories.map((catId) => (
-                <button
-                  key={catId}
-                  onClick={() => setSelectedCategory(catId)}
-                  style={{
-                    padding: "0.25rem 0.75rem",
-                    borderRadius: "999px",
-                    border: "1px solid",
-                    borderColor:
-                      selectedCategory === catId
-                        ? "var(--accent)"
-                        : "var(--border)",
-                    background:
-                      selectedCategory === catId
-                        ? "var(--accent-dim)"
-                        : "transparent",
-                    color:
-                      selectedCategory === catId
-                        ? "var(--accent)"
-                        : "var(--text-dim)",
-                    fontSize: "0.78rem",
-                    fontWeight: 600,
-                    cursor: "pointer",
-                    transition: "all 0.15s",
-                  }}
-                >
-                  {CATEGORIES[catId]?.label ?? `Catégorie ${catId}`}
-                </button>
-              ))}
-            </div>
-          )}
+          <div
+            style={{
+              display: "flex",
+              gap: "0.5rem",
+              flexWrap: "wrap",
+              marginBottom: "0.75rem",
+            }}
+          >
+            {availableCategories.map((catId) => (
+              <button
+                key={catId}
+                onClick={() => setSelectedCategory(catId)}
+                style={{
+                  padding: "0.25rem 0.75rem",
+                  borderRadius: "999px",
+                  border: "1px solid",
+                  borderColor:
+                    selectedCategory === catId
+                      ? "var(--accent)"
+                      : "var(--border)",
+                  background:
+                    selectedCategory === catId
+                      ? "var(--accent-dim)"
+                      : "transparent",
+                  color:
+                    selectedCategory === catId
+                      ? "var(--accent)"
+                      : "var(--text-dim)",
+                  fontSize: "0.78rem",
+                  fontWeight: 600,
+                  cursor: "pointer",
+                  transition: "all 0.15s",
+                }}
+              >
+                {CATEGORIES[catId]?.label ?? `Catégorie ${catId}`}
+              </button>
+            ))}
+          </div>
 
           {/* Road license warning */}
           {CATEGORIES[selectedCategory]?.warning && (
