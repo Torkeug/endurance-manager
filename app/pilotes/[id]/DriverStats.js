@@ -611,82 +611,40 @@ export default function DriverStats({
                     <Tooltip content={<IRatingTooltip />} />
 
                     {/* Legend */}
-                    <Legend
-                      wrapperStyle={{
-                        fontSize: "0.72rem",
-                        color: "var(--text-dim)",
-                        paddingTop: "0.5rem",
-                        margin: 0,
-                        paddingBottom: 0,
-                      }}
-                      content={({ payload }) => {
-                        if (!payload) return null;
+                   <Legend
+  content={() => (
+    <div
+      style={{
+        display: "flex",
+        gap: "1.5rem",
+        fontSize: "0.72rem",
+        color: "var(--text-dim)",
+        paddingTop: "0.5rem",
+        alignItems: "center",
+        flexWrap: "wrap",
+      }}
+    >
+      {/* Historique */}
+      <span style={{ display: "flex", alignItems: "center", gap: "0.4rem" }}>
+        <svg width="16" height="10" style={{ display: "block", flexShrink: 0 }}>
+          <line x1="0" y1="5" x2="16" y2="5" stroke="var(--accent)" strokeWidth="2" />
+          <circle cx="8" cy="5" r="3" fill="var(--accent)" />
+        </svg>
+        Historique iRating
+      </span>
 
-                        return (
-                          <div
-                            style={{
-                              display: "flex",
-                              gap: "1.5rem",
-                              alignItems: "center",
-                              flexWrap: "wrap",
-                            }}
-                          >
-                            {payload.map((entry, index) => {
-                              const isIRatingActuel = entry.value === "iRating";
-
-                              const label = isIRatingActuel
-                                ? "historique"
-                                : entry.value;
-
-                              return (
-                                <span
-                                  key={index}
-                                  style={{
-                                    display: "flex",
-                                    alignItems: "center",
-                                    gap: "0.4rem",
-                                  }}
-                                >
-                                  <svg width="14" height="14">
-                                    {/* line */}
-                                    <line
-                                      x1="0"
-                                      y1="7"
-                                      x2="14"
-                                      y2="7"
-                                      stroke={entry.color}
-                                      strokeWidth="2"
-                                      strokeDasharray={
-                                        entry.value === "iRating actuel"
-                                          ? "4 3"
-                                          : undefined
-                                      }
-                                      opacity={
-                                        entry.value === "iRating actuel"
-                                          ? 0.4
-                                          : 1
-                                      }
-                                    />
-
-                                    {/* dot only for normal series */}
-                                    {entry.value !== "iRating actuel" && (
-                                      <circle
-                                        cx="7"
-                                        cy="7"
-                                        r="3"
-                                        fill={entry.color}
-                                      />
-                                    )}
-                                  </svg>
-
-                                  <span>{label}</span>
-                                </span>
-                              );
-                            })}
-                          </div>
-                        );
-                      }}
-                    />
+      {/* iRating actuel — only on Sports Car tab */}
+      {currentIrating && selectedCategory === 5 && (
+        <span style={{ display: "flex", alignItems: "center", gap: "0.4rem" }}>
+          <svg width="16" height="10" style={{ display: "block", flexShrink: 0 }}>
+            <line x1="0" y1="5" x2="16" y2="5" stroke="var(--accent)" strokeWidth="2" strokeDasharray="4 3" opacity="0.4" />
+          </svg>
+          iRating actuel
+        </span>
+      )}
+    </div>
+  )}
+/>
 
                     {/* Real reference line (visible on chart) */}
                     {currentIrating && selectedCategory === 5 && (
@@ -695,21 +653,6 @@ export default function DriverStats({
                         stroke="var(--accent)"
                         strokeDasharray="4 3"
                         strokeOpacity={0.4}
-                      />
-                    )}
-
-                    {/* Fake line ONLY for legend */}
-                    {currentIrating && selectedCategory === 5 && (
-                      <Line
-                        dataKey="__irating_legend__"
-                        name="iRating actuel"
-                        stroke="var(--accent)"
-                        strokeDasharray="4 3"
-                        strokeOpacity={0} // invisible on chart
-                        dot={false}
-                        activeDot={false}
-                        legendType="plainline" // 🔥 key fix
-                        isAnimationActive={false}
                       />
                     )}
                     {/* Single continuous line with purple dots for pre-split */}
