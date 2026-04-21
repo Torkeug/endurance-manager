@@ -115,9 +115,9 @@ export default async function DriverDetail({ params, searchParams }) {
       : { data: [] };
 
   // Irating history to build irating graph
-  const { data: iratingHistory } = await supabase
+  const { data: iratingHistoryAll } = await supabase
     .from("irating_history")
-    .select("irating, recorded_at")
+    .select("irating, recorded_at, category_id")
     .eq("driver_id", id)
     .order("recorded_at", { ascending: true });
 
@@ -439,7 +439,7 @@ export default async function DriverDetail({ params, searchParams }) {
             teamPerfData={teamPerfData || []}
             teammatesData={teammatesData || []}
             signups={signups || []}
-            iratingHistory={iratingHistory || []}
+            iratingHistory={iratingHistoryAll || []}
             currentIrating={driver.irating}
           />
         }
