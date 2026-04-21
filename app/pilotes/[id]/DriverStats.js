@@ -277,6 +277,9 @@ export default function DriverStats({
       .map((h) => ({
         irating: h.irating,
         recorded_at: h.recorded_at,
+        // Track whether this point came from Road (pre-split) or current category
+        source:
+          selectedCategory === 5 && h.category_id === 2 ? "road" : "current",
       }));
 
     if (selectedCategory === 5) {
@@ -590,13 +593,29 @@ export default function DriverStats({
                         strokeOpacity={0.4}
                       />
                     )}
+                    {/* Road data (pre-split) */}
                     <Line
                       type="monotone"
                       dataKey="irating"
+                      data={chartData.filter((p) => p.source === "road")}
+                      stroke="#a06020"
+                      strokeWidth={2}
+                      dot={{ fill: "#a06020", r: 3, strokeWidth: 0 }}
+                      activeDot={{ r: 5, fill: "#a06020" }}
+                      isAnimationActive={false}
+                      name="Road"
+                    />
+                    {/* Sports Car data (post-split) */}
+                    <Line
+                      type="monotone"
+                      dataKey="irating"
+                      data={chartData.filter((p) => p.source === "current")}
                       stroke="var(--accent)"
                       strokeWidth={2}
                       dot={{ fill: "var(--accent)", r: 3, strokeWidth: 0 }}
                       activeDot={{ r: 5, fill: "var(--accent)" }}
+                      isAnimationActive={false}
+                      name="Sports Car"
                     />
                   </LineChart>
                 </ResponsiveContainer>
