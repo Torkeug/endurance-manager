@@ -10,7 +10,21 @@ import {
   ReferenceLine,
 } from "recharts";
 
-// ─── Helpers ─────────────────────────────────────────────────────────────────
+// ─── License category metadata ────────────────────────────────────────────────
+const CATEGORIES = {
+  1: { label: "Oval", warning: null },
+  2: {
+    label: "Road",
+    warning:
+      "Cette licence a été scindée en Sports Car et Formula Car en 2024 et n'est plus utilisée.",
+  },
+  3: { label: "Dirt Oval", warning: null },
+  4: { label: "Dirt Road", warning: null },
+  5: { label: "Sports Car", warning: null },
+  6: { label: "Formula Car", warning: null },
+};
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
 
 /** Format lap time in seconds to M:SS.mmm */
 function formatLapTime(sec) {
@@ -20,7 +34,7 @@ function formatLapTime(sec) {
   return `${m}:${String(s).padStart(6, "0")}`;
 }
 
-/** Mirror of StintGrid's getIGTime — offset from race IRL start */
+/** Mirror of StintGrid's getIGTime */
 function getIGTime(irlTime, raceIrlStart, igStartTimeStr) {
   if (!igStartTimeStr || !raceIrlStart || !irlTime) return null;
   const [igH, igM] = igStartTimeStr.split(":").map(Number);
@@ -60,7 +74,6 @@ function isNightStint(stint) {
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
-/** Summary stat card */
 function StatCard({ label, value, sub, color }) {
   return (
     <div
@@ -110,7 +123,6 @@ function StatCard({ label, value, sub, color }) {
   );
 }
 
-/** Horizontal bar with label and count */
 function MiniBar({ value, label, count, color }) {
   return (
     <div style={{ marginBottom: "0.6rem" }}>
@@ -152,7 +164,6 @@ function MiniBar({ value, label, count, color }) {
   );
 }
 
-/** Section label */
 function SectionHeader({ title }) {
   return (
     <div
@@ -170,7 +181,7 @@ function SectionHeader({ title }) {
   );
 }
 
-// ─── iRating chart tooltip ───────────────────────────────────────────────────
+// ─── iRating chart tooltip ────────────────────────────────────────────────────
 
 function IRatingTooltip({ active, payload }) {
   if (!active || !payload?.length) return null;
@@ -215,6 +226,52 @@ export default function DriverStats({
 }) {
   const [showAllTeammates, setShowAllTeammates] = useState(false);
 
+  // ── iRating chart data — grouped by category ──────────────────────────────
+  const historyByCategory = {};
+  (iratingHistory || []).forEach((h) => {
+    const cat = h.category_id ?? 5;
+    if (!historyByCategory[cat]) historyByCategory[cat] = [];
+    historyByCategory[cat].push(h);
+  });
+
+  const availableCategories = Object.keys(historyByCategory)
+    .map(Number)
+    .sort((a, b) => a - b);
+
+  const defaultCategory = availableCategories.includes(5)
+    ? 5
+    : (availableCategories[0] ?? 5);
+
+  const [selectedCategory, setSelectedCategory] = useState(defaultCategory);
+
+  // Chart data for selected category
+  const rawChartData = historyByCategory[selectedCategory] || [];
+  const chartData = (() => {
+    if (rawChartData.length === 0 && !currentIrating) return [];
+    const points = rawChartData.map((h) => ({
+      irating: h.irating,
+      recorded_at: h.recorded_at,
+    }));
+    // Append current iRating if it differs from last point (sports car only)
+    if (selectedCategory === 5) {
+      const last = points[points.length - 1];
+      if (currentIrating && (!last || last.irating !== currentIrating)) {
+        points.push({
+          irating: currentIrating,
+          recorded_at: new Date().toISOString(),
+        });
+      }
+    }
+    return points;
+  })();
+
+  const iratingValues = chartData.map((p) => p.irating);
+  const iratingMin = iratingValues.length > 0 ? Math.min(...iratingValues) : 0;
+  const iratingMax =
+    iratingValues.length > 0 ? Math.max(...iratingValues) : 2000;
+  const yPadding = Math.max(100, Math.round((iratingMax - iratingMin) * 0.2));
+  const yDomain = [Math.max(0, iratingMin - yPadding), iratingMax + yPadding];
+
   // ── Totals ─────────────────────────────────────────────────────────────────
   const totalRaces = new Set(
     (signups || []).map((s) => s.events?.id).filter(Boolean),
@@ -226,7 +283,6 @@ export default function DriverStats({
 
   const totalStints = (stints || []).length;
 
-  // Sum laps_planned — best approximation without re-running the calc engine
   const totalLaps = (stints || []).reduce(
     (sum, s) => sum + (s.laps_planned || 0),
     0,
@@ -238,30 +294,7 @@ export default function DriverStats({
   const nightStintsCount = (stints || []).filter(isNightStint).length;
   const nightPct = totalStints > 0 ? (nightStintsCount / totalStints) * 100 : 0;
 
-  // ── Most used circuits ─────────────────────────────────────────────────────
-  const circuitCounts = {};
-  (signups || []).forEach((s) => {
-    const name = s.events?.circuits?.name;
-    if (!name) return;
-    circuitCounts[name] = (circuitCounts[name] || 0) + 1;
-  });
-  const sortedCircuits = Object.entries(circuitCounts)
-    .map(([name, count]) => ({ name, count }))
-    .sort((a, b) => b.count - a.count);
-
-  // ── Most used cars ─────────────────────────────────────────────────────────
-  const carCounts = {};
-  (signups || []).forEach((s) => {
-    const name = s.team_entries?.cars?.name;
-    if (!name) return;
-    carCounts[name] = (carCounts[name] || 0) + 1;
-  });
-  const sortedCars = Object.entries(carCounts)
-    .map(([name, count]) => ({ name, count }))
-    .sort((a, b) => b.count - a.count);
-
   // ── Lap times by circuit ───────────────────────────────────────────────────
-  // Group performance records by circuit, keep best (lowest) lap times per condition
   const circuitMap = {};
   (driverPerfData || []).forEach((p) => {
     const circuit = p.team_entries?.events?.circuits?.name;
@@ -289,27 +322,22 @@ export default function DriverStats({
     .sort((a, b) => a.name.localeCompare(b.name));
 
   // ── Fuel efficiency vs team average ───────────────────────────────────────
-  // Compare driver's fuel consumption against the average of all teammates
-  // for the same team entry and condition
   const fuelRows = (driverPerfData || [])
     .filter((p) => p.fuel_dry || p.fuel_wet)
     .map((p) => {
       const teammates = (teamPerfData || []).filter(
         (t) => t.team_entry_id === p.team_entry_id,
       );
-
       const teamDryFuels = teammates.map((t) => t.fuel_dry).filter(Boolean);
       const teamAvgDry =
         teamDryFuels.length > 0
           ? teamDryFuels.reduce((s, f) => s + f, 0) / teamDryFuels.length
           : null;
-
       const teamWetFuels = teammates.map((t) => t.fuel_wet).filter(Boolean);
       const teamAvgWet =
         teamWetFuels.length > 0
           ? teamWetFuels.reduce((s, f) => s + f, 0) / teamWetFuels.length
           : null;
-
       return {
         teamEntryId: p.team_entry_id,
         eventName: p.team_entries?.events?.name || "—",
@@ -318,14 +346,12 @@ export default function DriverStats({
         driverFuelWet: p.fuel_wet,
         teamAvgDry,
         teamAvgWet,
-        // Positive diff = driver uses more fuel than team average
         diffDry: p.fuel_dry && teamAvgDry ? p.fuel_dry - teamAvgDry : null,
         diffWet: p.fuel_wet && teamAvgWet ? p.fuel_wet - teamAvgWet : null,
       };
     });
 
   // ── Teammates ──────────────────────────────────────────────────────────────
-  // Count how many times each driver has shared a team entry with this driver
   const teammateCounts = {};
   (teammatesData || []).forEach((t) => {
     const driverId = t.drivers?.id;
@@ -343,33 +369,27 @@ export default function DriverStats({
     ? sortedTeammates
     : sortedTeammates.slice(0, 5);
 
-  // ── iRating chart data ─────────────────────────────────────────────────────
-  // Merge history with current iRating for display.
-  // If current iRating differs from the last history entry, append it as "now".
-  const chartData = (() => {
-    if (iratingHistory.length === 0 && !currentIrating) return [];
-    const points = iratingHistory.map((h) => ({
-      irating: h.irating,
-      recorded_at: h.recorded_at,
-    }));
-    // Append current value if it differs from last recorded or history is empty
-    const last = points[points.length - 1];
-    if (currentIrating && (!last || last.irating !== currentIrating)) {
-      points.push({
-        irating: currentIrating,
-        recorded_at: new Date().toISOString(),
-      });
-    }
-    return points;
-  })();
+  // ── Most used circuits ─────────────────────────────────────────────────────
+  const circuitCounts = {};
+  (signups || []).forEach((s) => {
+    const name = s.events?.circuits?.name;
+    if (!name) return;
+    circuitCounts[name] = (circuitCounts[name] || 0) + 1;
+  });
+  const sortedCircuits = Object.entries(circuitCounts)
+    .map(([name, count]) => ({ name, count }))
+    .sort((a, b) => b.count - a.count);
 
-  // Y axis domain with padding
-  const iratingValues = chartData.map((p) => p.irating);
-  const iratingMin = iratingValues.length > 0 ? Math.min(...iratingValues) : 0;
-  const iratingMax =
-    iratingValues.length > 0 ? Math.max(...iratingValues) : 2000;
-  const yPadding = Math.max(100, Math.round((iratingMax - iratingMin) * 0.2));
-  const yDomain = [Math.max(0, iratingMin - yPadding), iratingMax + yPadding];
+  // ── Most used cars ─────────────────────────────────────────────────────────
+  const carCounts = {};
+  (signups || []).forEach((s) => {
+    const name = s.team_entries?.cars?.name;
+    if (!name) return;
+    carCounts[name] = (carCounts[name] || 0) + 1;
+  });
+  const sortedCars = Object.entries(carCounts)
+    .map(([name, count]) => ({ name, count }))
+    .sort((a, b) => b.count - a.count);
 
   // ── Empty state ────────────────────────────────────────────────────────────
   if (
@@ -409,6 +429,204 @@ export default function DriverStats({
   // ── Render ─────────────────────────────────────────────────────────────────
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
+      {/* ── iRating history ───────────────────────────────────────────── */}
+      {availableCategories.length > 0 && (
+        <div className="card">
+          <SectionHeader title="Évolution iRating" />
+
+          {/* Category tab selector */}
+          {availableCategories.length > 1 && (
+            <div
+              style={{
+                display: "flex",
+                gap: "0.5rem",
+                flexWrap: "wrap",
+                marginBottom: "0.75rem",
+              }}
+            >
+              {availableCategories.map((catId) => (
+                <button
+                  key={catId}
+                  onClick={() => setSelectedCategory(catId)}
+                  style={{
+                    padding: "0.25rem 0.75rem",
+                    borderRadius: "999px",
+                    border: "1px solid",
+                    borderColor:
+                      selectedCategory === catId
+                        ? "var(--accent)"
+                        : "var(--border)",
+                    background:
+                      selectedCategory === catId
+                        ? "var(--accent-dim)"
+                        : "transparent",
+                    color:
+                      selectedCategory === catId
+                        ? "var(--accent)"
+                        : "var(--text-dim)",
+                    fontSize: "0.78rem",
+                    fontWeight: 600,
+                    cursor: "pointer",
+                    transition: "all 0.15s",
+                  }}
+                >
+                  {CATEGORIES[catId]?.label ?? `Catégorie ${catId}`}
+                </button>
+              ))}
+            </div>
+          )}
+
+          {/* Road license warning */}
+          {CATEGORIES[selectedCategory]?.warning && (
+            <div
+              style={{
+                fontSize: "0.78rem",
+                color: "#d4904a",
+                padding: "0.5rem 0.75rem",
+                background: "#2a1a00",
+                border: "1px solid #a06020",
+                borderRadius: "3px",
+                marginBottom: "0.75rem",
+              }}
+            >
+              ⚠️ {CATEGORIES[selectedCategory].warning}
+            </div>
+          )}
+
+          {chartData.length > 1 ? (
+            <>
+              <div style={{ width: "100%", height: 200 }}>
+                <ResponsiveContainer width="100%" height={200}>
+                  <LineChart
+                    data={chartData}
+                    margin={{ top: 8, right: 16, left: 0, bottom: 0 }}
+                  >
+                    <XAxis
+                      dataKey="recorded_at"
+                      tickFormatter={(val) =>
+                        new Date(val).toLocaleDateString("fr-FR", {
+                          day: "2-digit",
+                          month: "2-digit",
+                          year: "2-digit",
+                        })
+                      }
+                      tick={{ fill: "var(--text-dim)", fontSize: 10 }}
+                      axisLine={{ stroke: "var(--border)" }}
+                      tickLine={false}
+                      minTickGap={60}
+                    />
+                    <YAxis
+                      domain={yDomain}
+                      tick={{ fill: "var(--text-dim)", fontSize: 10 }}
+                      axisLine={false}
+                      tickLine={false}
+                      width={48}
+                      tickFormatter={(v) => `${v}`}
+                    />
+                    <Tooltip content={<IRatingTooltip />} />
+                    {currentIrating && selectedCategory === 5 && (
+                      <ReferenceLine
+                        y={currentIrating}
+                        stroke="var(--accent)"
+                        strokeDasharray="4 3"
+                        strokeOpacity={0.4}
+                      />
+                    )}
+                    <Line
+                      type="monotone"
+                      dataKey="irating"
+                      stroke="var(--accent)"
+                      strokeWidth={2}
+                      dot={{ fill: "var(--accent)", r: 3, strokeWidth: 0 }}
+                      activeDot={{ r: 5, fill: "var(--accent)" }}
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+
+              {/* Annotations */}
+              {iratingValues.length > 1 && (
+                <div
+                  style={{
+                    display: "flex",
+                    gap: "1rem",
+                    marginTop: "0.5rem",
+                    fontSize: "0.72rem",
+                    color: "var(--text-dim)",
+                    flexWrap: "wrap",
+                  }}
+                >
+                  <span>
+                    Min :{" "}
+                    <span className="mono" style={{ color: "var(--text)" }}>
+                      {iratingMin} iR
+                    </span>
+                  </span>
+                  <span>
+                    Max :{" "}
+                    <span className="mono" style={{ color: "var(--text)" }}>
+                      {iratingMax} iR
+                    </span>
+                  </span>
+                  <span>
+                    Δ :{" "}
+                    <span
+                      className="mono"
+                      style={{
+                        color:
+                          iratingMax - iratingMin === 0
+                            ? "var(--text-dim)"
+                            : chartData[chartData.length - 1]?.irating >
+                                chartData[0]?.irating
+                              ? "#2eb460"
+                              : "var(--danger)",
+                      }}
+                    >
+                      {chartData[chartData.length - 1]?.irating >
+                      chartData[0]?.irating
+                        ? "+"
+                        : ""}
+                      {(chartData[chartData.length - 1]?.irating ?? 0) -
+                        (chartData[0]?.irating ?? 0)}{" "}
+                      iR
+                    </span>
+                  </span>
+                  <span style={{ marginLeft: "auto" }}>
+                    {chartData.length} point
+                    {chartData.length !== 1 ? "s" : ""}
+                  </span>
+                  <span
+                    style={{
+                      color: "var(--text-dim)",
+                      width: "100%",
+                      marginTop: "0.25rem",
+                    }}
+                  >
+                    {new Date(chartData[0].recorded_at).toLocaleDateString(
+                      "fr-FR",
+                      { day: "2-digit", month: "2-digit", year: "numeric" },
+                    )}{" "}
+                    →{" "}
+                    {new Date(
+                      chartData[chartData.length - 1].recorded_at,
+                    ).toLocaleDateString("fr-FR", {
+                      day: "2-digit",
+                      month: "2-digit",
+                      year: "numeric",
+                    })}
+                  </span>
+                </div>
+              )}
+            </>
+          ) : (
+            <div style={{ color: "var(--text-dim)", fontSize: "0.82rem" }}>
+              Pas encore assez de données pour afficher un graphique. Le
+              graphique apparaîtra après plusieurs synchronisations.
+            </div>
+          )}
+        </div>
+      )}
+
       {/* ── Summary cards ─────────────────────────────────────────────── */}
       <div style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap" }}>
         <StatCard label="Courses" value={totalRaces} />
@@ -422,122 +640,6 @@ export default function DriverStats({
           sub={totalLaps > 0 ? "estimés" : null}
         />
       </div>
-
-      {/* ── iRating history ───────────────────────────────────────────── */}
-      {chartData.length > 1 ? (
-        <div className="card">
-          <SectionHeader title="Évolution iRating" />
-          <div style={{ width: "100%", height: 200 }}>
-            <ResponsiveContainer width="100%" height={200}>
-              <LineChart
-                data={chartData}
-                margin={{ top: 8, right: 16, left: 0, bottom: 0 }}
-              >
-                <XAxis
-                  dataKey="recorded_at"
-                  tickFormatter={(val) =>
-                    new Date(val).toLocaleDateString("fr-FR", {
-                      day: "2-digit",
-                      month: "2-digit",
-                    })
-                  }
-                  tick={{ fill: "var(--text-dim)", fontSize: 10 }}
-                  axisLine={{ stroke: "var(--border)" }}
-                  tickLine={false}
-                  minTickGap={40}
-                />
-                <YAxis
-                  domain={yDomain}
-                  tick={{ fill: "var(--text-dim)", fontSize: 10 }}
-                  axisLine={false}
-                  tickLine={false}
-                  width={48}
-                  tickFormatter={(v) => `${v}`}
-                />
-                <Tooltip content={<IRatingTooltip />} />
-                {/* Reference line at current iRating */}
-                {currentIrating && (
-                  <ReferenceLine
-                    y={currentIrating}
-                    stroke="var(--accent)"
-                    strokeDasharray="4 3"
-                    strokeOpacity={0.4}
-                  />
-                )}
-                <Line
-                  type="monotone"
-                  dataKey="irating"
-                  stroke="var(--accent)"
-                  strokeWidth={2}
-                  dot={{ fill: "var(--accent)", r: 3, strokeWidth: 0 }}
-                  activeDot={{ r: 5, fill: "var(--accent)" }}
-                />
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
-          {/* Min / max annotation */}
-          {iratingValues.length > 1 && (
-            <div
-              style={{
-                display: "flex",
-                gap: "1rem",
-                marginTop: "0.5rem",
-                fontSize: "0.72rem",
-                color: "var(--text-dim)",
-                flexWrap: "wrap",
-              }}
-            >
-              <span>
-                Min :{" "}
-                <span className="mono" style={{ color: "var(--text)" }}>
-                  {iratingMin} iR
-                </span>
-              </span>
-              <span>
-                Max :{" "}
-                <span className="mono" style={{ color: "var(--text)" }}>
-                  {iratingMax} iR
-                </span>
-              </span>
-              <span>
-                Δ :{" "}
-                <span
-                  className="mono"
-                  style={{
-                    color:
-                      iratingMax - iratingMin === 0
-                        ? "var(--text-dim)"
-                        : chartData[chartData.length - 1]?.irating >
-                            chartData[0]?.irating
-                          ? "#2eb460"
-                          : "var(--danger)",
-                  }}
-                >
-                  {chartData[chartData.length - 1]?.irating >
-                  chartData[0]?.irating
-                    ? "+"
-                    : ""}
-                  {(chartData[chartData.length - 1]?.irating ?? 0) -
-                    (chartData[0]?.irating ?? 0)}{" "}
-                  iR
-                </span>
-              </span>
-              <span style={{ marginLeft: "auto" }}>
-                {chartData.length} point{chartData.length !== 1 ? "s" : ""}
-              </span>
-            </div>
-          )}
-        </div>
-      ) : currentIrating ? (
-        // Single data point — just show current iRating, no graph yet
-        <div className="card">
-          <SectionHeader title="Évolution iRating" />
-          <div style={{ color: "var(--text-dim)", fontSize: "0.82rem" }}>
-            Pas encore assez de données pour afficher un graphique. Le graphique
-            apparaîtra après plusieurs synchronisations.
-          </div>
-        </div>
-      ) : null}
 
       {/* ── Conditions ────────────────────────────────────────────────── */}
       {totalStints > 0 && (rainStints > 0 || nightStintsCount > 0) && (
