@@ -118,6 +118,15 @@ async function syncOneDriver(
     .update({ irating, iracing_synced_at: now })
     .eq("id", driverId);
 
+  // Record iRating history — only when we have a valid value
+  if (typeof irating === "number") {
+    await supabase.from("irating_history").insert({
+      driver_id: driverId,
+      irating,
+      recorded_at: now,
+    });
+  }
+
   // Replace car ownership — only proceed if iRacing returned car data
   const carRows = [...ownedCarIds]
     .map((carId) => {
@@ -357,7 +366,15 @@ export async function GET(request) {
             .from("drivers")
             .update({ irating, iracing_synced_at: now })
             .eq("id", d.id);
-          if (!updateErr) syncCount++;
+          if (!updateErr) {
+            syncCount++;
+            // Record iRating history for each successfully synced driver
+            await supabase.from("irating_history").insert({
+              driver_id: d.id,
+              irating,
+              recorded_at: now,
+            });
+          }
         } catch (err) {
           // Log per-driver errors but continue syncing remaining drivers
           console.error(`iRacing sync failed for driver ${d.id}:`, err.message);
