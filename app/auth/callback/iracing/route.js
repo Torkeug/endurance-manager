@@ -94,11 +94,23 @@ async function syncAllCategoryIratings(token, driverId, iracingCustId) {
         const latest = chartData.data[chartData.data.length - 1];
         if (typeof latest.value !== "number") return;
 
+        const recordedAt = new Date(latest.when).toISOString();
+
+        // Skip if this exact point already exists — avoids duplicates on repeated syncs
+        const { count } = await supabase
+          .from("irating_history")
+          .select("id", { count: "exact", head: true })
+          .eq("driver_id", driverId)
+          .eq("category_id", categoryId)
+          .eq("recorded_at", recordedAt);
+
+        if (count > 0) return;
+
         await supabase.from("irating_history").insert({
           driver_id: driverId,
           irating: latest.value,
           category_id: categoryId,
-          recorded_at: new Date(latest.when).toISOString(),
+          recorded_at: recordedAt,
         });
       } catch (err) {
         console.error(
