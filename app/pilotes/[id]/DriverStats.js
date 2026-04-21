@@ -24,6 +24,13 @@ const CATEGORIES = {
   6: { label: "Formula Car", warning: null },
 };
 
+const DATE_RANGES = [
+  { key: "3m", label: "3 mois", months: 3 },
+  { key: "6m", label: "6 mois", months: 6 },
+  { key: "1y", label: "1 an", months: 12 },
+  { key: "all", label: "Tout", months: null },
+];
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 /** Format lap time in seconds to M:SS.mmm */
@@ -243,16 +250,26 @@ export default function DriverStats({
     : (availableCategories[0] ?? 5);
 
   const [selectedCategory, setSelectedCategory] = useState(defaultCategory);
+  const [dateRange, setDateRange] = useState("all");
 
   // Chart data for selected category
   const rawChartData = historyByCategory[selectedCategory] || [];
   const chartData = (() => {
     if (rawChartData.length === 0 && !currentIrating) return [];
-    const points = rawChartData.map((h) => ({
-      irating: h.irating,
-      recorded_at: h.recorded_at,
-    }));
-    // Append current iRating if it differs from last point (sports car only)
+
+    // Apply date range filter
+    const selectedRange = DATE_RANGES.find((r) => r.key === dateRange);
+    const cutoff = selectedRange?.months
+      ? new Date(Date.now() - selectedRange.months * 30 * 24 * 60 * 60 * 1000)
+      : null;
+
+    const points = rawChartData
+      .filter((h) => !cutoff || new Date(h.recorded_at) >= cutoff)
+      .map((h) => ({
+        irating: h.irating,
+        recorded_at: h.recorded_at,
+      }));
+
     if (selectedCategory === 5) {
       const last = points[points.length - 1];
       if (currentIrating && (!last || last.irating !== currentIrating)) {
@@ -470,6 +487,40 @@ export default function DriverStats({
                 }}
               >
                 {CATEGORIES[catId]?.label ?? `Catégorie ${catId}`}
+              </button>
+            ))}
+          </div>
+
+          {/* Date range selector */}
+          <div
+            style={{
+              display: "flex",
+              gap: "0.4rem",
+              flexWrap: "wrap",
+              marginBottom: "0.75rem",
+            }}
+          >
+            {DATE_RANGES.map((r) => (
+              <button
+                key={r.key}
+                onClick={() => setDateRange(r.key)}
+                style={{
+                  padding: "0.2rem 0.6rem",
+                  borderRadius: "999px",
+                  border: "1px solid",
+                  borderColor:
+                    dateRange === r.key ? "var(--accent)" : "var(--border)",
+                  background:
+                    dateRange === r.key ? "var(--accent-dim)" : "transparent",
+                  color:
+                    dateRange === r.key ? "var(--accent)" : "var(--text-dim)",
+                  fontSize: "0.72rem",
+                  fontWeight: 600,
+                  cursor: "pointer",
+                  transition: "all 0.15s",
+                }}
+              >
+                {r.label}
               </button>
             ))}
           </div>
