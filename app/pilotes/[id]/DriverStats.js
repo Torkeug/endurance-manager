@@ -1,5 +1,14 @@
 "use client";
 import { useState } from "react";
+import {
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  Tooltip,
+  ResponsiveContainer,
+  ReferenceLine,
+} from "recharts";
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -161,6 +170,38 @@ function SectionHeader({ title }) {
   );
 }
 
+// ─── iRating chart tooltip ───────────────────────────────────────────────────
+
+function IRatingTooltip({ active, payload }) {
+  if (!active || !payload?.length) return null;
+  const { irating, recorded_at } = payload[0].payload;
+  return (
+    <div
+      style={{
+        background: "var(--surface)",
+        border: "1px solid var(--border)",
+        borderRadius: "4px",
+        padding: "0.5rem 0.75rem",
+        fontSize: "0.78rem",
+      }}
+    >
+      <div
+        className="mono"
+        style={{ color: "var(--accent)", fontWeight: 700, fontSize: "0.95rem" }}
+      >
+        {irating} iR
+      </div>
+      <div style={{ color: "var(--text-dim)", marginTop: "0.1rem" }}>
+        {new Date(recorded_at).toLocaleDateString("fr-FR", {
+          day: "2-digit",
+          month: "2-digit",
+          year: "numeric",
+        })}
+      </div>
+    </div>
+  );
+}
+
 // ─── Main export ──────────────────────────────────────────────────────────────
 
 export default function DriverStats({
@@ -169,6 +210,8 @@ export default function DriverStats({
   teamPerfData,
   teammatesData,
   signups,
+  iratingHistory = [],
+  currentIrating = null,
 }) {
   const [showAllTeammates, setShowAllTeammates] = useState(false);
 
@@ -278,6 +321,34 @@ export default function DriverStats({
     ? sortedTeammates
     : sortedTeammates.slice(0, 5);
 
+  // ── iRating chart data ─────────────────────────────────────────────────────
+  // Merge history with current iRating for display.
+  // If current iRating differs from the last history entry, append it as "now".
+  const chartData = (() => {
+    if (iratingHistory.length === 0 && !currentIrating) return [];
+    const points = iratingHistory.map((h) => ({
+      irating: h.irating,
+      recorded_at: h.recorded_at,
+    }));
+    // Append current value if it differs from last recorded or history is empty
+    const last = points[points.length - 1];
+    if (currentIrating && (!last || last.irating !== currentIrating)) {
+      points.push({
+        irating: currentIrating,
+        recorded_at: new Date().toISOString(),
+      });
+    }
+    return points;
+  })();
+
+  // Y axis domain with padding
+  const iratingValues = chartData.map((p) => p.irating);
+  const iratingMin = iratingValues.length > 0 ? Math.min(...iratingValues) : 0;
+  const iratingMax =
+    iratingValues.length > 0 ? Math.max(...iratingValues) : 2000;
+  const yPadding = Math.max(100, Math.round((iratingMax - iratingMin) * 0.2));
+  const yDomain = [Math.max(0, iratingMin - yPadding), iratingMax + yPadding];
+
   // ── Empty state ────────────────────────────────────────────────────────────
   if (totalStints === 0 && (driverPerfData || []).length === 0) {
     return (
@@ -325,6 +396,122 @@ export default function DriverStats({
           sub={totalLaps > 0 ? "estimés" : null}
         />
       </div>
+
+      {/* ── iRating history ───────────────────────────────────────────── */}
+      {chartData.length > 1 ? (
+        <div className="card">
+          <SectionHeader title="Évolution iRating" />
+          <div style={{ width: "100%", height: 200 }}>
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart
+                data={chartData}
+                margin={{ top: 8, right: 16, left: 0, bottom: 0 }}
+              >
+                <XAxis
+                  dataKey="recorded_at"
+                  tickFormatter={(val) =>
+                    new Date(val).toLocaleDateString("fr-FR", {
+                      day: "2-digit",
+                      month: "2-digit",
+                    })
+                  }
+                  tick={{ fill: "var(--text-dim)", fontSize: 10 }}
+                  axisLine={{ stroke: "var(--border)" }}
+                  tickLine={false}
+                  minTickGap={40}
+                />
+                <YAxis
+                  domain={yDomain}
+                  tick={{ fill: "var(--text-dim)", fontSize: 10 }}
+                  axisLine={false}
+                  tickLine={false}
+                  width={48}
+                  tickFormatter={(v) => `${v}`}
+                />
+                <Tooltip content={<IRatingTooltip />} />
+                {/* Reference line at current iRating */}
+                {currentIrating && (
+                  <ReferenceLine
+                    y={currentIrating}
+                    stroke="var(--accent)"
+                    strokeDasharray="4 3"
+                    strokeOpacity={0.4}
+                  />
+                )}
+                <Line
+                  type="monotone"
+                  dataKey="irating"
+                  stroke="var(--accent)"
+                  strokeWidth={2}
+                  dot={{ fill: "var(--accent)", r: 3, strokeWidth: 0 }}
+                  activeDot={{ r: 5, fill: "var(--accent)" }}
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+          {/* Min / max annotation */}
+          {iratingValues.length > 1 && (
+            <div
+              style={{
+                display: "flex",
+                gap: "1rem",
+                marginTop: "0.5rem",
+                fontSize: "0.72rem",
+                color: "var(--text-dim)",
+                flexWrap: "wrap",
+              }}
+            >
+              <span>
+                Min :{" "}
+                <span className="mono" style={{ color: "var(--text)" }}>
+                  {iratingMin} iR
+                </span>
+              </span>
+              <span>
+                Max :{" "}
+                <span className="mono" style={{ color: "var(--text)" }}>
+                  {iratingMax} iR
+                </span>
+              </span>
+              <span>
+                Δ :{" "}
+                <span
+                  className="mono"
+                  style={{
+                    color:
+                      iratingMax - iratingMin === 0
+                        ? "var(--text-dim)"
+                        : chartData[chartData.length - 1]?.irating >
+                            chartData[0]?.irating
+                          ? "#2eb460"
+                          : "var(--danger)",
+                  }}
+                >
+                  {chartData[chartData.length - 1]?.irating >
+                  chartData[0]?.irating
+                    ? "+"
+                    : ""}
+                  {(chartData[chartData.length - 1]?.irating ?? 0) -
+                    (chartData[0]?.irating ?? 0)}{" "}
+                  iR
+                </span>
+              </span>
+              <span style={{ marginLeft: "auto" }}>
+                {chartData.length} point{chartData.length !== 1 ? "s" : ""}
+              </span>
+            </div>
+          )}
+        </div>
+      ) : currentIrating ? (
+        // Single data point — just show current iRating, no graph yet
+        <div className="card">
+          <SectionHeader title="Évolution iRating" />
+          <div style={{ color: "var(--text-dim)", fontSize: "0.82rem" }}>
+            Pas encore assez de données pour afficher un graphique. Le graphique
+            apparaîtra après plusieurs synchronisations.
+          </div>
+        </div>
+      ) : null}
 
       {/* ── Conditions ────────────────────────────────────────────────── */}
       {totalStints > 0 && (rainStints > 0 || nightStintsCount > 0) && (

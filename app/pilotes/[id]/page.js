@@ -114,6 +114,13 @@ export default async function DriverDetail({ params, searchParams }) {
           .neq("driver_id", id)
       : { data: [] };
 
+  // Irating history to build irating graph
+  const { data: iratingHistory } = await supabase
+    .from("irating_history")
+    .select("irating, recorded_at")
+    .eq("driver_id", id)
+    .order("recorded_at", { ascending: true });
+
   // Build team_entry_id → { filled, available } map for O(1) lookup per signup card.
   // filled = total slots entered, available = slots marked green.
   const availMap = {};
@@ -432,6 +439,8 @@ export default async function DriverDetail({ params, searchParams }) {
             teamPerfData={teamPerfData || []}
             teammatesData={teammatesData || []}
             signups={signups || []}
+            iratingHistory={iratingHistory || []}
+            currentIrating={driver.irating}
           />
         }
       />
