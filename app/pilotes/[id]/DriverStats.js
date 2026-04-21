@@ -609,6 +609,8 @@ export default function DriverStats({
                       tickFormatter={(v) => `${v}`}
                     />
                     <Tooltip content={<IRatingTooltip />} />
+
+                    {/* Legend */}
                     <Legend
                       wrapperStyle={{
                         fontSize: "0.72rem",
@@ -630,8 +632,11 @@ export default function DriverStats({
                             }}
                           >
                             {payload.map((entry, index) => {
-                              const isIRatingActuel =
-                                entry.value === "iRating actuel";
+                              const isIRatingActuel = entry.value === "iRating";
+
+                              const label = isIRatingActuel
+                                ? "historique"
+                                : entry.value;
 
                               return (
                                 <span
@@ -643,7 +648,7 @@ export default function DriverStats({
                                   }}
                                 >
                                   <svg width="14" height="14">
-                                    {/* Line */}
+                                    {/* line */}
                                     <line
                                       x1="0"
                                       y1="7"
@@ -652,23 +657,29 @@ export default function DriverStats({
                                       stroke={entry.color}
                                       strokeWidth="2"
                                       strokeDasharray={
-                                        isIRatingActuel ? "4 3" : undefined
+                                        entry.value === "iRating actuel"
+                                          ? "4 3"
+                                          : undefined
                                       }
-                                      opacity={isIRatingActuel ? 0.4 : 1}
+                                      opacity={
+                                        entry.value === "iRating actuel"
+                                          ? 0.4
+                                          : 1
+                                      }
                                     />
 
-                                    {/* Dot ONLY for normal series */}
-                                    {!isIRatingActuel && (
+                                    {/* dot only for normal series */}
+                                    {entry.value !== "iRating actuel" && (
                                       <circle
                                         cx="7"
                                         cy="7"
-                                        r="2.5"
+                                        r="3"
                                         fill={entry.color}
                                       />
                                     )}
                                   </svg>
 
-                                  <span>{entry.value}</span>
+                                  <span>{label}</span>
                                 </span>
                               );
                             })}
@@ -705,6 +716,7 @@ export default function DriverStats({
                     <Line
                       type="monotone"
                       dataKey="irating"
+                      name="Historique iRating"
                       stroke="var(--accent)"
                       strokeWidth={2}
                       dot={(props) => {
