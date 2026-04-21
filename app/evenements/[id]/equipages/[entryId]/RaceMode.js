@@ -17,10 +17,13 @@ function formatTime(date) {
 function formatCountdown(sec) {
   if (sec === null || sec === undefined) return "—";
   const absS = Math.abs(sec);
-  const h = Math.floor(absS / 3600);
+  const d = Math.floor(absS / 86400);
+  const h = Math.floor((absS % 86400) / 3600);
   const m = Math.floor((absS % 3600) / 60);
   const s = absS % 60;
   const sign = sec < 0 ? "+" : "";
+  if (d > 0)
+    return `${sign}${d}j ${String(h).padStart(2, "0")}h ${String(m).padStart(2, "0")}min ${String(s).padStart(2, "0")}s`;
   if (h > 0)
     return `${sign}${h}h ${String(m).padStart(2, "0")}min ${String(s).padStart(2, "0")}s`;
   return `${sign}${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
