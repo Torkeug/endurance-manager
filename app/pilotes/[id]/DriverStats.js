@@ -597,25 +597,25 @@ export default function DriverStats({
                     <Line
                       type="monotone"
                       dataKey="irating"
-                      data={chartData.filter((p) => p.source === "road")}
-                      stroke="#a06020"
-                      strokeWidth={2}
-                      dot={{ fill: "#a06020", r: 3, strokeWidth: 0 }}
-                      activeDot={{ r: 5, fill: "#a06020" }}
-                      isAnimationActive={false}
-                      name="Road"
-                    />
-                    {/* Sports Car data (post-split) */}
-                    <Line
-                      type="monotone"
-                      dataKey="irating"
-                      data={chartData.filter((p) => p.source === "current")}
                       stroke="var(--accent)"
                       strokeWidth={2}
-                      dot={{ fill: "var(--accent)", r: 3, strokeWidth: 0 }}
-                      activeDot={{ r: 5, fill: "var(--accent)" }}
-                      isAnimationActive={false}
-                      name="Sports Car"
+                      dot={(props) => {
+                        const { cx, cy, payload } = props;
+                        const color =
+                          payload.source === "road"
+                            ? "#a06020"
+                            : "var(--accent)";
+                        return (
+                          <circle
+                            cx={cx}
+                            cy={cy}
+                            r={3}
+                            fill={color}
+                            strokeWidth={0}
+                          />
+                        );
+                      }}
+                      activeDot={{ r: 5 }}
                     />
                   </LineChart>
                 </ResponsiveContainer>
