@@ -8,6 +8,7 @@ import {
   Tooltip,
   ResponsiveContainer,
   ReferenceLine,
+  Legend,
 } from "recharts";
 
 // ─── License category metadata ────────────────────────────────────────────────
@@ -608,12 +609,96 @@ export default function DriverStats({
                       tickFormatter={(v) => `${v}`}
                     />
                     <Tooltip content={<IRatingTooltip />} />
+                    <Legend
+                      wrapperStyle={{
+                        fontSize: "0.72rem",
+                        color: "var(--text-dim)",
+                        paddingTop: "0.5rem",
+                        margin: 0,
+                        paddingBottom: 0,
+                      }}
+                      content={({ payload }) => {
+                        if (!payload) return null;
+
+                        return (
+                          <div
+                            style={{
+                              display: "flex",
+                              gap: "1.5rem",
+                              alignItems: "center",
+                              flexWrap: "wrap",
+                            }}
+                          >
+                            {payload.map((entry, index) => {
+                              const isIRatingActuel =
+                                entry.value === "iRating actuel";
+
+                              return (
+                                <span
+                                  key={index}
+                                  style={{
+                                    display: "flex",
+                                    alignItems: "center",
+                                    gap: "0.4rem",
+                                  }}
+                                >
+                                  <svg width="14" height="14">
+                                    {/* Line */}
+                                    <line
+                                      x1="0"
+                                      y1="7"
+                                      x2="14"
+                                      y2="7"
+                                      stroke={entry.color}
+                                      strokeWidth="2"
+                                      strokeDasharray={
+                                        isIRatingActuel ? "4 3" : undefined
+                                      }
+                                      opacity={isIRatingActuel ? 0.4 : 1}
+                                    />
+
+                                    {/* Dot ONLY for normal series */}
+                                    {!isIRatingActuel && (
+                                      <circle
+                                        cx="7"
+                                        cy="7"
+                                        r="2.5"
+                                        fill={entry.color}
+                                      />
+                                    )}
+                                  </svg>
+
+                                  <span>{entry.value}</span>
+                                </span>
+                              );
+                            })}
+                          </div>
+                        );
+                      }}
+                    />
+
+                    {/* Real reference line (visible on chart) */}
                     {currentIrating && selectedCategory === 5 && (
                       <ReferenceLine
                         y={currentIrating}
                         stroke="var(--accent)"
                         strokeDasharray="4 3"
                         strokeOpacity={0.4}
+                      />
+                    )}
+
+                    {/* Fake line ONLY for legend */}
+                    {currentIrating && selectedCategory === 5 && (
+                      <Line
+                        dataKey="__irating_legend__"
+                        name="iRating actuel"
+                        stroke="var(--accent)"
+                        strokeDasharray="4 3"
+                        strokeOpacity={0} // invisible on chart
+                        dot={false}
+                        activeDot={false}
+                        legendType="plainline" // 🔥 key fix
+                        isAnimationActive={false}
                       />
                     )}
                     {/* Single continuous line with purple dots for pre-split */}
