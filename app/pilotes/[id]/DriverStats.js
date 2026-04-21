@@ -631,7 +631,7 @@ export default function DriverStats({
                           <circle
                             cx={cx}
                             cy={cy}
-                            r={isPre ? 4 : 3}
+                            r={3}
                             fill={isPre ? "#8b5cf6" : "var(--accent)"}
                             strokeWidth={0}
                           />
