@@ -255,8 +255,16 @@ export default function DriverStats({
   // Chart data for selected category
   let rawChartData = historyByCategory[selectedCategory] || [];
 
-  // Sports Car special case: include Road data before the split (March 2024)
+  // Sports Car: include Road data before split (March 2024)
   if (selectedCategory === 5) {
+    const roadData = (historyByCategory[2] || []).filter(
+      (h) => new Date(h.recorded_at) < new Date("2024-03-15"),
+    );
+    rawChartData = [...roadData, ...rawChartData];
+  }
+
+  // Formula Car: include Road data all the way back (same split point as Sports Car)
+  if (selectedCategory === 6) {
     const roadData = (historyByCategory[2] || []).filter(
       (h) => new Date(h.recorded_at) < new Date("2024-03-15"),
     );
@@ -274,23 +282,17 @@ export default function DriverStats({
 
     const points = rawChartData
       .filter((h) => !cutoff || new Date(h.recorded_at) >= cutoff)
-      .map((h) => ({
-        irating: h.irating,
-        recorded_at: h.recorded_at,
-        // Track whether this point came from Road (pre-split) or current category
-        source:
-          selectedCategory === 5 && h.category_id === 2 ? "road" : "current",
-      }));
-
-    if (selectedCategory === 5) {
-      const last = points[points.length - 1];
-      if (currentIrating && (!last || last.irating !== currentIrating)) {
-        points.push({
-          irating: currentIrating,
-          recorded_at: new Date().toISOString(),
-        });
-      }
-    }
+      .map((h) => {
+        let source = "current";
+        if (selectedCategory === 5 && h.category_id === 2) source = "road";
+        if (selectedCategory === 6 && h.category_id === 2)
+          source = "formula_fallback";
+        return {
+          irating: h.irating,
+          recorded_at: h.recorded_at,
+          source,
+        };
+      });
     return points;
   })();
 
@@ -556,6 +558,27 @@ export default function DriverStats({
 
           {chartData.length > 1 ? (
             <>
+              {/* Pre-split data warning */}
+              {(selectedCategory === 5 || selectedCategory === 6) &&
+                chartData.some(
+                  (p) => p.source === "road" || p.source === "formula_fallback",
+                ) && (
+                  <div
+                    style={{
+                      fontSize: "0.72rem",
+                      color: "#8b5cf6",
+                      padding: "0.4rem 0.6rem",
+                      background: "rgba(139, 92, 246, 0.1)",
+                      border: "1px solid #8b5cf6",
+                      borderRadius: "3px",
+                      marginBottom: "0.5rem",
+                    }}
+                  >
+                    - Points en violet = données pré-scission (
+                    {selectedCategory === 5 ? "Road" : "Road"})
+                  </div>
+                )}
+
               <div style={{ width: "100%", height: 200 }}>
                 <ResponsiveContainer width="100%" height={200}>
                   <LineChart
@@ -593,7 +616,7 @@ export default function DriverStats({
                         strokeOpacity={0.4}
                       />
                     )}
-                    {/* Road data (pre-split) */}
+                    {/* Single continuous line with purple dots for pre-split */}
                     <Line
                       type="monotone"
                       dataKey="irating"
@@ -601,16 +624,15 @@ export default function DriverStats({
                       strokeWidth={2}
                       dot={(props) => {
                         const { cx, cy, payload } = props;
-                        const color =
-                          payload.source === "road"
-                            ? "#a06020"
-                            : "var(--accent)";
+                        const isPre =
+                          payload.source === "road" ||
+                          payload.source === "formula_fallback";
                         return (
                           <circle
                             cx={cx}
                             cy={cy}
-                            r={3}
-                            fill={color}
+                            r={isPre ? 4 : 3}
+                            fill={isPre ? "#8b5cf6" : "var(--accent)"}
                             strokeWidth={0}
                           />
                         );
