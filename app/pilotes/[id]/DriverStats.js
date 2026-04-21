@@ -505,8 +505,8 @@ export default function DriverStats({
                 key={r.key}
                 onClick={() => setDateRange(r.key)}
                 style={{
-                  padding: "0.2rem 0.6rem",
-                  borderRadius: "999px",
+                  padding: "0.15rem 0.5rem",
+                  borderRadius: "3px",
                   border: "1px solid",
                   borderColor:
                     dateRange === r.key ? "var(--accent)" : "var(--border)",
@@ -514,7 +514,7 @@ export default function DriverStats({
                     dateRange === r.key ? "var(--accent-dim)" : "transparent",
                   color:
                     dateRange === r.key ? "var(--accent)" : "var(--text-dim)",
-                  fontSize: "0.72rem",
+                  fontSize: "0.68rem",
                   fontWeight: 600,
                   cursor: "pointer",
                   transition: "all 0.15s",
