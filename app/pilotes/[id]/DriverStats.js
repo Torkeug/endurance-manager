@@ -372,7 +372,11 @@ export default function DriverStats({
   const yDomain = [Math.max(0, iratingMin - yPadding), iratingMax + yPadding];
 
   // ── Empty state ────────────────────────────────────────────────────────────
-  if (totalStints === 0 && (driverPerfData || []).length === 0) {
+  if (
+    totalStints === 0 &&
+    (driverPerfData || []).length === 0 &&
+    chartData.length === 0
+  ) {
     return (
       <div className="card">
         <div className="empty">
@@ -424,7 +428,7 @@ export default function DriverStats({
         <div className="card">
           <SectionHeader title="Évolution iRating" />
           <div style={{ width: "100%", height: 200 }}>
-            <ResponsiveContainer width="100%" height="100%">
+            <ResponsiveContainer width="100%" height={200}>
               <LineChart
                 data={chartData}
                 margin={{ top: 8, right: 16, left: 0, bottom: 0 }}
