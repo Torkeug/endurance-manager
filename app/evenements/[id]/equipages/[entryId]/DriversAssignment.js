@@ -3,72 +3,126 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabaseBrowser as supabase } from "../../../../../lib/supabase-browser";
 
-function MismatchBadge({ signup, entryCarId, entryClass }) {
+// ── PreferenceBadge ───────────────────────────────────────────────────────
+// Consolidated mismatch badge. Replaces the old MismatchBadge +
+// StartTimeMismatchBadge pair. Shows a single pill with all conflicts listed,
+// coloured by worst severity:
+//   🔴 hard  — class doesn't match (the driver fundamentally doesn't fit)
+//   🟡 soft  — class matches but preferred car(s) don't, or start time differs
+//
+// Props:
+//   signup          — signup row (preferred_car_ids, preferred_class, preferred_start_time_ids)
+//   entryCarId      — UUID of the car this team entry is running
+//   entryCarName    — human-readable name of that car
+//   entryClass      — class string of this team entry
+//   carsMap         — { [carId]: carName } for preferred car name resolution
+//   teamStartTimeId — UUID of the team's chosen start time
+//   startTimesMap   — { [startTimeId]: label } for start time name resolution
+function PreferenceBadge({
+  signup,
+  entryCarId,
+  entryCarName,
+  entryClass,
+  carsMap,
+  teamStartTimeId,
+  startTimesMap,
+}) {
   const prefCarIds = signup.preferred_car_ids || [];
   const prefClasses = signup.preferred_class || [];
+  const prefStartTimeIds = signup.preferred_start_time_ids || [];
 
-  if (prefCarIds.length > 0 && entryCarId && !prefCarIds.includes(entryCarId)) {
-    return (
-      <span
-        title="Voiture préférée différente"
-        style={{
-          fontSize: "0.7rem",
-          padding: "0.15rem 0.4rem",
-          background: "#2a1a00",
-          border: "1px solid #a06020",
-          borderRadius: "2px",
-          color: "#d4904a",
-          whiteSpace: "nowrap",
-        }}
-      >
-        ⚠️ voiture
-      </span>
-    );
-  }
-  if (
-    prefClasses.length > 0 &&
-    entryClass &&
-    !prefClasses.includes(entryClass)
-  ) {
-    return (
-      <span
-        title={`Classe préférée : ${prefClasses.join(", ")}`}
-        style={{
-          fontSize: "0.7rem",
-          padding: "0.15rem 0.4rem",
-          background: "#2a1a00",
-          border: "1px solid #a06020",
-          borderRadius: "2px",
-          color: "#d4904a",
-          whiteSpace: "nowrap",
-        }}
-      >
-        ⚠️ {prefClasses.join(", ")}
-      </span>
-    );
-  }
-  return null;
-}
+  // Collect individual conflict descriptors
+  const conflicts = []; // { label, tooltip, hard }
 
-// Badge shown when a driver's preferred start times don't include the team's start time
-function StartTimeMismatchBadge({ signup, teamStartTimeId }) {
-  if (!teamStartTimeId) return null;
-  const prefs = signup.preferred_start_time_ids || [];
-  if (prefs.length === 0 || prefs.includes(teamStartTimeId)) return null;
+  // ── Class check (hard mismatch) ─────────────────────────────────────────
+  const classConflict =
+    prefClasses.length > 0 && entryClass && !prefClasses.includes(entryClass);
+  if (classConflict) {
+    conflicts.push({
+      label: "classe",
+      tooltip: `Classe équipe : ${entryClass} — pilote préfère : ${prefClasses.join(", ")}`,
+      hard: true,
+    });
+  }
+
+  // ── Car check (soft — only relevant when class matches) ─────────────────
+  // We only warn about car if the class is fine (or unspecified), so admins
+  // aren't double-penalised for a car difference inside an already-flagged class.
+  const carConflict =
+    !classConflict &&
+    prefCarIds.length > 0 &&
+    entryCarId &&
+    !prefCarIds.includes(entryCarId);
+  if (carConflict) {
+    // Resolve preferred car names from the map; fall back to raw IDs if missing.
+    const prefCarNames = prefCarIds.map((id) => carsMap?.[id] || id).join(", ");
+    conflicts.push({
+      label: "voiture",
+      tooltip: `Voiture équipe : ${entryCarName || entryCarId} — pilote préfère : ${prefCarNames}\nLa classe correspond (${entryClass}).`,
+      hard: false,
+    });
+  }
+
+  // ── Start time check (soft) ─────────────────────────────────────────────
+  // Only consider preferred IDs that resolve in the map — stale IDs from
+  // event type conversion (regular→special or vice versa) are silently
+  // ignored rather than shown as raw UUIDs or flagged as false mismatches.
+  const resolvablePrefStartTimeIds = prefStartTimeIds.filter(
+    (id) => startTimesMap?.[id],
+  );
+  const startConflict =
+    teamStartTimeId &&
+    startTimesMap?.[teamStartTimeId] && // team's time must resolve too
+    resolvablePrefStartTimeIds.length > 0 &&
+    !resolvablePrefStartTimeIds.includes(teamStartTimeId);
+
+  if (startConflict) {
+    const teamLabel = startTimesMap[teamStartTimeId];
+    const prefLabels = resolvablePrefStartTimeIds
+      .map((id) => startTimesMap[id])
+      .join(", ");
+    conflicts.push({
+      label: "horaire",
+      tooltip: `Horaire équipe : ${teamLabel} — pilote préfère : ${prefLabels}`,
+      hard: false,
+    });
+  }
+
+  if (conflicts.length === 0) return null;
+
+  // Worst severity wins for colour
+  const isHard = conflicts.some((c) => c.hard);
+  const badgeStyle = isHard
+    ? {
+        // 🔴 hard — class mismatch
+        background: "rgba(224,85,85,0.12)",
+        border: "1px solid var(--danger)",
+        color: "var(--danger)",
+      }
+    : {
+        // 🟡 soft — car or start time mismatch within matching class
+        background: "#2a1a00",
+        border: "1px solid #a06020",
+        color: "#d4904a",
+      };
+
+  // Build a single multi-line tooltip listing every conflict
+  const fullTooltip = conflicts.map((c) => c.tooltip).join("\n\n");
+  const labelText = conflicts.map((c) => c.label).join(", ");
+
   return (
     <span
-      title="Horaire préféré différent"
+      title={fullTooltip}
       style={{
         fontSize: "0.7rem",
         padding: "0.15rem 0.4rem",
-        background: "#2a1a00",
-        border: "1px solid #a06020",
         borderRadius: "2px",
-        color: "#d4904a",
         whiteSpace: "nowrap",
+        cursor: "help",
+        ...badgeStyle,
       }}
     >
-      ⚠️ horaire
+      ⚠️ {labelText}
     </span>
   );
 }
@@ -76,7 +130,10 @@ function StartTimeMismatchBadge({ signup, teamStartTimeId }) {
 export default function DriversAssignment({
   entryId,
   entryCarId,
+  entryCarName, // human-readable team car name for tooltips
   entryClass,
+  carsMap, // { [carId]: carName }
+  startTimesMap, // { [startTimeId]: label }
   assignedDrivers,
   unassignedDrivers,
   currentDriver,
@@ -133,24 +190,42 @@ export default function DriversAssignment({
     router.refresh();
   };
 
+  // Returns true if any preference conflict exists — used to style the pill button
+  // in the unassigned section (amber border + warning icon).
   const hasMismatch = (signup) => {
     const prefCarIds = signup.preferred_car_ids || [];
     const prefClasses = signup.preferred_class || [];
-    const prefStartTimes = signup.preferred_start_time_ids || [];
-    if (prefCarIds.length > 0 && entryCarId && !prefCarIds.includes(entryCarId))
-      return true;
+    const prefStartTimeIds = signup.preferred_start_time_ids || [];
+
+    // Hard: class doesn't match
     if (
       prefClasses.length > 0 &&
       entryClass &&
       !prefClasses.includes(entryClass)
     )
       return true;
+
+    // Soft: class ok (or unspecified), but car preference doesn't include team car
+    const classOk =
+      prefClasses.length === 0 ||
+      !entryClass ||
+      prefClasses.includes(entryClass);
     if (
-      prefStartTimes.length > 0 &&
-      teamStartTimeId &&
-      !prefStartTimes.includes(teamStartTimeId)
+      classOk &&
+      prefCarIds.length > 0 &&
+      entryCarId &&
+      !prefCarIds.includes(entryCarId)
     )
       return true;
+
+    // Soft: start time mismatch
+    if (
+      teamStartTimeId &&
+      prefStartTimeIds.length > 0 &&
+      !prefStartTimeIds.includes(teamStartTimeId)
+    )
+      return true;
+
     return false;
   };
 
@@ -167,6 +242,17 @@ export default function DriversAssignment({
     }
     return unassigned;
   })();
+
+  // Shared badge props — avoids repeating the full prop list at every call site
+  const badgeProps = (signup) => ({
+    signup,
+    entryCarId,
+    entryCarName,
+    entryClass,
+    carsMap,
+    teamStartTimeId,
+    startTimesMap,
+  });
 
   return (
     <div>
@@ -208,15 +294,8 @@ export default function DriversAssignment({
                       }}
                     >
                       {s.drivers?.name || "—"}
-                      <MismatchBadge
-                        signup={s}
-                        entryCarId={entryCarId}
-                        entryClass={entryClass}
-                      />
-                      <StartTimeMismatchBadge
-                        signup={s}
-                        teamStartTimeId={teamStartTimeId}
-                      />
+                      {/* Single consolidated badge replacing the old two-badge system */}
+                      <PreferenceBadge {...badgeProps(s)} />
                     </div>
                   </td>
                   <td
@@ -316,25 +395,8 @@ export default function DriversAssignment({
                       {s.drivers.irating}
                     </span>
                   )}
-                  {mismatch && (
-                    <div
-                      style={{
-                        display: "flex",
-                        gap: "0.25rem",
-                        flexWrap: "wrap",
-                      }}
-                    >
-                      <MismatchBadge
-                        signup={s}
-                        entryCarId={entryCarId}
-                        entryClass={entryClass}
-                      />
-                      <StartTimeMismatchBadge
-                        signup={s}
-                        teamStartTimeId={teamStartTimeId}
-                      />
-                    </div>
-                  )}
+                  {/* Consolidated badge inside the unassigned pill */}
+                  {mismatch && <PreferenceBadge {...badgeProps(s)} />}
                 </button>
               );
             })}

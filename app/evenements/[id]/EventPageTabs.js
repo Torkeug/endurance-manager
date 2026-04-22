@@ -518,10 +518,40 @@ export default function EventPageTabs({
                       <tr key={entry.id}>
                         {/* Colored crew name pill — DB color takes priority over hash */}
                         <td style={{ fontWeight: 600 }}>
-                          <CrewPill
-                            name={entry.crew_name}
-                            color={crewColorsMap[entry.crew_name]}
-                          />
+                          <div
+                            style={{
+                              display: "flex",
+                              alignItems: "center",
+                              gap: "0.4rem",
+                              flexWrap: "wrap",
+                            }}
+                          >
+                            <CrewPill
+                              name={entry.crew_name}
+                              color={crewColorsMap[entry.crew_name]}
+                            />
+                            {/* Inscrit badge — mirrors the event list badge, shown when the current
+        driver is assigned to this specific team entry */}
+                            {(entry.signups || []).some(
+                              (s) => s.drivers?.id === currentDriver?.id,
+                            ) && (
+                              <span
+                                style={{
+                                  fontSize: "0.65rem",
+                                  fontWeight: 700,
+                                  letterSpacing: "0.08em",
+                                  textTransform: "uppercase",
+                                  padding: "0.1rem 0.45rem",
+                                  background: "rgba(80,200,120,0.12)",
+                                  border: "1px solid #50c878",
+                                  borderRadius: "3px",
+                                  color: "#50c878",
+                                }}
+                              >
+                                Inscrit ✓
+                              </span>
+                            )}
+                          </div>
                         </td>
                         <td style={{ color: "var(--text-dim)" }}>
                           {(event.archived ? entry.car_name_snapshot : null) ||

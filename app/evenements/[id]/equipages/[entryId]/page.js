@@ -48,6 +48,64 @@ export default async function EquipageDetail({ params }) {
   const entryCarId = entry.car_id;
   const entryClass = entry.class || entry.cars?.class;
 
+  // ── Preference resolution maps ────────────────────────────────────────────
+  // Build id→name maps so DriversAssignment can show human-readable car and
+  // start time names in mismatch tooltips instead of raw UUIDs.
+  const { data: allCars } = await supabase.from("cars").select("id, name");
+  const carsMap = Object.fromEntries(
+    (allCars || []).map((c) => [c.id, c.name]),
+  );
+
+  // Collect every start time ID referenced anywhere in this page:
+  // the team's own start time + all preferred_start_time_ids from every signup.
+  // Fetching by explicit ID list (rather than filtering by event_id) ensures
+  // we can resolve preferences even if a driver's saved preference points to
+  // a start time that was later reassigned or belongs to a sibling event.
+  const referencedStartTimeIds = [
+    ...(entry.start_time_id ? [entry.start_time_id] : []),
+    ...(allSignups || []).flatMap((s) => s.preferred_start_time_ids || []),
+  ];
+  const uniqueStartTimeIds = [...new Set(referencedStartTimeIds)];
+
+  // Fetch from both tables — regular and special event start times.
+  // When an event is converted to a special event, drivers may still have
+  // preferred_start_time_ids pointing to the old event_start_times rows.
+  // Merging both maps ensures all IDs resolve correctly regardless of event type.
+  const [{ data: regularStartTimes }, { data: specialStartTimes }] =
+    await Promise.all([
+      uniqueStartTimeIds.length > 0
+        ? supabase
+            .from("event_start_times")
+            .select("id, label, irl_start") // add irl_start
+            .in("id", uniqueStartTimeIds)
+        : Promise.resolve({ data: [] }),
+      uniqueStartTimeIds.length > 0
+        ? supabase
+            .from("special_event_start_times")
+            .select("id, label, hour, minute") // add hour, minute
+            .in("id", uniqueStartTimeIds)
+        : Promise.resolve({ data: [] }),
+    ]);
+
+  const tz = entry.events?.timezone || "Europe/Paris";
+
+  // Pre-format labels with date + time so tooltips in DriversAssignment
+  // are human-readable without needing timezone logic client-side.
+  const startTimesMap = Object.fromEntries([
+    ...(regularStartTimes || []).map((t) => [
+      t.id,
+      `${t.label} à ${formatTimeInZone(t.irl_start, tz, "HH:mm")}`,
+    ]),
+    ...(specialStartTimes || []).map((t) => [
+      t.id,
+      // special_event_start_times stores hour/minute directly — no UTC conversion needed
+      `${t.label} à ${String(t.hour).padStart(2, "0")}:${String(t.minute).padStart(2, "0")}`,
+    ]),
+  ]);
+
+  // Name of the car the team is running — passed for rich tooltip display.
+  const entryCarName = entry.cars?.name || entry.car_name_snapshot || null;
+
   const driversWithIrating = assignedDrivers.filter((d) => d.drivers?.irating);
   const avgIrating =
     driversWithIrating.length > 0
@@ -188,7 +246,10 @@ export default async function EquipageDetail({ params }) {
         assignedDrivers={assignedDrivers}
         unassignedDrivers={unassignedDrivers}
         entryCarId={entryCarId}
+        entryCarName={entryCarName}
         entryClass={entryClass}
+        carsMap={carsMap}
+        startTimesMap={startTimesMap}
         currentDriver={currentDriver}
         archived={archived}
         isInEvent={isInEvent}

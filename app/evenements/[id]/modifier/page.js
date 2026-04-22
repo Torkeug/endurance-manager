@@ -31,6 +31,8 @@ export default function ModifierEvenement({ params }) {
   const [customM, setCustomM] = useState("");
   const [authChecked, setAuthChecked] = useState(false);
   const [showRegenModal, setShowRegenModal] = useState(false);
+  const [previewStep, setPreviewStep] = useState(false);
+  const [previewLosses, setPreviewLosses] = useState([]);
 
   useEffect(() => {
     supabase.auth.getUser().then(async ({ data: { user } }) => {
@@ -235,9 +237,83 @@ export default function ModifierEvenement({ params }) {
     router.refresh();
   };
 
+  // Simulates the start time remap without writing anything to the DB.
+  // Computes which drivers would lose preferred_start_time_ids that don't
+  // match any newly generated slot, then surfaces them in the modal so the
+  // admin can make an informed decision before confirming.
+  const handlePreviewRegen = async () => {
+    setLoading(true);
+
+    const { data: specialStartTimes } = await supabase
+      .from("special_event_start_times")
+      .select("*")
+      .order("day_of_week")
+      .order("hour")
+      .order("minute");
+
+    // Compute what irl_start values the new rows would have (same logic as handleRegen)
+    const { DateTime } = await import("luxon");
+    const friday = DateTime.fromISO(weekendStartDate, { zone: form.timezone });
+    const newIrlStarts = new Set(
+      (specialStartTimes || []).map((st) => {
+        const dayOffset =
+          { vendredi: 0, samedi: 1, dimanche: 2 }[st.day_of_week] || 0;
+        return friday
+          .plus({ days: dayOffset })
+          .set({ hour: st.hour, minute: st.minute, second: 0, millisecond: 0 })
+          .toUTC()
+          .toISO();
+      }),
+    );
+
+    // Fetch current start times to know which old IDs will survive the remap
+    const { data: oldStartTimes } = await supabase
+      .from("event_start_times")
+      .select("id, irl_start")
+      .eq("event_id", id);
+
+    // IDs whose irl_start matches a new slot → will be remapped (survive)
+    // IDs with no match → will be dropped
+    const survivingOldIds = new Set(
+      (oldStartTimes || [])
+        .filter((t) => newIrlStarts.has(new Date(t.irl_start).toISOString()))
+        .map((t) => t.id),
+    );
+
+    // Fetch signups that have at least one preferred start time set
+    const { data: affectedSignups } = await supabase
+      .from("signups")
+      .select("id, preferred_start_time_ids, drivers(name)")
+      .eq("event_id", id)
+      .not("preferred_start_time_ids", "eq", "{}");
+
+    // A driver "loses" if none of their preferred IDs survive the remap
+    const losses = (affectedSignups || [])
+      .filter((s) => {
+        const prefs = s.preferred_start_time_ids || [];
+        // At least one pref must be an old ID that doesn't survive
+        const hasLoss = prefs.some((pid) => !survivingOldIds.has(pid));
+        // But only flag if no prefs survive at all (partial loss is still a valid pref)
+        const hasAnySurviving = prefs.some((pid) => survivingOldIds.has(pid));
+        return hasLoss && !hasAnySurviving;
+      })
+      .map((s) => s.drivers?.name || "—");
+
+    setPreviewLosses(losses);
+    setLoading(false);
+    setPreviewStep(true);
+  };
+
+  // Regenerates start times for a special event from the predefined slot templates.
+  // Deletes all existing event_start_times rows, inserts new ones based on the
+  // selected weekend date, then remaps every signup's preferred_start_time_ids
+  // by matching old→new rows on irl_start. Preferences pointing to slots that no
+  // longer exist are dropped. Should only be called after handlePreviewRegen has
+  // confirmed the impact with the admin.
   const handleRegen = async () => {
     setShowRegenModal(false);
     setLoading(true);
+
     const { data: specialStartTimes } = await supabase
       .from("special_event_start_times")
       .select("*")
@@ -246,11 +322,20 @@ export default function ModifierEvenement({ params }) {
       .order("minute");
 
     if (specialStartTimes?.length > 0) {
-      // Null out start_time_id on team entries first (FK constraint)
+      // ── Step 1: snapshot old start times before deletion ──────────────────
+      // We need old id→irl_start so we can remap signup preferences afterward.
+      const { data: oldStartTimes } = await supabase
+        .from("event_start_times")
+        .select("id, irl_start")
+        .eq("event_id", id);
+
+      // ── Step 2: null out team entry start_time_id (FK constraint) ─────────
       await supabase
         .from("team_entries")
         .update({ start_time_id: null })
         .eq("event_id", id);
+
+      // ── Step 3: delete old start times ────────────────────────────────────
       const { error: deleteErr } = await supabase
         .from("event_start_times")
         .delete()
@@ -261,7 +346,7 @@ export default function ModifierEvenement({ params }) {
         return;
       }
 
-      // Label is auto-generated from day + time — no free text input.
+      // ── Step 4: insert new start times ────────────────────────────────────
       const { DateTime } = await import("luxon");
       const friday = DateTime.fromISO(weekendStartDate, {
         zone: form.timezone,
@@ -278,8 +363,54 @@ export default function ModifierEvenement({ params }) {
           irl_start: dt.toUTC().toISO(),
         };
       });
-      await supabase.from("event_start_times").insert(startTimeRows);
+
+      const { data: newStartTimes } = await supabase
+        .from("event_start_times")
+        .insert(startTimeRows)
+        .select("id, irl_start");
+
+      // ── Step 5: remap signup preferred_start_time_ids ─────────────────────
+      // Match old→new by irl_start (same UTC moment = same slot, just new ID).
+      // Old IDs with no matching new time are dropped — they're genuinely gone.
+      if (oldStartTimes?.length > 0 && newStartTimes?.length > 0) {
+        // Build irl_start(as ISO string) → new_id lookup
+        const newByIrlStart = Object.fromEntries(
+          newStartTimes.map((t) => [new Date(t.irl_start).toISOString(), t.id]),
+        );
+        // Build old_id → new_id map via matching irl_start
+        const idRemap = Object.fromEntries(
+          (oldStartTimes || []).flatMap((old) => {
+            const newId = newByIrlStart[new Date(old.irl_start).toISOString()];
+            return newId ? [[old.id, newId]] : [];
+          }),
+        );
+
+        if (Object.keys(idRemap).length > 0) {
+          // Fetch all signups for this event that have any preferred start time
+          const { data: affectedSignups } = await supabase
+            .from("signups")
+            .select("id, preferred_start_time_ids")
+            .eq("event_id", id)
+            .not("preferred_start_time_ids", "eq", "{}");
+
+          if (affectedSignups?.length > 0) {
+            // For each signup, replace old IDs with new IDs and drop unresolvable ones
+            await Promise.all(
+              affectedSignups.map((signup) => {
+                const remapped = (signup.preferred_start_time_ids || [])
+                  .map((oldId) => idRemap[oldId]) // maps to new ID or undefined
+                  .filter(Boolean); // drops unmatched (deleted) IDs
+                return supabase
+                  .from("signups")
+                  .update({ preferred_start_time_ids: remapped })
+                  .eq("id", signup.id);
+              }),
+            );
+          }
+        }
+      }
     }
+
     setLoading(false);
     router.push(`/evenements/${id}`);
     router.refresh();
@@ -759,44 +890,147 @@ export default function ModifierEvenement({ params }) {
           }}
         >
           <div className="card" style={{ maxWidth: "480px", width: "100%" }}>
-            <h3 style={{ marginBottom: "0.75rem" }}>Horaires de départ</h3>
-            <p
-              style={{
-                fontSize: "0.9rem",
-                color: "var(--text-dim)",
-                marginBottom: "1.5rem",
-              }}
-            >
-              Souhaitez-vous régénérer les horaires de départ à partir des
-              horaires prédéfinis ? Les horaires existants seront supprimés.
-            </p>
-            <div
-              style={{
-                display: "flex",
-                flexDirection: "column",
-                gap: "0.75rem",
-              }}
-            >
-              <button onClick={handleRegen} className="btn btn-primary">
-                Enregistrer et régénérer les horaires
-              </button>
-              <button
-                onClick={() => {
-                  setShowRegenModal(false);
-                  router.push(`/evenements/${id}`);
-                  router.refresh();
-                }}
-                className="btn btn-secondary"
-              >
-                Enregistrer sans régénérer
-              </button>
-              <button
-                onClick={() => setShowRegenModal(false)}
-                className="btn btn-danger btn-sm"
-              >
-                Annuler
-              </button>
-            </div>
+            {!previewStep ? (
+              /* ── Step 1: ask whether to regenerate ── */
+              <>
+                <h3 style={{ marginBottom: "0.75rem" }}>Horaires de départ</h3>
+                <p
+                  style={{
+                    fontSize: "0.9rem",
+                    color: "var(--text-dim)",
+                    marginBottom: "1.5rem",
+                  }}
+                >
+                  Souhaitez-vous régénérer les horaires de départ à partir des
+                  horaires prédéfinis ? Les horaires existants seront supprimés.
+                </p>
+                <div
+                  style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: "0.75rem",
+                  }}
+                >
+                  <button
+                    onClick={handlePreviewRegen}
+                    className="btn btn-primary"
+                    disabled={loading}
+                  >
+                    {loading ? "Analyse en cours…" : "Régénérer les horaires"}
+                  </button>
+                  <button
+                    onClick={() => {
+                      setShowRegenModal(false);
+                      setPreviewStep(false);
+                      router.push(`/evenements/${id}`);
+                      router.refresh();
+                    }}
+                    className="btn btn-secondary"
+                  >
+                    Enregistrer sans régénérer
+                  </button>
+                  <button
+                    onClick={() => {
+                      setShowRegenModal(false);
+                      setPreviewStep(false);
+                    }}
+                    className="btn btn-danger btn-sm"
+                  >
+                    Annuler
+                  </button>
+                </div>
+              </>
+            ) : (
+              /* ── Step 2: preview losses, ask for confirmation ── */
+              <>
+                <h3 style={{ marginBottom: "0.75rem" }}>
+                  Confirmer la régénération
+                </h3>
+
+                {previewLosses.length === 0 ? (
+                  /* All preferences survive the remap — safe to proceed */
+                  <p
+                    style={{
+                      fontSize: "0.9rem",
+                      color: "var(--text-dim)",
+                      marginBottom: "1.5rem",
+                    }}
+                  >
+                    ✅ Aucune préférence d'horaire ne sera perdue — tous les
+                    créneaux existants correspondent aux nouveaux horaires.
+                  </p>
+                ) : (
+                  /* Some drivers will lose their preferred start times */
+                  <div style={{ marginBottom: "1.5rem" }}>
+                    <p
+                      style={{
+                        fontSize: "0.9rem",
+                        color: "var(--text-dim)",
+                        marginBottom: "0.75rem",
+                      }}
+                    >
+                      ⚠️{" "}
+                      <strong style={{ color: "var(--text)" }}>
+                        {previewLosses.length} pilote
+                        {previewLosses.length > 1 ? "s" : ""}
+                      </strong>{" "}
+                      {previewLosses.length > 1 ? "perdront" : "perdra"} leur
+                      préférence d'horaire car leur créneau n'existe plus dans
+                      les nouveaux horaires :
+                    </p>
+                    <ul
+                      style={{
+                        margin: 0,
+                        paddingLeft: "1.25rem",
+                        fontSize: "0.88rem",
+                        color: "var(--danger)",
+                        display: "flex",
+                        flexDirection: "column",
+                        gap: "0.2rem",
+                      }}
+                    >
+                      {previewLosses.map((name, i) => (
+                        <li key={i}>{name}</li>
+                      ))}
+                    </ul>
+                    <p
+                      style={{
+                        fontSize: "0.82rem",
+                        color: "var(--text-dim)",
+                        marginTop: "0.75rem",
+                      }}
+                    >
+                      Ces pilotes devront re-sélectionner leur horaire préféré
+                      lors de leur prochaine inscription.
+                    </p>
+                  </div>
+                )}
+
+                <div
+                  style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: "0.75rem",
+                  }}
+                >
+                  <button
+                    onClick={handleRegen}
+                    className="btn btn-primary"
+                    disabled={loading}
+                  >
+                    {loading ? "Régénération…" : "✓ Confirmer la régénération"}
+                  </button>
+                  <button
+                    onClick={() => {
+                      setPreviewStep(false);
+                    }}
+                    className="btn btn-secondary"
+                  >
+                    ← Retour
+                  </button>
+                </div>
+              </>
+            )}
           </div>
         </div>
       )}

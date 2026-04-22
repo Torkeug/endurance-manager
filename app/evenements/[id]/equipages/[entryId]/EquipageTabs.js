@@ -20,13 +20,13 @@ export default function EquipageTabs({
   assignedDrivers,
   unassignedDrivers,
   entryCarId,
+  entryCarName,
   entryClass,
+  carsMap,
+  startTimesMap,
   currentDriver,
-  // archived flows from the parent event — locks all tabs to read-only
   archived = false,
-  // isInEvent: the current driver has at least one signup for this event
   isInEvent = false,
-  // isInTeam: the current driver is assigned to this specific team entry
   isInTeam = false,
 }) {
   const isAdmin =
@@ -156,11 +156,13 @@ export default function EquipageTabs({
         <DriversAssignment
           entryId={entryId}
           entryCarId={entryCarId}
+          entryCarName={entryCarName}
           entryClass={entryClass}
+          carsMap={carsMap}
+          startTimesMap={startTimesMap}
           assignedDrivers={assignedDrivers}
           unassignedDrivers={unassignedDrivers}
           currentDriver={currentDriver}
-          // Engineers are read-only on this tab
           archived={archived || isEngineer}
           isInEvent={isInEvent}
           isInTeam={isInTeam}
