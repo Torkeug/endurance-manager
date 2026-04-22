@@ -22,6 +22,19 @@ function displayToSec(str) {
   );
 }
 
+// Format an ISO timestamp to a human-readable French date+time string
+// e.g. "12 avril 2026 à 14:32"
+function formatUpdatedAt(isoStr) {
+  if (!isoStr) return null;
+  return new Date(isoStr).toLocaleString("fr-FR", {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
 // ── Shared styles ──────────────────────────────────────────
 
 const thStyle = {
@@ -197,6 +210,20 @@ function DriverRow({
             }}
           >
             {driver?.name || "—"}
+            {/* Show last update time when performance data exists — helps drivers
+      know if lap times are recent enough to be used for strategy */}
+            {initialData?.updated_at && (
+              <div
+                style={{
+                  fontSize: "0.68rem",
+                  fontWeight: 400,
+                  color: "var(--text-dim)",
+                  marginTop: "0.2rem",
+                }}
+              >
+                Mis à jour le {formatUpdatedAt(initialData.updated_at)}
+              </div>
+            )}
           </td>
           <td style={{ ...tdStyle, borderBottom: "none" }}>
             <span
