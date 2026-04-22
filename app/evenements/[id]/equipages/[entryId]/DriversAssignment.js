@@ -4,20 +4,10 @@ import { useRouter } from "next/navigation";
 import { supabaseBrowser as supabase } from "../../../../../lib/supabase-browser";
 
 // ── PreferenceBadge ───────────────────────────────────────────────────────
-// Consolidated mismatch badge. Replaces the old MismatchBadge +
-// StartTimeMismatchBadge pair. Shows a single pill with all conflicts listed,
+// Consolidated mismatch badge. Shows a single pill with all conflicts listed,
 // coloured by worst severity:
 //   🔴 hard  — class doesn't match (the driver fundamentally doesn't fit)
 //   🟡 soft  — class matches but preferred car(s) don't, or start time differs
-//
-// Props:
-//   signup          — signup row (preferred_car_ids, preferred_class, preferred_start_time_ids)
-//   entryCarId      — UUID of the car this team entry is running
-//   entryCarName    — human-readable name of that car
-//   entryClass      — class string of this team entry
-//   carsMap         — { [carId]: carName } for preferred car name resolution
-//   teamStartTimeId — UUID of the team's chosen start time
-//   startTimesMap   — { [startTimeId]: label } for start time name resolution
 function PreferenceBadge({
   signup,
   entryCarId,
@@ -31,8 +21,7 @@ function PreferenceBadge({
   const prefClasses = signup.preferred_class || [];
   const prefStartTimeIds = signup.preferred_start_time_ids || [];
 
-  // Collect individual conflict descriptors
-  const conflicts = []; // { label, tooltip, hard }
+  const conflicts = [];
 
   // ── Class check (hard mismatch) ─────────────────────────────────────────
   const classConflict =
@@ -45,16 +34,13 @@ function PreferenceBadge({
     });
   }
 
-  // ── Car check (soft — only relevant when class matches) ─────────────────
-  // We only warn about car if the class is fine (or unspecified), so admins
-  // aren't double-penalised for a car difference inside an already-flagged class.
+  // ── Car check (soft — only when class matches) ──────────────────────────
   const carConflict =
     !classConflict &&
     prefCarIds.length > 0 &&
     entryCarId &&
     !prefCarIds.includes(entryCarId);
   if (carConflict) {
-    // Resolve preferred car names from the map; fall back to raw IDs if missing.
     const prefCarNames = prefCarIds.map((id) => carsMap?.[id] || id).join(", ");
     conflicts.push({
       label: "voiture",
@@ -64,18 +50,16 @@ function PreferenceBadge({
   }
 
   // ── Start time check (soft) ─────────────────────────────────────────────
-  // Only consider preferred IDs that resolve in the map — stale IDs from
-  // event type conversion (regular→special or vice versa) are silently
-  // ignored rather than shown as raw UUIDs or flagged as false mismatches.
+  // Only consider IDs that resolve in the map — stale IDs from event type
+  // conversion are silently ignored rather than flagged as false mismatches.
   const resolvablePrefStartTimeIds = prefStartTimeIds.filter(
     (id) => startTimesMap?.[id],
   );
   const startConflict =
     teamStartTimeId &&
-    startTimesMap?.[teamStartTimeId] && // team's time must resolve too
+    startTimesMap?.[teamStartTimeId] &&
     resolvablePrefStartTimeIds.length > 0 &&
     !resolvablePrefStartTimeIds.includes(teamStartTimeId);
-
   if (startConflict) {
     const teamLabel = startTimesMap[teamStartTimeId];
     const prefLabels = resolvablePrefStartTimeIds
@@ -90,23 +74,19 @@ function PreferenceBadge({
 
   if (conflicts.length === 0) return null;
 
-  // Worst severity wins for colour
   const isHard = conflicts.some((c) => c.hard);
   const badgeStyle = isHard
     ? {
-        // 🔴 hard — class mismatch
         background: "rgba(224,85,85,0.12)",
         border: "1px solid var(--danger)",
         color: "var(--danger)",
       }
     : {
-        // 🟡 soft — car or start time mismatch within matching class
         background: "#2a1a00",
         border: "1px solid #a06020",
         color: "#d4904a",
       };
 
-  // Build a single multi-line tooltip listing every conflict
   const fullTooltip = conflicts.map((c) => c.tooltip).join("\n\n");
   const labelText = conflicts.map((c) => c.label).join(", ");
 
@@ -127,13 +107,71 @@ function PreferenceBadge({
   );
 }
 
+// ── StartTimeModal ────────────────────────────────────────────────────────
+// Shown on assign (offer to add team start time to driver prefs) and on
+// unassign (offer to remove it, only when it wasn't in the pre-assignment snapshot).
+function StartTimeModal({ modal, onConfirm, onDecline, onClose }) {
+  if (!modal) return null;
+
+  const isAssign = modal.type === "assign";
+  const title = isAssign
+    ? "Préférence d'horaire"
+    : "Retirer la préférence d'horaire";
+  const message = isAssign
+    ? `Cet équipage démarre le ${modal.startTimeLabel}. Souhaitez-vous ajouter ce créneau aux préférences du pilote ?`
+    : `Ce pilote avait été assigné au créneau ${modal.startTimeLabel}. Souhaitez-vous retirer ce créneau de ses préférences ?`;
+
+  return (
+    <div
+      style={{
+        position: "fixed",
+        inset: 0,
+        background: "rgba(0,0,0,0.6)",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        zIndex: 1000,
+        padding: "1.5rem",
+      }}
+    >
+      <div className="card" style={{ maxWidth: "420px", width: "100%" }}>
+        <h3 style={{ marginBottom: "0.75rem" }}>{title}</h3>
+        <p
+          style={{
+            fontSize: "0.9rem",
+            color: "var(--text-dim)",
+            marginBottom: "1.5rem",
+          }}
+        >
+          {message}
+        </p>
+        <div
+          style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}
+        >
+          <button onClick={onConfirm} className="btn btn-primary">
+            {isAssign ? "Oui, ajouter le créneau" : "Oui, retirer le créneau"}
+          </button>
+          <button onClick={onDecline} className="btn btn-secondary">
+            {isAssign
+              ? "Non, laisser les préférences inchangées"
+              : "Non, conserver les préférences"}
+          </button>
+          <button onClick={onClose} className="btn btn-danger btn-sm">
+            Annuler
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function DriversAssignment({
   entryId,
   entryCarId,
-  entryCarName, // human-readable team car name for tooltips
+  entryCarName,
   entryClass,
-  carsMap, // { [carId]: carName }
-  startTimesMap, // { [startTimeId]: label }
+  carsMap,
+  startTimesMap,
   assignedDrivers,
   unassignedDrivers,
   currentDriver,
@@ -144,7 +182,7 @@ export default function DriversAssignment({
   isInTeam = false,
   // isAdmin: passed explicitly from EquipageTabs so we don't recompute
   isAdmin = false,
-  // teamStartTimeId: used to flag drivers whose preferred start times don't match
+  // teamStartTimeId: used to flag and cascade start time preferences
   teamStartTimeId = null,
 }) {
   const router = useRouter();
@@ -153,45 +191,179 @@ export default function DriversAssignment({
   const [error, setError] = useState(null);
   // Stores the signup ID being assigned — shows loading on the specific button
   const [assigning, setAssigning] = useState(null);
+  // Controls the start time preference modal for both assign and unassign flows
+  const [actionModal, setActionModal] = useState(null);
+  // null | { type: 'assign' | 'unassign', signup, startTimeLabel, onConfirm, onDecline }
 
   const isExternal = currentDriver?.role === "external";
 
-  const assign = async (signup) => {
-    if (assigning || archived) return;
+  // ── Assign helpers ────────────────────────────────────────────────────────
+
+  // Commits the actual DB assign after modal interaction.
+  // updatePrefs: true = add teamStartTimeId to preferred_start_time_ids.
+  const commitAssign = async (signup, updatePrefs) => {
     setAssigning(signup.id);
+    setActionModal(null);
+
+    // Snapshot current preferences before any modification so we can safely
+    // reverse on unassign — only remove what we actually added.
+    const currentPrefs = signup.preferred_start_time_ids || [];
+    const snapshot = currentPrefs;
+
+    // Build updated preferences if the admin/driver confirmed the addition
+    const newPrefs =
+      updatePrefs && teamStartTimeId && !currentPrefs.includes(teamStartTimeId)
+        ? [...currentPrefs, teamStartTimeId]
+        : currentPrefs;
+
+    // Save snapshot + updated preferences on the signup row, then assign to team
+    const { error: prefErr } = await supabase
+      .from("signups")
+      .update({
+        preferred_start_time_ids: newPrefs,
+        preferred_start_time_ids_snapshot: snapshot,
+      })
+      .eq("id", signup.id);
+
+    if (prefErr) {
+      setError(prefErr.message);
+      setAssigning(null);
+      return;
+    }
+
     const { data, error: err } = await supabase
       .from("signups")
       .update({ team_entry_id: entryId })
       .eq("id", signup.id)
       .select();
+
     if (err || !data || data.length === 0) {
       setError(err?.message || "Update failed (RLS ou contrainte)");
       setAssigning(null);
       return;
     }
-    setAssigned((prev) => [...prev, { ...signup, team_entry_id: entryId }]);
+
+    setAssigned((prev) => [
+      ...prev,
+      {
+        ...signup,
+        team_entry_id: entryId,
+        preferred_start_time_ids: newPrefs,
+        preferred_start_time_ids_snapshot: snapshot,
+      },
+    ]);
     setUnassigned((prev) => prev.filter((s) => s.id !== signup.id));
     setAssigning(null);
     router.refresh();
   };
 
-  const unassign = async (signup) => {
-    if (archived) return;
+  const assign = (signup) => {
+    if (assigning || archived) return;
+
+    // No team start time configured — assign silently, no modal needed
+    if (!teamStartTimeId) {
+      commitAssign(signup, false);
+      return;
+    }
+
+    const currentPrefs = signup.preferred_start_time_ids || [];
+
+    // Start time already in driver's preferences — assign silently
+    if (currentPrefs.includes(teamStartTimeId)) {
+      commitAssign(signup, false);
+      return;
+    }
+
+    // Start time not in preferences — prompt to add it
+    const startTimeLabel = startTimesMap?.[teamStartTimeId] || teamStartTimeId;
+    setActionModal({
+      type: "assign",
+      signup,
+      startTimeLabel,
+      onConfirm: () => commitAssign(signup, true),
+      onDecline: () => commitAssign(signup, false),
+    });
+  };
+
+  // ── Unassign helpers ──────────────────────────────────────────────────────
+
+  // Commits the actual DB unassign after modal interaction.
+  // removeStartTime: true = strip teamStartTimeId from preferred_start_time_ids.
+  const commitUnassign = async (signup, removeStartTime) => {
+    setActionModal(null);
+
+    const currentPrefs = signup.preferred_start_time_ids || [];
+    const newPrefs = removeStartTime
+      ? currentPrefs.filter((id) => id !== teamStartTimeId)
+      : currentPrefs;
+
+    if (removeStartTime) {
+      await supabase
+        .from("signups")
+        .update({ preferred_start_time_ids: newPrefs })
+        .eq("id", signup.id);
+    }
+
     const { error: err } = await supabase
       .from("signups")
       .update({ team_entry_id: null })
       .eq("id", signup.id);
+
     if (err) {
       setError(err.message);
       return;
     }
-    setUnassigned((prev) => [...prev, { ...signup, team_entry_id: null }]);
+
+    setUnassigned((prev) => [
+      ...prev,
+      {
+        ...signup,
+        team_entry_id: null,
+        preferred_start_time_ids: newPrefs,
+      },
+    ]);
     setAssigned((prev) => prev.filter((s) => s.id !== signup.id));
     router.refresh();
   };
 
-  // Returns true if any preference conflict exists — used to style the pill button
-  // in the unassigned section (amber border + warning icon).
+  const unassign = (signup) => {
+    if (archived) return;
+
+    // No team start time — unassign silently
+    if (!teamStartTimeId) {
+      commitUnassign(signup, false);
+      return;
+    }
+
+    const snapshot = signup.preferred_start_time_ids_snapshot;
+
+    // Snapshot is NULL (assigned before this feature existed) — keep prefs,
+    // unassign silently to avoid incorrectly stripping pre-existing preferences.
+    if (!snapshot) {
+      commitUnassign(signup, false);
+      return;
+    }
+
+    // Start time was already in prefs before assignment — keep it
+    if (snapshot.includes(teamStartTimeId)) {
+      commitUnassign(signup, false);
+      return;
+    }
+
+    // Start time was added during assignment — prompt to remove it
+    const startTimeLabel = startTimesMap?.[teamStartTimeId] || teamStartTimeId;
+    setActionModal({
+      type: "unassign",
+      signup,
+      startTimeLabel,
+      onConfirm: () => commitUnassign(signup, true),
+      onDecline: () => commitUnassign(signup, false),
+    });
+  };
+
+  // ── Mismatch detection ────────────────────────────────────────────────────
+  // Returns true if any preference conflict exists — used to style the pill
+  // button in the unassigned section (amber border + warning icon).
   const hasMismatch = (signup) => {
     const prefCarIds = signup.preferred_car_ids || [];
     const prefClasses = signup.preferred_class || [];
@@ -205,7 +377,7 @@ export default function DriversAssignment({
     )
       return true;
 
-    // Soft: class ok (or unspecified), but car preference doesn't include team car
+    // Soft: class ok (or unspecified), but preferred car doesn't include team car
     const classOk =
       prefClasses.length === 0 ||
       !entryClass ||
@@ -218,11 +390,13 @@ export default function DriversAssignment({
     )
       return true;
 
-    // Soft: start time mismatch
+    // Soft: start time mismatch (only resolvable IDs count)
+    const resolvable = prefStartTimeIds.filter((id) => startTimesMap?.[id]);
     if (
       teamStartTimeId &&
-      prefStartTimeIds.length > 0 &&
-      !prefStartTimeIds.includes(teamStartTimeId)
+      startTimesMap?.[teamStartTimeId] &&
+      resolvable.length > 0 &&
+      !resolvable.includes(teamStartTimeId)
     )
       return true;
 
@@ -256,6 +430,14 @@ export default function DriversAssignment({
 
   return (
     <div>
+      {/* ── Start time preference modal ── */}
+      <StartTimeModal
+        modal={actionModal}
+        onConfirm={() => actionModal?.onConfirm?.()}
+        onDecline={() => actionModal?.onDecline?.()}
+        onClose={() => setActionModal(null)}
+      />
+
       {error && (
         <div className="alert alert-error" style={{ marginBottom: "1rem" }}>
           {error}
