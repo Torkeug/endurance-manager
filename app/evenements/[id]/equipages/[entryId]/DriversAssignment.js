@@ -305,7 +305,15 @@ export default function DriversAssignment({
                     {s.drivers?.irating ?? "—"}
                   </td>
                   <td style={{ color: "var(--text-dim)", fontSize: "0.82rem" }}>
-                    {[...(s.preferred_class || [])].join(", ") || "—"}
+                    {(() => {
+                      const classes = s.preferred_class || [];
+                      // Resolve preferred car IDs to human-readable names via carsMap
+                      const carNames = (s.preferred_car_ids || [])
+                        .map((id) => carsMap?.[id])
+                        .filter(Boolean);
+                      const parts = [...classes, ...carNames];
+                      return parts.length > 0 ? parts.join(", ") : "—";
+                    })()}
                   </td>
                   <td
                     style={{
