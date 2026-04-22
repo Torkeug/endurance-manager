@@ -33,6 +33,7 @@ export default function ModifierEvenement({ params }) {
   const [showRegenModal, setShowRegenModal] = useState(false);
   const [previewStep, setPreviewStep] = useState(false);
   const [previewLosses, setPreviewLosses] = useState([]);
+  const [previewTeamLosses, setPreviewTeamLosses] = useState([]);
 
   useEffect(() => {
     supabase.auth.getUser().then(async ({ data: { user } }) => {
@@ -291,15 +292,27 @@ export default function ModifierEvenement({ params }) {
     const losses = (affectedSignups || [])
       .filter((s) => {
         const prefs = s.preferred_start_time_ids || [];
-        // At least one pref must be an old ID that doesn't survive
         const hasLoss = prefs.some((pid) => !survivingOldIds.has(pid));
-        // But only flag if no prefs survive at all (partial loss is still a valid pref)
         const hasAnySurviving = prefs.some((pid) => survivingOldIds.has(pid));
         return hasLoss && !hasAnySurviving;
       })
       .map((s) => s.drivers?.name || "—");
 
+    // A team entry "loses" if its current start_time_id doesn't survive the remap
+    const { data: currentTeamEntries } = await supabase
+      .from("team_entries")
+      .select("id, start_time_id, crew_name")
+      .eq("event_id", id)
+      .not("start_time_id", "is", null);
+
+    const teamLosses = (currentTeamEntries || [])
+      .filter(
+        (te) => te.start_time_id && !survivingOldIds.has(te.start_time_id),
+      )
+      .map((te) => te.crew_name || "—");
+
     setPreviewLosses(losses);
+    setPreviewTeamLosses(teamLosses);
     setLoading(false);
     setPreviewStep(true);
   };
@@ -329,7 +342,14 @@ export default function ModifierEvenement({ params }) {
         .select("id, irl_start")
         .eq("event_id", id);
 
-      // ── Step 2: null out team entry start_time_id (FK constraint) ─────────
+      // ── Step 2: snapshot then null out team entry start_time_id ───────────
+      // Snapshot first so we can remap after new rows are inserted.
+      // The null update is required before deletion due to the FK constraint.
+      const { data: teamEntriesSnapshot } = await supabase
+        .from("team_entries")
+        .select("id, start_time_id")
+        .eq("event_id", id);
+
       await supabase
         .from("team_entries")
         .update({ start_time_id: null })
@@ -369,11 +389,11 @@ export default function ModifierEvenement({ params }) {
         .insert(startTimeRows)
         .select("id, irl_start");
 
-      // ── Step 5: remap signup preferred_start_time_ids ─────────────────────
+      // ── Step 5: remap signup preferred_start_time_ids and team entry start_time_id ──
       // Match old→new by irl_start (same UTC moment = same slot, just new ID).
       // Old IDs with no matching new time are dropped — they're genuinely gone.
       if (oldStartTimes?.length > 0 && newStartTimes?.length > 0) {
-        // Build irl_start(as ISO string) → new_id lookup
+        // Build irl_start (as ISO string) → new_id lookup
         const newByIrlStart = Object.fromEntries(
           newStartTimes.map((t) => [new Date(t.irl_start).toISOString(), t.id]),
         );
@@ -386,6 +406,7 @@ export default function ModifierEvenement({ params }) {
         );
 
         if (Object.keys(idRemap).length > 0) {
+          // ── Signups: remap preferred_start_time_ids ──────────────────────
           // Fetch all signups for this event that have any preferred start time
           const { data: affectedSignups } = await supabase
             .from("signups")
@@ -405,6 +426,24 @@ export default function ModifierEvenement({ params }) {
                   .update({ preferred_start_time_ids: remapped })
                   .eq("id", signup.id);
               }),
+            );
+          }
+
+          // ── Team entries: remap start_time_id ───────────────────────────
+          // Uses the snapshot taken before nulling in Step 2 — by this point
+          // start_time_id is null on all entries due to the FK constraint workaround.
+          // Entries whose old start time has no equivalent in the new schedule stay null.
+          if (teamEntriesSnapshot?.length > 0) {
+            await Promise.all(
+              teamEntriesSnapshot
+                .filter((te) => te.start_time_id)
+                .map((te) => {
+                  const newStartTimeId = idRemap[te.start_time_id] || null;
+                  return supabase
+                    .from("team_entries")
+                    .update({ start_time_id: newStartTimeId })
+                    .eq("id", te.id);
+                }),
             );
           }
         }
@@ -947,8 +986,8 @@ export default function ModifierEvenement({ params }) {
                   Confirmer la régénération
                 </h3>
 
-                {previewLosses.length === 0 ? (
-                  /* All preferences survive the remap — safe to proceed */
+                {previewLosses.length === 0 &&
+                previewTeamLosses.length === 0 ? (
                   <p
                     style={{
                       fontSize: "0.9rem",
@@ -1002,6 +1041,52 @@ export default function ModifierEvenement({ params }) {
                     >
                       Ces pilotes devront re-sélectionner leur horaire préféré
                       lors de leur prochaine inscription.
+                    </p>
+                  </div>
+                )}
+
+                {previewTeamLosses.length > 0 && (
+                  <div style={{ marginBottom: "1.5rem" }}>
+                    <p
+                      style={{
+                        fontSize: "0.9rem",
+                        color: "var(--text-dim)",
+                        marginBottom: "0.75rem",
+                      }}
+                    >
+                      ⚠️{" "}
+                      <strong style={{ color: "var(--text)" }}>
+                        {previewTeamLosses.length} équipage
+                        {previewTeamLosses.length > 1 ? "s" : ""}
+                      </strong>{" "}
+                      {previewTeamLosses.length > 1 ? "perdront" : "perdra"}{" "}
+                      leur créneau de départ assigné car il n'existe plus dans
+                      les nouveaux horaires :
+                    </p>
+                    <ul
+                      style={{
+                        margin: 0,
+                        paddingLeft: "1.25rem",
+                        fontSize: "0.88rem",
+                        color: "var(--danger)",
+                        display: "flex",
+                        flexDirection: "column",
+                        gap: "0.2rem",
+                      }}
+                    >
+                      {previewTeamLosses.map((name, i) => (
+                        <li key={i}>{name}</li>
+                      ))}
+                    </ul>
+                    <p
+                      style={{
+                        fontSize: "0.82rem",
+                        color: "var(--text-dim)",
+                        marginTop: "0.75rem",
+                      }}
+                    >
+                      Ces équipages devront être réassignés à un nouveau créneau
+                      de départ.
                     </p>
                   </div>
                 )}
