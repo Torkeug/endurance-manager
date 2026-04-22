@@ -92,6 +92,98 @@ function CarTypePicker({ carTypes, value, onChange }) {
   );
 }
 
+// Shown before deleting a car that has active preferred_car_ids references
+// in signups. Lists affected drivers so the admin can make an informed decision.
+function DeleteCarModal({ modal, onConfirm, onCancel }) {
+  if (!modal) return null;
+  return (
+    <div
+      style={{
+        position: "fixed",
+        inset: 0,
+        background: "rgba(0,0,0,0.6)",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        zIndex: 1000,
+        padding: "1.5rem",
+      }}
+    >
+      <div className="card" style={{ maxWidth: "480px", width: "100%" }}>
+        <h3 style={{ marginBottom: "0.75rem" }}>Supprimer la voiture</h3>
+        {modal.affectedDrivers.length > 0 ? (
+          <>
+            <p
+              style={{
+                fontSize: "0.9rem",
+                color: "var(--text-dim)",
+                marginBottom: "0.75rem",
+              }}
+            >
+              ⚠️{" "}
+              <strong style={{ color: "var(--text)" }}>
+                {modal.affectedDrivers.length} pilote
+                {modal.affectedDrivers.length > 1 ? "s" : ""}
+              </strong>{" "}
+              {modal.affectedDrivers.length > 1 ? "ont" : "a"} cette voiture
+              dans leurs préférences et{" "}
+              {modal.affectedDrivers.length > 1 ? "perdront" : "perdra"}{" "}
+              silencieusement cette préférence :
+            </p>
+            <ul
+              style={{
+                margin: "0 0 1rem",
+                paddingLeft: "1.25rem",
+                fontSize: "0.88rem",
+                color: "var(--danger)",
+                display: "flex",
+                flexDirection: "column",
+                gap: "0.2rem",
+              }}
+            >
+              {modal.affectedDrivers.map((name, i) => (
+                <li key={i}>{name}</li>
+              ))}
+            </ul>
+            <p
+              style={{
+                fontSize: "0.82rem",
+                color: "var(--text-dim)",
+                marginBottom: "1.5rem",
+              }}
+            >
+              Ces pilotes devront mettre à jour leurs préférences lors de leur
+              prochaine inscription.
+            </p>
+          </>
+        ) : (
+          <p
+            style={{
+              fontSize: "0.9rem",
+              color: "var(--text-dim)",
+              marginBottom: "1.5rem",
+            }}
+          >
+            Confirmer la suppression de{" "}
+            <strong style={{ color: "var(--text)" }}>{modal.carName}</strong> ?
+            Cette action est irréversible.
+          </p>
+        )}
+        <div
+          style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}
+        >
+          <button onClick={onConfirm} className="btn btn-danger">
+            Supprimer définitivement
+          </button>
+          <button onClick={onCancel} className="btn btn-secondary">
+            Annuler
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── Kronos Endurance tab ─────────────────────────────────────────────────────
 // Manages cars used in events — linked to iRacing catalog, with tank size and class.
 function KronosEnduranceTab({ initialCars, iracingCars }) {
@@ -108,6 +200,7 @@ function KronosEnduranceTab({ initialCars, iracingCars }) {
   const [searchQuery, setSearchQuery] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
+  const [deleteModal, setDeleteModal] = useState(null);
 
   const set = (field) => (e) =>
     setForm((prev) => ({ ...prev, [field]: e.target.value }));
@@ -222,9 +315,28 @@ function KronosEnduranceTab({ initialCars, iracingCars }) {
     router.refresh();
   };
 
-  const handleDelete = async (id) => {
-    if (!confirm("Supprimer cette voiture ?")) return;
-    const { error: err } = await supabase.from("cars").delete().eq("id", id);
+  // Checks for active signup references before deleting — shows a warning modal
+  // listing affected drivers if any have this car in their preferred_car_ids.
+  // If the car is used by a team entry (FK violation), deletion is blocked entirely.
+  const handleDelete = async (id, name) => {
+    // Check signups that reference this car in preferred_car_ids
+    const { data: affectedSignups } = await supabase
+      .from("signups")
+      .select("id, drivers(name)")
+      .contains("preferred_car_ids", [id]);
+
+    const affectedDrivers = (affectedSignups || [])
+      .map((s) => s.drivers?.name)
+      .filter(Boolean);
+
+    // Show modal regardless — no warning if clean, warning list if affected
+    setDeleteModal({ carId: id, carName: name, affectedDrivers });
+  };
+
+  const commitDelete = async () => {
+    const { carId } = deleteModal;
+    setDeleteModal(null);
+    const { error: err } = await supabase.from("cars").delete().eq("id", carId);
     if (err) {
       setError(
         err.code === "23503"
@@ -233,7 +345,7 @@ function KronosEnduranceTab({ initialCars, iracingCars }) {
       );
       return;
     }
-    setCars((prev) => prev.filter((c) => c.id !== id));
+    setCars((prev) => prev.filter((c) => c.id !== carId));
     router.refresh();
   };
 
@@ -446,6 +558,13 @@ function KronosEnduranceTab({ initialCars, iracingCars }) {
 
   return (
     <div>
+      {/* Delete confirmation modal — warns if drivers have this car in preferences */}
+      <DeleteCarModal
+        modal={deleteModal}
+        onConfirm={commitDelete}
+        onCancel={() => setDeleteModal(null)}
+      />
+
       {!adding && !editingId && error && (
         <div className="alert alert-error" style={{ marginBottom: "1rem" }}>
           {error}
@@ -559,7 +678,7 @@ function KronosEnduranceTab({ initialCars, iracingCars }) {
                             Modifier
                           </button>
                           <button
-                            onClick={() => handleDelete(car.id)}
+                            onClick={() => handleDelete(car.id, car.name)}
                             className="btn btn-danger btn-sm"
                           >
                             Supprimer
@@ -659,7 +778,7 @@ function KronosEnduranceTab({ initialCars, iracingCars }) {
                             Modifier
                           </button>
                           <button
-                            onClick={() => handleDelete(car.id)}
+                            onClick={() => handleDelete(car.id, car.name)}
                             className="btn btn-danger btn-sm"
                           >
                             Supprimer
