@@ -544,6 +544,29 @@ export default function ChampionshipTeamsManager() {
   const handleSave = async (entryId, rawVal) => {
     const number = rawVal === "" ? null : parseInt(rawVal, 10);
     if (rawVal !== "" && isNaN(number)) return;
+
+    // Validate uniqueness within the same event before saving —
+    // exclude the current entry so it can keep its own number.
+    if (number !== null) {
+      const entry = entries.find((e) => e.id === entryId);
+      const { data: existing } = await supabaseBrowser
+        .from("team_entries")
+        .select("id, crew_name")
+        .eq("event_id", entry?.event_id)
+        .eq("car_number", number)
+        .neq("id", entryId)
+        .maybeSingle();
+      if (existing) {
+        // Surface the conflict inline — no modal, just revert the input
+        alert(
+          `Le numéro #${number} est déjà utilisé par ${existing.crew_name} pour cette manche.`,
+        );
+        // Revert by re-setting entries to their current state (triggers re-render)
+        setEntries((prev) => [...prev]);
+        return;
+      }
+    }
+
     const { error } = await supabaseBrowser
       .from("team_entries")
       .update({ car_number: number })

@@ -223,6 +223,23 @@ export default function NouvelEquipage({ params }) {
     setLoading(true);
     setError(null);
 
+    // Validate car number uniqueness within the event before inserting
+    if (isChampionship && form.car_number !== "") {
+      const { data: existing } = await supabase
+        .from("team_entries")
+        .select("id")
+        .eq("event_id", id)
+        .eq("car_number", parseInt(form.car_number))
+        .maybeSingle();
+      if (existing) {
+        setError(
+          `Le numéro #${form.car_number} est déjà utilisé par un autre équipage pour cet événement.`,
+        );
+        setLoading(false);
+        return;
+      }
+    }
+
     // Build full Twitch URLs from usernames array
     const streamUrls = twitchUsernames.map((u) => `https://twitch.tv/${u}`);
 
@@ -260,7 +277,9 @@ export default function NouvelEquipage({ params }) {
     if (err) {
       setError(
         err.code === "23505"
-          ? "Cet équipage est déjà inscrit pour ce créneau de départ."
+          ? err.message.includes("car_number")
+            ? `Le numéro de course est déjà utilisé par un autre équipage pour cet événement.`
+            : "Cet équipage est déjà inscrit pour ce créneau de départ."
           : err.message,
       );
       setLoading(false);

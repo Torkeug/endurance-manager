@@ -210,6 +210,25 @@ export default function ModifierEquipage({ params }) {
     setLoading(true);
     setError(null);
 
+    // Validate car number uniqueness within the event before updating —
+    // exclude the current entry from the check so it can keep its own number.
+    if (isChampionship && form.car_number !== "") {
+      const { data: existing } = await supabase
+        .from("team_entries")
+        .select("id")
+        .eq("event_id", id)
+        .eq("car_number", parseInt(form.car_number))
+        .neq("id", entryId)
+        .maybeSingle();
+      if (existing) {
+        setError(
+          `Le numéro #${form.car_number} est déjà utilisé par un autre équipage pour cet événement.`,
+        );
+        setLoading(false);
+        return;
+      }
+    }
+
     const streamUrls = twitchUsernames.map((u) => `https://twitch.tv/${u}`);
 
     const payload = {
@@ -243,7 +262,9 @@ export default function ModifierEquipage({ params }) {
     if (err) {
       setError(
         err.code === "23505"
-          ? "Cet équipage est déjà inscrit pour ce créneau de départ."
+          ? err.message.includes("car_number")
+            ? `Le numéro de course est déjà utilisé par un autre équipage pour cet événement.`
+            : "Cet équipage est déjà inscrit pour ce créneau de départ."
           : err.message,
       );
       setLoading(false);
