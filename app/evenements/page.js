@@ -119,13 +119,14 @@ export default async function EvenementsPage() {
     return finish < now;
   });
   if (eventsToArchive.length > 0) {
-    await supabase
-      .from("events")
-      .update({ archived: true })
-      .in(
-        "id",
-        eventsToArchive.map((e) => e.id),
-      );
+    // Call the atomic archive_event() Postgres function for each event —
+    // ensures snapshots are written before the archived flag is flipped,
+    // same as the manual archive flow in ArchiveToggle.js.
+    await Promise.all(
+      eventsToArchive.map((e) =>
+        supabase.rpc("archive_event", { event_id: e.id }),
+      ),
+    );
     eventsToArchive.forEach((e) => {
       e.archived = true;
     });
