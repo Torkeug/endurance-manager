@@ -135,9 +135,15 @@ export default function EventPageTabs({
 
   const formatPreferences = (signup) => {
     const classes = signup.preferred_class || [];
-    const carNames = (signup.preferred_car_ids || [])
-      .map((cid) => carsMap[cid])
-      .filter(Boolean);
+    // For archived events, use the snapshotted car names if available —
+    // the live carsMap may be incomplete if cars were deleted since archiving.
+    // Fall back to live resolution for non-archived events or pre-feature archives.
+    const carNames =
+      event.archived && signup.preferred_car_names_snapshot != null
+        ? signup.preferred_car_names_snapshot
+        : (signup.preferred_car_ids || [])
+            .map((cid) => carsMap[cid])
+            .filter(Boolean);
     const parts = [...classes, ...carNames];
     return parts.length > 0 ? parts.join(", ") : "—";
   };
@@ -531,7 +537,7 @@ export default function EventPageTabs({
                               color={crewColorsMap[entry.crew_name]}
                             />
                             {/* Inscrit badge — mirrors the event list badge, shown when the current
-        driver is assigned to this specific team entry */}
+                            driver is assigned to this specific team entry */}
                             {(entry.signups || []).some(
                               (s) => s.drivers?.id === currentDriver?.id,
                             ) && (

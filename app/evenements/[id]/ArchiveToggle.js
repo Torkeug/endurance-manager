@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { supabaseBrowser as supabase } from '../../../lib/supabase-browser'
+import { supabaseBrowser as supabase } from "../../../lib/supabase-browser";
 
 export default function ArchiveToggle({ eventId, archived }) {
   const [loading, setLoading] = useState(false);
@@ -51,22 +51,46 @@ export default function ArchiveToggle({ eventId, archived }) {
           ),
         );
       }
-
-      // 3. Snapshot driver names on signups
+      // 3. Snapshot driver names and preferred car names on signups.
+      // Car names are resolved from the cars table at archive time so the
+      // inscriptions tab stays accurate even if cars are later renamed or deleted.
       const { data: signups } = await supabase
         .from("signups")
-        .select("id, driver_id, drivers(name)")
+        .select("id, driver_id, drivers(name), preferred_car_ids")
         .eq("event_id", eventId);
+
+      // Fetch all cars referenced across all signups in one query
+      const allPreferredCarIds = [
+        ...new Set((signups || []).flatMap((s) => s.preferred_car_ids || [])),
+      ];
+      const { data: preferredCars } =
+        allPreferredCarIds.length > 0
+          ? await supabase
+              .from("cars")
+              .select("id, name")
+              .in("id", allPreferredCarIds)
+          : { data: [] };
+      const preferredCarsMap = Object.fromEntries(
+        (preferredCars || []).map((c) => [c.id, c.name]),
+      );
+
       if (signups?.length > 0) {
         await Promise.all(
-          signups.map((s) =>
-            s.drivers?.name
-              ? supabase
-                  .from("signups")
-                  .update({ driver_name_snapshot: s.drivers.name })
-                  .eq("id", s.id)
-              : Promise.resolve(),
-          ),
+          signups.map((s) => {
+            // Resolve preferred car IDs to names — drop any that no longer exist
+            const carNamesSnapshot = (s.preferred_car_ids || [])
+              .map((id) => preferredCarsMap[id])
+              .filter(Boolean);
+            return supabase
+              .from("signups")
+              .update({
+                driver_name_snapshot: s.drivers?.name || null,
+                // Always write the array — empty array is valid (driver had no car prefs)
+                // NULL means "not yet snapshotted" (pre-feature archives)
+                preferred_car_names_snapshot: carNamesSnapshot,
+              })
+              .eq("id", s.id);
+          }),
         );
       }
 
