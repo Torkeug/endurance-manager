@@ -306,7 +306,12 @@ export default function DriversAssignment({
 
     const { error: err } = await supabase
       .from("signups")
-      .update({ team_entry_id: null })
+      .update({
+        team_entry_id: null,
+        // Clear the snapshot on unassign — it was tied to this specific
+        // assignment. A fresh snapshot will be taken on the next assignment.
+        preferred_start_time_ids_snapshot: null,
+      })
       .eq("id", signup.id);
 
     if (err) {
