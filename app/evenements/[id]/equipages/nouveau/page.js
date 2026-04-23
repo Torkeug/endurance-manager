@@ -293,8 +293,9 @@ export default function NouvelEquipage({ params }) {
       refuel_time_seconds: parseInt(form.refuel_time_seconds) || 30,
       tyre_change_time_seconds: parseInt(form.tyre_change_time_seconds) || 0,
       // Minutes before stint end to trigger Discord handoff alert (null = disabled)
+      // Enforce minimum of 1 minute — 0 or negative would trigger immediate alerts
       notification_minutes_before: form.notification_minutes_before
-        ? parseInt(form.notification_minutes_before)
+        ? Math.max(1, parseInt(form.notification_minutes_before))
         : null,
       car_number:
         isChampionship && form.car_number !== ""

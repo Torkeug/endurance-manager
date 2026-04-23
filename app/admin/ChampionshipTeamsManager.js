@@ -364,6 +364,52 @@ function ChampionshipView({
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// CarNumberConflictModal
+// ─────────────────────────────────────────────────────────────────────────────
+
+// Shown when a car number conflicts with an existing entry in the same event.
+// Replaces the native alert() for consistency with the rest of the app.
+function CarNumberConflictModal({ conflict, onClose }) {
+  if (!conflict) return null;
+  return (
+    <div
+      style={{
+        position: "fixed",
+        inset: 0,
+        background: "rgba(0,0,0,0.6)",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        zIndex: 1000,
+        padding: "1.5rem",
+      }}
+    >
+      <div className="card" style={{ maxWidth: "400px", width: "100%" }}>
+        <h3 style={{ marginBottom: "0.75rem" }}>Numéro déjà utilisé</h3>
+        <p
+          style={{
+            fontSize: "0.9rem",
+            color: "var(--text-dim)",
+            marginBottom: "1.5rem",
+          }}
+        >
+          Le numéro{" "}
+          <strong style={{ color: "var(--text)" }}>#{conflict.number}</strong>{" "}
+          est déjà utilisé par{" "}
+          <strong style={{ color: "var(--text)" }}>
+            {conflict.existingCrewName}
+          </strong>{" "}
+          pour cette manche.
+        </p>
+        <button onClick={onClose} className="btn btn-primary">
+          OK
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // TeamView
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -494,6 +540,9 @@ export default function ChampionshipTeamsManager() {
   const [view, setView] = useState("team");
   const [expandedTop, setExpandedTop] = useState({});
   const [expandedRow, setExpandedRow] = useState({});
+  // Conflict modal — shown when a car number is already taken in the same event
+  const [numberConflict, setNumberConflict] = useState(null);
+  // null | { number, existingCrewName }
 
   const fetchData = useCallback(async () => {
     const { data: champs, error: champErr } = await supabaseBrowser
@@ -557,11 +606,9 @@ export default function ChampionshipTeamsManager() {
         .neq("id", entryId)
         .maybeSingle();
       if (existing) {
-        // Surface the conflict inline — no modal, just revert the input
-        alert(
-          `Le numéro #${number} est déjà utilisé par ${existing.crew_name} pour cette manche.`,
-        );
-        // Revert by re-setting entries to their current state (triggers re-render)
+        // Show conflict modal instead of native alert()
+        setNumberConflict({ number, existingCrewName: existing.crew_name });
+        // Revert input by re-setting entries to their current state
         setEntries((prev) => [...prev]);
         return;
       }
@@ -617,6 +664,13 @@ export default function ChampionshipTeamsManager() {
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
+      {/* Car number conflict modal — replaces native alert() */}
+      <CarNumberConflictModal
+        conflict={numberConflict}
+        onClose={() => setNumberConflict(null)}
+      />
+
+      {/* ── View toggle ── */}
       {/* ── View toggle ─────────────────────────────────────────────────── */}
       <div style={{ display: "flex", gap: "0.5rem" }}>
         {[
