@@ -31,18 +31,18 @@ export default async function DriverDetail({ params, searchParams }) {
     .from("signups")
     .select(
       `
-      *,
-      events (
-        id, name, duration_minutes, format, championship_id,
-        circuits (name),
-        event_start_times (id, label, irl_start)
-      ),
-      team_entries (
-        id, crew_name, class,
-        cars (name),
-        event_start_times (label, irl_start)
-      )
-    `,
+    *,
+    events (
+      id, name, duration_minutes, format, championship_id, archived,
+      circuits (name),
+      event_start_times (id, label, irl_start)
+    ),
+    team_entries (
+      id, crew_name, class,
+      cars (name),
+      event_start_times (label, irl_start)
+    )
+  `,
     )
     .eq("driver_id", id)
     .order("created_at", { ascending: false });
