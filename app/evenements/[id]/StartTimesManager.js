@@ -9,6 +9,47 @@ import {
 } from "../../../lib/timezone";
 import { DateTime } from "luxon";
 
+function ConfirmModal({ modal, onConfirm, onCancel }) {
+  if (!modal) return null;
+  return (
+    <div
+      style={{
+        position: "fixed",
+        inset: 0,
+        background: "rgba(0,0,0,0.6)",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        zIndex: 1000,
+        padding: "1.5rem",
+      }}
+    >
+      <div className="card" style={{ maxWidth: "400px", width: "100%" }}>
+        <h3 style={{ marginBottom: "0.75rem" }}>{modal.title}</h3>
+        <p
+          style={{
+            fontSize: "0.9rem",
+            color: "var(--text-dim)",
+            marginBottom: "1.5rem",
+          }}
+        >
+          {modal.message}
+        </p>
+        <div
+          style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}
+        >
+          <button onClick={onConfirm} className="btn btn-danger">
+            {modal.confirmLabel || "Confirmer"}
+          </button>
+          <button onClick={onCancel} className="btn btn-secondary">
+            Annuler
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // Auto-generate a human-readable label from date + time in the event timezone.
 // Format: "Samedi 23 avril 2025" — no free text input to keep labels consistent.
 function generateLabel(date, time, tz) {
@@ -38,6 +79,7 @@ export default function StartTimesManager({
   const [time, setTime] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
+  const [confirmModal, setConfirmModal] = useState(null);
 
   const resetForm = () => {
     setAdding(false);
@@ -122,25 +164,36 @@ export default function StartTimesManager({
     router.refresh();
   };
 
-  const handleDelete = async (stId) => {
-    if (!confirm("Supprimer ce créneau de départ ?")) return;
-    const { error: err } = await supabase
-      .from("event_start_times")
-      .delete()
-      .eq("id", stId);
-    if (err) {
-      if (err.code === "23503") {
-        setError(
-          "Ce créneau est utilisé par un ou plusieurs équipages et ne peut pas être supprimé.",
-        );
-      } else {
-        setError(err.message);
-      }
-      return;
-    }
-    setStartTimes((prev) => prev.filter((s) => s.id !== stId));
-    if (editingId === stId) resetForm();
-    router.refresh();
+  const handleDelete = (stId) => {
+    setConfirmModal({
+      title: "Supprimer le créneau",
+      message: "Supprimer ce créneau de départ ?",
+      confirmLabel: "Supprimer",
+      onConfirm: async () => {
+        const { error: err } = await supabase
+          .from("event_start_times")
+          .delete()
+          .eq("id", stId);
+
+        if (err) {
+          if (err.code === "23503") {
+            setError(
+              "Ce créneau est utilisé par un ou plusieurs équipages et ne peut pas être supprimé.",
+            );
+          } else {
+            setError(err.message);
+          }
+          return;
+        }
+
+        setConfirmModal(null);
+        setStartTimes((prev) => prev.filter((s) => s.id !== stId));
+
+        if (editingId === stId) resetForm();
+
+        router.refresh();
+      },
+    });
   };
 
   const sorted = [...startTimes].sort(
@@ -186,6 +239,11 @@ export default function StartTimesManager({
 
   return (
     <div>
+      <ConfirmModal
+        modal={confirmModal}
+        onConfirm={() => confirmModal?.onConfirm?.()}
+        onCancel={() => setConfirmModal(null)}
+      />
       {/* Read-only notice when the event is archived */}
       {archived && (
         <div
