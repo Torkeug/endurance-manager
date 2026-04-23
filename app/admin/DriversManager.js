@@ -79,7 +79,27 @@ function DeleteDriverModal({ modal, onConfirm, onCancel }) {
         <h3 style={{ marginBottom: "0.75rem" }}>
           Supprimer {modal.driverName}
         </h3>
-        {modal.affectedEvents.length > 0 ? (
+
+        {/* Stints warning — will be deleted explicitly before driver */}
+        {modal.hasStints && (
+          <div
+            style={{
+              marginBottom: "1rem",
+              padding: "0.65rem 0.9rem",
+              background: "rgba(224,85,85,0.08)",
+              border: "1px solid var(--danger)",
+              borderRadius: "3px",
+              fontSize: "0.88rem",
+              color: "var(--danger)",
+            }}
+          >
+            ⚠️ Ce pilote a des relais assignés qui seront supprimés
+            définitivement.
+          </div>
+        )}
+
+        {/* Signups — informational, will cascade-delete */}
+        {modal.affectedEvents.length > 0 && (
           <>
             <p
               style={{
@@ -88,12 +108,12 @@ function DeleteDriverModal({ modal, onConfirm, onCancel }) {
                 marginBottom: "0.75rem",
               }}
             >
-              ⚠️ Ce pilote est inscrit à{" "}
+              Ce pilote est inscrit à{" "}
               <strong style={{ color: "var(--text)" }}>
                 {modal.affectedEvents.length} événement
                 {modal.affectedEvents.length > 1 ? "s" : ""}
               </strong>
-              . Ces inscriptions seront supprimées :
+              . Ces inscriptions seront supprimées automatiquement :
             </p>
             <ul
               style={{
@@ -110,19 +130,11 @@ function DeleteDriverModal({ modal, onConfirm, onCancel }) {
                 <li key={i}>{name}</li>
               ))}
             </ul>
-            <p
-              style={{
-                fontSize: "0.82rem",
-                color: "var(--text-dim)",
-                marginBottom: "1.5rem",
-              }}
-            >
-              Cette action est irréversible. Les relais assignés à ce pilote
-              empêcheront la suppression — retirez-les d&apos;abord si
-              nécessaire.
-            </p>
           </>
-        ) : (
+        )}
+
+        {/* Clean delete */}
+        {!modal.hasStints && modal.affectedEvents.length === 0 && (
           <p
             style={{
               fontSize: "0.9rem",
@@ -135,6 +147,17 @@ function DeleteDriverModal({ modal, onConfirm, onCancel }) {
             ? Cette action est irréversible.
           </p>
         )}
+
+        <p
+          style={{
+            fontSize: "0.82rem",
+            color: "var(--text-dim)",
+            marginBottom: "1.5rem",
+          }}
+        >
+          Cette action est irréversible.
+        </p>
+
         <div
           style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}
         >
@@ -279,21 +302,31 @@ export default function DriversManager({ initialDrivers, currentDriver }) {
     setDeleteModal(null);
     setSaving(driverId);
     setError(null);
+
+    // Delete stints first — FK constraint prevents driver deletion if stints exist.
+    // Signups cascade-delete automatically when the driver record is removed.
+    if (deleteModal.hasStints) {
+      const { error: stintErr } = await supabase
+        .from("stints")
+        .delete()
+        .eq("driver_id", driverId);
+      if (stintErr) {
+        setError(`Erreur suppression relais : ${stintErr.message}`);
+        setSaving(null);
+        return;
+      }
+    }
+
     const { error: err } = await supabase
       .from("drivers")
       .delete()
       .eq("id", driverId);
     if (err) {
-      if (err.code === "23503") {
-        setError(
-          "Ce pilote est lié à des relais existants et ne peut pas être supprimé. Retirez ses relais d'abord.",
-        );
-      } else {
-        setError(err.message);
-      }
+      setError(err.message);
       setSaving(null);
       return;
     }
+
     setDrivers((prev) => prev.filter((d) => d.id !== driverId));
     setSaving(null);
     router.refresh();
