@@ -12,6 +12,18 @@ function formatDuration(minutes) {
   return m === 0 ? `${h}h` : `${h}h${String(m).padStart(2, "0")}`;
 }
 
+// Validates a time string is in strict HH:MM format with valid hour (0-23)
+// and minute (0-59). Returns false for anything malformed — guards against
+// mobile Safari treating type="time" as plain text input.
+function isValidTime(str) {
+  if (!str) return true; // empty is valid — fields are optional
+  const match = str.match(/^(\d{2}):(\d{2})$/);
+  if (!match) return false;
+  const h = parseInt(match[1], 10);
+  const m = parseInt(match[2], 10);
+  return h >= 0 && h <= 23 && m >= 0 && m <= 59;
+}
+
 // Auto-generate a label from date + time in the event timezone.
 // Mirrors the same function in StartTimesManager to keep labels consistent.
 function generateLabel(date, time, tz) {
@@ -206,6 +218,25 @@ export default function NouvelEvenement() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    // Validate in-game time fields — mobile Safari ignores type="time" constraints
+    if (!isValidTime(form.ig_start_time)) {
+      setError(
+        "L'heure de départ IG est invalide — format attendu : HH:MM (ex : 13:00).",
+      );
+      return;
+    }
+    if (!isValidTime(form.ig_sunrise)) {
+      setError(
+        "L'heure de lever de soleil IG est invalide — format attendu : HH:MM (ex : 06:30).",
+      );
+      return;
+    }
+    if (!isValidTime(form.ig_sunset)) {
+      setError(
+        "L'heure de coucher de soleil IG est invalide — format attendu : HH:MM (ex : 20:00).",
+      );
+      return;
+    }
     if (!form.name.trim()) {
       setError("Le nom est obligatoire.");
       return;
