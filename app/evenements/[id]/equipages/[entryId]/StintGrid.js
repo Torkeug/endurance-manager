@@ -593,6 +593,50 @@ function ClearDriverStintsModal({ modal, onConfirm, onCancel }) {
   );
 }
 
+// ─── Simple confirmation modal ────────────────────────────────────────────────
+// Reusable yes/no modal — replaces native confirm() for clearAllStints
+// and deleteStint, consistent with the rest of the app's modal pattern.
+function ConfirmModal({ modal, onConfirm, onCancel }) {
+  if (!modal) return null;
+  return (
+    <div
+      style={{
+        position: "fixed",
+        inset: 0,
+        background: "rgba(0,0,0,0.6)",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        zIndex: 1000,
+        padding: "1.5rem",
+      }}
+    >
+      <div className="card" style={{ maxWidth: "400px", width: "100%" }}>
+        <h3 style={{ marginBottom: "0.75rem" }}>{modal.title}</h3>
+        <p
+          style={{
+            fontSize: "0.9rem",
+            color: "var(--text-dim)",
+            marginBottom: "1.5rem",
+          }}
+        >
+          {modal.message}
+        </p>
+        <div
+          style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}
+        >
+          <button onClick={onConfirm} className="btn btn-danger">
+            {modal.confirmLabel || "Confirmer"}
+          </button>
+          <button onClick={onCancel} className="btn btn-secondary">
+            Annuler
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── Recalc preview modal ────────────────────────────────────────────────────
 
 function RecalcModal({ diffs, raceEndDiff, onConfirm, onCancel, saving }) {
@@ -880,6 +924,10 @@ export default function StintGrid({
   const [dragOverIndex, setDragOverIndex] = useState(null);
   // Index of the row being dragged — used to prevent self-drop
   const [draggingIndex, setDraggingIndex] = useState(null);
+
+  // Controls the shared confirm modal for deleteStint and clearAllStints
+  const [confirmModal, setConfirmModal] = useState(null);
+  // null | { title, message, confirmLabel, onConfirm }
 
   useEffect(() => {
     if (!teamEntryId) return;
@@ -1198,18 +1246,34 @@ export default function StintGrid({
     setSaving(null);
   };
 
-  const deleteStint = async (stintId) => {
+  const deleteStint = (stintId) => {
     if (archived) return;
-    if (!confirm("Supprimer ce relais ?")) return;
-    await supabase.from("stints").delete().eq("id", stintId);
-    setStints((prev) => prev.filter((s) => s.id !== stintId));
+    setConfirmModal({
+      title: "Supprimer ce relais",
+      message:
+        "Ce relais sera supprimé définitivement. Cette action est irréversible.",
+      confirmLabel: "Supprimer",
+      onConfirm: async () => {
+        setConfirmModal(null);
+        await supabase.from("stints").delete().eq("id", stintId);
+        setStints((prev) => prev.filter((s) => s.id !== stintId));
+      },
+    });
   };
 
-  const clearAllStints = async () => {
+  const clearAllStints = () => {
     if (archived) return;
-    if (!confirm("Supprimer tous les relais ?")) return;
-    await supabase.from("stints").delete().eq("team_entry_id", teamEntryId);
-    setStints([]);
+    setConfirmModal({
+      title: "Supprimer tous les relais",
+      message:
+        "Tous les relais de cet équipage seront supprimés définitivement. Cette action est irréversible.",
+      confirmLabel: "Tout supprimer",
+      onConfirm: async () => {
+        setConfirmModal(null);
+        await supabase.from("stints").delete().eq("team_entry_id", teamEntryId);
+        setStints([]);
+      },
+    });
   };
 
   // Swaps all driver-specific fields between two stints identified by their
@@ -1934,6 +1998,35 @@ export default function StintGrid({
                         );
                       })}
                     </select>
+                    {/* Ghost label — shown when slot is empty but has a previous driver.
+                    Indicates the slot is "reserved" vs truly unassigned, and hints
+                    that reassigning this driver will trigger a restore modal. */}
+                    {!stint.driver_id &&
+                      stint.previous_driver_id &&
+                      (() => {
+                        const prevDriver = assignedDrivers.find(
+                          (d) => d.drivers?.id === stint.previous_driver_id,
+                        );
+                        const prevName =
+                          prevDriver?.drivers?.name || "Pilote précédent";
+                        return (
+                          <div
+                            style={{
+                              marginTop: "0.2rem",
+                              fontSize: "0.68rem",
+                              color: "var(--text-dim)",
+                              fontStyle: "italic",
+                              display: "flex",
+                              alignItems: "center",
+                              gap: "0.25rem",
+                            }}
+                            title={`Ce créneau appartenait à ${prevName} — réassignez ce pilote pour proposer une restauration`}
+                          >
+                            <span style={{ opacity: 0.5 }}>↩</span>
+                            <span>{prevName}</span>
+                          </div>
+                        );
+                      })()}
                   </td>
 
                   {/* IRL start */}
@@ -2426,6 +2519,13 @@ export default function StintGrid({
           saving={recalcSaving}
         />
       )}
+
+      {/* Shared confirm modal — used by deleteStint and clearAllStints */}
+      <ConfirmModal
+        modal={confirmModal}
+        onConfirm={() => confirmModal?.onConfirm?.()}
+        onCancel={() => setConfirmModal(null)}
+      />
 
       {/* Clear driver stints confirmation modal */}
       <ClearDriverStintsModal
