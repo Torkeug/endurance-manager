@@ -4,6 +4,48 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { supabaseBrowser as supabase } from "../../../../lib/supabase-browser";
 
+// Reusable confirm modal — replaces native confirm() for archive and delete actions
+function ConfirmModal({ modal, onConfirm, onCancel }) {
+  if (!modal) return null;
+  return (
+    <div
+      style={{
+        position: "fixed",
+        inset: 0,
+        background: "rgba(0,0,0,0.6)",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        zIndex: 1000,
+        padding: "1.5rem",
+      }}
+    >
+      <div className="card" style={{ maxWidth: "400px", width: "100%" }}>
+        <h3 style={{ marginBottom: "0.75rem" }}>{modal.title}</h3>
+        <p
+          style={{
+            fontSize: "0.9rem",
+            color: "var(--text-dim)",
+            marginBottom: "1.5rem",
+          }}
+        >
+          {modal.message}
+        </p>
+        <div
+          style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}
+        >
+          <button onClick={onConfirm} className="btn btn-danger">
+            {modal.confirmLabel || "Confirmer"}
+          </button>
+          <button onClick={onCancel} className="btn btn-secondary">
+            Annuler
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function ModifierChampionnat({ params }) {
   const router = useRouter();
   const { id } = use(params);
@@ -13,6 +55,10 @@ export default function ModifierChampionnat({ params }) {
   const [fetching, setFetching] = useState(true);
   const [error, setError] = useState(null);
   const [authChecked, setAuthChecked] = useState(false);
+
+  // Controls confirmation modals for archive toggle and championship deletion
+  const [confirmModal, setConfirmModal] = useState(null);
+  // null | { title, message, confirmLabel, onConfirm }
 
   // Auth checked client-side — redirects non-admins before rendering the form.
   useEffect(() => {
@@ -87,55 +133,62 @@ export default function ModifierChampionnat({ params }) {
   // Archiving a championship hides it and its rounds from the active view.
   // Rounds are not archived individually — they're filtered via archivedChampionshipIds
   // in the events page and dashboard.
-  const handleArchiveToggle = async () => {
+  const handleArchiveToggle = () => {
     const isArchived = form.archived;
-    const msg = isArchived
-      ? "Désarchiver ce championnat ?"
-      : "Archiver ce championnat ?";
-    if (!confirm(msg)) return;
-    const { error: err } = await supabase
-      .from("championships")
-      .update({ archived: !isArchived })
-      .eq("id", id);
-    if (err) {
-      setError(err.message);
-      return;
-    }
-    router.push("/evenements");
-    router.refresh();
+    setConfirmModal({
+      title: isArchived
+        ? "Désarchiver le championnat"
+        : "Archiver le championnat",
+      message: isArchived
+        ? "Ce championnat sera à nouveau visible dans la liste active."
+        : "Ce championnat sera masqué de la liste active. Les manches restent accessibles.",
+      confirmLabel: isArchived ? "Désarchiver" : "Archiver",
+      onConfirm: async () => {
+        setConfirmModal(null);
+        const { error: err } = await supabase
+          .from("championships")
+          .update({ archived: !isArchived })
+          .eq("id", id);
+        if (err) {
+          setError(err.message);
+          return;
+        }
+        router.push("/evenements");
+        router.refresh();
+      },
+    });
   };
 
-  const handleDelete = async () => {
-    if (
-      !confirm(
-        "Supprimer définitivement ce championnat ? Toutes les manches seront également supprimées.",
-      )
-    )
-      return;
-
-    // Delete all rounds before the championship — FK constraint prevents
-    // deleting a championship that still has event rows referencing it.
-    const { error: roundsErr } = await supabase
-      .from("events")
-      .delete()
-      .eq("championship_id", id);
-    if (roundsErr) {
-      setError(roundsErr.message);
-      return;
-    }
-
-    // Then delete the championship
-    const { error: err } = await supabase
-      .from("championships")
-      .delete()
-      .eq("id", id);
-    if (err) {
-      setError(err.message);
-      return;
-    }
-
-    router.push("/evenements");
-    router.refresh();
+  const handleDelete = () => {
+    setConfirmModal({
+      title: "Supprimer le championnat",
+      message:
+        "Ce championnat et toutes ses manches seront supprimés définitivement. Cette action est irréversible.",
+      confirmLabel: "Supprimer définitivement",
+      onConfirm: async () => {
+        setConfirmModal(null);
+        // Delete all rounds first — FK constraint prevents deleting a championship
+        // that still has event rows referencing it.
+        const { error: roundsErr } = await supabase
+          .from("events")
+          .delete()
+          .eq("championship_id", id);
+        if (roundsErr) {
+          setError(roundsErr.message);
+          return;
+        }
+        const { error: err } = await supabase
+          .from("championships")
+          .delete()
+          .eq("id", id);
+        if (err) {
+          setError(err.message);
+          return;
+        }
+        router.push("/evenements");
+        router.refresh();
+      },
+    });
   };
 
   if (fetching)
@@ -153,6 +206,12 @@ export default function ModifierChampionnat({ params }) {
 
   return (
     <div className="page">
+      <ConfirmModal
+        modal={confirmModal}
+        onConfirm={() => confirmModal?.onConfirm?.()}
+        onCancel={() => setConfirmModal(null)}
+      />
+
       <div className="page-header">
         <div>
           <h1>Modifier le championnat</h1>
