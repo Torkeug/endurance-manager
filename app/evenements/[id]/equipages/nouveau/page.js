@@ -180,33 +180,63 @@ export default function NouvelEquipage({ params }) {
     );
   };
 
-  // Car/class mismatch: driver preferred a different car or class than this team entry
-  const getCarClassMismatch = (signup) => {
+  // Returns an array of conflict descriptors for a signup — mirrors the
+  // PreferenceBadge logic in DriversAssignment.js for consistency.
+  // Each conflict has: { label, tooltip, hard }
+  const getMismatches = (signup) => {
     const prefCarIds = signup.preferred_car_ids || [];
     const prefClasses = signup.preferred_class || [];
-    if (
+    const prefStartTimeIds = signup.preferred_start_time_ids || [];
+    const conflicts = [];
+
+    // ── Class check (hard) ──────────────────────────────────────────────────
+    const classConflict =
+      prefClasses.length > 0 && form.class && !prefClasses.includes(form.class);
+    if (classConflict) {
+      conflicts.push({
+        label: "classe",
+        tooltip: `Classe équipe : ${form.class} — pilote préfère : ${prefClasses.join(", ")}`,
+        hard: true,
+      });
+    }
+
+    // ── Car check (soft — only when class matches) ──────────────────────────
+    const carConflict =
+      !classConflict &&
       prefCarIds.length > 0 &&
       form.car_id &&
-      !prefCarIds.includes(form.car_id)
-    )
-      return "voiture";
-    if (
-      prefClasses.length > 0 &&
-      form.class &&
-      !prefClasses.includes(form.class)
-    )
-      return "classe";
-    return null;
-  };
+      !prefCarIds.includes(form.car_id);
+    if (carConflict) {
+      const prefCarNames = prefCarIds.map((id) => carsMap[id] || id).join(", ");
+      const teamCarName = carsMap[form.car_id] || form.car_id;
+      conflicts.push({
+        label: "voiture",
+        tooltip: `Voiture équipe : ${teamCarName} — pilote préfère : ${prefCarNames}\nLa classe correspond (${form.class}).`,
+        hard: false,
+      });
+    }
 
-  // Start time mismatch: driver has preferences but none match the selected start time
-  const getStartTimeMismatch = (signup) => {
-    const prefs = signup.preferred_start_time_ids || [];
-    return (
-      prefs.length > 0 &&
-      !!form.start_time_id &&
-      !prefs.includes(form.start_time_id)
-    );
+    // ── Start time check (soft) ─────────────────────────────────────────────
+    // Only consider IDs that resolve in the map — stale IDs silently ignored.
+    const resolvablePrefs = prefStartTimeIds.filter((id) => startTimesMap[id]);
+    const startConflict =
+      form.start_time_id &&
+      startTimesMap[form.start_time_id] &&
+      resolvablePrefs.length > 0 &&
+      !resolvablePrefs.includes(form.start_time_id);
+    if (startConflict) {
+      const teamLabel = startTimesMap[form.start_time_id];
+      const prefLabels = resolvablePrefs
+        .map((id) => startTimesMap[id])
+        .join(", ");
+      conflicts.push({
+        label: "horaire",
+        tooltip: `Horaire équipe : ${teamLabel} — pilote préfère : ${prefLabels}`,
+        hard: false,
+      });
+    }
+
+    return conflicts;
   };
 
   const handleSubmit = async (e) => {
@@ -349,6 +379,13 @@ export default function NouvelEquipage({ params }) {
   const availableClasses = [...new Set(cars.map((c) => c.class))]
     .filter(Boolean)
     .sort();
+
+  // Derived maps for mismatch resolution — built from already-fetched state,
+  // no extra queries needed.
+  const carsMap = Object.fromEntries(cars.map((c) => [c.id, c.name]));
+  const startTimesMap = Object.fromEntries(
+    startTimes.map((st) => [st.id, st.label]),
+  );
 
   // Commits driver assignments after the modal decision.
   // addStartTime: true = add team start time to affected drivers' preferences.
@@ -712,9 +749,9 @@ export default function NouvelEquipage({ params }) {
             <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem" }}>
               {eventSignups.map((s) => {
                 const selected = selectedSignupIds.includes(s.id);
-                const carClassMismatch = getCarClassMismatch(s);
-                const startTimeMismatch = getStartTimeMismatch(s);
-                const hasMismatch = carClassMismatch || startTimeMismatch;
+                const conflicts = getMismatches(s);
+                const hasMismatch = conflicts.length > 0;
+                const isHard = conflicts.some((c) => c.hard);
                 return (
                   <button
                     key={s.id}
@@ -742,7 +779,13 @@ export default function NouvelEquipage({ params }) {
                       }}
                     >
                       {hasMismatch && (
-                        <span style={{ color: "#d4904a" }}>⚠️</span>
+                        <span
+                          style={{
+                            color: isHard ? "var(--danger)" : "#d4904a",
+                          }}
+                        >
+                          ⚠️
+                        </span>
                       )}
                       <span style={{ fontWeight: 600 }}>
                         {selected ? "✓ " : ""}
@@ -757,43 +800,31 @@ export default function NouvelEquipage({ params }) {
                         {s.drivers.irating}
                       </span>
                     )}
+                    {/* Consolidated badge matching PreferenceBadge severity logic */}
                     {hasMismatch && (
-                      <div
+                      <span
+                        title={conflicts.map((c) => c.tooltip).join("\n\n")}
                         style={{
-                          display: "flex",
-                          gap: "0.25rem",
-                          flexWrap: "wrap",
+                          fontSize: "0.7rem",
+                          padding: "0.15rem 0.4rem",
+                          borderRadius: "2px",
+                          whiteSpace: "nowrap",
+                          cursor: "help",
+                          ...(isHard
+                            ? {
+                                background: "rgba(224,85,85,0.12)",
+                                border: "1px solid var(--danger)",
+                                color: "var(--danger)",
+                              }
+                            : {
+                                background: "#2a1a00",
+                                border: "1px solid #a06020",
+                                color: "#d4904a",
+                              }),
                         }}
                       >
-                        {carClassMismatch && (
-                          <span
-                            style={{
-                              fontSize: "0.7rem",
-                              padding: "0.1rem 0.35rem",
-                              background: "#2a1a00",
-                              border: "1px solid #a06020",
-                              borderRadius: "2px",
-                              color: "#d4904a",
-                            }}
-                          >
-                            ⚠️ {carClassMismatch}
-                          </span>
-                        )}
-                        {startTimeMismatch && (
-                          <span
-                            style={{
-                              fontSize: "0.7rem",
-                              padding: "0.1rem 0.35rem",
-                              background: "#2a1a00",
-                              border: "1px solid #a06020",
-                              borderRadius: "2px",
-                              color: "#d4904a",
-                            }}
-                          >
-                            ⚠️ horaire
-                          </span>
-                        )}
-                      </div>
+                        ⚠️ {conflicts.map((c) => c.label).join(", ")}
+                      </span>
                     )}
                   </button>
                 );
