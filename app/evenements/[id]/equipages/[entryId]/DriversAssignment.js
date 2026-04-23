@@ -165,6 +165,65 @@ function StartTimeModal({ modal, onConfirm, onDecline, onClose }) {
   );
 }
 
+// ── RestoreStintsModal ────────────────────────────────────────────────────
+// Shown when a driver being reassigned to a team has empty stint slots that
+// previously belonged to them. Offers to restore their driver_id on those slots.
+function RestoreStintsModal({ modal, onConfirm, onDecline }) {
+  if (!modal) return null;
+  return (
+    <div
+      style={{
+        position: "fixed",
+        inset: 0,
+        background: "rgba(0,0,0,0.6)",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        zIndex: 1000,
+        padding: "1.5rem",
+      }}
+    >
+      <div className="card" style={{ maxWidth: "420px", width: "100%" }}>
+        <h3 style={{ marginBottom: "0.75rem" }}>Relais précédents</h3>
+        <p
+          style={{
+            fontSize: "0.9rem",
+            color: "var(--text-dim)",
+            marginBottom: "1.5rem",
+          }}
+        >
+          Ce pilote avait{" "}
+          <strong style={{ color: "var(--text)" }}>
+            {modal.stintCount} relais
+          </strong>{" "}
+          assignés dans cet équipage avant d&apos;en être retiré. Souhaitez-vous
+          restaurer ces relais ?
+        </p>
+        <p
+          style={{
+            fontSize: "0.82rem",
+            color: "var(--text-dim)",
+            marginBottom: "1.5rem",
+          }}
+        >
+          Les données des relais (tours, notes) ont été effacées — seul
+          l&apos;emplacement dans le planning sera restauré.
+        </p>
+        <div
+          style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}
+        >
+          <button onClick={onConfirm} className="btn btn-primary">
+            Oui, restaurer les relais
+          </button>
+          <button onClick={onDecline} className="btn btn-secondary">
+            Non, laisser les relais vides
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function DriversAssignment({
   entryId,
   entryCarId,
@@ -193,30 +252,66 @@ export default function DriversAssignment({
   const [assigning, setAssigning] = useState(null);
   // Controls the start time preference modal for both assign and unassign flows
   const [actionModal, setActionModal] = useState(null);
-  // null | { type: 'assign' | 'unassign', signup, startTimeLabel, onConfirm, onDecline }
+  // Controls the stint restore modal shown when a returning driver has previous stints
+  const [restoreModal, setRestoreModal] = useState(null);
 
   const isExternal = currentDriver?.role === "external";
 
   // ── Assign helpers ────────────────────────────────────────────────────────
 
-  // Commits the actual DB assign after modal interaction.
+  // Checks for previous stints belonging to this driver in this team entry.
+  // Called before committing an assign to determine if restore modal is needed.
+  const checkPreviousStints = async (driverId) => {
+    const { data } = await supabase
+      .from("stints")
+      .select("id")
+      .eq("team_entry_id", entryId)
+      .eq("previous_driver_id", driverId)
+      .is("driver_id", null);
+    return data || [];
+  };
+
+  // Restores driver_id on stints that previously belonged to this driver.
+  // Clears previous_driver_id afterward — slot is now actively assigned again.
+  const restoreStints = async (driverId) => {
+    const { data: previousStints } = await supabase
+      .from("stints")
+      .select("id")
+      .eq("team_entry_id", entryId)
+      .eq("previous_driver_id", driverId)
+      .is("driver_id", null);
+
+    if (previousStints?.length > 0) {
+      await Promise.all(
+        previousStints.map((s) =>
+          supabase
+            .from("stints")
+            .update({ driver_id: driverId, previous_driver_id: null })
+            .eq("id", s.id),
+        ),
+      );
+    }
+  };
+
+  // Commits the actual DB assign after all modals are resolved.
   // updatePrefs: true = add teamStartTimeId to preferred_start_time_ids.
-  const commitAssign = async (signup, updatePrefs) => {
+  // restoreStintsForDriver: true = restore previous stint assignments.
+  const commitAssign = async (signup, updatePrefs, restoreStintsForDriver) => {
     setAssigning(signup.id);
     setActionModal(null);
+    setRestoreModal(null);
 
     // Snapshot current preferences before any modification so we can safely
     // reverse on unassign — only remove what we actually added.
     const currentPrefs = signup.preferred_start_time_ids || [];
     const snapshot = currentPrefs;
 
-    // Build updated preferences if the admin/driver confirmed the addition
     const newPrefs =
       updatePrefs && teamStartTimeId && !currentPrefs.includes(teamStartTimeId)
         ? [...currentPrefs, teamStartTimeId]
         : currentPrefs;
 
-    // Save snapshot + updated preferences on the signup row, then assign to team
+    // Save snapshot + updated preferences, then assign to team
     const { error: prefErr } = await supabase
       .from("signups")
       .update({
@@ -243,6 +338,11 @@ export default function DriversAssignment({
       return;
     }
 
+    // Restore previous stint slots if the driver confirmed
+    if (restoreStintsForDriver) {
+      await restoreStints(signup.drivers?.id);
+    }
+
     setAssigned((prev) => [
       ...prev,
       {
@@ -257,41 +357,119 @@ export default function DriversAssignment({
     router.refresh();
   };
 
-  const assign = (signup) => {
+  // Multi-step assign flow:
+  // 1. Check for previous stints → show restore modal if any
+  // 2. Check start time preference → show start time modal
+  // 3. Commit
+  const assign = async (signup) => {
     if (assigning || archived) return;
 
-    // No team start time configured — assign silently, no modal needed
-    if (!teamStartTimeId) {
-      commitAssign(signup, false);
-      return;
-    }
+    const driverId = signup.drivers?.id;
+    const previousStints = driverId ? await checkPreviousStints(driverId) : [];
+    const hasPreviousStints = previousStints.length > 0;
 
+    // Determine start time modal need
     const currentPrefs = signup.preferred_start_time_ids || [];
+    const needsStartTimeModal =
+      teamStartTimeId && !currentPrefs.includes(teamStartTimeId);
+    const startTimeLabel = needsStartTimeModal
+      ? startTimesMap?.[teamStartTimeId] || teamStartTimeId
+      : null;
 
-    // Start time already in driver's preferences — assign silently
-    if (currentPrefs.includes(teamStartTimeId)) {
-      commitAssign(signup, false);
+    if (hasPreviousStints) {
+      // Show restore modal first — start time handled after
+      setRestoreModal({
+        stintCount: previousStints.length,
+        onConfirm: () => {
+          setRestoreModal(null);
+          if (needsStartTimeModal) {
+            setActionModal({
+              type: "assign",
+              signup,
+              startTimeLabel,
+              onConfirm: () => commitAssign(signup, true, true),
+              onDecline: () => commitAssign(signup, false, true),
+            });
+          } else {
+            commitAssign(signup, false, true);
+          }
+        },
+        onDecline: () => {
+          setRestoreModal(null);
+          if (needsStartTimeModal) {
+            setActionModal({
+              type: "assign",
+              signup,
+              startTimeLabel,
+              onConfirm: () => commitAssign(signup, true, false),
+              onDecline: () => commitAssign(signup, false, false),
+            });
+          } else {
+            commitAssign(signup, false, false);
+          }
+        },
+      });
       return;
     }
 
-    // Start time not in preferences — prompt to add it
-    const startTimeLabel = startTimesMap?.[teamStartTimeId] || teamStartTimeId;
-    setActionModal({
-      type: "assign",
-      signup,
-      startTimeLabel,
-      onConfirm: () => commitAssign(signup, true),
-      onDecline: () => commitAssign(signup, false),
-    });
+    if (needsStartTimeModal) {
+      setActionModal({
+        type: "assign",
+        signup,
+        startTimeLabel,
+        onConfirm: () => commitAssign(signup, true, false),
+        onDecline: () => commitAssign(signup, false, false),
+      });
+      return;
+    }
+
+    // No modals needed — assign silently
+    commitAssign(signup, false, false);
   };
 
   // ── Unassign helpers ──────────────────────────────────────────────────────
 
-  // Commits the actual DB unassign after modal interaction.
+  // Commits the actual DB unassign.
   // removeStartTime: true = strip teamStartTimeId from preferred_start_time_ids.
   const commitUnassign = async (signup, removeStartTime) => {
     setActionModal(null);
 
+    const driverId = signup.drivers?.id;
+
+    // ── Clear stint data for this driver in this team entry ───────────────
+    // Nulls driver-specific fields but preserves the slot in the planning
+    // sequence. Stores driver_id in previous_driver_id so the slot can be
+    // restored if the driver rejoins.
+    if (driverId) {
+      const { data: driverStints } = await supabase
+        .from("stints")
+        .select("id")
+        .eq("team_entry_id", entryId)
+        .eq("driver_id", driverId);
+
+      if (driverStints?.length > 0) {
+        await Promise.all(
+          driverStints.map((s) =>
+            supabase
+              .from("stints")
+              .update({
+                // Preserve slot identity — driver nulled, previous stored
+                driver_id: null,
+                previous_driver_id: driverId,
+                // Clear driver-specific planning data
+                laps_planned: null,
+                rain: false,
+                tyre_change: false,
+                notes: null,
+                irl_end_actual: null,
+              })
+              .eq("id", s.id),
+          ),
+        );
+      }
+    }
+
+    // ── Update start time preferences if needed ───────────────────────────
     const currentPrefs = signup.preferred_start_time_ids || [];
     const newPrefs = removeStartTime
       ? currentPrefs.filter((id) => id !== teamStartTimeId)
@@ -304,12 +482,13 @@ export default function DriversAssignment({
         .eq("id", signup.id);
     }
 
+    // ── Unassign from team + clear snapshot ───────────────────────────────
     const { error: err } = await supabase
       .from("signups")
       .update({
         team_entry_id: null,
-        // Clear the snapshot on unassign — it was tied to this specific
-        // assignment. A fresh snapshot will be taken on the next assignment.
+        // Clear snapshot on unassign — it was tied to this specific assignment.
+        // A fresh snapshot will be taken on the next assignment.
         preferred_start_time_ids_snapshot: null,
       })
       .eq("id", signup.id);
@@ -334,7 +513,6 @@ export default function DriversAssignment({
   const unassign = (signup) => {
     if (archived) return;
 
-    // No team start time — unassign silently
     if (!teamStartTimeId) {
       commitUnassign(signup, false);
       return;
@@ -367,14 +545,11 @@ export default function DriversAssignment({
   };
 
   // ── Mismatch detection ────────────────────────────────────────────────────
-  // Returns true if any preference conflict exists — used to style the pill
-  // button in the unassigned section (amber border + warning icon).
   const hasMismatch = (signup) => {
     const prefCarIds = signup.preferred_car_ids || [];
     const prefClasses = signup.preferred_class || [];
     const prefStartTimeIds = signup.preferred_start_time_ids || [];
 
-    // Hard: class doesn't match
     if (
       prefClasses.length > 0 &&
       entryClass &&
@@ -382,7 +557,6 @@ export default function DriversAssignment({
     )
       return true;
 
-    // Soft: class ok (or unspecified), but preferred car doesn't include team car
     const classOk =
       prefClasses.length === 0 ||
       !entryClass ||
@@ -395,7 +569,6 @@ export default function DriversAssignment({
     )
       return true;
 
-    // Soft: start time mismatch (only resolvable IDs count)
     const resolvable = prefStartTimeIds.filter((id) => startTimesMap?.[id]);
     if (
       teamStartTimeId &&
@@ -409,9 +582,6 @@ export default function DriversAssignment({
   };
 
   // ── Unassigned list filtering ─────────────────────────────────────────────
-  // Admin: sees everyone not yet assigned to this team
-  // Event driver not in team (self-assign flow): sees only their own signup
-  // In team but not admin: sees everyone not yet assigned to this team
   const visibleUnassigned = (() => {
     if (archived) return [];
     if (isAdmin) return unassigned;
@@ -435,12 +605,17 @@ export default function DriversAssignment({
 
   return (
     <div>
-      {/* ── Start time preference modal ── */}
+      {/* ── Modals ── */}
       <StartTimeModal
         modal={actionModal}
         onConfirm={() => actionModal?.onConfirm?.()}
         onDecline={() => actionModal?.onDecline?.()}
         onClose={() => setActionModal(null)}
+      />
+      <RestoreStintsModal
+        modal={restoreModal}
+        onConfirm={() => restoreModal?.onConfirm?.()}
+        onDecline={() => restoreModal?.onDecline?.()}
       />
 
       {error && (
@@ -481,7 +656,6 @@ export default function DriversAssignment({
                       }}
                     >
                       {s.drivers?.name || "—"}
-                      {/* Single consolidated badge replacing the old two-badge system */}
                       <PreferenceBadge {...badgeProps(s)} />
                     </div>
                   </td>
@@ -494,7 +668,6 @@ export default function DriversAssignment({
                   <td style={{ color: "var(--text-dim)", fontSize: "0.82rem" }}>
                     {(() => {
                       const classes = s.preferred_class || [];
-                      // Resolve preferred car IDs to human-readable names via carsMap
                       const carNames = (s.preferred_car_ids || [])
                         .map((id) => carsMap?.[id])
                         .filter(Boolean);
@@ -590,7 +763,6 @@ export default function DriversAssignment({
                       {s.drivers.irating}
                     </span>
                   )}
-                  {/* Consolidated badge inside the unassigned pill */}
                   {mismatch && <PreferenceBadge {...badgeProps(s)} />}
                 </button>
               );
