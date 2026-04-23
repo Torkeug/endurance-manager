@@ -138,12 +138,22 @@ export default async function DriverDetail({ params, searchParams }) {
     stintsMap[s.team_entry_id].push(s);
   });
 
-  // Sort by earliest event start time descending (most recent first).
-  // Uses string comparison on ISO dates which is safe for UTC timestamps.
+  // Sort by earliest start time descending — uses Math.min across all start
+  // times rather than [0] which is Supabase insertion order, not chronological.
   const sortedSignups = (signups || []).sort((a, b) => {
-    const aDate = a.events?.event_start_times?.[0]?.irl_start || "";
-    const bDate = b.events?.event_start_times?.[0]?.irl_start || "";
-    return bDate.localeCompare(aDate);
+    const aDate =
+      Math.min(
+        ...(a.events?.event_start_times || []).map(
+          (st) => new Date(st.irl_start),
+        ),
+      ) || 0;
+    const bDate =
+      Math.min(
+        ...(b.events?.event_start_times || []).map(
+          (st) => new Date(st.irl_start),
+        ),
+      ) || 0;
+    return bDate - aDate;
   });
 
   const socials = [
