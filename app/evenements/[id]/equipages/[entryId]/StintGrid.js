@@ -1460,6 +1460,68 @@ export default function StintGrid({
           );
         })()}
 
+      {/* ── Per-driver stint clear ───────────────────────────────────────────
+      Only shown when at least one driver has eligible stints assigned.
+      Placed above the grid so the action is clearly associated with
+      the planning data, not the global delete actions below. */}
+      {!archived &&
+        (() => {
+          const driversWithEligibleStints = assignedDrivers.filter((d) =>
+            calculated.some(
+              (s) => s.driver_id === d.drivers?.id && isEligible(s),
+            ),
+          );
+          if (driversWithEligibleStints.length === 0) return null;
+          return (
+            <div
+              style={{
+                marginBottom: "1rem",
+                padding: "0.75rem 1rem",
+                background: "var(--surface-2)",
+                border: "1px solid var(--border)",
+                borderRadius: "4px",
+              }}
+            >
+              <div
+                style={{
+                  fontSize: "0.72rem",
+                  fontWeight: 700,
+                  letterSpacing: "0.08em",
+                  textTransform: "uppercase",
+                  color: "var(--text-dim)",
+                  marginBottom: "0.6rem",
+                }}
+              >
+                Libérer les relais d&apos;un pilote
+              </div>
+              <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
+                {driversWithEligibleStints.map((d) => {
+                  const eligibleCount = calculated.filter(
+                    (s) => s.driver_id === d.drivers?.id && isEligible(s),
+                  ).length;
+                  return (
+                    <button
+                      key={d.drivers?.id}
+                      onClick={() => clearDriverStints(d.drivers?.id)}
+                      className="btn btn-secondary btn-sm"
+                      style={{ borderColor: "#a06020", color: "#d4904a" }}
+                      title={`Retirer ${d.drivers?.name} de ses ${eligibleCount} relais éligibles`}
+                    >
+                      ✕ {d.drivers?.name}{" "}
+                      <span
+                        className="mono"
+                        style={{ fontSize: "0.72rem", opacity: 0.8 }}
+                      >
+                        ({eligibleCount})
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        })()}
+
       {/* Legend */}
       <div
         style={{
@@ -2274,32 +2336,6 @@ export default function StintGrid({
             <button onClick={addStint} className="btn btn-secondary">
               + Ajouter un relais
             </button>
-            {/* Per-driver clear — only shown for drivers with at least one eligible stint */}
-            {(() => {
-              const driversWithEligibleStints = assignedDrivers.filter((d) =>
-                calculated.some(
-                  (s) => s.driver_id === d.drivers?.id && isEligible(s),
-                ),
-              );
-              if (driversWithEligibleStints.length === 0) return null;
-              return (
-                <div
-                  style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}
-                >
-                  {driversWithEligibleStints.map((d) => (
-                    <button
-                      key={d.drivers?.id}
-                      onClick={() => clearDriverStints(d.drivers?.id)}
-                      className="btn btn-secondary btn-sm"
-                      style={{ borderColor: "#a06020", color: "#d4904a" }}
-                      title={`Retirer ${d.drivers?.name} de tous ses relais éligibles`}
-                    >
-                      ✕ {d.drivers?.name}
-                    </button>
-                  ))}
-                </div>
-              );
-            })()}
             {stints.length > 0 && (
               <button
                 onClick={clearAllStints}
