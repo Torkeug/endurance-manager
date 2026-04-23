@@ -554,7 +554,8 @@ export default function RaceMode({
               ? driverMap[stints[0]?.driver_id] || (
                   <span style={{ color: "var(--text-dim)" }}>À définir</span>
                 )
-              : driverMap[activeStint?.driver_id] || (
+              : driverMap[activeStint?.driver_id] ||
+                activeStint?.driver_name_snapshot || (
                   <span style={{ color: "var(--text-dim)" }}>À définir</span>
                 )}
         </div>
@@ -715,9 +716,10 @@ export default function RaceMode({
               color: "var(--text-dim)",
             }}
           >
-            {driverMap[nextStint.driver_id] || (
-              <span style={{ color: "var(--text-dim)" }}>À définir</span>
-            )}
+            {driverMap[nextStint.driver_id] ||
+              nextStint?.driver_name_snapshot || (
+                <span style={{ color: "var(--text-dim)" }}>À définir</span>
+              )}
           </div>
           {nextStint.irl_start && (
             <div
@@ -905,7 +907,9 @@ export default function RaceMode({
                     <span style={{ color: "var(--text-dim)", flexShrink: 0 }}>
                       #{s.stint_number}{" "}
                       <span style={{ color: "var(--text)", fontWeight: 600 }}>
-                        {driverMap[s.driver_id] || "—"}
+                        {driverMap[s.driver_id] ||
+                          s.driver_name_snapshot ||
+                          "—"}
                       </span>
                     </span>
                     <span
@@ -997,7 +1001,7 @@ export default function RaceMode({
                 <span style={{ color: "var(--text-dim)" }}>
                   #{s.stint_number}{" "}
                   <span style={{ color: "var(--text)", fontWeight: 600 }}>
-                    {driverMap[s.driver_id] || "—"}
+                    {driverMap[s.driver_id] || s.driver_name_snapshot || "—"}
                   </span>
                 </span>
                 <span
