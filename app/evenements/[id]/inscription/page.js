@@ -6,17 +6,18 @@ import { supabaseBrowser as supabase } from "../../../../lib/supabase-browser";
 import { formatTimeInZone } from "../../../../lib/timezone";
 import { useRouter } from "next/navigation";
 
-function MismatchWarning({ message }) {
+// hard = class mismatch (red), soft = car mismatch within matching class (amber)
+function MismatchWarning({ message, hard = false }) {
   return (
     <div
       style={{
         marginTop: "0.75rem",
         padding: "0.65rem 0.9rem",
-        background: "#2a1a00",
-        border: "1px solid #a06020",
+        background: hard ? "rgba(224,85,85,0.08)" : "#2a1a00",
+        border: `1px solid ${hard ? "var(--danger)" : "#a06020"}`,
         borderRadius: "3px",
         fontSize: "0.82rem",
-        color: "#d4904a",
+        color: hard ? "var(--danger)" : "#d4904a",
         display: "flex",
         gap: "0.5rem",
         alignItems: "flex-start",
@@ -127,35 +128,49 @@ function SignupForm({
       prev.includes(sid) ? prev.filter((s) => s !== sid) : [...prev, sid],
     );
 
-  // No warning if at least one preference (car or class) matches the team entry.
-  // Only warn when ALL preferences conflict with the assigned team.
-  const getMismatchWarning = () => {
-    if (!carEntryId) return null;
+  // Returns an array of conflict descriptors matching the PreferenceBadge
+  // severity logic used throughout the app.
+  // Each conflict: { label, message, hard }
+  const getMismatches = () => {
+    if (!carEntryId) return [];
     const entry = carEntries.find((e) => e.id === carEntryId);
-    if (!entry) return null;
+    if (!entry) return [];
+
     const entryClass = entry.class || entry.cars?.class;
     const entryCarId = entry.car_id;
-    if (preferredCarIds.length === 0 && preferredClasses.length === 0)
-      return null;
-    if (preferredCarIds.length > 0 && preferredCarIds.includes(entryCarId))
-      return null;
-    if (preferredClasses.length > 0 && preferredClasses.includes(entryClass))
-      return null;
-    if (preferredCarIds.length > 0 && preferredClasses.length > 0) {
-      if (
-        preferredCarIds.includes(entryCarId) ||
-        preferredClasses.includes(entryClass)
-      )
-        return null;
+    const entryCarName = entry.cars?.name || "?";
+    const conflicts = [];
+
+    // ── Class check (hard) ──────────────────────────────────────────────────
+    const classConflict =
+      preferredClasses.length > 0 &&
+      entryClass &&
+      !preferredClasses.includes(entryClass);
+    if (classConflict) {
+      conflicts.push({
+        hard: true,
+        message: `La classe de cette équipe (${entryClass}) ne correspond pas à vos préférences (${preferredClasses.join(", ")}).`,
+      });
     }
-    if (preferredCarIds.length > 0) {
-      const names = preferredCarIds
+
+    // ── Car check (soft — only when class matches) ──────────────────────────
+    const carConflict =
+      !classConflict &&
+      preferredCarIds.length > 0 &&
+      entryCarId &&
+      !preferredCarIds.includes(entryCarId);
+    if (carConflict) {
+      const prefCarNames = preferredCarIds
         .map((cid) => cars.find((c) => c.id === cid)?.name)
         .filter(Boolean)
         .join(", ");
-      return `La voiture de cette équipe (${entry.cars?.name || "?"}) ne correspond pas à vos préférences (${names}).`;
+      conflicts.push({
+        hard: false,
+        message: `La voiture de cette équipe (${entryCarName}) ne correspond pas à vos préférences (${prefCarNames}). La classe correspond (${entryClass}).`,
+      });
     }
-    return `La voiture de cette équipe (${entry.cars?.name || "?"} — ${entryClass}) ne correspond pas à vos classes préférées (${preferredClasses.join(", ")}).`;
+
+    return conflicts;
   };
 
   const handleSubmit = async (e) => {
@@ -217,7 +232,7 @@ function SignupForm({
     return acc;
   }, {});
 
-  const mismatch = getMismatchWarning();
+  const mismatches = getMismatches();
 
   return (
     <form onSubmit={handleSubmit}>
@@ -398,7 +413,9 @@ function SignupForm({
                 );
               })}
             </div>
-            {mismatch && <MismatchWarning message={mismatch} />}
+            {mismatches.map((m, i) => (
+              <MismatchWarning key={i} message={m.message} hard={m.hard} />
+            ))}
           </>
         )}
       </div>
