@@ -815,6 +815,14 @@ export default function StintGrid({
   const igSunset = event?.ig_sunset;
   const driverIds = assignedDrivers.map((d) => d.drivers?.id).filter(Boolean);
 
+  // Touch device detection — coarse pointer = mobile = show arrow buttons
+  // instead of drag-and-drop which is unreliable on touch screens.
+  const [isTouchDevice, setIsTouchDevice] = useState(false);
+  // Index of the row currently being dragged over — used for visual highlight
+  const [dragOverIndex, setDragOverIndex] = useState(null);
+  // Index of the row being dragged — used to prevent self-drop
+  const [draggingIndex, setDraggingIndex] = useState(null);
+
   useEffect(() => {
     if (!teamEntryId) return;
     Promise.all([
@@ -964,6 +972,12 @@ export default function StintGrid({
       onAutoOpenHandled?.();
     }
   }, [autoOpenRecalc, loading]);
+
+  // Detect touch device on mount — pointer: coarse = touchscreen.
+  // Determines whether to show drag handles or arrow buttons.
+  useEffect(() => {
+    setIsTouchDevice(window.matchMedia("(pointer: coarse)").matches);
+  }, []);
 
   // ── Open recalc modal ──────────────────────────────────────────────────────
   // Splits calculated stints into completed vs remaining, extracts actual perf,
@@ -1139,6 +1153,62 @@ export default function StintGrid({
     await supabase.from("stints").delete().eq("team_entry_id", teamEntryId);
     setStints([]);
   };
+
+  // Swaps all driver-specific fields between two stints identified by their
+  // position in the calculated array. Only eligible stints can be swapped —
+  // completed or past stints are immovable.
+  // Fields swapped: driver_id, laps_planned, rain, tyre_change, notes,
+  //                 irl_end_actual, previous_driver_id
+  // Fields kept:    id, stint_number, team_entry_id (slot identity)
+  const swapStints = async (indexA, indexB) => {
+    if (archived) return;
+    const a = calculated[indexA];
+    const b = calculated[indexB];
+    if (!a || !b) return;
+
+    // Guard — never swap with a completed or past stint
+    const isLocked = (s) =>
+      isStintCompleted(s) || (s._irlStart && s._irlStart < new Date());
+    if (isLocked(a) || isLocked(b)) return;
+
+    const fieldsToSwap = [
+      "driver_id",
+      "laps_planned",
+      "rain",
+      "tyre_change",
+      "notes",
+      "irl_end_actual",
+      "previous_driver_id",
+    ];
+
+    // Build payloads — each stint gets the other's values
+    const payloadA = Object.fromEntries(
+      fieldsToSwap.map((f) => [f, b[f] ?? null]),
+    );
+    const payloadB = Object.fromEntries(
+      fieldsToSwap.map((f) => [f, a[f] ?? null]),
+    );
+
+    // Optimistic update — instant UI response
+    setStints((prev) =>
+      prev.map((s) => {
+        if (s.id === a.id) return { ...s, ...payloadA };
+        if (s.id === b.id) return { ...s, ...payloadB };
+        return s;
+      }),
+    );
+
+    // Persist both updates in parallel
+    await Promise.all([
+      supabase.from("stints").update(payloadA).eq("id", a.id),
+      supabase.from("stints").update(payloadB).eq("id", b.id),
+    ]);
+  };
+
+  // Returns true if a stint can be reordered — not completed and not started
+  const isEligible = (stint) =>
+    !isStintCompleted(stint) &&
+    !(stint._irlStart && stint._irlStart < new Date());
 
   const TH = {
     background: "var(--surface-2)",
@@ -1552,15 +1622,65 @@ export default function StintGrid({
               return (
                 <tr
                   key={stint.id}
+                  draggable={!archived && isEligible(stint)}
+                  onDragStart={
+                    !archived && isEligible(stint)
+                      ? () => {
+                          setDraggingIndex(i);
+                        }
+                      : undefined
+                  }
+                  onDragOver={
+                    !archived && isEligible(stint)
+                      ? (e) => {
+                          e.preventDefault();
+                          // Only highlight if dragging from an eligible source
+                          if (draggingIndex !== null && draggingIndex !== i) {
+                            setDragOverIndex(i);
+                          }
+                        }
+                      : undefined
+                  }
+                  onDrop={
+                    !archived && isEligible(stint)
+                      ? (e) => {
+                          e.preventDefault();
+                          if (
+                            draggingIndex !== null &&
+                            draggingIndex !== i &&
+                            isEligible(calculated[draggingIndex])
+                          ) {
+                            swapStints(draggingIndex, i);
+                          }
+                          setDragOverIndex(null);
+                          setDraggingIndex(null);
+                        }
+                      : undefined
+                  }
+                  onDragEnd={() => {
+                    setDragOverIndex(null);
+                    setDraggingIndex(null);
+                  }}
                   style={{
-                    background: stint._isLastStint
-                      ? stint._doesNotCoverRaceEnd
-                        ? "rgba(224,85,85,0.15)"
-                        : "rgba(46,180,96,0.12)"
-                      : i % 2 === 0
-                        ? "transparent"
-                        : "rgba(255,255,255,0.02)",
-                    opacity: isSaving ? 0.6 : 1,
+                    background:
+                      dragOverIndex === i && draggingIndex !== i
+                        ? "rgba(var(--accent-rgb), 0.1)"
+                        : stint._isLastStint
+                          ? stint._doesNotCoverRaceEnd
+                            ? "rgba(224,85,85,0.15)"
+                            : "rgba(46,180,96,0.12)"
+                          : i % 2 === 0
+                            ? "transparent"
+                            : "rgba(255,255,255,0.02)",
+                    opacity: draggingIndex === i ? 0.4 : isSaving ? 0.6 : 1,
+                    cursor:
+                      !archived && isEligible(stint) && !isTouchDevice
+                        ? "grab"
+                        : "default",
+                    outline:
+                      dragOverIndex === i && draggingIndex !== i
+                        ? "2px solid var(--accent)"
+                        : "none",
                     borderLeft: stint._isLastStint
                       ? stint._doesNotCoverRaceEnd
                         ? "3px solid var(--danger)"
@@ -2012,16 +2132,69 @@ export default function StintGrid({
                     );
                   })}
 
-                  {/* Delete button */}
+                  {/* Delete + reorder controls */}
                   {!archived && (
                     <td style={{ ...TD, textAlign: "center" }}>
-                      <button
-                        onClick={() => deleteStint(stint.id)}
-                        className="btn btn-danger btn-sm"
-                        style={{ padding: "0.15rem 0.4rem" }}
+                      <div
+                        style={{
+                          display: "flex",
+                          flexDirection: "column",
+                          gap: "0.15rem",
+                          alignItems: "center",
+                        }}
                       >
-                        ×
-                      </button>
+                        {/* Arrow buttons — touch devices only, hidden on desktop (drag handles used instead) */}
+                        {isTouchDevice && isEligible(stint) && (
+                          <div style={{ display: "flex", gap: "0.15rem" }}>
+                            {/* ↑ — only shown when the stint above is also eligible */}
+                            {i > 0 && isEligible(calculated[i - 1]) && (
+                              <button
+                                onClick={() => swapStints(i, i - 1)}
+                                style={{
+                                  background: "var(--surface-2)",
+                                  border: "1px solid var(--border)",
+                                  borderRadius: "3px",
+                                  color: "var(--text-dim)",
+                                  cursor: "pointer",
+                                  fontSize: "0.65rem",
+                                  padding: "0.1rem 0.3rem",
+                                  lineHeight: 1,
+                                }}
+                                title="Remonter"
+                              >
+                                ↑
+                              </button>
+                            )}
+                            {/* ↓ — only shown when the stint below is also eligible */}
+                            {i < calculated.length - 1 &&
+                              isEligible(calculated[i + 1]) && (
+                                <button
+                                  onClick={() => swapStints(i, i + 1)}
+                                  style={{
+                                    background: "var(--surface-2)",
+                                    border: "1px solid var(--border)",
+                                    borderRadius: "3px",
+                                    color: "var(--text-dim)",
+                                    cursor: "pointer",
+                                    fontSize: "0.65rem",
+                                    padding: "0.1rem 0.3rem",
+                                    lineHeight: 1,
+                                  }}
+                                  title="Descendre"
+                                >
+                                  ↓
+                                </button>
+                              )}
+                          </div>
+                        )}
+                        <button
+                          onClick={() => deleteStint(stint.id)}
+                          className="btn btn-danger btn-sm"
+                          style={{ padding: "0.15rem 0.4rem" }}
+                        >
+                          ×
+                        </button>
+                      </div>
                     </td>
                   )}
                 </tr>
