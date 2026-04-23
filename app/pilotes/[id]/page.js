@@ -156,6 +156,12 @@ export default async function DriverDetail({ params, searchParams }) {
     return bDate - aDate;
   });
 
+  // Fetch all cars for preferred car ID resolution in EngagementsTab
+  const { data: allCars } = await supabase.from("cars").select("id, name");
+  const carsMap = Object.fromEntries(
+    (allCars || []).map((c) => [c.id, c.name]),
+  );
+
   const socials = [
     {
       label: "iRacing ID",
@@ -440,6 +446,7 @@ export default async function DriverDetail({ params, searchParams }) {
             sortedSignups={sortedSignups}
             availMap={availMap}
             stintsMap={stintsMap}
+            carsMap={carsMap}
           />
         }
         statsContent={

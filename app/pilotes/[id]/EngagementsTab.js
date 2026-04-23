@@ -21,7 +21,7 @@ function isEventPast(signup) {
 }
 
 // ── Signup card ───────────────────────────────────────────────────────────────
-function SignupCard({ signup, availMap, stintsMap }) {
+function SignupCard({ signup, availMap, stintsMap, carsMap = {} }) {
   const event = signup.events;
   const teamEntry = signup.team_entries;
   const avail = teamEntry ? availMap[teamEntry.id] : null;
@@ -209,6 +209,25 @@ function SignupCard({ signup, availMap, stintsMap }) {
               {signup.preferred_class.join(", ")}
             </div>
           )}
+          {/* Resolve preferred car IDs to names — for archived events use snapshot */}
+          {(() => {
+            const carNames =
+              signup.events?.archived &&
+              signup.preferred_car_names_snapshot?.length > 0
+                ? signup.preferred_car_names_snapshot
+                : (signup.preferred_car_ids || [])
+                    .map((id) => carsMap[id])
+                    .filter(Boolean);
+            if (carNames.length === 0) return null;
+            return (
+              <div style={{ fontSize: "0.82rem", marginBottom: "0.25rem" }}>
+                <span style={{ color: "var(--text-dim)", fontSize: "0.72rem" }}>
+                  Voitures :{" "}
+                </span>
+                {carNames.join(", ")}
+              </div>
+            );
+          })()}
           {prefStartLabels.length > 0 && (
             <div style={{ fontSize: "0.82rem", marginBottom: "0.25rem" }}>
               <span style={{ color: "var(--text-dim)", fontSize: "0.72rem" }}>
@@ -218,6 +237,7 @@ function SignupCard({ signup, availMap, stintsMap }) {
             </div>
           )}
           {(signup.preferred_class || []).length === 0 &&
+            (signup.preferred_car_ids || []).length === 0 &&
             prefStartLabels.length === 0 && (
               <div style={{ color: "var(--text-dim)", fontSize: "0.85rem" }}>
                 —
@@ -391,7 +411,12 @@ function SignupCard({ signup, availMap, stintsMap }) {
 
 // ── Main export ───────────────────────────────────────────────────────────────
 
-export default function EngagementsTab({ sortedSignups, availMap, stintsMap }) {
+export default function EngagementsTab({
+  sortedSignups,
+  availMap,
+  stintsMap,
+  carsMap = {},
+}) {
   const upcoming = sortedSignups.filter((s) => !isEventPast(s));
   const past = sortedSignups.filter((s) => isEventPast(s));
 
@@ -453,6 +478,7 @@ export default function EngagementsTab({ sortedSignups, availMap, stintsMap }) {
                     signup={signup}
                     availMap={availMap}
                     stintsMap={stintsMap}
+                    carsMap={carsMap}
                   />
                 ))}
               </div>
@@ -498,6 +524,7 @@ export default function EngagementsTab({ sortedSignups, availMap, stintsMap }) {
                       signup={signup}
                       availMap={availMap}
                       stintsMap={stintsMap}
+                      carsMap={carsMap}
                     />
                   ))}
                 </div>
