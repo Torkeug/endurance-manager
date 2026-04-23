@@ -732,13 +732,17 @@ export default function EventPageTabs({
 
                             if (!canAccess) return null;
 
-                            const label = admin
-                              ? "Gérer"
-                              : engineer
-                                ? "Voir"
-                                : isInTeam
-                                  ? "Gérer"
-                                  : "Voir";
+                            // Archived events are fully read-only — always show "Voir" regardless
+                            // of role or team membership. "Gérer" implies write access which is blocked.
+                            const label = event.archived
+                              ? "Voir"
+                              : admin
+                                ? "Gérer"
+                                : engineer
+                                  ? "Voir"
+                                  : isInTeam
+                                    ? "Gérer"
+                                    : "Voir";
 
                             return (
                               <Link
