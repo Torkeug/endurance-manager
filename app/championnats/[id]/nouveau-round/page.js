@@ -11,6 +11,17 @@ function formatDuration(minutes) {
   return m === 0 ? `${h}h` : `${h}h${String(m).padStart(2, "0")}`;
 }
 
+// Validates a time string is in strict HH:MM format with valid hour (0-23)
+// and minute (0-59). Guards against mobile Safari treating type="time" as plain text.
+function isValidTime(str) {
+  if (!str) return true;
+  const match = str.match(/^(\d{2}):(\d{2})$/);
+  if (!match) return false;
+  const h = parseInt(match[1], 10);
+  const m = parseInt(match[2], 10);
+  return h >= 0 && h <= 23 && m >= 0 && m <= 59;
+}
+
 export default function NouveauRound({ params }) {
   const router = useRouter();
   const { id } = use(params); // championship id
@@ -70,29 +81,34 @@ export default function NouveauRound({ params }) {
         .order("name"),
       supabase.from("event_types").select("name").order("sort_order"),
       supabase.from("event_duration_presets").select("*").order("minutes"),
-      // Fetch existing round count to auto-number the new round and pre-fill the name.
+      // Fetch existing round numbers to determine the next round number.
+      // Uses MAX instead of COUNT — safe when rounds have been deleted.
       supabase
         .from("events")
-        .select("id", { count: "exact" })
-        .eq("championship_id", id),
+        .select("round_number")
+        .eq("championship_id", id)
+        .not("round_number", "is", null),
     ]).then(
       ([
         { data: champ },
         { data: circuitsData },
         { data: typesData },
         { data: durData },
-        { count },
+        { data: roundsData },
       ]) => {
         setChampionship(champ);
         setCircuits(circuitsData || []);
         setEventTypes(typesData?.map((t) => t.name) || []);
         setDurations(durData || []);
-        setRoundCount(count || 0);
-        // Pre-fill name with "Championship — Manche N" as a convenience default.
-        // The user can override it before saving.
+        // MAX round_number — safe when rounds have been deleted
+        const maxRound = Math.max(
+          0,
+          ...(roundsData || []).map((r) => r.round_number || 0),
+        );
+        setRoundCount(maxRound);
         setForm((prev) => ({
           ...prev,
-          name: `${champ?.name || ""} — Manche ${(count || 0) + 1}`,
+          name: `${champ?.name || ""} — Manche ${maxRound + 1}`,
         }));
       },
     );
@@ -156,6 +172,26 @@ export default function NouveauRound({ params }) {
       setError("Le circuit est obligatoire.");
       return;
     }
+    // Validate in-game time fields — mobile Safari ignores type="time" constraints
+    if (!isValidTime(form.ig_start_time)) {
+      setError(
+        "L'heure de départ IG est invalide — format attendu : HH:MM (ex : 13:00).",
+      );
+      return;
+    }
+    if (!isValidTime(form.ig_sunrise)) {
+      setError(
+        "L'heure de lever de soleil IG est invalide — format attendu : HH:MM (ex : 06:30).",
+      );
+      return;
+    }
+    if (!isValidTime(form.ig_sunset)) {
+      setError(
+        "L'heure de coucher de soleil IG est invalide — format attendu : HH:MM (ex : 20:00).",
+      );
+      return;
+    }
+
     setLoading(true);
     setError(null);
 
@@ -180,7 +216,11 @@ export default function NouveauRound({ params }) {
       .select()
       .single();
     if (err) {
-      setError(err.message);
+      setError(
+        err.code === "23505"
+          ? "Ce numéro de manche existe déjà dans ce championnat. Rechargez la page et réessayez."
+          : err.message,
+      );
       setLoading(false);
       return;
     }
