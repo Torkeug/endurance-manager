@@ -33,6 +33,10 @@ export default function NouvelEquipage({ params }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [isChampionship, setIsChampionship] = useState(false);
+  // Holds data needed for the post-creation start time preference modal.
+  // Set after team entry is inserted but before signups are assigned.
+  // null = modal closed | object = modal open with affected driver details.
+  const [pendingAssignment, setPendingAssignment] = useState(null);
 
   // Multiple Twitch streams — stored as array of raw usernames
   const [twitchUsernames, setTwitchUsernames] = useState([]);
@@ -284,14 +288,50 @@ export default function NouvelEquipage({ params }) {
       );
       setLoading(false);
     } else {
-      // Assign selected drivers to the new team entry before navigating
       if (selectedSignupIds.length > 0) {
+        // Find which selected signups are missing the team start time in their
+        // preferences — these drivers will be prompted to add it via the modal.
+        const selectedSignups = eventSignups.filter((s) =>
+          selectedSignupIds.includes(s.id),
+        );
+        const affected = selectedSignups.filter((s) => {
+          const prefs = s.preferred_start_time_ids || [];
+          // Only flag if driver has preferences set but team start time is missing
+          return prefs.length > 0 && !prefs.includes(form.start_time_id);
+        });
+
+        if (affected.length > 0) {
+          // Some drivers are missing the start time preference — show modal
+          // before committing assignments so admin can decide whether to add it.
+          const startTime = startTimes.find(
+            (st) => st.id === form.start_time_id,
+          );
+          setPendingAssignment({
+            entryId: data.id,
+            entryEventId: id,
+            selectedSignups,
+            affectedSignups: affected,
+            startTimeLabel: startTime
+              ? `${startTime.label} à ${startTime.irl_start}`
+              : form.start_time_id,
+          });
+          setLoading(false);
+          return;
+        }
+
+        // No affected drivers — assign all silently with snapshot
         await Promise.all(
-          selectedSignupIds.map((signupId) =>
+          selectedSignups.map((s) =>
             supabase
               .from("signups")
-              .update({ team_entry_id: data.id })
-              .eq("id", signupId),
+              .update({
+                team_entry_id: data.id,
+                // Snapshot preferences before assignment so unassign can
+                // safely reverse only what was added here
+                preferred_start_time_ids_snapshot:
+                  s.preferred_start_time_ids || [],
+              })
+              .eq("id", s.id),
           ),
         );
       }
@@ -310,8 +350,131 @@ export default function NouvelEquipage({ params }) {
     .filter(Boolean)
     .sort();
 
+  // Commits driver assignments after the modal decision.
+  // addStartTime: true = add team start time to affected drivers' preferences.
+  const commitAssignments = async (addStartTime) => {
+    const { entryId, selectedSignups, affectedSignups } = pendingAssignment;
+    const affectedIds = new Set(affectedSignups.map((s) => s.id));
+
+    await Promise.all(
+      selectedSignups.map((s) => {
+        const currentPrefs = s.preferred_start_time_ids || [];
+        const isAffected = affectedIds.has(s.id);
+        // Add start time to preferences only for affected drivers and only
+        // if the admin confirmed — unaffected drivers stay unchanged
+        const newPrefs =
+          addStartTime &&
+          isAffected &&
+          !currentPrefs.includes(form.start_time_id)
+            ? [...currentPrefs, form.start_time_id]
+            : currentPrefs;
+        return supabase
+          .from("signups")
+          .update({
+            team_entry_id: entryId,
+            // Snapshot taken before any modification — used by unassign
+            // to know whether to remove the start time on departure
+            preferred_start_time_ids_snapshot: currentPrefs,
+            preferred_start_time_ids: newPrefs,
+          })
+          .eq("id", s.id);
+      }),
+    );
+
+    setPendingAssignment(null);
+    router.push(`/evenements/${id}/equipages/${pendingAssignment.entryId}`);
+    router.refresh();
+  };
+
   return (
     <div className="page">
+      {/* ── Start time preference modal ─────────────────────────────────────
+          Shown after team creation when some selected drivers don't have the
+          team's start time in their preferred_start_time_ids. */}
+      {pendingAssignment && (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(0,0,0,0.6)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 1000,
+            padding: "1.5rem",
+          }}
+        >
+          <div className="card" style={{ maxWidth: "480px", width: "100%" }}>
+            <h3 style={{ marginBottom: "0.75rem" }}>
+              Préférence d&apos;horaire
+            </h3>
+            <p
+              style={{
+                fontSize: "0.9rem",
+                color: "var(--text-dim)",
+                marginBottom: "0.75rem",
+              }}
+            >
+              <strong style={{ color: "var(--text)" }}>
+                {pendingAssignment.affectedSignups.length} pilote
+                {pendingAssignment.affectedSignups.length > 1 ? "s" : ""}
+              </strong>{" "}
+              {pendingAssignment.affectedSignups.length > 1
+                ? "n'ont pas ce créneau dans leurs préférences"
+                : "n'a pas ce créneau dans ses préférences"}{" "}
+              :
+            </p>
+            <ul
+              style={{
+                margin: "0 0 1rem",
+                paddingLeft: "1.25rem",
+                fontSize: "0.88rem",
+                color: "var(--accent)",
+                display: "flex",
+                flexDirection: "column",
+                gap: "0.2rem",
+              }}
+            >
+              {pendingAssignment.affectedSignups.map((s) => (
+                <li key={s.id}>{s.drivers?.name}</li>
+              ))}
+            </ul>
+            <p
+              style={{
+                fontSize: "0.9rem",
+                color: "var(--text-dim)",
+                marginBottom: "1.5rem",
+              }}
+            >
+              Souhaitez-vous ajouter le créneau{" "}
+              <strong style={{ color: "var(--text)" }}>
+                {pendingAssignment.startTimeLabel}
+              </strong>{" "}
+              à leurs préférences ?
+            </p>
+            <div
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                gap: "0.75rem",
+              }}
+            >
+              <button
+                onClick={() => commitAssignments(true)}
+                className="btn btn-primary"
+              >
+                Oui, ajouter le créneau
+              </button>
+              <button
+                onClick={() => commitAssignments(false)}
+                className="btn btn-secondary"
+              >
+                Non, laisser les préférences inchangées
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       <div className="page-header">
         <div>
           <h1>Nouvel équipage</h1>
