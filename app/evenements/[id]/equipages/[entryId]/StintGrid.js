@@ -539,6 +539,58 @@ function hasConflict(calc, otherStints) {
   return null;
 }
 
+// ─── Clear driver stints modal ───────────────────────────────────────────────
+// Shown before clearing all eligible stints for a specific driver.
+// Replaces native confirm() for consistency with the rest of the app.
+function ClearDriverStintsModal({ modal, onConfirm, onCancel }) {
+  if (!modal) return null;
+  return (
+    <div
+      style={{
+        position: "fixed",
+        inset: 0,
+        background: "rgba(0,0,0,0.6)",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        zIndex: 1000,
+        padding: "1.5rem",
+      }}
+    >
+      <div className="card" style={{ maxWidth: "420px", width: "100%" }}>
+        <h3 style={{ marginBottom: "0.75rem" }}>
+          Libérer les relais de {modal.driverName}
+        </h3>
+        <p
+          style={{
+            fontSize: "0.9rem",
+            color: "var(--text-dim)",
+            marginBottom: "1.5rem",
+          }}
+        >
+          Les{" "}
+          <strong style={{ color: "var(--text)" }}>
+            {modal.stintCount} relais éligibles
+          </strong>{" "}
+          de {modal.driverName} seront vidés. Les données (tours, notes) seront
+          effacées mais les créneaux resteront dans le planning. Le pilote
+          pourra être restauré lors d&apos;une réassignation.
+        </p>
+        <div
+          style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}
+        >
+          <button onClick={onConfirm} className="btn btn-primary">
+            Confirmer
+          </button>
+          <button onClick={onCancel} className="btn btn-secondary">
+            Annuler
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── Recalc preview modal ────────────────────────────────────────────────────
 
 function RecalcModal({ diffs, raceEndDiff, onConfirm, onCancel, saving }) {
@@ -814,6 +866,10 @@ export default function StintGrid({
   const igSunrise = event?.ig_sunrise;
   const igSunset = event?.ig_sunset;
   const driverIds = assignedDrivers.map((d) => d.drivers?.id).filter(Boolean);
+
+  // Controls the clear driver stints confirmation modal
+  const [clearDriverModal, setClearDriverModal] = useState(null);
+  // null | { driverId, driverName, stintCount }
 
   // Touch device detection — coarse pointer = mobile = show arrow buttons
   // instead of drag-and-drop which is unreliable on touch screens.
@@ -1205,16 +1261,23 @@ export default function StintGrid({
     ]);
   };
 
-  // Clears all stint assignments for a specific driver — nulls driver-specific
-  // fields and stores previous_driver_id for potential restore on reassignment.
-  // Only affects eligible (non-completed, non-started) stints.
-  const clearDriverStints = async (driverId) => {
+  // Shows a confirmation modal before clearing all eligible stints for a driver.
+  // Nulls driver-specific fields and stores previous_driver_id for potential
+  // restore on reassignment.
+  const clearDriverStints = (driverId) => {
     if (archived) return;
-    const driverName =
-      assignedDrivers.find((d) => d.drivers?.id === driverId)?.drivers?.name ||
-      "ce pilote";
-    if (!confirm(`Retirer ${driverName} de tous ses relais éligibles ?`))
-      return;
+    const driver = assignedDrivers.find((d) => d.drivers?.id === driverId);
+    const driverName = driver?.drivers?.name || "ce pilote";
+    const stintCount = calculated.filter(
+      (s) => s.driver_id === driverId && isEligible(s),
+    ).length;
+    if (stintCount === 0) return;
+    setClearDriverModal({ driverId, driverName, stintCount });
+  };
+
+  const commitClearDriverStints = async () => {
+    const { driverId } = clearDriverModal;
+    setClearDriverModal(null);
 
     const targetStints = calculated.filter(
       (s) => s.driver_id === driverId && isEligible(s),
@@ -2361,6 +2424,13 @@ export default function StintGrid({
           saving={recalcSaving}
         />
       )}
+
+      {/* Clear driver stints confirmation modal */}
+      <ClearDriverStintsModal
+        modal={clearDriverModal}
+        onConfirm={commitClearDriverStints}
+        onCancel={() => setClearDriverModal(null)}
+      />
     </div>
   );
 }
