@@ -1100,9 +1100,13 @@ export default function StintGrid({
     setStints((prev) =>
       prev.map((s) => (s.id === stintId ? { ...s, [field]: value } : s)),
     );
+    // When a new driver is assigned, clear previous_driver_id — the slot is
+    // now actively claimed and should no longer trigger the restore modal.
+    const extraFields =
+      field === "driver_id" && value ? { previous_driver_id: null } : {};
     await supabase
       .from("stints")
-      .update({ [field]: value })
+      .update({ [field]: value, ...extraFields })
       .eq("id", stintId);
     setSaving(null);
   };
