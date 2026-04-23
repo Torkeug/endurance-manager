@@ -1798,6 +1798,7 @@ export default function StintGrid({
                   Skip fin
                 </th>
               )}
+              <th style={{ ...TH, width: "140px" }}>Notes</th>
               <th style={{ ...TH, width: "52px" }}>IG</th>
               <th style={{ ...TH, width: "24px" }}>⏱</th>
               <th style={{ ...TH, width: "24px" }} title="Pluie">
@@ -1828,7 +1829,7 @@ export default function StintGrid({
               <tr>
                 <td
                   colSpan={
-                    11 +
+                    12 +
                     assignedDrivers.length +
                     (archived ? 0 : 2) +
                     (raceCovered ? 1 : 0)
@@ -2295,6 +2296,26 @@ export default function StintGrid({
                       })()}
                     </td>
                   )}
+
+                  {/* Notes — editable text input, truncated to fit the column */}
+                  <td style={{ ...TD, maxWidth: "140px" }}>
+                    <input
+                      type="text"
+                      value={stint.notes || ""}
+                      placeholder="—"
+                      onChange={(e) =>
+                        updateStint(stint.id, "notes", e.target.value || null)
+                      }
+                      disabled={archived}
+                      style={{
+                        ...INPUT,
+                        width: "130px",
+                        opacity: archived ? 0.7 : 1,
+                        color: stint.notes ? "var(--text)" : "var(--text-dim)",
+                      }}
+                      title={stint.notes || ""}
+                    />
+                  </td>
 
                   {/* IG start */}
                   <td style={TD}>
