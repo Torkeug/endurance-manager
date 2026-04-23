@@ -1205,6 +1205,46 @@ export default function StintGrid({
     ]);
   };
 
+  // Clears all stint assignments for a specific driver — nulls driver-specific
+  // fields and stores previous_driver_id for potential restore on reassignment.
+  // Only affects eligible (non-completed, non-started) stints.
+  const clearDriverStints = async (driverId) => {
+    if (archived) return;
+    const driverName =
+      assignedDrivers.find((d) => d.drivers?.id === driverId)?.drivers?.name ||
+      "ce pilote";
+    if (!confirm(`Retirer ${driverName} de tous ses relais éligibles ?`))
+      return;
+
+    const targetStints = calculated.filter(
+      (s) => s.driver_id === driverId && isEligible(s),
+    );
+    if (targetStints.length === 0) return;
+
+    const payload = {
+      driver_id: null,
+      previous_driver_id: driverId,
+      laps_planned: null,
+      rain: false,
+      tyre_change: false,
+      notes: null,
+      irl_end_actual: null,
+    };
+
+    // Optimistic update
+    setStints((prev) =>
+      prev.map((s) =>
+        targetStints.find((t) => t.id === s.id) ? { ...s, ...payload } : s,
+      ),
+    );
+
+    await Promise.all(
+      targetStints.map((s) =>
+        supabase.from("stints").update(payload).eq("id", s.id),
+      ),
+    );
+  };
+
   // Returns true if a stint can be reordered — not completed and not started
   const isEligible = (stint) =>
     !isStintCompleted(stint) &&
@@ -2234,6 +2274,32 @@ export default function StintGrid({
             <button onClick={addStint} className="btn btn-secondary">
               + Ajouter un relais
             </button>
+            {/* Per-driver clear — only shown for drivers with at least one eligible stint */}
+            {(() => {
+              const driversWithEligibleStints = assignedDrivers.filter((d) =>
+                calculated.some(
+                  (s) => s.driver_id === d.drivers?.id && isEligible(s),
+                ),
+              );
+              if (driversWithEligibleStints.length === 0) return null;
+              return (
+                <div
+                  style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}
+                >
+                  {driversWithEligibleStints.map((d) => (
+                    <button
+                      key={d.drivers?.id}
+                      onClick={() => clearDriverStints(d.drivers?.id)}
+                      className="btn btn-secondary btn-sm"
+                      style={{ borderColor: "#a06020", color: "#d4904a" }}
+                      title={`Retirer ${d.drivers?.name} de tous ses relais éligibles`}
+                    >
+                      ✕ {d.drivers?.name}
+                    </button>
+                  ))}
+                </div>
+              );
+            })()}
             {stints.length > 0 && (
               <button
                 onClick={clearAllStints}
@@ -2245,6 +2311,7 @@ export default function StintGrid({
           </div>
         </div>
       )}
+
       {/* Recalc preview modal */}
       {showRecalcModal && (
         <RecalcModal
