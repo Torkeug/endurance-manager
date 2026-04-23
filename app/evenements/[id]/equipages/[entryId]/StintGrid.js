@@ -572,9 +572,11 @@ function ClearDriverStintsModal({ modal, onConfirm, onCancel }) {
           <strong style={{ color: "var(--text)" }}>
             {modal.stintCount} relais éligibles
           </strong>{" "}
-          de {modal.driverName} seront vidés. Les données (tours, notes) seront
-          effacées mais les créneaux resteront dans le planning. Le pilote
-          pourra être restauré lors d&apos;une réassignation.
+          de{" "}
+          <strong style={{ color: "var(--text)" }}>{modal.driverName}</strong>{" "}
+          seront vidés. Les données (tours, notes) seront effacées mais les
+          créneaux resteront dans le planning. Le pilote pourra être restauré
+          lors d&apos;une réassignation.
         </p>
         <div
           style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}
