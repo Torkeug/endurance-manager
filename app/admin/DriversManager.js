@@ -56,6 +56,100 @@ function canApproveOrRevoke(
   return false;
 }
 
+// Shown before deleting a driver that has active signups.
+// Lists affected events so the admin can make an informed decision.
+// Note: drivers with stints cannot be deleted at all (FK constraint) —
+// this modal only appears for drivers with signups but no stints.
+function DeleteDriverModal({ modal, onConfirm, onCancel }) {
+  if (!modal) return null;
+  return (
+    <div
+      style={{
+        position: "fixed",
+        inset: 0,
+        background: "rgba(0,0,0,0.6)",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        zIndex: 1000,
+        padding: "1.5rem",
+      }}
+    >
+      <div className="card" style={{ maxWidth: "480px", width: "100%" }}>
+        <h3 style={{ marginBottom: "0.75rem" }}>
+          Supprimer {modal.driverName}
+        </h3>
+        {modal.affectedEvents.length > 0 ? (
+          <>
+            <p
+              style={{
+                fontSize: "0.9rem",
+                color: "var(--text-dim)",
+                marginBottom: "0.75rem",
+              }}
+            >
+              ⚠️ Ce pilote est inscrit à{" "}
+              <strong style={{ color: "var(--text)" }}>
+                {modal.affectedEvents.length} événement
+                {modal.affectedEvents.length > 1 ? "s" : ""}
+              </strong>
+              . Ces inscriptions seront supprimées :
+            </p>
+            <ul
+              style={{
+                margin: "0 0 1rem",
+                paddingLeft: "1.25rem",
+                fontSize: "0.88rem",
+                color: "var(--danger)",
+                display: "flex",
+                flexDirection: "column",
+                gap: "0.2rem",
+              }}
+            >
+              {modal.affectedEvents.map((name, i) => (
+                <li key={i}>{name}</li>
+              ))}
+            </ul>
+            <p
+              style={{
+                fontSize: "0.82rem",
+                color: "var(--text-dim)",
+                marginBottom: "1.5rem",
+              }}
+            >
+              Cette action est irréversible. Les relais assignés à ce pilote
+              empêcheront la suppression — retirez-les d&apos;abord si
+              nécessaire.
+            </p>
+          </>
+        ) : (
+          <p
+            style={{
+              fontSize: "0.9rem",
+              color: "var(--text-dim)",
+              marginBottom: "1.5rem",
+            }}
+          >
+            Confirmer la suppression définitive de{" "}
+            <strong style={{ color: "var(--text)" }}>{modal.driverName}</strong>{" "}
+            ? Cette action est irréversible.
+          </p>
+        )}
+        <div
+          style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}
+        >
+          <button onClick={onConfirm} className="btn btn-danger">
+            Supprimer définitivement
+          </button>
+          <button onClick={onCancel} className="btn btn-secondary">
+            Annuler
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function DriversManager({ initialDrivers, currentDriver }) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -67,6 +161,10 @@ export default function DriversManager({ initialDrivers, currentDriver }) {
   const [saving, setSaving] = useState(null);
   const [error, setError] = useState(null);
   const [filter, setFilter] = useState("pending");
+  // Controls the delete preview modal — null when closed, populated with
+  // affected signup data when a driver has active event registrations.
+  const [deleteModal, setDeleteModal] = useState(null);
+  // null | { driverId, driverName, affectedEvents: [] }
 
   // Which driver row has its Discord ID pencil editor open, and the draft value
   const [editingDiscord, setEditingDiscord] = useState(null);
@@ -160,13 +258,25 @@ export default function DriversManager({ initialDrivers, currentDriver }) {
     router.refresh();
   };
 
-  const deleteDriver = async (driverId) => {
-    if (
-      !confirm(
-        "Supprimer définitivement ce pilote ? Cette action est irréversible.",
-      )
-    )
-      return;
+  // Preview signups before deleting — shows affected events in a modal.
+  // Drivers with stints are blocked by FK constraint at DB level.
+  const deleteDriver = async (driverId, driverName) => {
+    // Fetch active signups for this driver to preview impact
+    const { data: signups } = await supabase
+      .from("signups")
+      .select("events(name)")
+      .eq("driver_id", driverId);
+
+    const affectedEvents = [
+      ...new Set((signups || []).map((s) => s.events?.name).filter(Boolean)),
+    ];
+
+    setDeleteModal({ driverId, driverName, affectedEvents });
+  };
+
+  const commitDelete = async () => {
+    const { driverId } = deleteModal;
+    setDeleteModal(null);
     setSaving(driverId);
     setError(null);
     const { error: err } = await supabase
@@ -174,10 +284,9 @@ export default function DriversManager({ initialDrivers, currentDriver }) {
       .delete()
       .eq("id", driverId);
     if (err) {
-      // FK violation (23503) means the driver has linked stints or signups — soft error
       if (err.code === "23503") {
         setError(
-          "Ce pilote est lié à des données existantes (relais, inscriptions) et ne peut pas être supprimé.",
+          "Ce pilote est lié à des relais existants et ne peut pas être supprimé. Retirez ses relais d'abord.",
         );
       } else {
         setError(err.message);
@@ -300,6 +409,13 @@ export default function DriversManager({ initialDrivers, currentDriver }) {
 
   return (
     <div>
+      {/* Delete preview modal — shows affected events before committing */}
+      <DeleteDriverModal
+        modal={deleteModal}
+        onConfirm={commitDelete}
+        onCancel={() => setDeleteModal(null)}
+      />
+
       {/* iRacing sync-all feedback banners */}
       {iracingSyncedCount && (
         <div className="alert alert-success" style={{ marginBottom: "1rem" }}>
@@ -440,7 +556,7 @@ export default function DriversManager({ initialDrivers, currentDriver }) {
                           ✗ Refuser
                         </button>
                         <button
-                          onClick={() => deleteDriver(d.id)}
+                          onClick={() => deleteDriver(d.id, d.name)}
                           className="btn btn-secondary btn-sm"
                           disabled={saving === d.id}
                         >
@@ -778,7 +894,7 @@ export default function DriversManager({ initialDrivers, currentDriver }) {
                               Révoquer
                             </button>
                             <button
-                              onClick={() => deleteDriver(d.id)}
+                              onClick={() => deleteDriver(d.id, d.name)}
                               className="btn btn-danger btn-sm"
                               disabled={saving === d.id}
                             >
@@ -836,7 +952,7 @@ export default function DriversManager({ initialDrivers, currentDriver }) {
                           Approuver
                         </button>
                         <button
-                          onClick={() => deleteDriver(d.id)}
+                          onClick={() => deleteDriver(d.id, d.name)}
                           className="btn btn-danger btn-sm"
                           disabled={saving === d.id}
                         >
