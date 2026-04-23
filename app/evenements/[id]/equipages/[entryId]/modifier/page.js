@@ -5,6 +5,47 @@ import Link from "next/link";
 import { supabaseBrowser as supabase } from "../../../../../../lib/supabase-browser";
 import { formatTimeInZone } from "../../../../../../lib/timezone";
 
+function ConfirmModal({ modal, onConfirm, onCancel }) {
+  if (!modal) return null;
+  return (
+    <div
+      style={{
+        position: "fixed",
+        inset: 0,
+        background: "rgba(0,0,0,0.6)",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        zIndex: 1000,
+        padding: "1.5rem",
+      }}
+    >
+      <div className="card" style={{ maxWidth: "400px", width: "100%" }}>
+        <h3 style={{ marginBottom: "0.75rem" }}>{modal.title}</h3>
+        <p
+          style={{
+            fontSize: "0.9rem",
+            color: "var(--text-dim)",
+            marginBottom: "1.5rem",
+          }}
+        >
+          {modal.message}
+        </p>
+        <div
+          style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}
+        >
+          <button onClick={onConfirm} className="btn btn-danger">
+            {modal.confirmLabel || "Confirmer"}
+          </button>
+          <button onClick={onCancel} className="btn btn-secondary">
+            Annuler
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // Extract a Twitch username from a full twitch.tv URL
 function extractTwitchUsername(url) {
   if (!url) return "";
@@ -33,6 +74,7 @@ export default function ModifierEquipage({ params }) {
   const [twitchInput, setTwitchInput] = useState("");
   // Drivers in this event who have a linked Twitch account — offered as quick-pick
   const [twitchDrivers, setTwitchDrivers] = useState([]);
+  const [confirmModal, setConfirmModal] = useState(null);
 
   // Auth check — sets currentIsAdmin to control delete button visibility
   useEffect(() => {
@@ -275,23 +317,29 @@ export default function ModifierEquipage({ params }) {
     }
   };
 
-  const handleDelete = async () => {
-    if (
-      !confirm(
+  const handleDelete = () => {
+    setConfirmModal({
+      title: "Supprimer l'équipage",
+      message:
         "Supprimer cet équipage ? Toutes les données associées (relais, disponibilités) seront supprimées.",
-      )
-    )
-      return;
-    const { error: err } = await supabase
-      .from("team_entries")
-      .delete()
-      .eq("id", entryId);
-    if (err) {
-      setError(err.message);
-      return;
-    }
-    router.push(`/evenements/${id}`);
-    router.refresh();
+      confirmLabel: "Supprimer",
+      onConfirm: async () => {
+        setConfirmModal(null);
+
+        const { error: err } = await supabase
+          .from("team_entries")
+          .delete()
+          .eq("id", entryId);
+
+        if (err) {
+          setError(err.message);
+          return;
+        }
+
+        router.push(`/evenements/${id}`);
+        router.refresh();
+      },
+    });
   };
 
   const carsByClass = cars.reduce((acc, car) => {
@@ -322,6 +370,11 @@ export default function ModifierEquipage({ params }) {
 
   return (
     <div className="page">
+      <ConfirmModal
+        modal={confirmModal}
+        onConfirm={() => confirmModal?.onConfirm?.()}
+        onCancel={() => setConfirmModal(null)}
+      />
       <div className="page-header">
         <div>
           <h1>Modifier l&apos;équipage</h1>

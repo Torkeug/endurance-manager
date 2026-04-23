@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { supabaseBrowser as supabase } from '../../lib/supabase-browser'
+import { supabaseBrowser as supabase } from "../../lib/supabase-browser";
 import React from "react";
 
 // Fixed sort order for days of the week — used to sort special start times
@@ -13,6 +13,47 @@ function formatDuration(minutes) {
   const h = Math.floor(minutes / 60);
   const m = minutes % 60;
   return m === 0 ? `${h}h` : `${h}h${String(m).padStart(2, "0")}`;
+}
+
+function ConfirmModal({ modal, onConfirm, onCancel }) {
+  if (!modal) return null;
+  return (
+    <div
+      style={{
+        position: "fixed",
+        inset: 0,
+        background: "rgba(0,0,0,0.6)",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        zIndex: 1000,
+        padding: "1.5rem",
+      }}
+    >
+      <div className="card" style={{ maxWidth: "400px", width: "100%" }}>
+        <h3 style={{ marginBottom: "0.75rem" }}>{modal.title}</h3>
+        <p
+          style={{
+            fontSize: "0.9rem",
+            color: "var(--text-dim)",
+            marginBottom: "1.5rem",
+          }}
+        >
+          {modal.message}
+        </p>
+        <div
+          style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}
+        >
+          <button onClick={onConfirm} className="btn btn-danger">
+            {modal.confirmLabel || "Confirmer"}
+          </button>
+          <button onClick={onCancel} className="btn btn-secondary">
+            Annuler
+          </button>
+        </div>
+      </div>
+    </div>
+  );
 }
 
 export default function SettingsManager({
@@ -43,6 +84,7 @@ export default function SettingsManager({
   const [editStH, setEditStH] = useState("");
   const [editStM, setEditStM] = useState("");
   const [editStDay, setEditStDay] = useState("vendredi");
+  const [confirmModal, setConfirmModal] = useState(null);
 
   // Default duration state
   const [defaultDuration, setDefaultDuration] = useState(
@@ -87,22 +129,29 @@ export default function SettingsManager({
     router.refresh();
   };
 
-  const handleDelete = async (id) => {
-    if (!confirm("Supprimer cette durée ?")) return;
-    setSaving(id);
-    setError(null);
-    const { error: err } = await supabase
-      .from("event_duration_presets")
-      .delete()
-      .eq("id", id);
-    if (err) {
-      setError(err.message);
-      setSaving(null);
-      return;
-    }
-    setPresets((prev) => prev.filter((p) => p.id !== id));
-    setSaving(null);
-    router.refresh();
+  const handleDelete = (id) => {
+    setConfirmModal({
+      title: "Supprimer cette durée",
+      message: "Cette durée sera supprimée de la liste des préréglages.",
+      confirmLabel: "Supprimer",
+      onConfirm: async () => {
+        setConfirmModal(null);
+        setSaving(id);
+        setError(null);
+        const { error: err } = await supabase
+          .from("event_duration_presets")
+          .delete()
+          .eq("id", id);
+        if (err) {
+          setError(err.message);
+          setSaving(null);
+          return;
+        }
+        setPresets((prev) => prev.filter((p) => p.id !== id));
+        setSaving(null);
+        router.refresh();
+      },
+    });
   };
 
   const handleSaveDefault = async () => {
@@ -203,28 +252,40 @@ export default function SettingsManager({
     router.refresh();
   };
 
-  const handleDeleteSpecialTime = async (id) => {
-    if (!confirm("Supprimer cet horaire ?")) return;
-    setSavingSpecial(id);
-    setError(null);
-    const { error: err } = await supabase
-      .from("special_event_start_times")
-      .delete()
-      .eq("id", id);
-    if (err) {
-      setError(err.message);
-      setSavingSpecial(null);
-      return;
-    }
-    setSpecialTimes((prev) => prev.filter((s) => s.id !== id));
-    setSavingSpecial(null);
-    router.refresh();
+  const handleDeleteSpecialTime = (id) => {
+    setConfirmModal({
+      title: "Supprimer cet horaire",
+      message: "Cet horaire prédéfini sera supprimé définitivement.",
+      confirmLabel: "Supprimer",
+      onConfirm: async () => {
+        setConfirmModal(null);
+        setSavingSpecial(id);
+        setError(null);
+        const { error: err } = await supabase
+          .from("special_event_start_times")
+          .delete()
+          .eq("id", id);
+        if (err) {
+          setError(err.message);
+          setSavingSpecial(null);
+          return;
+        }
+        setSpecialTimes((prev) => prev.filter((s) => s.id !== id));
+        setSavingSpecial(null);
+        router.refresh();
+      },
+    });
   };
 
   const newTotal = (parseInt(newH) || 0) * 60 + (parseInt(newM) || 0);
 
   return (
     <div>
+      <ConfirmModal
+        modal={confirmModal}
+        onConfirm={() => confirmModal?.onConfirm?.()}
+        onCancel={() => setConfirmModal(null)}
+      />
       {error && (
         <div className="alert alert-error" style={{ marginBottom: "1rem" }}>
           {error}

@@ -5,6 +5,47 @@ import Link from "next/link";
 import { supabaseBrowser as supabase } from "../../../../lib/supabase-browser";
 import { TIMEZONES } from "../../../../lib/timezone";
 
+function ConfirmModal({ modal, onConfirm, onCancel }) {
+  if (!modal) return null;
+  return (
+    <div
+      style={{
+        position: "fixed",
+        inset: 0,
+        background: "rgba(0,0,0,0.6)",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        zIndex: 1000,
+        padding: "1.5rem",
+      }}
+    >
+      <div className="card" style={{ maxWidth: "400px", width: "100%" }}>
+        <h3 style={{ marginBottom: "0.75rem" }}>{modal.title}</h3>
+        <p
+          style={{
+            fontSize: "0.9rem",
+            color: "var(--text-dim)",
+            marginBottom: "1.5rem",
+          }}
+        >
+          {modal.message}
+        </p>
+        <div
+          style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}
+        >
+          <button onClick={onConfirm} className="btn btn-danger">
+            {modal.confirmLabel || "Confirmer"}
+          </button>
+          <button onClick={onCancel} className="btn btn-secondary">
+            Annuler
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function formatDuration(minutes) {
   const h = Math.floor(minutes / 60);
   const m = minutes % 60;
@@ -46,6 +87,7 @@ export default function ModifierEvenement({ params }) {
   const [previewStep, setPreviewStep] = useState(false);
   const [previewLosses, setPreviewLosses] = useState([]);
   const [previewTeamLosses, setPreviewTeamLosses] = useState([]);
+  const [confirmModal, setConfirmModal] = useState(null);
 
   useEffect(() => {
     supabase.auth.getUser().then(async ({ data: { user } }) => {
@@ -488,20 +530,29 @@ export default function ModifierEvenement({ params }) {
 
   // Hard delete — removes the event and all associated data permanently.
   // Distinct from archiving which preserves the data with a snapshot.
-  const handleDelete = async () => {
-    if (
-      !confirm(
+  const handleDelete = () => {
+    setConfirmModal({
+      title: "Supprimer l'événement",
+      message:
         "Supprimer cet événement ? Toutes les données associées seront supprimées.",
-      )
-    )
-      return;
-    const { error: err } = await supabase.from("events").delete().eq("id", id);
-    if (err) {
-      setError(err.message);
-      return;
-    }
-    router.push("/evenements");
-    router.refresh();
+      confirmLabel: "Supprimer",
+      onConfirm: async () => {
+        setConfirmModal(null);
+
+        const { error: err } = await supabase
+          .from("events")
+          .delete()
+          .eq("id", id);
+
+        if (err) {
+          setError(err.message);
+          return;
+        }
+
+        router.push("/evenements");
+        router.refresh();
+      },
+    });
   };
 
   const durationButtonStyle = (value) => ({
@@ -565,6 +616,11 @@ export default function ModifierEvenement({ params }) {
     );
   return (
     <div className="page">
+      <ConfirmModal
+        modal={confirmModal}
+        onConfirm={() => confirmModal?.onConfirm?.()}
+        onCancel={() => setConfirmModal(null)}
+      />
       <div className="page-header">
         <div>
           <h1>Modifier l&apos;événement</h1>

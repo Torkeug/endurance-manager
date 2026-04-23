@@ -4,6 +4,47 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { supabaseBrowser as supabase } from "../../../../lib/supabase-browser";
 
+function ConfirmModal({ modal, onConfirm, onCancel }) {
+  if (!modal) return null;
+  return (
+    <div
+      style={{
+        position: "fixed",
+        inset: 0,
+        background: "rgba(0,0,0,0.6)",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        zIndex: 1000,
+        padding: "1.5rem",
+      }}
+    >
+      <div className="card" style={{ maxWidth: "400px", width: "100%" }}>
+        <h3 style={{ marginBottom: "0.75rem" }}>{modal.title}</h3>
+        <p
+          style={{
+            fontSize: "0.9rem",
+            color: "var(--text-dim)",
+            marginBottom: "1.5rem",
+          }}
+        >
+          {modal.message}
+        </p>
+        <div
+          style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}
+        >
+          <button onClick={onConfirm} className="btn btn-danger">
+            {modal.confirmLabel || "Confirmer"}
+          </button>
+          <button onClick={onCancel} className="btn btn-secondary">
+            Annuler
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function ModifierPilote({ params }) {
   const router = useRouter();
   const { id } = use(params);
@@ -12,6 +53,7 @@ export default function ModifierPilote({ params }) {
   const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(true);
   const [error, setError] = useState(null);
+  const [confirmModal, setConfirmModal] = useState(null);
 
   const [currentIsAdmin, setCurrentIsAdmin] = useState(false);
   const [authChecked, setAuthChecked] = useState(false);
@@ -135,16 +177,26 @@ export default function ModifierPilote({ params }) {
     }
   };
 
-  const handleDelete = async () => {
-    if (!confirm("Supprimer ce pilote ? Cette action est irréversible."))
-      return;
-    const { error: err } = await supabase.from("drivers").delete().eq("id", id);
-    if (err) {
-      setError(err.message);
-      return;
-    }
-    router.push("/pilotes");
-    router.refresh();
+  const handleDelete = () => {
+    setConfirmModal({
+      title: "Supprimer ce pilote",
+      message:
+        "Ce pilote sera supprimé définitivement. Cette action est irréversible.",
+      confirmLabel: "Supprimer",
+      onConfirm: async () => {
+        setConfirmModal(null);
+        const { error: err } = await supabase
+          .from("drivers")
+          .delete()
+          .eq("id", id);
+        if (err) {
+          setError(err.message);
+          return;
+        }
+        router.push("/pilotes");
+        router.refresh();
+      },
+    });
   };
 
   if (fetching)
@@ -175,6 +227,11 @@ export default function ModifierPilote({ params }) {
 
   return (
     <div className="page">
+      <ConfirmModal
+        modal={confirmModal}
+        onConfirm={() => confirmModal?.onConfirm?.()}
+        onCancel={() => setConfirmModal(null)}
+      />
       <div className="page-header">
         <div>
           <h1>Modifier le pilote</h1>

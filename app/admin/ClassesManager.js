@@ -3,6 +3,47 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabaseBrowser as supabase } from "../../lib/supabase-browser";
 
+function ConfirmModal({ modal, onConfirm, onCancel }) {
+  if (!modal) return null;
+  return (
+    <div
+      style={{
+        position: "fixed",
+        inset: 0,
+        background: "rgba(0,0,0,0.6)",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        zIndex: 1000,
+        padding: "1.5rem",
+      }}
+    >
+      <div className="card" style={{ maxWidth: "400px", width: "100%" }}>
+        <h3 style={{ marginBottom: "0.75rem" }}>{modal.title}</h3>
+        <p
+          style={{
+            fontSize: "0.9rem",
+            color: "var(--text-dim)",
+            marginBottom: "1.5rem",
+          }}
+        >
+          {modal.message}
+        </p>
+        <div
+          style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}
+        >
+          <button onClick={onConfirm} className="btn btn-danger">
+            {modal.confirmLabel || "Confirmer"}
+          </button>
+          <button onClick={onCancel} className="btn btn-secondary">
+            Annuler
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function ClassesManager({ initialClasses, initialCars }) {
   const router = useRouter();
   const [classes, setClasses] = useState(initialClasses);
@@ -19,6 +60,7 @@ export default function ClassesManager({ initialClasses, initialCars }) {
     ),
   );
   const [error, setError] = useState(null);
+  const [confirmModal, setConfirmModal] = useState(null);
 
   const reset = () => {
     setAdding(false);
@@ -144,42 +186,45 @@ export default function ClassesManager({ initialClasses, initialCars }) {
     router.refresh();
   };
 
-  const handleDelete = async (id, className) => {
+  const handleDelete = (id, className) => {
     const carsInClass = getCarsInClass(className);
-    const msg =
-      carsInClass.length > 0
-        ? `Supprimer la classe "${className}" ? Les ${carsInClass.length} voiture(s) associées seront déclassées.`
-        : `Supprimer la classe "${className}" ?`;
-    if (!confirm(msg)) return;
-
-    const { error: err } = await supabase
-      .from("car_classes")
-      .delete()
-      .eq("id", id);
-    if (err) {
-      if (err.code === "23503") {
-        setError("Cette classe est utilisée et ne peut pas être supprimée.");
-      } else {
-        setError(err.message);
-      }
-      return;
-    }
-
-    // On delete, unclass all cars in this class rather than blocking deletion.
-    // Admin is warned via the confirm dialog how many cars will be affected.
-    if (carsInClass.length > 0) {
-      await supabase
-        .from("cars")
-        .update({ class: null })
-        .eq("class", className);
-      setCars((prev) =>
-        prev.map((c) => (c.class === className ? { ...c, class: null } : c)),
-      );
-    }
-
-    setClasses((prev) => prev.filter((c) => c.id !== id));
-    if (expandedId === id) setExpandedId(null);
-    router.refresh();
+    setConfirmModal({
+      title: `Supprimer la classe "${className}"`,
+      message:
+        carsInClass.length > 0
+          ? `${carsInClass.length} voiture${carsInClass.length > 1 ? "s" : ""} associée${carsInClass.length > 1 ? "s" : ""} seront déclassées. Cette action est irréversible.`
+          : "Cette classe sera supprimée définitivement.",
+      confirmLabel: "Supprimer",
+      onConfirm: async () => {
+        setConfirmModal(null);
+        const { error: err } = await supabase
+          .from("car_classes")
+          .delete()
+          .eq("id", id);
+        if (err) {
+          setError(
+            err.code === "23503"
+              ? "Cette classe est utilisée et ne peut pas être supprimée."
+              : err.message,
+          );
+          return;
+        }
+        if (carsInClass.length > 0) {
+          await supabase
+            .from("cars")
+            .update({ class: null })
+            .eq("class", className);
+          setCars((prev) =>
+            prev.map((c) =>
+              c.class === className ? { ...c, class: null } : c,
+            ),
+          );
+        }
+        setClasses((prev) => prev.filter((c) => c.id !== id));
+        if (expandedId === id) setExpandedId(null);
+        router.refresh();
+      },
+    });
   };
 
   const startEdit = (cls) => {
@@ -204,6 +249,11 @@ export default function ClassesManager({ initialClasses, initialCars }) {
 
   return (
     <div>
+      <ConfirmModal
+        modal={confirmModal}
+        onConfirm={() => confirmModal?.onConfirm?.()}
+        onCancel={() => setConfirmModal(null)}
+      />
       {error && !editingId && !adding && (
         <div className="alert alert-error" style={{ marginBottom: "1rem" }}>
           {error}

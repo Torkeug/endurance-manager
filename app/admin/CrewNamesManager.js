@@ -10,8 +10,12 @@ function isSafeTextColor(hex) {
   const r = parseInt(hex.slice(1, 3), 16);
   const g = parseInt(hex.slice(3, 5), 16);
   const b = parseInt(hex.slice(5, 7), 16);
-  const toLinear = (c) => { c /= 255; return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4); };
-  const lum = 0.2126 * toLinear(r) + 0.7152 * toLinear(g) + 0.0722 * toLinear(b);
+  const toLinear = (c) => {
+    c /= 255;
+    return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
+  };
+  const lum =
+    0.2126 * toLinear(r) + 0.7152 * toLinear(g) + 0.0722 * toLinear(b);
   return lum > 0.08 && lum < 0.7;
 }
 
@@ -28,6 +32,47 @@ const PALETTE_PRESETS = [
   "#8b5cf6", // violet
 ];
 
+function ConfirmModal({ modal, onConfirm, onCancel }) {
+  if (!modal) return null;
+  return (
+    <div
+      style={{
+        position: "fixed",
+        inset: 0,
+        background: "rgba(0,0,0,0.6)",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        zIndex: 1000,
+        padding: "1.5rem",
+      }}
+    >
+      <div className="card" style={{ maxWidth: "400px", width: "100%" }}>
+        <h3 style={{ marginBottom: "0.75rem" }}>{modal.title}</h3>
+        <p
+          style={{
+            fontSize: "0.9rem",
+            color: "var(--text-dim)",
+            marginBottom: "1.5rem",
+          }}
+        >
+          {modal.message}
+        </p>
+        <div
+          style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}
+        >
+          <button onClick={onConfirm} className="btn btn-danger">
+            {modal.confirmLabel || "Confirmer"}
+          </button>
+          <button onClick={onCancel} className="btn btn-secondary">
+            Annuler
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function CrewNamesManager({ initialCrewNames }) {
   const router = useRouter();
   const [items, setItems] = useState(initialCrewNames);
@@ -38,6 +83,7 @@ export default function CrewNamesManager({ initialCrewNames }) {
   const [newColor, setNewColor] = useState(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
+  const [confirmModal, setConfirmModal] = useState(null);
 
   const reset = () => {
     setAdding(false);
@@ -55,11 +101,13 @@ export default function CrewNamesManager({ initialCrewNames }) {
     setSaving(true);
     const { data, error: err } = await supabase
       .from("crew_names")
-      .insert([{
-        name: newName.trim(),
-        color: newColor || null,
-        sort_order: (items.length + 1) * 10,
-      }])
+      .insert([
+        {
+          name: newName.trim(),
+          color: newColor || null,
+          sort_order: (items.length + 1) * 10,
+        },
+      ])
       .select()
       .single();
     if (err) {
@@ -72,7 +120,9 @@ export default function CrewNamesManager({ initialCrewNames }) {
       setSaving(false);
       return;
     }
-    setItems((prev) => [...prev, data].sort((a, b) => a.name.localeCompare(b.name)));
+    setItems((prev) =>
+      [...prev, data].sort((a, b) => a.name.localeCompare(b.name)),
+    );
     reset();
     setSaving(false);
     router.refresh();
@@ -106,20 +156,30 @@ export default function CrewNamesManager({ initialCrewNames }) {
     router.refresh();
   };
 
-  const handleDelete = async (id) => {
-    if (!confirm("Supprimer ce nom d'équipage ?")) return;
-    const { error: err } = await supabase.from("crew_names").delete().eq("id", id);
-    if (err) {
-      // 23503 = FK violation — crew name is referenced by a team entry
-      if (err.code === "23503") {
-        setError("Ce nom est utilisé par un ou plusieurs équipages et ne peut pas être supprimé.");
-      } else {
-        setError(err.message);
-      }
-      return;
-    }
-    setItems((prev) => prev.filter((i) => i.id !== id));
-    router.refresh();
+  const handleDelete = (id) => {
+    setConfirmModal({
+      title: "Supprimer ce nom d'équipage",
+      message:
+        "Ce nom sera supprimé définitivement. S'il est utilisé par des équipages existants, la suppression sera bloquée.",
+      confirmLabel: "Supprimer",
+      onConfirm: async () => {
+        setConfirmModal(null);
+        const { error: err } = await supabase
+          .from("crew_names")
+          .delete()
+          .eq("id", id);
+        if (err) {
+          setError(
+            err.code === "23503"
+              ? "Ce nom est utilisé par un ou plusieurs équipages et ne peut pas être supprimé."
+              : err.message,
+          );
+          return;
+        }
+        setItems((prev) => prev.filter((i) => i.id !== id));
+        router.refresh();
+      },
+    });
   };
 
   const startEdit = (item) => {
@@ -134,13 +194,27 @@ export default function CrewNamesManager({ initialCrewNames }) {
   const colorPicker = (
     <div className="form-group" style={{ marginTop: "0.75rem" }}>
       <label>Couleur de l&apos;équipage</label>
-      <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", flexWrap: "wrap" }}>
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: "0.75rem",
+          flexWrap: "wrap",
+        }}
+      >
         {/* Native color wheel */}
         <input
           type="color"
           value={newColor || "#6366f1"}
           onChange={(e) => setNewColor(e.target.value)}
-          style={{ width: "36px", height: "36px", padding: "2px", cursor: "pointer", borderRadius: "3px", border: "1px solid var(--border)" }}
+          style={{
+            width: "36px",
+            height: "36px",
+            padding: "2px",
+            cursor: "pointer",
+            borderRadius: "3px",
+            border: "1px solid var(--border)",
+          }}
         />
         {/* Quick-pick palette swatches */}
         {PALETTE_PRESETS.map((hex) => (
@@ -152,7 +226,10 @@ export default function CrewNamesManager({ initialCrewNames }) {
               height: "22px",
               borderRadius: "3px",
               background: hex,
-              border: newColor === hex ? "2px solid var(--text)" : "2px solid transparent",
+              border:
+                newColor === hex
+                  ? "2px solid var(--text)"
+                  : "2px solid transparent",
               cursor: "pointer",
               flexShrink: 0,
               padding: 0,
@@ -187,14 +264,27 @@ export default function CrewNamesManager({ initialCrewNames }) {
           </span>
         )}
       </div>
-      <div style={{ fontSize: "0.72rem", color: "var(--text-dim)", marginTop: "0.35rem" }}>
-        Si aucune couleur n&apos;est définie, une couleur automatique est attribuée.
+      <div
+        style={{
+          fontSize: "0.72rem",
+          color: "var(--text-dim)",
+          marginTop: "0.35rem",
+        }}
+      >
+        Si aucune couleur n&apos;est définie, une couleur automatique est
+        attribuée.
       </div>
     </div>
   );
 
   const editForm = (
-    <div style={{ padding: "1rem", background: "var(--surface-2)", marginBottom: "0.75rem" }}>
+    <div
+      style={{
+        padding: "1rem",
+        background: "var(--surface-2)",
+        marginBottom: "0.75rem",
+      }}
+    >
       <div style={{ display: "flex", gap: "0.75rem", alignItems: "flex-end" }}>
         <div className="form-group" style={{ flex: 1 }}>
           <label>{editingId ? "Nom" : "Nouveau nom d'équipage"}</label>
@@ -227,6 +317,11 @@ export default function CrewNamesManager({ initialCrewNames }) {
 
   return (
     <div>
+      <ConfirmModal
+        modal={confirmModal}
+        onConfirm={() => confirmModal?.onConfirm?.()}
+        onCancel={() => setConfirmModal(null)}
+      />
       {!adding && !editingId && error && (
         <div className="alert alert-error" style={{ marginBottom: "1rem" }}>
           {error}
@@ -267,7 +362,9 @@ export default function CrewNamesManager({ initialCrewNames }) {
                           borderRadius: "3px",
                           background: `${item.color}20`,
                           border: `1px solid ${item.color}`,
-                          color: isSafeTextColor(item.color) ? item.color : "var(--text)",
+                          color: isSafeTextColor(item.color)
+                            ? item.color
+                            : "var(--text)",
                           fontSize: "0.82rem",
                           fontWeight: 600,
                         }}
@@ -281,7 +378,13 @@ export default function CrewNamesManager({ initialCrewNames }) {
                   <td>
                     {item.color ? (
                       /* Color dot with hex value */
-                      <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                      <div
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "0.5rem",
+                        }}
+                      >
                         <span
                           style={{
                             width: "14px",
@@ -292,18 +395,35 @@ export default function CrewNamesManager({ initialCrewNames }) {
                             flexShrink: 0,
                           }}
                         />
-                        <span className="mono" style={{ fontSize: "0.78rem", color: "var(--text-dim)" }}>
+                        <span
+                          className="mono"
+                          style={{
+                            fontSize: "0.78rem",
+                            color: "var(--text-dim)",
+                          }}
+                        >
                           {item.color}
                         </span>
                       </div>
                     ) : (
-                      <span style={{ color: "var(--text-dim)", fontSize: "0.82rem" }}>
+                      <span
+                        style={{
+                          color: "var(--text-dim)",
+                          fontSize: "0.82rem",
+                        }}
+                      >
                         Auto
                       </span>
                     )}
                   </td>
                   <td style={{ textAlign: "right" }}>
-                    <div style={{ display: "flex", gap: "0.5rem", justifyContent: "flex-end" }}>
+                    <div
+                      style={{
+                        display: "flex",
+                        gap: "0.5rem",
+                        justifyContent: "flex-end",
+                      }}
+                    >
                       <button
                         onClick={() => startEdit(item)}
                         className="btn btn-secondary btn-sm"

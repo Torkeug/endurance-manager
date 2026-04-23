@@ -6,6 +6,47 @@ import { supabaseBrowser as supabase } from "../../../../lib/supabase-browser";
 import { formatTimeInZone } from "../../../../lib/timezone";
 import { useRouter } from "next/navigation";
 
+function ConfirmModal({ modal, onConfirm, onCancel }) {
+  if (!modal) return null;
+  return (
+    <div
+      style={{
+        position: "fixed",
+        inset: 0,
+        background: "rgba(0,0,0,0.6)",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        zIndex: 1000,
+        padding: "1.5rem",
+      }}
+    >
+      <div className="card" style={{ maxWidth: "400px", width: "100%" }}>
+        <h3 style={{ marginBottom: "0.75rem" }}>{modal.title}</h3>
+        <p
+          style={{
+            fontSize: "0.9rem",
+            color: "var(--text-dim)",
+            marginBottom: "1.5rem",
+          }}
+        >
+          {modal.message}
+        </p>
+        <div
+          style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}
+        >
+          <button onClick={onConfirm} className="btn btn-danger">
+            {modal.confirmLabel || "Confirmer"}
+          </button>
+          <button onClick={onCancel} className="btn btn-secondary">
+            Annuler
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // hard = class mismatch (red), soft = car mismatch within matching class (amber)
 function MismatchWarning({ message, hard = false }) {
   return (
@@ -114,6 +155,7 @@ function SignupForm({
   const [notes, setNotes] = useState(signup?.notes || "");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [confirmModal, setConfirmModal] = useState(null);
 
   const toggleClass = (cls) =>
     setPreferredClasses((prev) =>
@@ -209,21 +251,28 @@ function SignupForm({
     onSaved();
   };
 
-  const handleDelete = async () => {
+  const handleDelete = () => {
     if (!signup?.id) {
       onCancel();
       return;
     }
-    if (!confirm("Se désinscrire ? Cette inscription sera supprimée.")) return;
-    const { error: err } = await supabase
-      .from("signups")
-      .delete()
-      .eq("id", signup.id);
-    if (err) {
-      setError(err.message);
-      return;
-    }
-    onDelete();
+    setConfirmModal({
+      title: "Se désinscrire",
+      message: "Cette inscription sera supprimée définitivement.",
+      confirmLabel: "Se désinscrire",
+      onConfirm: async () => {
+        setConfirmModal(null);
+        const { error: err } = await supabase
+          .from("signups")
+          .delete()
+          .eq("id", signup.id);
+        if (err) {
+          setError(err.message);
+          return;
+        }
+        onDelete();
+      },
+    });
   };
 
   const carsByClass = cars.reduce((acc, car) => {
@@ -236,6 +285,11 @@ function SignupForm({
 
   return (
     <form onSubmit={handleSubmit}>
+      <ConfirmModal
+        modal={confirmModal}
+        onConfirm={() => confirmModal?.onConfirm?.()}
+        onCancel={() => setConfirmModal(null)}
+      />
       {/* Preferred start times */}
       {startTimes.length > 0 && (
         <div className="card" style={{ marginBottom: "1.25rem" }}>

@@ -5,6 +5,47 @@ import { supabaseBrowser as supabase } from "../../lib/supabase-browser";
 
 const emptyForm = { name: "", pit_lane_time_seconds: "" };
 
+function ConfirmModal({ modal, onConfirm, onCancel }) {
+  if (!modal) return null;
+  return (
+    <div
+      style={{
+        position: "fixed",
+        inset: 0,
+        background: "rgba(0,0,0,0.6)",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        zIndex: 1000,
+        padding: "1.5rem",
+      }}
+    >
+      <div className="card" style={{ maxWidth: "400px", width: "100%" }}>
+        <h3 style={{ marginBottom: "0.75rem" }}>{modal.title}</h3>
+        <p
+          style={{
+            fontSize: "0.9rem",
+            color: "var(--text-dim)",
+            marginBottom: "1.5rem",
+          }}
+        >
+          {modal.message}
+        </p>
+        <div
+          style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}
+        >
+          <button onClick={onConfirm} className="btn btn-danger">
+            {modal.confirmLabel || "Confirmer"}
+          </button>
+          <button onClick={onCancel} className="btn btn-secondary">
+            Annuler
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function CircuitsManager({ initialCircuits, iracingTracks }) {
   const router = useRouter();
   const [circuits, setCircuits] = useState(initialCircuits);
@@ -18,6 +59,7 @@ export default function CircuitsManager({ initialCircuits, iracingTracks }) {
   // Collapsed groups state — persisted in localStorage, all collapsed by default
   const [expandedGroups, setExpandedGroups] = useState(new Set());
   const [groupStateLoaded, setGroupStateLoaded] = useState(false);
+  const [confirmModal, setConfirmModal] = useState(null);
 
   const set = (field) => (e) =>
     setForm((prev) => ({ ...prev, [field]: e.target.value }));
@@ -195,22 +237,30 @@ export default function CircuitsManager({ initialCircuits, iracingTracks }) {
     router.refresh();
   };
 
-  const handleDelete = async (id) => {
-    if (!confirm("Supprimer ce circuit ?")) return;
-    const { error: err } = await supabase
-      .from("circuits")
-      .delete()
-      .eq("id", id);
-    if (err) {
-      setError(
-        err.code === "23503"
-          ? "Ce circuit est utilisé par un ou plusieurs événements et ne peut pas être supprimé."
-          : err.message,
-      );
-      return;
-    }
-    setCircuits((prev) => prev.filter((c) => c.id !== id));
-    router.refresh();
+  const handleDelete = (id) => {
+    setConfirmModal({
+      title: "Supprimer ce circuit",
+      message:
+        "Ce circuit sera supprimé définitivement. S'il est utilisé par des événements, la suppression sera bloquée.",
+      confirmLabel: "Supprimer",
+      onConfirm: async () => {
+        setConfirmModal(null);
+        const { error: err } = await supabase
+          .from("circuits")
+          .delete()
+          .eq("id", id);
+        if (err) {
+          setError(
+            err.code === "23503"
+              ? "Ce circuit est utilisé par un ou plusieurs événements et ne peut pas être supprimé."
+              : err.message,
+          );
+          return;
+        }
+        setCircuits((prev) => prev.filter((c) => c.id !== id));
+        router.refresh();
+      },
+    });
   };
 
   const startEdit = (circuit) => {
@@ -405,6 +455,11 @@ export default function CircuitsManager({ initialCircuits, iracingTracks }) {
 
   return (
     <div>
+      <ConfirmModal
+        modal={confirmModal}
+        onConfirm={() => confirmModal?.onConfirm?.()}
+        onCancel={() => setConfirmModal(null)}
+      />
       {!adding && !editingId && error && (
         <div className="alert alert-error" style={{ marginBottom: "1rem" }}>
           {error}

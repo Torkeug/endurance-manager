@@ -2,6 +2,47 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabaseBrowser as supabase } from "../../../../../lib/supabase-browser";
 
+function ConfirmModal({ modal, onConfirm, onCancel }) {
+  if (!modal) return null;
+  return (
+    <div
+      style={{
+        position: "fixed",
+        inset: 0,
+        background: "rgba(0,0,0,0.6)",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        zIndex: 1000,
+        padding: "1.5rem",
+      }}
+    >
+      <div className="card" style={{ maxWidth: "400px", width: "100%" }}>
+        <h3 style={{ marginBottom: "0.75rem" }}>{modal.title}</h3>
+        <p
+          style={{
+            fontSize: "0.9rem",
+            color: "var(--text-dim)",
+            marginBottom: "1.5rem",
+          }}
+        >
+          {modal.message}
+        </p>
+        <div
+          style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}
+        >
+          <button onClick={onConfirm} className="btn btn-danger">
+            {modal.confirmLabel || "Confirmer"}
+          </button>
+          <button onClick={onCancel} className="btn btn-secondary">
+            Annuler
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── Formatting helpers ──────────────────────────────────────────────────────
 
 function formatTime(date) {
@@ -175,6 +216,7 @@ export default function RaceMode({
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [now, setNow] = useState(new Date());
+  const [confirmModal, setConfirmModal] = useState(null);
 
   // Dev-only state override
   const [devState, setDevState] = useState(null);
@@ -344,21 +386,28 @@ export default function RaceMode({
     setSaving(false);
   };
 
-  const undoLastPit = async () => {
-    if (archived || saving) return;
+  const undoLastPit = () => {
     const last = [...stints].reverse().find((s) => s.irl_end_actual);
     if (!last) return;
-    if (!confirm("Annuler le dernier arrêt au stand ?")) return;
-    setSaving(true);
-    // Optimistic update — instant UI response before realtime confirms
-    setStints((prev) =>
-      prev.map((s) => (s.id === last.id ? { ...s, irl_end_actual: null } : s)),
-    );
-    await supabase
-      .from("stints")
-      .update({ irl_end_actual: null })
-      .eq("id", last.id);
-    setSaving(false);
+    setConfirmModal({
+      title: "Annuler le dernier arrêt",
+      message: "L'arrêt au stand sera annulé et le relais repassera en cours.",
+      confirmLabel: "Annuler l'arrêt",
+      onConfirm: async () => {
+        setConfirmModal(null);
+        setSaving(true);
+        setStints((prev) =>
+          prev.map((s) =>
+            s.id === last.id ? { ...s, irl_end_actual: null } : s,
+          ),
+        );
+        await supabase
+          .from("stints")
+          .update({ irl_end_actual: null })
+          .eq("id", last.id);
+        setSaving(false);
+      },
+    });
   };
 
   // ── Shared styles ──────────────────────────────────────────────────────────
@@ -393,6 +442,11 @@ export default function RaceMode({
   // ── Render ─────────────────────────────────────────────────────────────────
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+      <ConfirmModal
+        modal={confirmModal}
+        onConfirm={() => confirmModal?.onConfirm?.()}
+        onCancel={() => setConfirmModal(null)}
+      />
       {/* ── Race progress bar ──────────────────────────────────────────── */}
       <div>
         <div
@@ -455,7 +509,6 @@ export default function RaceMode({
           <span>{raceEnd ? formatTime(raceEnd) : "—"}</span>
         </div>
       </div>
-
       {/* ── Stint progress pills ───────────────────────────────────────── */}
       <div style={{ display: "flex", gap: "0.25rem", flexWrap: "wrap" }}>
         {stints.map((s) => {
@@ -482,7 +535,6 @@ export default function RaceMode({
           );
         })}
       </div>
-
       {/* ── Main active stint card ─────────────────────────────────────── */}
       <div
         className="card"
@@ -698,7 +750,6 @@ export default function RaceMode({
           </button>
         )}
       </div>
-
       {/* ── Next stint card ────────────────────────────────────────────── */}
       {nextStint && isInRace && (
         <div
@@ -769,7 +820,6 @@ export default function RaceMode({
           )}
         </div>
       )}
-
       {/* ── Recalc strategy card — only during race with completed stints ── */}
       {!archived &&
         onRequestRecalc &&
@@ -823,7 +873,6 @@ export default function RaceMode({
             </span>
           </div>
         )}
-
       {/* ── Fuel summary ──────────────────────────────────────────────── */}
       {hasFuelData && (
         <div className="card">
@@ -974,7 +1023,6 @@ export default function RaceMode({
           </div>
         </div>
       )}
-
       {/* ── Completed stints log ───────────────────────────────────────── */}
       {completedStints.length > 0 && (
         <div className="card" style={{ padding: "0.75rem 1rem" }}>
@@ -1015,7 +1063,6 @@ export default function RaceMode({
           </div>
         </div>
       )}
-
       {/* ── Undo button ────────────────────────────────────────────────── */}
       {!archived && completedStints.length > 0 && (
         <div style={{ textAlign: "right" }}>
@@ -1029,7 +1076,6 @@ export default function RaceMode({
           </button>
         </div>
       )}
-
       {/* ── Dev state override ─────────────────────────────────────────── */}
       {process.env.NODE_ENV === "development" && (
         <div

@@ -21,6 +21,47 @@ const ROLE_COLORS = {
   super_admin: "#e05555",
 };
 
+function ConfirmModal({ modal, onConfirm, onCancel }) {
+  if (!modal) return null;
+  return (
+    <div
+      style={{
+        position: "fixed",
+        inset: 0,
+        background: "rgba(0,0,0,0.6)",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        zIndex: 1000,
+        padding: "1.5rem",
+      }}
+    >
+      <div className="card" style={{ maxWidth: "400px", width: "100%" }}>
+        <h3 style={{ marginBottom: "0.75rem" }}>{modal.title}</h3>
+        <p
+          style={{
+            fontSize: "0.9rem",
+            color: "var(--text-dim)",
+            marginBottom: "1.5rem",
+          }}
+        >
+          {modal.message}
+        </p>
+        <div
+          style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}
+        >
+          <button onClick={onConfirm} className="btn btn-danger">
+            {modal.confirmLabel || "Confirmer"}
+          </button>
+          <button onClick={onCancel} className="btn btn-secondary">
+            Annuler
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // Role hierarchy: super_admin can change anyone except other super_admins.
 // Admin can only change drivers and externals — cannot touch other admins.
 // Returns null if the current user cannot change this target's role at all.
@@ -188,6 +229,7 @@ export default function DriversManager({ initialDrivers, currentDriver }) {
   // affected signup data when a driver has active event registrations.
   const [deleteModal, setDeleteModal] = useState(null);
   // null | { driverId, driverName, affectedEvents: [] }
+  const [confirmModal, setConfirmModal] = useState(null);
 
   // Which driver row has its Discord ID pencil editor open, and the draft value
   const [editingDiscord, setEditingDiscord] = useState(null);
@@ -228,57 +270,61 @@ export default function DriversManager({ initialDrivers, currentDriver }) {
     }).catch((e) => console.error("[approve] Email notification failed:", e));
   };
 
-  const refuse = async (driverId) => {
-    if (
-      !confirm(
-        "Refuser cet accès ? Le pilote ne pourra plus se connecter avec cet email.",
-      )
-    )
-      return;
-    setSaving(driverId);
-    setError(null);
-    const { error: err } = await supabase
-      .from("drivers")
-      .update({ approved: false, refused: true })
-      .eq("id", driverId);
-    if (err) {
-      setError(err.message);
-      setSaving(null);
-      return;
-    }
-    setDrivers((prev) =>
-      prev.map((d) =>
-        d.id === driverId ? { ...d, approved: false, refused: true } : d,
-      ),
-    );
-    setSaving(null);
-    router.refresh();
+  const refuse = (driverId) => {
+    setConfirmModal({
+      title: "Refuser l'accès",
+      message: "Ce pilote ne pourra plus se connecter avec cet email.",
+      confirmLabel: "Refuser",
+      onConfirm: async () => {
+        setConfirmModal(null);
+        setSaving(driverId);
+        setError(null);
+        const { error: err } = await supabase
+          .from("drivers")
+          .update({ approved: false, refused: true })
+          .eq("id", driverId);
+        if (err) {
+          setError(err.message);
+          setSaving(null);
+          return;
+        }
+        setDrivers((prev) =>
+          prev.map((d) =>
+            d.id === driverId ? { ...d, approved: false, refused: true } : d,
+          ),
+        );
+        setSaving(null);
+        router.refresh();
+      },
+    });
   };
 
   // revoke = back to pending (approved: false), distinct from refuse (refused: true)
-  const revoke = async (driverId) => {
-    if (
-      !confirm(
-        "Révoquer l'accès de ce pilote ? Il sera mis en attente d'approbation.",
-      )
-    )
-      return;
-    setSaving(driverId);
-    setError(null);
-    const { error: err } = await supabase
-      .from("drivers")
-      .update({ approved: false })
-      .eq("id", driverId);
-    if (err) {
-      setError(err.message);
-      setSaving(null);
-      return;
-    }
-    setDrivers((prev) =>
-      prev.map((d) => (d.id === driverId ? { ...d, approved: false } : d)),
-    );
-    setSaving(null);
-    router.refresh();
+  const revoke = (driverId) => {
+    setConfirmModal({
+      title: "Révoquer l'accès",
+      message: "Ce pilote sera mis en attente d'approbation.",
+      confirmLabel: "Révoquer",
+      onConfirm: async () => {
+        setConfirmModal(null);
+        setSaving(driverId);
+        setError(null);
+        const { error: err } = await supabase
+          .from("drivers")
+          .update({ approved: false })
+          .eq("id", driverId);
+        if (err) {
+          setError(err.message);
+          setSaving(null);
+          return;
+        }
+        setDrivers((prev) =>
+          prev.map((d) => (d.id === driverId ? { ...d, approved: false } : d)),
+        );
+        setSaving(null);
+        router.refresh();
+      },
+    });
   };
 
   // Preview signups before deleting — shows affected events in a modal.
@@ -442,7 +488,12 @@ export default function DriversManager({ initialDrivers, currentDriver }) {
 
   return (
     <div>
-      {/* Delete preview modal — shows affected events before committing */}
+      <ConfirmModal
+        modal={confirmModal}
+        onConfirm={() => confirmModal?.onConfirm?.()}
+        onCancel={() => setConfirmModal(null)}
+      />
+
       <DeleteDriverModal
         modal={deleteModal}
         onConfirm={commitDelete}

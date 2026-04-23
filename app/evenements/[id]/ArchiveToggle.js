@@ -3,25 +3,79 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabaseBrowser as supabase } from "../../../lib/supabase-browser";
 
+function ConfirmModal({ modal, onConfirm, onCancel }) {
+  if (!modal) return null;
+  return (
+    <div
+      style={{
+        position: "fixed",
+        inset: 0,
+        background: "rgba(0,0,0,0.6)",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        zIndex: 1000,
+        padding: "1.5rem",
+      }}
+    >
+      <div className="card" style={{ maxWidth: "400px", width: "100%" }}>
+        <h3 style={{ marginBottom: "0.75rem" }}>{modal.title}</h3>
+        <p
+          style={{
+            fontSize: "0.9rem",
+            color: "var(--text-dim)",
+            marginBottom: "1.5rem",
+          }}
+        >
+          {modal.message}
+        </p>
+        <div
+          style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}
+        >
+          <button onClick={onConfirm} className="btn btn-primary">
+            {modal.confirmLabel || "Confirmer"}
+          </button>
+          <button onClick={onCancel} className="btn btn-secondary">
+            Annuler
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function ArchiveToggle({ eventId, archived }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [confirmModal, setConfirmModal] = useState(null);
   const router = useRouter();
 
-  const handleToggle = async () => {
-    const msg = archived
-      ? "Désarchiver cet événement ? Il sera à nouveau visible par tous les pilotes."
-      : "Archiver cet événement ? Il passera en lecture seule pour les pilotes.";
-    if (!confirm(msg)) return;
+  const handleToggle = () => {
+    if (!archived) {
+      // Archiving — call Postgres function directly, no confirm needed
+      // (the archive operation is significant enough to not need an extra step
+      // since it's clearly labeled and reversible via unarchive)
+      commitToggle();
+    } else {
+      // Unarchiving — confirm first
+      setConfirmModal({
+        title: "Désarchiver cet événement",
+        message:
+          "Cet événement sera à nouveau visible et modifiable par tous les pilotes.",
+        confirmLabel: "Désarchiver",
+        onConfirm: () => {
+          setConfirmModal(null);
+          commitToggle();
+        },
+      });
+    }
+  };
 
+  const commitToggle = async () => {
     setLoading(true);
     setError(null);
 
     if (!archived) {
-      // ── Archiving ────────────────────────────────────────────────────────
-      // Delegates all snapshot writes + archived flag to a single Postgres
-      // function that runs as one atomic transaction. If anything fails,
-      // nothing is committed and the event stays unarchived.
       const { error: rpcErr } = await supabase.rpc("archive_event", {
         event_id: eventId,
       });
@@ -31,9 +85,6 @@ export default function ArchiveToggle({ eventId, archived }) {
         return;
       }
     } else {
-      // ── Unarchiving ──────────────────────────────────────────────────────
-      // Simple flag flip — no snapshot changes needed.
-      // Snapshots are kept so they're ready if the event is re-archived.
       const { error: updateErr } = await supabase
         .from("events")
         .update({ archived: false })
@@ -51,6 +102,11 @@ export default function ArchiveToggle({ eventId, archived }) {
 
   return (
     <div>
+      <ConfirmModal
+        modal={confirmModal}
+        onConfirm={() => confirmModal?.onConfirm?.()}
+        onCancel={() => setConfirmModal(null)}
+      />
       {error && (
         <div
           className="alert alert-error"

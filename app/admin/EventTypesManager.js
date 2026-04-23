@@ -3,6 +3,47 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabaseBrowser as supabase } from "../../lib/supabase-browser";
 
+function ConfirmModal({ modal, onConfirm, onCancel }) {
+  if (!modal) return null;
+  return (
+    <div
+      style={{
+        position: "fixed",
+        inset: 0,
+        background: "rgba(0,0,0,0.6)",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        zIndex: 1000,
+        padding: "1.5rem",
+      }}
+    >
+      <div className="card" style={{ maxWidth: "400px", width: "100%" }}>
+        <h3 style={{ marginBottom: "0.75rem" }}>{modal.title}</h3>
+        <p
+          style={{
+            fontSize: "0.9rem",
+            color: "var(--text-dim)",
+            marginBottom: "1.5rem",
+          }}
+        >
+          {modal.message}
+        </p>
+        <div
+          style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}
+        >
+          <button onClick={onConfirm} className="btn btn-danger">
+            {modal.confirmLabel || "Confirmer"}
+          </button>
+          <button onClick={onCancel} className="btn btn-secondary">
+            Annuler
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function EventTypesManager({
   initialEventTypes,
   initialEventTypeCars,
@@ -18,6 +59,7 @@ export default function EventTypesManager({
   const [newName, setNewName] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
+  const [confirmModal, setConfirmModal] = useState(null);
 
   const reset = () => {
     setAdding(false);
@@ -88,26 +130,34 @@ export default function EventTypesManager({
     router.refresh();
   };
 
-  const handleDelete = async (id) => {
-    if (!confirm("Supprimer ce type d'événement ?")) return;
-    const { error: err } = await supabase
-      .from("event_types")
-      .delete()
-      .eq("id", id);
-    if (err) {
-      if (err.code === "23503") {
-        setError(
-          "Ce type d'événement est utilisé par un ou plusieurs événements et ne peut pas être supprimé.",
+  const handleDelete = (id) => {
+    setConfirmModal({
+      title: "Supprimer ce type d'événement",
+      message:
+        "Ce type sera supprimé définitivement. S'il est utilisé par des événements existants, la suppression sera bloquée.",
+      confirmLabel: "Supprimer",
+      onConfirm: async () => {
+        setConfirmModal(null);
+        const { error: err } = await supabase
+          .from("event_types")
+          .delete()
+          .eq("id", id);
+        if (err) {
+          setError(
+            err.code === "23503"
+              ? "Ce type d'événement est utilisé par un ou plusieurs événements et ne peut pas être supprimé."
+              : err.message,
+          );
+          return;
+        }
+        setEventTypes((prev) => prev.filter((t) => t.id !== id));
+        setEventTypeCars((prev) =>
+          prev.filter((etc) => etc.event_type_id !== id),
         );
-      } else {
-        setError(err.message);
-      }
-      return;
-    }
-    setEventTypes((prev) => prev.filter((t) => t.id !== id));
-    setEventTypeCars((prev) => prev.filter((etc) => etc.event_type_id !== id));
-    if (expandedId === id) setExpandedId(null);
-    router.refresh();
+        if (expandedId === id) setExpandedId(null);
+        router.refresh();
+      },
+    });
   };
 
   // Toggles a car's presence in event_type_cars.
@@ -160,6 +210,11 @@ export default function EventTypesManager({
 
   return (
     <div>
+      <ConfirmModal
+        modal={confirmModal}
+        onConfirm={() => confirmModal?.onConfirm?.()}
+        onCancel={() => setConfirmModal(null)}
+      />
       {error && !editingId && !adding && (
         <div className="alert alert-error" style={{ marginBottom: "1rem" }}>
           {error}
