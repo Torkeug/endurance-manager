@@ -82,12 +82,33 @@ export default function PendingPage() {
               color: "var(--text-dim)",
               fontSize: "0.9rem",
               lineHeight: 1.6,
-              marginBottom: "1.5rem",
+              marginBottom: "0.75rem",
             }}
           >
             Votre profil a été créé et est en attente de validation par un
-            administrateur. Contactez un administrateur pour activer votre
-            compte.
+            administrateur Kronos SimSports.
+          </p>
+          <p
+            style={{
+              color: "var(--text-dim)",
+              fontSize: "0.85rem",
+              lineHeight: 1.6,
+              marginBottom: "0.75rem",
+            }}
+          >
+            Vous recevrez un email dès que votre compte sera approuvé. Cette
+            page se met à jour automatiquement — pas besoin de rafraîchir.
+          </p>
+          <p
+            style={{
+              color: "var(--text-dim)",
+              fontSize: "0.85rem",
+              lineHeight: 1.6,
+              marginBottom: "1.5rem",
+            }}
+          >
+            En attendant, vous pouvez contacter un administrateur sur Discord
+            pour accélérer la validation.
           </p>
           <button onClick={handleLogout} className="btn btn-secondary">
             Se déconnecter
