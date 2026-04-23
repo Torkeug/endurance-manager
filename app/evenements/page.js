@@ -15,18 +15,6 @@ function getEarliestStart(startTimes) {
   );
 }
 
-// Latest start = used for auto-archive calculation (race ends after last start + duration).
-function getLatestStart(startTimes) {
-  if (!startTimes || startTimes.length === 0) return null;
-  return startTimes.reduce(
-    (latest, st) =>
-      !latest || new Date(st.irl_start) > new Date(latest.irl_start)
-        ? st
-        : latest,
-    null,
-  );
-}
-
 // Serialize an event row into a plain object safe to pass to the client component.
 // currentDriverId is used to flag whether the current user is signed up.
 function serializeEvent(ev, currentDriverId) {
@@ -103,33 +91,6 @@ export default async function EvenementsPage() {
         <div className="alert alert-error">Erreur : {error.message}</div>
       </div>
     );
-  }
-
-  const now = new Date();
-  // Auto-archive all past events (not just championship rounds) —
-  // any event whose last start + duration + 2h headroom is in the past.
-  const eventsToArchive = (evenements || []).filter((ev) => {
-    if (ev.archived) return false;
-    const latestStart = getLatestStart(ev.event_start_times);
-    if (!latestStart) return false;
-    const finish = new Date(
-      new Date(latestStart.irl_start).getTime() +
-        ((ev.duration_minutes || 0) + 120) * 60 * 1000,
-    );
-    return finish < now;
-  });
-  if (eventsToArchive.length > 0) {
-    // Call the atomic archive_event() Postgres function for each event —
-    // ensures snapshots are written before the archived flag is flipped,
-    // same as the manual archive flow in ArchiveToggle.js.
-    await Promise.all(
-      eventsToArchive.map((e) =>
-        supabase.rpc("archive_event", { event_id: e.id }),
-      ),
-    );
-    eventsToArchive.forEach((e) => {
-      e.archived = true;
-    });
   }
 
   const allEvents = (evenements || []).map((ev) =>
