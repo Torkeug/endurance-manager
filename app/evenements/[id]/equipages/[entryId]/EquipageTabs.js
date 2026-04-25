@@ -168,6 +168,8 @@ export default function EquipageTabs({
           isInTeam={isInTeam}
           isAdmin={isAdmin}
           teamStartTimeId={teamEntry.start_time_id}
+          irlStart={teamEntry.event_start_times?.irl_start || null}
+          durationMinutes={teamEntry.events?.duration_minutes || 0}
         />
       )}
 

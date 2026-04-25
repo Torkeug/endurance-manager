@@ -98,6 +98,69 @@ function Badge({ label, bg, borderColor }) {
   );
 }
 
+// Replaces native prompt() for wipe-all action — consistent with app modal pattern
+function WipeModal({ onConfirm, onCancel }) {
+  const [input, setInput] = useState("");
+  const valid = input === "CONFIRMER";
+  return (
+    <div
+      style={{
+        position: "fixed",
+        inset: 0,
+        background: "rgba(0,0,0,0.6)",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        zIndex: 1000,
+        padding: "1.5rem",
+      }}
+    >
+      <div className="card" style={{ maxWidth: "420px", width: "100%" }}>
+        <h3 style={{ marginBottom: "0.75rem" }}>
+          Effacer toutes les disponibilités
+        </h3>
+        <p
+          style={{
+            fontSize: "0.9rem",
+            color: "var(--text-dim)",
+            marginBottom: "1rem",
+          }}
+        >
+          Cette action effacera les disponibilités de{" "}
+          <strong style={{ color: "var(--text)" }}>tous les pilotes</strong>.
+          Tapez{" "}
+          <span className="mono" style={{ color: "var(--danger)" }}>
+            CONFIRMER
+          </span>{" "}
+          pour continuer.
+        </p>
+        <input
+          type="text"
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          placeholder="CONFIRMER"
+          autoFocus
+          style={{ marginBottom: "1rem" }}
+        />
+        <div
+          style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}
+        >
+          <button
+            onClick={onConfirm}
+            className="btn btn-danger"
+            disabled={!valid}
+          >
+            Effacer définitivement
+          </button>
+          <button onClick={onCancel} className="btn btn-secondary">
+            Annuler
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function AvailabilityGrid({
   teamEntryId,
   assignedDrivers,
@@ -119,6 +182,7 @@ export default function AvailabilityGrid({
   const pendingUpdates = useRef({});
   const [dragPreview, setDragPreview] = useState({});
   const [dragMode, setDragMode] = useState("available");
+  const [wipeModal, setWipeModal] = useState(false);
 
   const slots = irlStart ? generateSlots(irlStart, durationMinutes || 0) : [];
   const raceStart = irlStart ? new Date(irlStart) : null;
@@ -158,7 +222,10 @@ export default function AvailabilityGrid({
     const key = `${driverId}_${slot.toISOString()}`;
     if (dragPreview[key] !== undefined) return dragPreview[key];
     const record = getAvail(driverId, slot);
-    if (!record) return false;
+    // No DB row = truly unset — returns undefined, not false
+    // Pre-population on assign ensures all slots have rows, so undefined
+    // means the driver was assigned before pre-population was introduced.
+    if (!record) return undefined;
     return record.available;
   };
 
@@ -257,7 +324,8 @@ export default function AvailabilityGrid({
 
   const driverCounts = assignedDrivers.reduce((acc, d) => {
     const id = d.drivers?.id;
-    acc[id] = slots.filter((s) => getSlotState(id, s) === true).length;
+    // Count all slots that have been explicitly set (any state except undefined)
+    acc[id] = slots.filter((s) => getSlotState(id, s) !== undefined).length;
     return acc;
   }, {});
 
@@ -434,38 +502,43 @@ export default function AvailabilityGrid({
               </button>
             )}
 
-            {/* Wipe all — requires typing CONFIRMER to prevent accidents */}
+            {/* Wipe all — modal with typed confirmation to prevent accidents */}
             {!selectedDriverId && (
-              <button
-                onClick={async () => {
-                  const input = prompt(
-                    "Cette action efface les disponibilités de TOUS les pilotes.\nTapez CONFIRMER pour continuer :",
-                  );
-                  if (input !== "CONFIRMER") return;
-                  const updates = assignedDrivers.flatMap((d) =>
-                    slots.map((slot) => ({
-                      team_entry_id: teamEntryId,
-                      driver_id: d.drivers?.id,
-                      slot_start: slot.toISOString(),
-                      available: false,
-                      updated_at: new Date().toISOString(),
-                    })),
-                  );
-                  setAvailabilities((prev) => {
-                    const next = { ...prev };
-                    updates.forEach((u) => {
-                      next[`${u.driver_id}_${u.slot_start}`] = u;
-                    });
-                    return next;
-                  });
-                  await supabase.from("availabilities").upsert(updates, {
-                    onConflict: "team_entry_id,driver_id,slot_start",
-                  });
-                }}
-                className="btn btn-danger btn-sm"
-              >
-                Effacer toutes les disponibilités
-              </button>
+              <>
+                {wipeModal && (
+                  <WipeModal
+                    onConfirm={async () => {
+                      setWipeModal(false);
+                      const updates = assignedDrivers.flatMap((d) =>
+                        slots.map((slot) => ({
+                          team_entry_id: teamEntryId,
+                          driver_id: d.drivers?.id,
+                          slot_start: slot.toISOString(),
+                          available: false,
+                          updated_at: new Date().toISOString(),
+                        })),
+                      );
+                      setAvailabilities((prev) => {
+                        const next = { ...prev };
+                        updates.forEach((u) => {
+                          next[`${u.driver_id}_${u.slot_start}`] = u;
+                        });
+                        return next;
+                      });
+                      await supabase.from("availabilities").upsert(updates, {
+                        onConflict: "team_entry_id,driver_id,slot_start",
+                      });
+                    }}
+                    onCancel={() => setWipeModal(false)}
+                  />
+                )}
+                <button
+                  onClick={() => setWipeModal(true)}
+                  className="btn btn-danger btn-sm"
+                >
+                  Effacer toutes les disponibilités
+                </button>
+              </>
             )}
           </div>
         </div>

@@ -3,6 +3,24 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabaseBrowser as supabase } from "../../../../../lib/supabase-browser";
 
+// Mirror of AvailabilityGrid's generateSlots — used to pre-populate
+// availability slots when a driver is assigned to a team entry.
+// 30-minute slots covering race window plus 1h buffer on each side.
+function generateSlots(irlStart, durationMinutes) {
+  const slots = [];
+  const start = new Date(new Date(irlStart).getTime() - 60 * 60 * 1000);
+  const end = new Date(
+    new Date(irlStart).getTime() + (durationMinutes + 60) * 60 * 1000,
+  );
+  let current = new Date(start);
+  current.setMinutes(Math.floor(current.getMinutes() / 30) * 30, 0, 0);
+  while (current <= end) {
+    slots.push(new Date(current));
+    current = new Date(current.getTime() + 30 * 60 * 1000);
+  }
+  return slots;
+}
+
 // ── PreferenceBadge ───────────────────────────────────────────────────────
 // Consolidated mismatch badge. Shows a single pill with all conflicts listed,
 // coloured by worst severity:
@@ -234,15 +252,13 @@ export default function DriversAssignment({
   assignedDrivers,
   unassignedDrivers,
   currentDriver,
-  // archived — when true all assign/unassign actions are hidden
   archived = false,
   isInEvent = false,
-  // isInTeam: current driver is already in this team entry
   isInTeam = false,
-  // isAdmin: passed explicitly from EquipageTabs so we don't recompute
   isAdmin = false,
-  // teamStartTimeId: used to flag and cascade start time preferences
   teamStartTimeId = null,
+  irlStart = null,
+  durationMinutes = 0,
 }) {
   const router = useRouter();
   const [assigned, setAssigned] = useState(assignedDrivers);
@@ -341,6 +357,26 @@ export default function DriversAssignment({
     // Restore previous stint slots if the driver confirmed
     if (restoreStintsForDriver) {
       await restoreStints(signup.drivers?.id);
+    }
+
+    // Pre-populate availability slots as unavailable (false) for this driver.
+    // This ensures the engagement tab shows slots as "renseigné" immediately
+    // after assignment, rather than appearing empty/unfilled.
+    // Uses upsert to avoid duplicates if driver was previously assigned.
+    if (irlStart && durationMinutes && signup.drivers?.id) {
+      const slots = generateSlots(irlStart, durationMinutes);
+      const availRows = slots.map((slot) => ({
+        team_entry_id: entryId,
+        driver_id: signup.drivers.id,
+        slot_start: slot.toISOString(),
+        available: false,
+        updated_at: new Date().toISOString(),
+      }));
+      await supabase.from("availabilities").upsert(availRows, {
+        onConflict: "team_entry_id,driver_id,slot_start",
+        // Don't overwrite slots the driver has already explicitly set
+        ignoreDuplicates: true,
+      });
     }
 
     setAssigned((prev) => [
