@@ -47,17 +47,65 @@ function ConfirmModal({ modal, onConfirm, onCancel }) {
         padding: "1.5rem",
       }}
     >
-      <div className="card" style={{ maxWidth: "400px", width: "100%" }}>
+      <div className="card" style={{ maxWidth: "480px", width: "100%" }}>
         <h3 style={{ marginBottom: "0.75rem" }}>{modal.title}</h3>
-        <p
-          style={{
-            fontSize: "0.9rem",
-            color: "var(--text-dim)",
-            marginBottom: "1.5rem",
-          }}
-        >
-          {modal.message}
-        </p>
+
+        {/* Usage warning — shown when crew name is used by team entries */}
+        {modal.affectedEvents?.length > 0 ? (
+          <>
+            <p
+              style={{
+                fontSize: "0.9rem",
+                color: "var(--text-dim)",
+                marginBottom: "0.75rem",
+              }}
+            >
+              ⚠️ Ce nom est utilisé par{" "}
+              <strong style={{ color: "var(--text)" }}>
+                {modal.affectedEvents.length} événement
+                {modal.affectedEvents.length > 1 ? "s" : ""}
+              </strong>{" "}
+              existants :
+            </p>
+            <ul
+              style={{
+                margin: "0 0 1rem",
+                paddingLeft: "1.25rem",
+                fontSize: "0.88rem",
+                color: "var(--danger)",
+                display: "flex",
+                flexDirection: "column",
+                gap: "0.2rem",
+              }}
+            >
+              {modal.affectedEvents.map((name, i) => (
+                <li key={i}>{name}</li>
+              ))}
+            </ul>
+            <p
+              style={{
+                fontSize: "0.82rem",
+                color: "var(--text-dim)",
+                marginBottom: "1.5rem",
+              }}
+            >
+              Les équipages concernés conserveront leur nom actuel mais ne
+              seront plus liés à ce nom d&apos;équipage.
+            </p>
+          </>
+        ) : (
+          <p
+            style={{
+              fontSize: "0.9rem",
+              color: "var(--text-dim)",
+              marginBottom: "1.5rem",
+            }}
+          >
+            Ce nom n&apos;est utilisé par aucun équipage. La suppression est
+            sans impact.
+          </p>
+        )}
+
         <div
           style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}
         >
@@ -156,12 +204,22 @@ export default function CrewNamesManager({ initialCrewNames }) {
     router.refresh();
   };
 
-  const handleDelete = (id) => {
+  const handleDelete = async (id, name) => {
+    // Preview usage before showing the modal
+    const { data: usedBy } = await supabase
+      .from("team_entries")
+      .select("id, crew_name, events(name)")
+      .eq("crew_name", name);
+
+    const affectedEvents = [
+      ...new Set((usedBy || []).map((te) => te.events?.name).filter(Boolean)),
+    ];
+
     setConfirmModal({
-      title: "Supprimer ce nom d'équipage",
-      message:
-        "Ce nom sera supprimé définitivement. S'il est utilisé par des équipages existants, la suppression sera bloquée.",
-      confirmLabel: "Supprimer",
+      title: `Supprimer "${name}"`,
+      message: null,
+      affectedEvents,
+      confirmLabel: "Supprimer définitivement",
       onConfirm: async () => {
         setConfirmModal(null);
         const { error: err } = await supabase
@@ -169,11 +227,7 @@ export default function CrewNamesManager({ initialCrewNames }) {
           .delete()
           .eq("id", id);
         if (err) {
-          setError(
-            err.code === "23503"
-              ? "Ce nom est utilisé par un ou plusieurs équipages et ne peut pas être supprimé."
-              : err.message,
-          );
+          setError(err.message);
           return;
         }
         setItems((prev) => prev.filter((i) => i.id !== id));
@@ -431,7 +485,7 @@ export default function CrewNamesManager({ initialCrewNames }) {
                         Modifier
                       </button>
                       <button
-                        onClick={() => handleDelete(item.id)}
+                        onClick={() => handleDelete(item.id, item.name)}
                         className="btn btn-danger btn-sm"
                       >
                         Supprimer
