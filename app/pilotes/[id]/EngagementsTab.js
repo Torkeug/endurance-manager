@@ -272,13 +272,24 @@ function SignupCard({ signup, availMap, stintsMap, carsMap = {} }) {
                   <span style={{ color: "#2eb460", fontWeight: 600 }}>
                     {avail.available}
                   </span>
-                  <span style={{ color: "var(--text-dim)" }}>
-                    {" "}
-                    disponibles ·{" "}
-                  </span>
+                  <span style={{ color: "var(--text-dim)" }}> disponibles</span>
+                  {avail.tentative > 0 && (
+                    <>
+                      <span style={{ color: "var(--text-dim)" }}> · </span>
+                      <span style={{ color: "#d4904a", fontWeight: 600 }}>
+                        {avail.tentative}
+                      </span>
+                      <span style={{ color: "var(--text-dim)" }}>
+                        {" "}
+                        incertains
+                      </span>
+                    </>
+                  )}
+                  <span style={{ color: "var(--text-dim)" }}> · </span>
                   <span style={{ fontWeight: 600 }}>{avail.filled}</span>
                   <span style={{ color: "var(--text-dim)" }}> renseignés</span>
                 </div>
+                {/* Bar: green = available, amber = tentative, rest = unavailable */}
                 <div
                   style={{
                     marginTop: "0.5rem",
@@ -286,19 +297,33 @@ function SignupCard({ signup, availMap, stintsMap, carsMap = {} }) {
                     background: "var(--border)",
                     borderRadius: "3px",
                     overflow: "hidden",
+                    display: "flex",
                   }}
                 >
                   <div
                     style={{
                       height: "100%",
-                      borderRadius: "3px",
                       background: "var(--accent)",
                       width: `${Math.min(
                         100,
                         (avail.available / Math.max(1, avail.filled)) * 100,
                       )}%`,
+                      transition: "width 0.3s",
                     }}
                   />
+                  {avail.tentative > 0 && (
+                    <div
+                      style={{
+                        height: "100%",
+                        background: "#d4904a",
+                        width: `${Math.min(
+                          100,
+                          (avail.tentative / Math.max(1, avail.filled)) * 100,
+                        )}%`,
+                        transition: "width 0.3s",
+                      }}
+                    />
+                  )}
                 </div>
               </>
             ) : (

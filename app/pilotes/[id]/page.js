@@ -126,9 +126,11 @@ export default async function DriverDetail({ params, searchParams }) {
   const availMap = {};
   (availData || []).forEach((a) => {
     if (!availMap[a.team_entry_id])
-      availMap[a.team_entry_id] = { filled: 0, available: 0 };
+      availMap[a.team_entry_id] = { filled: 0, available: 0, tentative: 0 };
     availMap[a.team_entry_id].filled++;
     if (a.available === true) availMap[a.team_entry_id].available++;
+    // null = tentative/incertain — counts as renseigné
+    if (a.available === null) availMap[a.team_entry_id].tentative++;
   });
 
   // Build stints map: team_entry_id → stints[]
