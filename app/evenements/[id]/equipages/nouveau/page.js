@@ -5,6 +5,49 @@ import Link from "next/link";
 import { supabaseBrowser as supabase } from "../../../../../lib/supabase-browser";
 import { formatTimeInZone } from "../../../../../lib/timezone";
 
+// Used to pre-populate availability slots on driver assignment at team creation.
+// Mirrors AvailabilityGrid's generateSlots — 30-min slots, 1h buffer each side.
+function generateSlots(irlStart, durationMinutes) {
+  const slots = [];
+  const start = new Date(new Date(irlStart).getTime() - 60 * 60 * 1000);
+  const end = new Date(
+    new Date(irlStart).getTime() + (durationMinutes + 60) * 60 * 1000,
+  );
+  let current = new Date(start);
+  current.setMinutes(Math.floor(current.getMinutes() / 30) * 30, 0, 0);
+  while (current <= end) {
+    slots.push(new Date(current));
+    current = new Date(current.getTime() + 30 * 60 * 1000);
+  }
+  return slots;
+}
+
+// Pre-populates availability slots for a list of drivers as unavailable (false).
+// Uses upsert with ignoreDuplicates so existing entries are never overwritten.
+async function prepopulateAvailabilities(
+  supabase,
+  entryId,
+  driverIds,
+  irlStart,
+  durationMinutes,
+) {
+  if (!irlStart || !durationMinutes || driverIds.length === 0) return;
+  const slots = generateSlots(irlStart, durationMinutes);
+  const rows = driverIds.flatMap((driverId) =>
+    slots.map((slot) => ({
+      team_entry_id: entryId,
+      driver_id: driverId,
+      slot_start: slot.toISOString(),
+      available: false,
+      updated_at: new Date().toISOString(),
+    })),
+  );
+  await supabase.from("availabilities").upsert(rows, {
+    onConflict: "team_entry_id,driver_id,slot_start",
+    ignoreDuplicates: true,
+  });
+}
+
 const emptyForm = {
   crew_name: "",
   car_id: "",
@@ -37,6 +80,7 @@ export default function NouvelEquipage({ params }) {
   // Set after team entry is inserted but before signups are assigned.
   // null = modal closed | object = modal open with affected driver details.
   const [pendingAssignment, setPendingAssignment] = useState(null);
+  const [eventDurationMinutes, setEventDurationMinutes] = useState(0);
 
   // Multiple Twitch streams — stored as array of raw usernames
   const [twitchUsernames, setTwitchUsernames] = useState([]);
@@ -58,7 +102,7 @@ export default function NouvelEquipage({ params }) {
         .order("irl_start"),
       supabase
         .from("events")
-        .select("name, format, timezone, championship_id")
+        .select("name, format, timezone, championship_id, duration_minutes")
         .eq("id", id)
         .single(),
       supabase.from("crew_names").select("name").order("sort_order"),
@@ -88,6 +132,7 @@ export default function NouvelEquipage({ params }) {
         setEventName(evData?.name || "");
         setEventTimezone(evData?.timezone || "Europe/Paris");
         setIsChampionship(!!evData?.championship_id);
+        setEventDurationMinutes(evData?.duration_minutes || 0);
         setCrewNames(
           crewData?.map((c) => c.name).sort((a, b) => a.localeCompare(b)) || [],
         );
@@ -258,16 +303,17 @@ export default function NouvelEquipage({ params }) {
     setError(null);
 
     // Validate car number uniqueness within the event before inserting
-    if (isChampionship && form.car_number !== "") {
+    if (isChampionship && form.car_number !== "" && form.start_time_id) {
       const { data: existing } = await supabase
         .from("team_entries")
-        .select("id")
+        .select("id, crew_name")
         .eq("event_id", id)
+        .eq("start_time_id", form.start_time_id)
         .eq("car_number", parseInt(form.car_number))
         .maybeSingle();
       if (existing) {
         setError(
-          `Le numéro #${form.car_number} est déjà utilisé par un autre équipage pour cet événement.`,
+          `Le numéro #${form.car_number} est déjà utilisé par un autre équipage pour ce créneau de départ.`,
         );
         setLoading(false);
         return;
@@ -343,7 +389,7 @@ export default function NouvelEquipage({ params }) {
             selectedSignups,
             affectedSignups: affected,
             startTimeLabel: startTime
-              ? `${startTime.label} à ${startTime.irl_start}`
+              ? `${startTime.label} à ${formatTimeInZone(startTime.irl_start, eventTimezone)}`
               : form.start_time_id,
           });
           setLoading(false);
@@ -357,14 +403,26 @@ export default function NouvelEquipage({ params }) {
               .from("signups")
               .update({
                 team_entry_id: data.id,
-                // Snapshot preferences before assignment so unassign can
-                // safely reverse only what was added here
                 preferred_start_time_ids_snapshot:
                   s.preferred_start_time_ids || [],
               })
               .eq("id", s.id),
           ),
         );
+        // Pre-populate availability slots for all assigned drivers
+        const startTime = startTimes.find((st) => st.id === form.start_time_id);
+        if (startTime) {
+          const driverIds = selectedSignups
+            .map((s) => s.drivers?.id)
+            .filter(Boolean);
+          await prepopulateAvailabilities(
+            supabase,
+            data.id,
+            driverIds,
+            startTime.irl_start,
+            eventDurationMinutes,
+          );
+        }
       }
       router.push(`/evenements/${id}/equipages/${data.id}`);
       router.refresh();
@@ -419,6 +477,20 @@ export default function NouvelEquipage({ params }) {
       }),
     );
 
+    // Pre-populate availability slots for all assigned drivers
+    const startTime = startTimes.find((st) => st.id === form.start_time_id);
+    if (startTime) {
+      const driverIds = pendingAssignment.selectedSignups
+        .map((s) => s.drivers?.id)
+        .filter(Boolean);
+      await prepopulateAvailabilities(
+        supabase,
+        pendingAssignment.entryId,
+        driverIds,
+        startTime.irl_start,
+        eventDurationMinutes,
+      );
+    }
     setPendingAssignment(null);
     router.push(`/evenements/${id}/equipages/${pendingAssignment.entryId}`);
     router.refresh();

@@ -254,17 +254,18 @@ export default function ModifierEquipage({ params }) {
 
     // Validate car number uniqueness within the event before updating —
     // exclude the current entry from the check so it can keep its own number.
-    if (isChampionship && form.car_number !== "") {
+    if (isChampionship && form.car_number !== "" && form.start_time_id) {
       const { data: existing } = await supabase
         .from("team_entries")
-        .select("id")
+        .select("id, crew_name")
         .eq("event_id", id)
+        .eq("start_time_id", form.start_time_id)
         .eq("car_number", parseInt(form.car_number))
         .neq("id", entryId)
         .maybeSingle();
       if (existing) {
         setError(
-          `Le numéro #${form.car_number} est déjà utilisé par un autre équipage pour cet événement.`,
+          `Le numéro #${form.car_number} est déjà utilisé par ${existing.crew_name} pour ce créneau de départ.`,
         );
         setLoading(false);
         return;
@@ -306,7 +307,7 @@ export default function ModifierEquipage({ params }) {
       setError(
         err.code === "23505"
           ? err.message.includes("car_number")
-            ? `Le numéro de course est déjà utilisé par un autre équipage pour cet événement.`
+            ? `Le numéro de course est déjà utilisé par un autre équipage pour ce créneau de départ.`
             : "Cet équipage est déjà inscrit pour ce créneau de départ."
           : err.message,
       );

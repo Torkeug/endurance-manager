@@ -399,7 +399,7 @@ function CarNumberConflictModal({ conflict, onClose }) {
           <strong style={{ color: "var(--text)" }}>
             {conflict.existingCrewName}
           </strong>{" "}
-          pour cette manche.
+          pour ce créneau de départ dans cette manche.
         </p>
         <button onClick={onClose} className="btn btn-primary">
           OK
@@ -575,7 +575,7 @@ export default function ChampionshipTeamsManager() {
     const { data: ents } = await supabaseBrowser
       .from("team_entries")
       .select(
-        "id, crew_name, car_number, class, car_name_snapshot, event_id, cars(name)",
+        "id, crew_name, car_number, class, car_name_snapshot, event_id, start_time_id, cars(name)",
       )
       .in("event_id", eventIds)
       .order("crew_name");
@@ -594,21 +594,25 @@ export default function ChampionshipTeamsManager() {
     const number = rawVal === "" ? null : parseInt(rawVal, 10);
     if (rawVal !== "" && isNaN(number)) return;
 
-    // Validate uniqueness within the same event before saving —
+    // Validate uniqueness within the same event AND start time before saving —
     // exclude the current entry so it can keep its own number.
     if (number !== null) {
       const entry = entries.find((e) => e.id === entryId);
-      const { data: existing } = await supabaseBrowser
+      const query = supabaseBrowser
         .from("team_entries")
         .select("id, crew_name")
         .eq("event_id", entry?.event_id)
         .eq("car_number", number)
-        .neq("id", entryId)
-        .maybeSingle();
+        .neq("id", entryId);
+
+      // Only scope to start_time_id if the entry has one
+      if (entry?.start_time_id) {
+        query.eq("start_time_id", entry.start_time_id);
+      }
+
+      const { data: existing } = await query.maybeSingle();
       if (existing) {
-        // Show conflict modal instead of native alert()
         setNumberConflict({ number, existingCrewName: existing.crew_name });
-        // Revert input by re-setting entries to their current state
         setEntries((prev) => [...prev]);
         return;
       }
