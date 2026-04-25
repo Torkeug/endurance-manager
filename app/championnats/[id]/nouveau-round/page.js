@@ -144,6 +144,27 @@ export default function NouveauRound({ params }) {
       .then(({ data }) => setDurations(data || []));
   }, []);
 
+  // Fetch default duration from settings and pre-select it on the form.
+  // Runs after durations are loaded so the preset button highlights correctly.
+  useEffect(() => {
+    if (durations.length === 0) return;
+    supabase
+      .from("settings")
+      .select("value")
+      .eq("key", "default_event_duration_minutes")
+      .single()
+      .then(({ data }) => {
+        if (!data?.value) return;
+        const defaultMinutes = parseInt(data.value);
+        if (!defaultMinutes) return;
+        setForm((prev) =>
+          prev.duration_minutes === "" || prev.duration_minutes === 0
+            ? { ...prev, duration_minutes: defaultMinutes }
+            : prev,
+        );
+      });
+  }, [durations]);
+
   useEffect(() => {
     if (!id) return;
 
@@ -221,8 +242,8 @@ export default function NouveauRound({ params }) {
     resetStartTimeForm();
   };
 
-  const removeStartTime = (id) => {
-    setStartTimeEntries((prev) => prev.filter((e) => e.id !== id));
+  const removeStartTime = (entryId) => {
+    setStartTimeEntries((prev) => prev.filter((e) => e.id !== entryId));
   };
 
   // Sort entries chronologically for display
@@ -360,8 +381,20 @@ export default function NouveauRound({ params }) {
     <div className="page">
       <div className="page-header">
         <div>
-          <h1>Nouvel événement</h1>
+          <h1>Nouvelle manche</h1>
           <div className="accent-line" />
+          {championship && (
+            <div
+              style={{
+                marginTop: "0.4rem",
+                color: "var(--text-dim)",
+                fontSize: "0.85rem",
+              }}
+            >
+              {championship.name}
+              {championship.season && ` — ${championship.season}`}
+            </div>
+          )}
         </div>
         <Link href="/evenements" className="btn btn-secondary">
           ← Retour
@@ -385,18 +418,6 @@ export default function NouveauRound({ params }) {
                 placeholder="ex : Nürburgring 24h 2025"
                 required
               />
-            </div>
-            <div className="form-group" style={{ gridColumn: "1 / -1" }}>
-              <label
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "0.75rem",
-                  cursor: "pointer",
-                }}
-              >
-                <span>Événement spécial (horaires de départ prédéfinis)</span>
-              </label>
             </div>
 
             <div className="form-group">
