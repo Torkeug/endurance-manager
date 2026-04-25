@@ -344,14 +344,13 @@ export default function DriversManager({ initialDrivers, currentDriver }) {
   };
 
   const commitDelete = async () => {
-    const { driverId } = deleteModal;
+    // Capture before nulling — setDeleteModal(null) makes deleteModal unavailable
+    const { driverId, hasStints } = deleteModal;
     setDeleteModal(null);
     setSaving(driverId);
     setError(null);
 
-    // Delete stints first — FK constraint prevents driver deletion if stints exist.
-    // Signups cascade-delete automatically when the driver record is removed.
-    if (deleteModal.hasStints) {
+    if (hasStints) {
       const { error: stintErr } = await supabase
         .from("stints")
         .delete()

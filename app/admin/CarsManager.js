@@ -238,7 +238,11 @@ function KronosEnduranceTab({ initialCars, iracingCars }) {
     setEditingId(null);
     setSelectedIracingCar(null);
     setSearchQuery("");
-    setForm({ tank_size_litres: "", car_type_label: "" });
+    setForm({
+      tank_size_litres: "",
+      car_type_label: "",
+      refuel_litres_per_second: "",
+    });
     setError(null);
   };
 
