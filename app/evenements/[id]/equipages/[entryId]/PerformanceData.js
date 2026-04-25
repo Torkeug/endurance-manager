@@ -60,6 +60,7 @@ function DriverRow({
   teamEntryId,
   onSaved,
   archived,
+  dayWetAdd,
   nightDryAdd,
   nightWetAdd,
 }) {
@@ -314,7 +315,7 @@ function DriverRow({
               }}
             >
               {secToDisplay(initialData?.lap_time_night_dry) ||
-                (initialData?.lap_time_dry && nightDryAdd > 0 ? (
+                (initialData?.lap_time_dry && nightDryAdd !== 0 ? (
                   <span style={{ fontSize: "0.74rem" }}>
                     → {secToDisplay(initialData.lap_time_dry + nightDryAdd)}*
                   </span>
@@ -333,9 +334,15 @@ function DriverRow({
               }}
             >
               {secToDisplay(initialData?.lap_time_night_wet) ||
-                (initialData?.lap_time_wet && nightWetAdd > 0 ? (
+                (nightWetAdd !== 0 &&
+                (initialData?.lap_time_wet || initialData?.lap_time_dry) ? (
                   <span style={{ fontSize: "0.74rem" }}>
-                    → {secToDisplay(initialData.lap_time_wet + nightWetAdd)}*
+                    →{" "}
+                    {secToDisplay(
+                      (initialData.lap_time_wet || initialData.lap_time_dry) +
+                        nightWetAdd,
+                    )}
+                    *
                   </span>
                 ) : (
                   "—"
@@ -730,6 +737,7 @@ export default function PerformanceData({
   const [nightDryAdd, setNightDryAdd] = useState(0);
   const [nightWetAdd, setNightWetAdd] = useState(0);
   const [nightSaving, setNightSaving] = useState(false);
+  const [dayWetAdd, setDayWetAdd] = useState(0);
 
   useEffect(() => {
     if (!teamEntryId || assignedDrivers.length === 0) {
@@ -744,7 +752,9 @@ export default function PerformanceData({
       // Fetch night additive modifiers alongside performance data
       supabase
         .from("team_entries")
-        .select("night_dry_add_seconds, night_wet_add_seconds")
+        .select(
+          "night_dry_add_seconds, night_wet_add_seconds, day_wet_add_seconds",
+        )
         .eq("id", teamEntryId)
         .single(),
     ]).then(([{ data: perfRows }, { data: entry }]) => {
@@ -756,6 +766,7 @@ export default function PerformanceData({
       if (entry) {
         setNightDryAdd(entry.night_dry_add_seconds || 0);
         setNightWetAdd(entry.night_wet_add_seconds || 0);
+        setDayWetAdd(entry.day_wet_add_seconds || 0);
       }
       setLoading(false);
     });
@@ -765,12 +776,15 @@ export default function PerformanceData({
     setPerfData((prev) => ({ ...prev, [data.driver_id]: data }));
   };
 
-  // Auto-save night modifier on blur — no explicit submit button needed
-  const saveNightModifier = async (field, value) => {
+  // Auto-save modifier on blur — handles night dry, night wet, and day wet
+  const saveModifier = async (field, value) => {
     setNightSaving(true);
+    // parseFloat handles negative values correctly — only falls back to 0 for empty/NaN
+    const parsed =
+      value === "" || isNaN(parseFloat(value)) ? 0 : parseFloat(value);
     await supabase
       .from("team_entries")
-      .update({ [field]: parseFloat(value) || 0 })
+      .update({ [field]: parsed })
       .eq("id", teamEntryId);
     setNightSaving(false);
   };
@@ -790,7 +804,7 @@ export default function PerformanceData({
 
   return (
     <div>
-      {/* Night modifier card — hidden when archived */}
+      {/* Modifier card — hidden when archived */}
       {!archived && (
         <div className="card" style={{ marginBottom: "1rem" }}>
           <div
@@ -803,7 +817,7 @@ export default function PerformanceData({
               marginBottom: "0.5rem",
             }}
           >
-            🌙 Modificateur nuit (équipage)
+            Modificateurs équipage (secondes)
           </div>
           <p
             style={{
@@ -812,9 +826,9 @@ export default function PerformanceData({
               marginBottom: "0.75rem",
             }}
           >
-            Appliqué en fallback si le pilote n&apos;a pas de données de chrono
-            nuit spécifiques. Les valeurs affichées avec * utilisent ce
-            modificateur.
+            Appliqués en fallback quand le pilote n&apos;a pas de données
+            spécifiques pour cette condition. Valeurs négatives autorisées. Les
+            chronos affichés avec * utilisent ces modificateurs.
           </p>
           <div
             style={{
@@ -824,6 +838,7 @@ export default function PerformanceData({
               alignItems: "center",
             }}
           >
+            {/* Day wet modifier */}
             <div
               style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}
             >
@@ -834,19 +849,49 @@ export default function PerformanceData({
                   whiteSpace: "nowrap",
                 }}
               >
-                🌙☀️ Nuit sec +
+                💧 Pluie jour
+              </label>
+              <input
+                type="number"
+                value={dayWetAdd}
+                step="0.1"
+                onChange={(e) => setDayWetAdd(parseFloat(e.target.value) || 0)}
+                onBlur={(e) =>
+                  saveModifier("day_wet_add_seconds", e.target.value)
+                }
+                style={{
+                  width: "80px",
+                  fontFamily: "var(--font-mono), monospace",
+                }}
+                disabled={nightSaving}
+              />
+              <span style={{ fontSize: "0.82rem", color: "var(--text-dim)" }}>
+                s
+              </span>
+            </div>
+
+            {/* Night dry modifier */}
+            <div
+              style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}
+            >
+              <label
+                style={{
+                  fontSize: "0.82rem",
+                  color: "var(--text-dim)",
+                  whiteSpace: "nowrap",
+                }}
+              >
+                🌙☀️ Nuit sec
               </label>
               <input
                 type="number"
                 value={nightDryAdd}
-                min="0"
-                max="60"
                 step="0.1"
                 onChange={(e) =>
                   setNightDryAdd(parseFloat(e.target.value) || 0)
                 }
                 onBlur={(e) =>
-                  saveNightModifier("night_dry_add_seconds", e.target.value)
+                  saveModifier("night_dry_add_seconds", e.target.value)
                 }
                 style={{
                   width: "80px",
@@ -858,6 +903,8 @@ export default function PerformanceData({
                 s
               </span>
             </div>
+
+            {/* Night wet modifier */}
             <div
               style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}
             >
@@ -868,19 +915,17 @@ export default function PerformanceData({
                   whiteSpace: "nowrap",
                 }}
               >
-                🌙💧 Nuit pluie +
+                🌙💧 Nuit pluie
               </label>
               <input
                 type="number"
                 value={nightWetAdd}
-                min="0"
-                max="60"
                 step="0.1"
                 onChange={(e) =>
                   setNightWetAdd(parseFloat(e.target.value) || 0)
                 }
                 onBlur={(e) =>
-                  saveNightModifier("night_wet_add_seconds", e.target.value)
+                  saveModifier("night_wet_add_seconds", e.target.value)
                 }
                 style={{
                   width: "80px",
@@ -892,6 +937,7 @@ export default function PerformanceData({
                 s
               </span>
             </div>
+
             {nightSaving && (
               <span style={{ fontSize: "0.78rem", color: "var(--text-dim)" }}>
                 Enregistrement…
@@ -925,6 +971,7 @@ export default function PerformanceData({
                 teamEntryId={teamEntryId}
                 onSaved={handleSaved}
                 archived={archived}
+                dayWetAdd={dayWetAdd}
                 nightDryAdd={nightDryAdd}
                 nightWetAdd={nightWetAdd}
               />
@@ -932,7 +979,7 @@ export default function PerformanceData({
           </tbody>
         </table>
       </div>
-      {(nightDryAdd > 0 || nightWetAdd > 0) && (
+      {(dayWetAdd !== 0 || nightDryAdd !== 0 || nightWetAdd !== 0) && (
         <div
           style={{
             marginTop: "0.5rem",
@@ -940,8 +987,8 @@ export default function PerformanceData({
             color: "var(--text-dim)",
           }}
         >
-          * Chrono estimé via modificateur nuit équipage (pas de données nuit
-          spécifiques pour ce pilote)
+          * Chrono estimé via modificateur équipage (pas de données spécifiques
+          pour ce pilote dans cette condition)
         </div>
       )}
     </div>

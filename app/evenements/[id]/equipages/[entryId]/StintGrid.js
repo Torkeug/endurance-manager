@@ -151,6 +151,7 @@ function calcStint(
   const isNight = phase === "🌑";
 
   // Night additive fallback — applied only when no specific night lap time data exists
+  const dayWetAdd = teamEntry?.day_wet_add_seconds || 0;
   const nightDryAdd = teamEntry?.night_dry_add_seconds || 0;
   const nightWetAdd = teamEntry?.night_wet_add_seconds || 0;
 
@@ -162,18 +163,27 @@ function calcStint(
   let lapTimeSec;
   if (stint.rain) {
     lapTimeSec = isNight
-      ? perf?.lap_time_night_wet ||
+      ? // Night wet: specific → day wet + nightWetAdd → day dry + nightWetAdd
+        perf?.lap_time_night_wet ||
         (perf?.lap_time_wet ? perf.lap_time_wet + nightWetAdd : null) ||
         (perf?.lap_time_dry ? perf.lap_time_dry + nightWetAdd : null) ||
         null
-      : perf?.lap_time_wet || perf?.lap_time_dry || null;
+      : // Day wet: specific → day dry + dayWetAdd → day dry
+        perf?.lap_time_wet ||
+        (perf?.lap_time_dry && dayWetAdd !== 0
+          ? perf.lap_time_dry + dayWetAdd
+          : null) ||
+        perf?.lap_time_dry ||
+        null;
   } else {
     lapTimeSec = isNight
-      ? perf?.lap_time_night_dry ||
+      ? // Night dry: specific → day dry + nightDryAdd → day wet + nightDryAdd
+        perf?.lap_time_night_dry ||
         (perf?.lap_time_dry ? perf.lap_time_dry + nightDryAdd : null) ||
         (perf?.lap_time_wet ? perf.lap_time_wet + nightDryAdd : null) ||
         null
-      : perf?.lap_time_dry || perf?.lap_time_wet || null;
+      : // Day dry: specific → day wet
+        perf?.lap_time_dry || perf?.lap_time_wet || null;
   }
 
   // Fuel selection delegated to selectFuelPerLap for reuse
@@ -299,10 +309,13 @@ function calculateAllStints(
         );
         coveringStint._adjustedIrlEnd = coveringStint._irlEnd;
         coveringStint._adjustedDurationSec = coveringStint._stintDurationSec;
-        const perf = driverPerf[coveringStint.driver_id];
-        const fuelPerLap = coveringStint.rain
-          ? perf?.fuel_wet || perf?.fuel_dry
-          : perf?.fuel_dry || perf?.fuel_wet;
+        const fuelPerLap =
+          coveringStint._fuelPerLap ||
+          selectFuelPerLap(
+            driverPerf[coveringStint.driver_id],
+            coveringStint.rain,
+            coveringStint._phase === "🌑",
+          );
         if (fuelPerLap)
           coveringStint._fuelUsed = coveringStint._laps * fuelPerLap;
       }
