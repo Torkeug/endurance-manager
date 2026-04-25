@@ -636,13 +636,18 @@ function InscriptionPage({ params }) {
     Promise.all([
       // Engineers are staff — they don't sign up as drivers for events.
       // Test accounts are hidden from all dropdowns outside the admin panel.
-      supabase
-        .from("drivers")
-        .select("id, name")
-        .eq("active", true)
-        .eq("is_test_account", false)
-        .neq("role", "engineer")
-        .order("name"),
+      (() => {
+        let q = supabase
+          .from("drivers")
+          .select("id, name")
+          .eq("active", true)
+          .neq("role", "engineer")
+          .order("name");
+        if (process.env.NEXT_PUBLIC_SHOW_TEST_ACCOUNTS !== "true") {
+          q = q.eq("is_test_account", false);
+        }
+        return q;
+      })(),
       supabase
         .from("cars")
         .select("id, name, class")
