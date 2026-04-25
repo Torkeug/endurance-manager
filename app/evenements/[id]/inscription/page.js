@@ -631,7 +631,9 @@ function InscriptionPage({ params }) {
   const [editingSignup, setEditingSignup] = useState(null);
   const [error, setError] = useState(null);
   const [currentUserRole, setCurrentUserRole] = useState(null);
+  const [currentUserId, setCurrentUserId] = useState(null);
   const isExternal = currentUserRole === "external";
+  const [currentUserIsAdmin, setCurrentUserIsAdmin] = useState(false);
 
   useEffect(() => {
     Promise.all([
@@ -640,7 +642,7 @@ function InscriptionPage({ params }) {
       (() => {
         let q = supabase
           .from("drivers")
-          .select("id, name")
+          .select("id, name, role")
           .eq("active", true)
           .neq("role", "engineer")
           .order("name");
@@ -679,6 +681,8 @@ function InscriptionPage({ params }) {
         { data: entriesData },
         { data: stData },
       ]) => {
+        // Store full list — external drivers filtered out at render time
+        // based on current user's role (admins can see everyone)
         setDrivers(driversData || []);
         setEventName(evData?.name || "");
         // Archived events are read-only — redirect to event detail page
@@ -733,7 +737,11 @@ function InscriptionPage({ params }) {
 
             if (driver) {
               setDriverId(driver.id);
+              setCurrentUserId(driver.id);
               setCurrentUserRole(driver.role);
+              setCurrentUserIsAdmin(
+                driver.role === "admin" || driver.role === "super_admin",
+              );
             }
           });
         }
@@ -803,8 +811,8 @@ function InscriptionPage({ params }) {
         </Link>
       </div>
 
-      {/* Driver selector */}
-      {!isExternal && (
+      {/* Driver selector — hidden until role is known and hidden for externals who are auto-selected */}
+      {currentUserRole !== null && !isExternal && (
         <div className="card" style={{ marginBottom: "1.25rem" }}>
           <h3 style={{ marginBottom: "1.25rem", color: "var(--text-dim)" }}>
             Qui êtes-vous ?
@@ -820,11 +828,20 @@ function InscriptionPage({ params }) {
               }}
             >
               <option value="">— Sélectionnez votre nom —</option>
-              {drivers.map((d) => (
-                <option key={d.id} value={d.id}>
-                  {d.name}
-                </option>
-              ))}
+              {drivers
+                // Admins see everyone
+                // Non-admins see non-external drivers + themselves (in case they are external)
+                .filter(
+                  (d) =>
+                    currentUserIsAdmin ||
+                    d.role !== "external" ||
+                    d.id === currentUserId,
+                )
+                .map((d) => (
+                  <option key={d.id} value={d.id}>
+                    {d.name}
+                  </option>
+                ))}
             </select>
           </div>
         </div>
