@@ -194,6 +194,8 @@ export default function EquipageTabs({
             igSunrise={teamEntry.events?.ig_sunrise || null}
             igSunset={teamEntry.events?.ig_sunset || null}
             archived={archived || isEngineer}
+            currentDriverId={currentDriver?.id || null}
+            isExternalUser={currentDriver?.role === "external"}
           />
         </>
       )}

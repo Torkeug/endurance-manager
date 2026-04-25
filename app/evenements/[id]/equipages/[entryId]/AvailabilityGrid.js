@@ -68,6 +68,17 @@ function sameDay(a, b) {
   return a.toDateString() === b.toDateString();
 }
 
+// Format driver name as "Prénom N." — first name(s) + surname initial.
+// Matches the format used in InventoryMatrix.
+function formatDriverName(name) {
+  if (!name) return "?";
+  const parts = name.trim().split(/\s+/);
+  if (parts.length === 1) return parts[0];
+  const firstName = parts.slice(0, -1).join(" ");
+  const lastInitial = parts[parts.length - 1][0].toUpperCase();
+  return `${firstName} ${lastInitial}.`;
+}
+
 function Badge({ label, bg, borderColor }) {
   return (
     <span
@@ -95,8 +106,9 @@ export default function AvailabilityGrid({
   igStartTime,
   igSunrise,
   igSunset,
-  // archived — when true, all editing is disabled and the grid is read-only
   archived = false,
+  currentDriverId = null,
+  isExternalUser = false,
 }) {
   const [selectedDriverId, setSelectedDriverId] = useState("");
   const [availabilities, setAvailabilities] = useState({});
@@ -131,6 +143,13 @@ export default function AvailabilityGrid({
         setLoading(false);
       });
   }, [teamEntryId]);
+
+  // Auto-select external drivers — they can only edit their own availability
+  useEffect(() => {
+    if (isExternalUser && currentDriverId) {
+      setSelectedDriverId(currentDriverId);
+    }
+  }, [isExternalUser, currentDriverId]);
 
   const getAvail = (driverId, slot) =>
     availabilities[`${driverId}_${slot.toISOString()}`];
@@ -284,18 +303,30 @@ export default function AvailabilityGrid({
       {!archived && (
         <div className="card" style={{ marginBottom: "1rem" }}>
           <div className="form-group">
-            <label>Remplir ma disponibilité</label>
-            <select
-              value={selectedDriverId}
-              onChange={(e) => setSelectedDriverId(e.target.value)}
-            >
-              <option value="">— Sélectionnez votre nom —</option>
-              {assignedDrivers.map((d) => (
-                <option key={d.drivers?.id} value={d.drivers?.id}>
-                  {d.drivers?.name}
-                </option>
-              ))}
-            </select>
+            <label>
+              {isExternalUser
+                ? "Votre disponibilité"
+                : "Remplir ma disponibilité"}
+            </label>
+            {/* External drivers are auto-selected — no dropdown needed */}
+            {!isExternalUser && (
+              <select
+                value={selectedDriverId}
+                onChange={(e) => setSelectedDriverId(e.target.value)}
+              >
+                <option value="">— Sélectionnez votre nom —</option>
+                {assignedDrivers
+                  // External drivers can only select themselves
+                  .filter(
+                    (d) => !isExternalUser || d.drivers?.id === currentDriverId,
+                  )
+                  .map((d) => (
+                    <option key={d.drivers?.id} value={d.drivers?.id}>
+                      {d.drivers?.name}
+                    </option>
+                  ))}
+              </select>
+            )}
           </div>
           <p
             style={{
@@ -556,7 +587,7 @@ export default function AvailabilityGrid({
                           : "var(--text-dim)",
                     }}
                   >
-                    <div>{d.drivers?.name?.split(" ")[0]}</div>
+                    <div>{formatDriverName(d.drivers?.name)}</div>
                     <div
                       style={{
                         fontSize: "0.58rem",
