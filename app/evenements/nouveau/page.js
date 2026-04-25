@@ -144,6 +144,28 @@ export default function NouvelEvenement() {
       .then(({ data }) => setDurations(data || []));
   }, []);
 
+  // Fetch default duration from settings and pre-select it on the form.
+  // Runs after durations are loaded so the preset button highlights correctly.
+  useEffect(() => {
+    if (durations.length === 0) return;
+    supabase
+      .from("settings")
+      .select("value")
+      .eq("key", "default_event_duration_minutes")
+      .single()
+      .then(({ data }) => {
+        if (!data?.value) return;
+        const defaultMinutes = parseInt(data.value);
+        if (!defaultMinutes) return;
+        // Only apply if form hasn't been touched yet
+        setForm((prev) =>
+          prev.duration_minutes === "" || prev.duration_minutes === 0
+            ? { ...prev, duration_minutes: defaultMinutes }
+            : prev,
+        );
+      });
+  }, [durations]);
+
   useEffect(() => {
     supabase
       .from("special_event_start_times")
