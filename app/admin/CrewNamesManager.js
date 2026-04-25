@@ -227,11 +227,7 @@ export default function CrewNamesManager({ initialCrewNames }) {
           .delete()
           .eq("id", id);
         if (err) {
-          setError(
-            err.code === "23503"
-              ? "Ce nom d'équipage est référencé par le bot et ne peut pas être supprimé directement."
-              : err.message,
-          );
+          setError(err.message);
           return;
         }
         setItems((prev) => prev.filter((i) => i.id !== id));
