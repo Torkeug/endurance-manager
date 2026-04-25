@@ -18,17 +18,89 @@ function ConfirmModal({ modal, onConfirm, onCancel }) {
         padding: "1.5rem",
       }}
     >
-      <div className="card" style={{ maxWidth: "400px", width: "100%" }}>
+      <div className="card" style={{ maxWidth: "480px", width: "100%" }}>
         <h3 style={{ marginBottom: "0.75rem" }}>{modal.title}</h3>
+
+        {modal.affectedCars?.length > 0 && (
+          <p
+            style={{
+              fontSize: "0.9rem",
+              color: "var(--text-dim)",
+              marginBottom: "0.5rem",
+            }}
+          >
+            ⚠️{" "}
+            <strong style={{ color: "var(--text)" }}>
+              {modal.affectedCars.length} voiture
+              {modal.affectedCars.length > 1 ? "s" : ""}
+            </strong>{" "}
+            seront déclassées :{" "}
+            <span style={{ color: "var(--danger)" }}>
+              {modal.affectedCars.join(", ")}
+            </span>
+          </p>
+        )}
+
+        {modal.affectedEvents?.length > 0 && (
+          <>
+            <p
+              style={{
+                fontSize: "0.9rem",
+                color: "var(--text-dim)",
+                marginBottom: "0.5rem",
+                marginTop: "0.5rem",
+              }}
+            >
+              Cette classe est utilisée dans{" "}
+              <strong style={{ color: "var(--text)" }}>
+                {modal.affectedEvents.length} événement
+                {modal.affectedEvents.length > 1 ? "s" : ""} actifs
+              </strong>{" "}
+              :
+            </p>
+            <ul
+              style={{
+                margin: "0 0 0.75rem",
+                paddingLeft: "1.25rem",
+                fontSize: "0.88rem",
+                color: "var(--danger)",
+                display: "flex",
+                flexDirection: "column",
+                gap: "0.2rem",
+              }}
+            >
+              {modal.affectedEvents.map((name, i) => (
+                <li key={i}>{name}</li>
+              ))}
+            </ul>
+          </>
+        )}
+
+        {!modal.affectedCars?.length && !modal.affectedEvents?.length && (
+          <p
+            style={{
+              fontSize: "0.9rem",
+              color: "var(--text-dim)",
+              marginBottom: "1rem",
+            }}
+          >
+            Cette classe n&apos;est utilisée par aucune voiture ni événement
+            actif.
+          </p>
+        )}
+
         <p
           style={{
-            fontSize: "0.9rem",
+            fontSize: "0.82rem",
             color: "var(--text-dim)",
             marginBottom: "1.5rem",
+            marginTop: "0.5rem",
           }}
         >
-          {modal.message}
+          Les événements archivés ne sont pas affectés. Cette action est
+          irréversible.
         </p>
+
         <div
           style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}
         >
@@ -186,14 +258,28 @@ export default function ClassesManager({ initialClasses, initialCars }) {
     router.refresh();
   };
 
-  const handleDelete = (id, className) => {
+  const handleDelete = async (id, className) => {
     const carsInClass = getCarsInClass(className);
+
+    // Check non-archived events using this class in team entries
+    const { data: teamEntries } = await supabase
+      .from("team_entries")
+      .select("events(name, archived)")
+      .eq("class", className);
+
+    const affectedEvents = [
+      ...new Set(
+        (teamEntries || [])
+          .filter((te) => !te.events?.archived)
+          .map((te) => te.events?.name)
+          .filter(Boolean),
+      ),
+    ];
+
     setConfirmModal({
       title: `Supprimer la classe "${className}"`,
-      message:
-        carsInClass.length > 0
-          ? `${carsInClass.length} voiture${carsInClass.length > 1 ? "s" : ""} associée${carsInClass.length > 1 ? "s" : ""} seront déclassées. Cette action est irréversible.`
-          : "Cette classe sera supprimée définitivement.",
+      affectedCars: carsInClass.map((c) => c.name),
+      affectedEvents,
       confirmLabel: "Supprimer",
       onConfirm: async () => {
         setConfirmModal(null);
@@ -202,11 +288,7 @@ export default function ClassesManager({ initialClasses, initialCars }) {
           .delete()
           .eq("id", id);
         if (err) {
-          setError(
-            err.code === "23503"
-              ? "Cette classe est utilisée et ne peut pas être supprimée."
-              : err.message,
-          );
+          setError(err.message);
           return;
         }
         if (carsInClass.length > 0) {

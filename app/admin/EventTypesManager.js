@@ -18,17 +18,79 @@ function ConfirmModal({ modal, onConfirm, onCancel }) {
         padding: "1.5rem",
       }}
     >
-      <div className="card" style={{ maxWidth: "400px", width: "100%" }}>
+      <div className="card" style={{ maxWidth: "480px", width: "100%" }}>
         <h3 style={{ marginBottom: "0.75rem" }}>{modal.title}</h3>
+
+        {modal.activeEvents?.length > 0 && (
+          <>
+            <p
+              style={{
+                fontSize: "0.9rem",
+                color: "var(--text-dim)",
+                marginBottom: "0.75rem",
+              }}
+            >
+              ⚠️ Ce type est utilisé par{" "}
+              <strong style={{ color: "var(--text)" }}>
+                {modal.activeEvents.length} événement
+                {modal.activeEvents.length > 1 ? "s" : ""} actifs
+              </strong>{" "}
+              — leur format sera effacé :
+            </p>
+            <ul
+              style={{
+                margin: "0 0 0.75rem",
+                paddingLeft: "1.25rem",
+                fontSize: "0.88rem",
+                color: "var(--danger)",
+                display: "flex",
+                flexDirection: "column",
+                gap: "0.2rem",
+              }}
+            >
+              {modal.activeEvents.map((name, i) => (
+                <li key={i}>{name}</li>
+              ))}
+            </ul>
+          </>
+        )}
+
+        {modal.archivedCount > 0 && (
+          <p
+            style={{
+              fontSize: "0.82rem",
+              color: "var(--text-dim)",
+              marginBottom: "0.75rem",
+            }}
+          >
+            ✓ {modal.archivedCount} événement
+            {modal.archivedCount > 1 ? "s archivés" : " archivé"} — non affecté
+            {modal.archivedCount > 1 ? "s" : ""}.
+          </p>
+        )}
+
+        {!modal.activeEvents?.length && !modal.archivedCount && (
+          <p
+            style={{
+              fontSize: "0.9rem",
+              color: "var(--text-dim)",
+              marginBottom: "1rem",
+            }}
+          >
+            Ce type n&apos;est utilisé par aucun événement actif.
+          </p>
+        )}
+
         <p
           style={{
-            fontSize: "0.9rem",
+            fontSize: "0.82rem",
             color: "var(--text-dim)",
             marginBottom: "1.5rem",
           }}
         >
-          {modal.message}
+          Cette action est irréversible.
         </p>
+
         <div
           style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}
         >
@@ -130,24 +192,43 @@ export default function EventTypesManager({
     router.refresh();
   };
 
-  const handleDelete = (id) => {
+  const handleDelete = async (id) => {
+    const et = eventTypes.find((t) => t.id === id);
+
+    const { data: affectedEventsData } = await supabase
+      .from("events")
+      .select("name, archived")
+      .eq("format", et?.name);
+
+    const activeEvents = (affectedEventsData || [])
+      .filter((e) => !e.archived)
+      .map((e) => e.name);
+
+    const archivedCount = (affectedEventsData || []).filter(
+      (e) => e.archived,
+    ).length;
+
     setConfirmModal({
-      title: "Supprimer ce type d'événement",
-      message:
-        "Ce type sera supprimé définitivement. S'il est utilisé par des événements existants, la suppression sera bloquée.",
+      title: `Supprimer "${et?.name}"`,
+      activeEvents,
+      archivedCount,
       confirmLabel: "Supprimer",
       onConfirm: async () => {
         setConfirmModal(null);
+        // Null out format on active events before deleting the type
+        if (activeEvents.length > 0) {
+          await supabase
+            .from("events")
+            .update({ format: null })
+            .eq("format", et?.name)
+            .eq("archived", false);
+        }
         const { error: err } = await supabase
           .from("event_types")
           .delete()
           .eq("id", id);
         if (err) {
-          setError(
-            err.code === "23503"
-              ? "Ce type d'événement est utilisé par un ou plusieurs événements et ne peut pas être supprimé."
-              : err.message,
-          );
+          setError(err.message);
           return;
         }
         setEventTypes((prev) => prev.filter((t) => t.id !== id));

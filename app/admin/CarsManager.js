@@ -319,7 +319,20 @@ function KronosEnduranceTab({ initialCars, iracingCars }) {
   // listing affected drivers if any have this car in their preferred_car_ids.
   // If the car is used by a team entry (FK violation), deletion is blocked entirely.
   const handleDelete = async (id, name) => {
-    // Check signups that reference this car in preferred_car_ids
+    // Check team entries using this car in non-archived events
+    const { data: teamEntries } = await supabase
+      .from("team_entries")
+      .select("id, crew_name, events(name, archived)")
+      .eq("car_id", id);
+
+    const activeEntries = (teamEntries || []).filter(
+      (te) => !te.events?.archived,
+    );
+    const affectedEvents = [
+      ...new Set(activeEntries.map((te) => te.events?.name).filter(Boolean)),
+    ];
+
+    // Check signups with this car in preferred_car_ids
     const { data: affectedSignups } = await supabase
       .from("signups")
       .select("id, drivers(name)")
@@ -329,8 +342,12 @@ function KronosEnduranceTab({ initialCars, iracingCars }) {
       .map((s) => s.drivers?.name)
       .filter(Boolean);
 
-    // Show modal regardless — no warning if clean, warning list if affected
-    setDeleteModal({ carId: id, carName: name, affectedDrivers });
+    setDeleteModal({
+      carId: id,
+      carName: name,
+      affectedEvents,
+      affectedDrivers,
+    });
   };
 
   const commitDelete = async () => {
@@ -338,11 +355,7 @@ function KronosEnduranceTab({ initialCars, iracingCars }) {
     setDeleteModal(null);
     const { error: err } = await supabase.from("cars").delete().eq("id", carId);
     if (err) {
-      setError(
-        err.code === "23503"
-          ? "Cette voiture est utilisée par un ou plusieurs équipages et ne peut pas être supprimée."
-          : err.message,
-      );
+      setError(err.message);
       return;
     }
     setCars((prev) => prev.filter((c) => c.id !== carId));
