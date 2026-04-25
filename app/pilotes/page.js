@@ -8,12 +8,12 @@ export default async function PilotesPage() {
   const isExternal = currentDriver?.role === "external";
   // Test accounts are always hidden from the pilot list — admin-only visibility
   // is handled in DriversManager.js instead.
-  let query = supabase
-    .from("drivers")
-    .select("*")
-    .eq("is_test_account", false)
-    .order("name");
-  // External drivers can only see their own row — filter by their own ID.
+  // Hide test accounts in production — set NEXT_PUBLIC_SHOW_TEST_ACCOUNTS=true in .env.local to show them
+  let query = supabase.from("drivers").select("*").order("name");
+  if (process.env.NEXT_PUBLIC_SHOW_TEST_ACCOUNTS !== "true") {
+    query = query.eq("is_test_account", false);
+  }
+  // External drivers can only see their own row
   if (isExternal) {
     query = query.eq("id", currentDriver.id);
   }
