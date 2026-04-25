@@ -630,7 +630,8 @@ function InscriptionPage({ params }) {
   const [existingSignups, setExistingSignups] = useState([]);
   const [editingSignup, setEditingSignup] = useState(null);
   const [error, setError] = useState(null);
-  const [isExternal, setIsExternal] = useState(false);
+  const [currentUserRole, setCurrentUserRole] = useState(null);
+  const isExternal = currentUserRole === "external";
 
   useEffect(() => {
     Promise.all([
@@ -732,6 +733,7 @@ function InscriptionPage({ params }) {
 
             if (driver) {
               setDriverId(driver.id);
+              setCurrentUserRole(driver.role);
             }
           });
         }
@@ -770,19 +772,6 @@ function InscriptionPage({ params }) {
         setEditingSignup(null);
       });
   };
-
-  useEffect(() => {
-    if (!driverId) return;
-
-    supabase
-      .from("drivers")
-      .select("role")
-      .eq("id", driverId)
-      .single()
-      .then(({ data }) => {
-        setIsExternal(data?.role === "external");
-      });
-  }, [driverId]);
 
   if (fetching)
     return (
