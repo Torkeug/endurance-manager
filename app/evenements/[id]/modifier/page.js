@@ -144,6 +144,7 @@ export default function ModifierEvenement({ params }) {
         ig_sunrise: event.ig_sunrise || "",
         ig_sunset: event.ig_sunset || "",
         notes: event.notes || "",
+        green_flag_offset_minutes: event.green_flag_offset_minutes ?? 0,
       });
       // Pre-fill base track for grouped dropdown
       if (event.circuit_id && circuitsData) {
@@ -287,6 +288,7 @@ export default function ModifierEvenement({ params }) {
       is_special: isSpecial,
       weekend_start_date:
         isSpecial && weekendStartDate ? weekendStartDate : null,
+      green_flag_offset_minutes: parseInt(form.green_flag_offset_minutes) || 0,
     };
 
     const { error: err } = await supabase
@@ -938,6 +940,34 @@ export default function ModifierEvenement({ params }) {
             Heures en format 24h.
           </p>
           <div className="form-grid">
+            {/* Offset between the scheduled IRL start time and the actual green flag.
+                Pre-fills the default strategy offset when a new strategy is created. */}
+            <div className="form-group">
+              <label htmlFor="green_flag_offset_minutes">
+                Décalage drapeau vert (min)
+              </label>
+              <input
+                id="green_flag_offset_minutes"
+                type="number"
+                min={-60}
+                max={120}
+                value={form.green_flag_offset_minutes}
+                onChange={set("green_flag_offset_minutes")}
+                placeholder="0"
+                style={{ fontFamily: "var(--font-mono), monospace" }}
+              />
+              <p
+                style={{
+                  fontSize: "0.78rem",
+                  color: "var(--text-dim)",
+                  marginTop: "0.4rem",
+                }}
+              >
+                Minutes entre l&apos;heure officielle de départ et le drapeau
+                vert effectif. Utilisé comme décalage par défaut dans les
+                stratégies.
+              </p>
+            </div>
             <div className="form-group">
               <label htmlFor="ig_start_time">Heure de départ IG (HH:MM)</label>
               <input

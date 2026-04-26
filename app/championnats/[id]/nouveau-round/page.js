@@ -46,6 +46,7 @@ const emptyForm = {
   ig_sunrise: "",
   ig_sunset: "",
   notes: "",
+  green_flag_offset_minutes: 0,
 };
 
 export default function NouveauRound({ params }) {
@@ -301,9 +302,9 @@ export default function NouveauRound({ params }) {
       ig_sunrise: form.ig_sunrise || null,
       ig_sunset: form.ig_sunset || null,
       notes: form.notes.trim() || null,
-
       championship_id: id,
       round_number: roundCount + 1,
+      green_flag_offset_minutes: parseInt(form.green_flag_offset_minutes) || 0,
     };
 
     const { data, error: err } = await supabase
@@ -808,6 +809,34 @@ export default function NouveauRound({ params }) {
             Communs à tous les équipages. Heures en format 24h.
           </p>
           <div className="form-grid">
+            {/* Offset between the scheduled IRL start time and the actual green flag.
+                Pre-fills the default strategy offset when a new strategy is created. */}
+            <div className="form-group">
+              <label htmlFor="green_flag_offset_minutes">
+                Décalage drapeau vert (min)
+              </label>
+              <input
+                id="green_flag_offset_minutes"
+                type="number"
+                min={-60}
+                max={120}
+                value={form.green_flag_offset_minutes}
+                onChange={set("green_flag_offset_minutes")}
+                placeholder="0"
+                style={{ fontFamily: "var(--font-mono), monospace" }}
+              />
+              <p
+                style={{
+                  fontSize: "0.78rem",
+                  color: "var(--text-dim)",
+                  marginTop: "0.4rem",
+                }}
+              >
+                Minutes entre l&apos;heure officielle de départ et le drapeau
+                vert effectif. Utilisé comme décalage par défaut dans les
+                stratégies.
+              </p>
+            </div>
             <div className="form-group">
               <label htmlFor="ig_start_time">Heure de départ IG (HH:MM)</label>
               <input

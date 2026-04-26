@@ -18,7 +18,7 @@ export default async function EquipageDetail({ params }) {
       `
       *,
       cars (id, name, tank_size_litres, class, refuel_litres_per_second, car_classes(refuel_litres_per_second)),
-      events (name, duration_minutes, ig_start_time, ig_sunrise, ig_sunset, timezone, archived, championship_id,
+      events (name, duration_minutes, ig_start_time, ig_sunrise, ig_sunset, timezone, archived, championship_id, green_flag_offset_minutes,
       circuits (name, pit_lane_time_seconds)),
       event_start_times (irl_start, label)
     `,
