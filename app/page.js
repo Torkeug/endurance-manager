@@ -639,6 +639,46 @@ export default async function HomePage() {
 
   return (
     <div className="page">
+      {/* Stale iRacing sync warning — shown to the logged-in driver when their own data is stale */}
+      {currentDriver &&
+        !admin &&
+        (!currentDriver.last_driver_sync_at ||
+          Date.now() - new Date(currentDriver.last_driver_sync_at).getTime() >
+            100 * 24 * 60 * 60 * 1000) && (
+          <div
+            style={{
+              background: "rgba(245,158,11,0.08)",
+              border: "1px solid #f59e0b",
+              borderRadius: "4px",
+              padding: "0.75rem 1rem",
+              marginBottom: "1.5rem",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              gap: "1rem",
+              flexWrap: "wrap",
+            }}
+          >
+            <span
+              style={{ color: "#f59e0b", fontWeight: 600, fontSize: "0.9rem" }}
+            >
+              ⚠️ Vos données iRacing n&apos;ont pas été synchronisées depuis
+              plus de 100 jours.
+            </span>
+            <Link
+              href={`/pilotes/${currentDriver.id}`}
+              className="btn btn-sm"
+              style={{
+                borderColor: "#f59e0b",
+                color: "#f59e0b",
+                background: "transparent",
+              }}
+            >
+              Mon profil →
+            </Link>
+          </div>
+        )}
+
       {/* Pending approval warning (admin only) */}
       {admin && pendingCount > 0 && (
         <div

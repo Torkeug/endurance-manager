@@ -236,6 +236,49 @@ export default async function DriverDetail({ params, searchParams }) {
         </Link>
       </div>
 
+      {/* Staleness warning — shown to admins and to the driver themselves */}
+      {(admin || currentDriver?.id === id) &&
+        (!driver.last_driver_sync_at ||
+          Date.now() - new Date(driver.last_driver_sync_at).getTime() >
+            100 * 24 * 60 * 60 * 1000) && (
+          <div
+            style={{
+              marginBottom: "1rem",
+              padding: "0.65rem 1rem",
+              background: "rgba(245,158,11,0.08)",
+              border: "1px solid #f59e0b",
+              borderRadius: "4px",
+              fontSize: "0.85rem",
+              color: "#f59e0b",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              gap: "1rem",
+              flexWrap: "wrap",
+            }}
+          >
+            <span>
+              ⚠️ Les données iRacing (inventaire voitures &amp; circuits)
+              n&apos;ont pas été synchronisées depuis plus de 100 jours.
+            </span>
+            {/* Only show the sync button to the driver themselves */}
+            {currentDriver?.id === id && driver.iracing_id && (
+              <a
+                href={`/auth/iracing?mode=driver&returnTo=/pilotes/${id}`}
+                className="btn btn-sm"
+                style={{
+                  borderColor: "#f59e0b",
+                  color: "#f59e0b",
+                  background: "transparent",
+                  whiteSpace: "nowrap",
+                }}
+              >
+                🔄 Synchroniser maintenant
+              </a>
+            )}
+          </div>
+        )}
+
       {/* iRacing first-link success */}
       {iracing_linked === "true" && (
         <div className="alert alert-success" style={{ marginBottom: "1rem" }}>
