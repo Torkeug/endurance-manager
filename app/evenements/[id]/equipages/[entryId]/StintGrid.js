@@ -2082,7 +2082,7 @@ export default function StintGrid({
                   const subColor = maxSub >= 3 ? "#a07830" : "#c9a84c";
                   return {
                     borderStyles: { borderLeft: "none" },
-                    gradientBorder: `linear-gradient(to bottom, #4a9fd4 50%, ${subColor} 50%) left / 6px 100% no-repeat`,
+                    gradientBorder: `linear-gradient(to bottom, #4a9fd4 50%, ${subColor} 50%) left / 3px 100% no-repeat`,
                   };
                 }
                 if (maxTier >= 4)
@@ -2113,9 +2113,31 @@ export default function StintGrid({
                     : i % 2 === 0
                       ? "transparent"
                       : "rgba(255,255,255,0.02)";
-              const rowBackground = stintBorderStyle.gradientBorder
-                ? `${stintBorderStyle.gradientBorder}, ${rowBg}`
-                : rowBg;
+              // First-cell border style — applied to the # <td> instead of <tr> background,
+              // since <tr> background positioning is unreliable with border-collapse: collapse.
+              // inset box-shadow for single colors, background gradient for compound splits.
+              const firstCellBorderStyle = (() => {
+                if (stintBorderStyle.gradientBorder) {
+                  const subColor =
+                    (stintBorderStyle.gradientBorder.match(/#[a-f0-9]+/gi) ||
+                      [])[1] || "#c9a84c";
+                  return {
+                    backgroundImage: `linear-gradient(to bottom, #4a9fd4 50%, ${subColor} 50%)`,
+                    backgroundSize: "3px 100%",
+                    backgroundRepeat: "no-repeat",
+                    backgroundPosition: "left",
+                    backgroundOrigin: "border-box",
+                  };
+                }
+                const borderColor = (() => {
+                  const b = stintBorderStyle.borderStyles?.borderLeft || "";
+                  const m = b.match(/#[a-f0-9]+/i);
+                  return m ? m[0] : null;
+                })();
+                return borderColor
+                  ? { boxShadow: `inset 3px 0 0 0 ${borderColor}` }
+                  : {};
+              })();
 
               return (
                 <tr
@@ -2160,8 +2182,7 @@ export default function StintGrid({
                     setDraggingIndex(null);
                   }}
                   style={{
-                    // rowBackground composes gradient border strip + normal row bg (computed above)
-                    background: rowBackground,
+                    background: rowBg,
                     opacity: draggingIndex === i ? 0.4 : isSaving ? 0.6 : 1,
                     cursor:
                       !archived && isEligible(stint) && !isTouchDevice
@@ -2171,12 +2192,16 @@ export default function StintGrid({
                       dragOverIndex === i && draggingIndex !== i
                         ? "2px solid var(--accent)"
                         : "none",
-                    // borderStyles: single-color borderLeft, or none when gradient strip is active
-                    ...stintBorderStyle.borderStyles,
                   }}
                 >
-                  {/* # */}
-                  <td style={{ ...TD, textAlign: "center" }}>
+                  {/* # — firstCellBorderStyle applied here instead of <tr> for reliable alignment */}
+                  <td
+                    style={{
+                      ...TD,
+                      textAlign: "center",
+                      ...firstCellBorderStyle,
+                    }}
+                  >
                     <div
                       style={{
                         display: "flex",
