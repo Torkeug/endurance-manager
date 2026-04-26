@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { supabaseBrowser as supabase } from "../../../../../lib/supabase-browser";
 import ActualEndInput from "./ActualEndInput";
 
@@ -1210,6 +1210,10 @@ export default function StintGrid({
   // null | { title, message, confirmLabel, onConfirm }
 
   // Fetch strategies once on mount — initialises selectedStrategyId to the active strategy
+  // Guard against concurrent default-strategy creation — the async insert can race
+  // with a re-render that re-fires the effect before the first insert completes.
+  const creatingDefaultStrategy = useRef(false);
+
   useEffect(() => {
     if (!teamEntryId) return;
     supabase
@@ -1217,14 +1221,39 @@ export default function StintGrid({
       .select("*")
       .eq("team_entry_id", teamEntryId)
       .order("sort_order")
-      .then(({ data }) => {
+      .then(async ({ data }) => {
         const strats = data || [];
-        setStrategies(strats);
-        setSelectedStrategyId((prev) => {
-          // Keep current selection if still valid — avoids reset after CRUD operations
-          if (prev && strats.find((s) => s.id === prev)) return prev;
-          return strats.find((s) => s.is_active)?.id || strats[0]?.id || null;
-        });
+        if (strats.length === 0 && !archived) {
+          // Bail if another render already kicked off a creation
+          if (creatingDefaultStrategy.current) return;
+          creatingDefaultStrategy.current = true;
+          const { data: newStrat } = await supabase
+            .from("strategies")
+            .insert({
+              team_entry_id: teamEntryId,
+              name: "Stratégie 1",
+              sort_order: 1,
+              is_active: true,
+              actual_start_offset_minutes:
+                teamEntry?.events?.green_flag_offset_minutes || 0,
+            })
+            .select()
+            .single();
+          creatingDefaultStrategy.current = false;
+          if (newStrat) {
+            setStrategies([newStrat]);
+            setSelectedStrategyId(newStrat.id);
+          } else {
+            setLoading(false);
+          }
+        } else {
+          setStrategies(strats);
+          setSelectedStrategyId((prev) => {
+            if (prev && strats.find((s) => s.id === prev)) return prev;
+            return strats.find((s) => s.is_active)?.id || strats[0]?.id || null;
+          });
+          if (strats.length === 0) setLoading(false);
+        }
       });
   }, [teamEntryId]);
 
@@ -1537,7 +1566,9 @@ export default function StintGrid({
         name: `Stratégie ${nextSort}`,
         sort_order: nextSort,
         is_active: false,
-        actual_start_offset_minutes: 0,
+        // Pre-fill from event-level green flag offset — driver can override per strategy
+        actual_start_offset_minutes:
+          teamEntry?.events?.green_flag_offset_minutes || 0,
       })
       .select()
       .single();
