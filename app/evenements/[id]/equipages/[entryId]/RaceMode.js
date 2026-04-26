@@ -2,6 +2,15 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabaseBrowser as supabase } from "../../../../../lib/supabase-browser";
 
+// markerFromTier — superscript character for a given fallback tier.
+// Keep in sync with StintGrid.js.
+function markerFromTier(tier) {
+  if (tier === 2) return "*";
+  if (tier === 3) return "~";
+  if (tier === 4) return "†";
+  return "";
+}
+
 function ConfirmModal({ modal, onConfirm, onCancel }) {
   if (!modal) return null;
   return (
@@ -108,37 +117,91 @@ function getPhase(igTime, sunriseStr, sunsetStr) {
 }
 
 // ─── Fuel per lap — mirrors selectFuelPerLap in StintGrid ───────────────────
+// Returns { value, tier } or null. Tier: 1=specific, 2=proxy.
+// Keep in sync with StintGrid.js when modifying chains.
 
 function selectFuelPerLap(perf, rain, isNight) {
   if (!perf) return null;
-  if (rain) {
-    return isNight
-      ? perf.fuel_night_wet || perf.fuel_wet || perf.fuel_dry || null
-      : perf.fuel_wet || perf.fuel_dry || null;
+  const condition = rain ? (isNight ? "NW" : "DW") : isNight ? "ND" : "DD";
+  const chains = {
+    DD: ["fuel_dry", "fuel_night_dry", "fuel_wet", "fuel_night_wet"],
+    DW: ["fuel_wet", "fuel_night_wet", "fuel_dry", "fuel_night_dry"],
+    ND: ["fuel_night_dry", "fuel_dry", "fuel_night_wet", "fuel_wet"],
+    NW: ["fuel_night_wet", "fuel_wet", "fuel_night_dry", "fuel_dry"],
+  };
+  for (let i = 0; i < chains[condition].length; i++) {
+    const val = perf[chains[condition][i]];
+    if (val != null)
+      return { value: val, tier: i === 0 ? 1 : 2, subTier: null };
   }
-  return isNight
-    ? perf.fuel_night_dry || perf.fuel_dry || perf.fuel_wet || null
-    : perf.fuel_dry || perf.fuel_wet || null;
+  return null;
 }
 
-// ─── Lap time per driver — mirrors calcStint priority in StintGrid ───────────
+// ─── Lap time per driver — mirrors resolveLapTimeCalc in StintGrid ────────────
+// Returns { value, tier } or null.
+// Keep in sync with StintGrid.js when modifying chains.
 
-function selectLapTime(perf, rain, isNight, nightDryAdd, nightWetAdd) {
+function selectLapTime(
+  perf,
+  rain,
+  isNight,
+  dayWetAdd,
+  nightDryAdd,
+  nightWetAdd,
+) {
   if (!perf) return null;
-  if (rain) {
-    return isNight
-      ? perf.lap_time_night_wet ||
-          (perf.lap_time_wet ? perf.lap_time_wet + nightWetAdd : null) ||
-          (perf.lap_time_dry ? perf.lap_time_dry + nightWetAdd : null) ||
-          null
-      : perf.lap_time_wet || perf.lap_time_dry || null;
-  }
-  return isNight
-    ? perf.lap_time_night_dry ||
-        (perf.lap_time_dry ? perf.lap_time_dry + nightDryAdd : null) ||
-        (perf.lap_time_wet ? perf.lap_time_wet + nightDryAdd : null) ||
+  const condition = rain ? (isNight ? "NW" : "DW") : isNight ? "ND" : "DD";
+  const tryPath = (source, mods = []) => {
+    if (source == null) return null;
+    const val = source + mods.reduce((s, m) => s + m, 0);
+    if (val <= 0) return null;
+    if (mods.length === 0) return { value: val, tier: 1, subTier: null };
+    // subTier: null — RaceMode has no team-average fallback so subTier is never populated
+    return {
+      value: val,
+      tier: mods.some((m) => m === 0) ? 3 : 2,
+      subTier: null,
+    };
+  };
+  const dw = dayWetAdd,
+    nd = nightDryAdd,
+    nw = nightWetAdd;
+  switch (condition) {
+    case "DD":
+      return (
+        tryPath(perf.lap_time_dry) ||
+        tryPath(perf.lap_time_wet, [-dw]) ||
+        tryPath(perf.lap_time_night_dry, [-nd]) ||
+        tryPath(perf.lap_time_night_wet, [-dw, -nw]) ||
         null
-    : perf.lap_time_dry || perf.lap_time_wet || null;
+      );
+    case "DW":
+      return (
+        tryPath(perf.lap_time_wet) ||
+        tryPath(perf.lap_time_dry, [dw]) ||
+        tryPath(perf.lap_time_night_wet, [-nw]) ||
+        tryPath(perf.lap_time_night_dry, [dw, -nd]) ||
+        null
+      );
+    case "ND":
+      return (
+        tryPath(perf.lap_time_night_dry) ||
+        tryPath(perf.lap_time_dry, [nd]) ||
+        tryPath(perf.lap_time_wet, [-dw, nd]) ||
+        tryPath(perf.lap_time_night_wet, [-dw, -nw, nd]) ||
+        null
+      );
+    case "NW":
+      return (
+        tryPath(perf.lap_time_night_wet) ||
+        tryPath(perf.lap_time_wet, [nw]) ||
+        tryPath(perf.lap_time_dry, [dw, nw]) ||
+        tryPath(perf.lap_time_night_dry, [-nd, dw, nw]) ||
+        null
+      );
+    default:
+      return null;
+  }
 }
 
 // ─── Compute actual fuel stats for a completed stint ────────────────────────
@@ -151,6 +214,7 @@ function calcActualFuel(stint, driverPerf, teamEntry) {
   const igStartTime = teamEntry?.events?.ig_start_time;
   const igSunrise = teamEntry?.events?.ig_sunrise;
   const igSunset = teamEntry?.events?.ig_sunset;
+  const dayWetAdd = teamEntry?.day_wet_add_seconds || 0;
   const nightDryAdd = teamEntry?.night_dry_add_seconds || 0;
   const nightWetAdd = teamEntry?.night_wet_add_seconds || 0;
 
@@ -158,14 +222,18 @@ function calcActualFuel(stint, driverPerf, teamEntry) {
   const phase = getPhase(igTime, igSunrise, igSunset);
   const isNight = phase === "🌑";
 
-  const lapTimeSec = selectLapTime(
+  // Both helpers now return { value, tier } or null
+  const resolvedLap = selectLapTime(
     perf,
     stint.rain,
     isNight,
+    dayWetAdd,
     nightDryAdd,
     nightWetAdd,
   );
-  const fuelPerLap = selectFuelPerLap(perf, stint.rain, isNight);
+  const resolvedFuel = selectFuelPerLap(perf, stint.rain, isNight);
+  const lapTimeSec = resolvedLap?.value ?? null;
+  const fuelPerLapVal = resolvedFuel?.value ?? null;
 
   const actualDurationSec =
     (new Date(stint.irl_end_actual) - new Date(stint.irl_start)) / 1000;
@@ -174,12 +242,22 @@ function calcActualFuel(stint, driverPerf, teamEntry) {
       ? Math.round(actualDurationSec / lapTimeSec)
       : null;
   const actualFuel =
-    actualLaps !== null && fuelPerLap ? actualLaps * fuelPerLap : null;
+    actualLaps !== null && fuelPerLapVal ? actualLaps * fuelPerLapVal : null;
   const plannedFuel = stint.fuel_used_calc ?? null;
   const drift =
     actualFuel !== null && plannedFuel !== null
       ? actualFuel - plannedFuel
       : null;
+
+  // Worst tier and subTier across lap and fuel — drives compound marker in fuel summary.
+  // RaceMode has no team-average fallback so maxSubTier will always be 0 here —
+  // kept for structural consistency with StintGrid so the fuel summary rendering
+  // can use the same compound-marker logic in both components.
+  const maxTier = Math.max(resolvedLap?.tier || 0, resolvedFuel?.tier || 0);
+  const maxSubTier = Math.max(
+    resolvedLap?.subTier || 0,
+    resolvedFuel?.subTier || 0,
+  );
 
   return {
     actualLaps,
@@ -187,7 +265,9 @@ function calcActualFuel(stint, driverPerf, teamEntry) {
     plannedFuel,
     drift,
     actualDurationSec,
-    hasPerfData: !!(lapTimeSec && fuelPerLap),
+    maxTier, // 0=no data, 1=specific, 2=modifier, 3=zero-modifier
+    maxSubTier, // sub-resolution tier when team avg was used (always 0 in RaceMode)
+    hasPerfData: !!(lapTimeSec && fuelPerLapVal),
   };
 }
 
@@ -1009,14 +1089,38 @@ export default function RaceMode({
                         {f.drift.toFixed(1)}L
                       </span>
                     )}
-                    {!f.hasPerfData && (
+                    {/* Tier marker when data is estimated, ⚠️ only when no data at all.
+                        Compound marker (e.g. †~) when team avg was itself derived via bad path. */}
+                    {f.maxTier >= 2 ? (
+                      <sup
+                        style={{
+                          fontSize: "0.7em",
+                          // Primary tier drives color — compound marker carries subTier detail
+                          color: f.maxTier >= 3 ? "#a07830" : "#c9a84c",
+                        }}
+                        title={
+                          f.maxTier === 4
+                            ? f.maxSubTier >= 3
+                              ? "Estimé via moyenne équipe sans modificateur configuré — fiabilité faible"
+                              : f.maxSubTier === 2
+                                ? "Estimé via moyenne équipe + modificateur"
+                                : "Estimé via moyenne équipe"
+                            : f.maxTier === 3
+                              ? "Estimé — modificateur non configuré"
+                              : "Estimé via modificateur équipage"
+                        }
+                      >
+                        {markerFromTier(f.maxTier)}
+                        {f.maxSubTier >= 2 ? markerFromTier(f.maxSubTier) : ""}
+                      </sup>
+                    ) : !f.hasPerfData ? (
                       <span
                         title="Données de performance manquantes"
                         style={{ fontSize: "0.75rem" }}
                       >
                         ⚠️
                       </span>
-                    )}
+                    ) : null}
                   </div>
                 );
               })}

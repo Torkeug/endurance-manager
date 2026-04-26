@@ -35,6 +35,145 @@ function formatUpdatedAt(isoStr) {
   });
 }
 
+// ── Condition fallback resolvers ────────────────────────────────────────────
+// Each resolver mirrors the exact priority chain used in StintGrid's calcStint,
+// so the Performances table always shows the value that would actually be used
+// in strategy calculations for each condition.
+//
+// Tiers:
+//   1 — specific:  driver's own exact-condition field, no computation
+//   2 — derived:   another field + all non-zero modifiers applied (or raw fuel proxy)
+//   3 — zero-mod:  derived path where ≥1 modifier in the chain is 0/unset
+//   (4 — team avg: added in Part B / StintGrid)
+
+function resolveLapTime(
+  perf,
+  condition,
+  { dayWetAdd = 0, nightDryAdd = 0, nightWetAdd = 0 } = {},
+) {
+  if (!perf) return null;
+
+  // Attempt one fallback path.
+  // source: raw driver perf field.
+  // mods:   array of deltas to sum onto source (negative = subtraction).
+  // Returns { value, tier, marker } or null if source is null or result ≤ 0.
+  const tryPath = (source, mods = []) => {
+    if (source == null) return null;
+    const val = source + mods.reduce((s, m) => s + m, 0);
+    if (val <= 0) return null;
+    if (mods.length === 0) return { value: val, tier: 1, marker: "" };
+    // Tier 3 when any modifier used in this path is zero/unset
+    const tier = mods.some((m) => m === 0) ? 3 : 2;
+    return { value: val, tier, marker: tier === 2 ? "*" : "~" };
+  };
+
+  switch (condition) {
+    case "DD": // Day dry — origin condition, all paths are subtractive
+      return (
+        tryPath(perf.lap_time_dry) ||
+        tryPath(perf.lap_time_wet, [-dayWetAdd]) ||
+        tryPath(perf.lap_time_night_dry, [-nightDryAdd]) ||
+        tryPath(perf.lap_time_night_wet, [-dayWetAdd, -nightWetAdd]) ||
+        null
+      );
+    case "DW": // Day wet
+      return (
+        tryPath(perf.lap_time_wet) ||
+        tryPath(perf.lap_time_dry, [dayWetAdd]) ||
+        tryPath(perf.lap_time_night_wet, [-nightWetAdd]) ||
+        tryPath(perf.lap_time_night_dry, [dayWetAdd, -nightDryAdd]) ||
+        null
+      );
+    case "ND": // Night dry
+      return (
+        tryPath(perf.lap_time_night_dry) ||
+        tryPath(perf.lap_time_dry, [nightDryAdd]) ||
+        tryPath(perf.lap_time_wet, [-dayWetAdd, nightDryAdd]) ||
+        tryPath(perf.lap_time_night_wet, [
+          -dayWetAdd,
+          -nightWetAdd,
+          nightDryAdd,
+        ]) ||
+        null
+      );
+    case "NW": // Night wet
+      return (
+        tryPath(perf.lap_time_night_wet) ||
+        tryPath(perf.lap_time_wet, [nightWetAdd]) ||
+        tryPath(perf.lap_time_dry, [dayWetAdd, nightWetAdd]) ||
+        tryPath(perf.lap_time_night_dry, [
+          -nightDryAdd,
+          dayWetAdd,
+          nightWetAdd,
+        ]) ||
+        null
+      );
+    default:
+      return null;
+  }
+}
+
+// Fuel fallbacks use same-precip priority — no modifiers exist for fuel,
+// so cross-condition values are raw proxies (tier 2), not computed.
+// Priority: exact → same-precip different-time → opposite-precip same-time → full opposite.
+function resolveFuel(perf, condition) {
+  if (!perf) return null;
+
+  // Specific — driver's own field for this exact condition
+  const specific = (source) =>
+    source != null ? { value: source, tier: 1, marker: "" } : null;
+
+  // Proxy — raw value from a related condition (tier 2, amber marker)
+  const proxy = (source) =>
+    source != null ? { value: source, tier: 2, marker: "*" } : null;
+
+  switch (condition) {
+    case "DD":
+      return (
+        specific(perf.fuel_dry) ||
+        proxy(perf.fuel_night_dry) ||
+        proxy(perf.fuel_wet) ||
+        proxy(perf.fuel_night_wet) ||
+        null
+      );
+    case "DW":
+      return (
+        specific(perf.fuel_wet) ||
+        proxy(perf.fuel_night_wet) ||
+        proxy(perf.fuel_dry) ||
+        proxy(perf.fuel_night_dry) ||
+        null
+      );
+    case "ND":
+      return (
+        specific(perf.fuel_night_dry) ||
+        proxy(perf.fuel_dry) ||
+        proxy(perf.fuel_night_wet) ||
+        proxy(perf.fuel_wet) ||
+        null
+      );
+    case "NW":
+      return (
+        specific(perf.fuel_night_wet) ||
+        proxy(perf.fuel_wet) ||
+        proxy(perf.fuel_night_dry) ||
+        proxy(perf.fuel_dry) ||
+        null
+      );
+    default:
+      return null;
+  }
+}
+
+// Maps a fallback tier to a display color. baseColor is used for tier 1 (specific).
+function tierColor(tier, baseColor) {
+  if (tier === 1) return baseColor;
+  if (tier === 2) return "#c9a84c"; // amber — modifier-derived or raw fuel proxy
+  if (tier === 3) return "#a07830"; // dim amber — zero/unset modifier used
+  if (tier === 4) return "#4a9fd4"; // blue — team average (Part B)
+  return "var(--text-dim)";
+}
+
 // ── Shared styles ──────────────────────────────────────────
 
 const thStyle = {
@@ -51,6 +190,33 @@ const thStyle = {
 };
 
 const tdStyle = { padding: "0.6rem 1rem" };
+
+// ── Resolved cell renderer ────────────────────────────────────────────────────
+// Renders a lap time or fuel value resolved via the fallback chain.
+// Color and marker convey the confidence tier. Returns "—" when nothing resolved.
+function ResolvedCell({ resolved, formatter, baseColor = "var(--text)" }) {
+  if (!resolved) return <span style={{ color: "var(--text-dim)" }}>—</span>;
+  return (
+    <span
+      className="mono"
+      style={{ color: tierColor(resolved.tier, baseColor) }}
+      title={
+        resolved.tier === 2
+          ? "Estimé via modificateur — pas de données spécifiques pour cette condition"
+          : resolved.tier === 3
+            ? "Estimé — modificateur non configuré (fiabilité faible)"
+            : undefined
+      }
+    >
+      {formatter(resolved.value)}
+      {resolved.marker && (
+        <sup style={{ fontSize: "0.65em", marginLeft: "1px" }}>
+          {resolved.marker}
+        </sup>
+      )}
+    </span>
+  );
+}
 
 // ── Row component ──────────────────────────────────────────
 
@@ -185,20 +351,22 @@ function DriverRow({
     setLapNightWetError(false);
   };
 
-  const hasDay =
-    initialData &&
-    (initialData.lap_time_dry ||
-      initialData.lap_time_wet ||
-      initialData.fuel_dry ||
-      initialData.fuel_wet);
-  const hasNight =
-    initialData &&
-    (initialData.lap_time_night_dry ||
-      initialData.lap_time_night_wet ||
-      initialData.fuel_night_dry ||
-      initialData.fuel_night_wet);
-
   if (!editing) {
+    // Resolve all 8 conditions via the full fallback chains —
+    // matches exactly what calcStint uses, so the table reflects real strategy values.
+    const mods = { dayWetAdd, nightDryAdd, nightWetAdd };
+    const rDD = resolveLapTime(initialData, "DD", mods);
+    const rDW = resolveLapTime(initialData, "DW", mods);
+    const rND = resolveLapTime(initialData, "ND", mods);
+    const rNW = resolveLapTime(initialData, "NW", mods);
+    const fDD = resolveFuel(initialData, "DD");
+    const fDW = resolveFuel(initialData, "DW");
+    const fND = resolveFuel(initialData, "ND");
+    const fNW = resolveFuel(initialData, "NW");
+
+    // Fuel display — strip trailing zeros, max 3 decimal places
+    const fuelFmt = (v) => `${parseFloat(v.toFixed(3))}L`;
+
     return (
       <>
         {/* ── Day row ── */}
@@ -211,8 +379,7 @@ function DriverRow({
             }}
           >
             {driver?.name || "—"}
-            {/* Show last update time when performance data exists — helps drivers
-      know if lap times are recent enough to be used for strategy */}
+            {/* Show last update timestamp — helps drivers confirm data is recent enough */}
             {initialData?.updated_at && (
               <div
                 style={{
@@ -226,38 +393,31 @@ function DriverRow({
               </div>
             )}
           </td>
+          {/* Dry lap time — resolves DD chain */}
           <td style={{ ...tdStyle, borderBottom: "none" }}>
-            <span
-              className="mono"
-              style={{ color: hasDay ? "var(--text)" : "var(--text-dim)" }}
-            >
-              {secToDisplay(initialData?.lap_time_dry) || "—"}
-            </span>
+            <ResolvedCell resolved={rDD} formatter={secToDisplay} />
           </td>
+          {/* Wet lap time — resolves DW chain */}
           <td style={{ ...tdStyle, borderBottom: "none" }}>
-            <span
-              className="mono"
-              style={{ color: hasDay ? "var(--text)" : "var(--text-dim)" }}
-            >
-              {secToDisplay(initialData?.lap_time_wet) || "—"}
-            </span>
+            <ResolvedCell resolved={rDW} formatter={secToDisplay} />
           </td>
+          {/* Dry fuel — resolves DD fuel chain */}
           <td style={{ ...tdStyle, borderBottom: "none" }}>
-            <span
-              className="mono"
-              style={{ color: hasDay ? "var(--accent)" : "var(--text-dim)" }}
-            >
-              {initialData?.fuel_dry != null ? `${initialData.fuel_dry}L` : "—"}
-            </span>
+            <ResolvedCell
+              resolved={fDD}
+              formatter={fuelFmt}
+              baseColor="var(--accent)"
+            />
           </td>
+          {/* Wet fuel — resolves DW fuel chain */}
           <td style={{ ...tdStyle, borderBottom: "none" }}>
-            <span
-              className="mono"
-              style={{ color: hasDay ? "var(--accent)" : "var(--text-dim)" }}
-            >
-              {initialData?.fuel_wet != null ? `${initialData.fuel_wet}L` : "—"}
-            </span>
+            <ResolvedCell
+              resolved={fDW}
+              formatter={fuelFmt}
+              baseColor="var(--accent)"
+            />
           </td>
+          {/* Setup notes — informational only, no fallback */}
           <td
             style={{
               ...tdStyle,
@@ -280,7 +440,7 @@ function DriverRow({
           >
             {initialData?.setup_notes_wet || "—"}
           </td>
-          {/* Modifier button spans both day and night rows */}
+          {/* Edit button spans day + night rows */}
           <td style={{ ...tdStyle, borderBottom: "none" }} rowSpan={2}>
             {!archived && (
               <button
@@ -305,77 +465,31 @@ function DriverRow({
           >
             🌙 Nuit
           </td>
-          {/* Night dry lap — show fallback hint when modifier is set but no specific night data */}
+          {/* Night dry lap — resolves ND chain (shows fallback with marker if needed) */}
           <td style={{ ...tdStyle, padding: "0.4rem 1rem" }}>
-            <span
-              className="mono"
-              style={{
-                fontSize: "0.82rem",
-                color: hasNight ? "var(--text)" : "var(--text-dim)",
-              }}
-            >
-              {secToDisplay(initialData?.lap_time_night_dry) ||
-                (initialData?.lap_time_dry && nightDryAdd !== 0 ? (
-                  <span style={{ fontSize: "0.74rem" }}>
-                    → {secToDisplay(initialData.lap_time_dry + nightDryAdd)}*
-                  </span>
-                ) : (
-                  "—"
-                ))}
-            </span>
+            <ResolvedCell resolved={rND} formatter={secToDisplay} />
           </td>
-          {/* Night wet lap */}
+          {/* Night wet lap — resolves NW chain */}
           <td style={{ ...tdStyle, padding: "0.4rem 1rem" }}>
-            <span
-              className="mono"
-              style={{
-                fontSize: "0.82rem",
-                color: hasNight ? "var(--text)" : "var(--text-dim)",
-              }}
-            >
-              {secToDisplay(initialData?.lap_time_night_wet) ||
-                (nightWetAdd !== 0 &&
-                (initialData?.lap_time_wet || initialData?.lap_time_dry) ? (
-                  <span style={{ fontSize: "0.74rem" }}>
-                    →{" "}
-                    {secToDisplay(
-                      (initialData.lap_time_wet || initialData.lap_time_dry) +
-                        nightWetAdd,
-                    )}
-                    *
-                  </span>
-                ) : (
-                  "—"
-                ))}
-            </span>
+            <ResolvedCell resolved={rNW} formatter={secToDisplay} />
           </td>
+          {/* Night dry fuel — resolves ND fuel chain */}
           <td style={{ ...tdStyle, padding: "0.4rem 1rem" }}>
-            <span
-              className="mono"
-              style={{
-                fontSize: "0.82rem",
-                color: hasNight ? "var(--accent)" : "var(--text-dim)",
-              }}
-            >
-              {initialData?.fuel_night_dry != null
-                ? `${initialData.fuel_night_dry}L`
-                : "—"}
-            </span>
+            <ResolvedCell
+              resolved={fND}
+              formatter={fuelFmt}
+              baseColor="var(--accent)"
+            />
           </td>
+          {/* Night wet fuel — resolves NW fuel chain */}
           <td style={{ ...tdStyle, padding: "0.4rem 1rem" }}>
-            <span
-              className="mono"
-              style={{
-                fontSize: "0.82rem",
-                color: hasNight ? "var(--accent)" : "var(--text-dim)",
-              }}
-            >
-              {initialData?.fuel_night_wet != null
-                ? `${initialData.fuel_night_wet}L`
-                : "—"}
-            </span>
+            <ResolvedCell
+              resolved={fNW}
+              formatter={fuelFmt}
+              baseColor="var(--accent)"
+            />
           </td>
-          {/* Separate dry/wet setup notes for night */}
+          {/* Night setup notes — informational only, no fallback */}
           <td
             style={{
               ...tdStyle,
@@ -979,18 +1093,47 @@ export default function PerformanceData({
           </tbody>
         </table>
       </div>
-      {(dayWetAdd !== 0 || nightDryAdd !== 0 || nightWetAdd !== 0) && (
-        <div
-          style={{
-            marginTop: "0.5rem",
-            fontSize: "0.72rem",
-            color: "var(--text-dim)",
-          }}
-        >
-          * Chrono estimé via modificateur équipage (pas de données spécifiques
-          pour ce pilote dans cette condition)
-        </div>
-      )}
+      {/* Fallback tier legend — always shown since ~ can fire even when modifiers=0 */}
+      <div
+        style={{
+          marginTop: "0.75rem",
+          fontSize: "0.72rem",
+          color: "var(--text-dim)",
+          display: "flex",
+          gap: "1.25rem",
+          flexWrap: "wrap",
+          alignItems: "center",
+        }}
+      >
+        {[
+          { color: "#c9a84c", marker: "*", label: "modificateur équipage" },
+          {
+            color: "#a07830",
+            marker: "~",
+            label: "sans modificateur configuré",
+          },
+        ].map(({ color, marker, label }) => (
+          <span
+            key={marker}
+            style={{ display: "flex", alignItems: "center", gap: "0.4rem" }}
+          >
+            {/* Colored bar matching the StintGrid row border tint for this tier */}
+            <span
+              style={{
+                display: "inline-block",
+                width: "3px",
+                height: "14px",
+                background: color,
+                borderRadius: "1px",
+                flexShrink: 0,
+              }}
+            />
+            <span>
+              <span style={{ color }}>{marker}</span> {label}
+            </span>
+          </span>
+        ))}
+      </div>
     </div>
   );
 }

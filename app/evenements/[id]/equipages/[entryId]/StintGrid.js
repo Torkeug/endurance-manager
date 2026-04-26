@@ -89,19 +89,146 @@ function checkAvailability(availabilities, driverId, irlStart, irlEnd) {
 }
 
 // ─── Fuel per lap selection ──────────────────────────────────────────────────
-// Extracted so it can be reused in calcStint and calcSkipLastStintTarget.
-// Priority mirrors calcStint: night-specific → day + additive → opposite condition.
-
+// selectFuelPerLap — 4-step fuel fallback chains, same-precip priority.
+// Returns { value, tier } or null.
+// Tier: 1=specific, 2=proxy (different condition, no modifiers).
+// Mirrors resolveFuel() in PerformanceData.js — keep in sync when modifying chains.
 function selectFuelPerLap(perf, rain, isNight) {
   if (!perf) return null;
-  if (rain) {
-    return isNight
-      ? perf.fuel_night_wet || perf.fuel_wet || perf.fuel_dry || null
-      : perf.fuel_wet || perf.fuel_dry || null;
+  const condition = rain ? (isNight ? "NW" : "DW") : isNight ? "ND" : "DD";
+  const chains = {
+    DD: ["fuel_dry", "fuel_night_dry", "fuel_wet", "fuel_night_wet"],
+    DW: ["fuel_wet", "fuel_night_wet", "fuel_dry", "fuel_night_dry"],
+    ND: ["fuel_night_dry", "fuel_dry", "fuel_night_wet", "fuel_wet"],
+    NW: ["fuel_night_wet", "fuel_wet", "fuel_night_dry", "fuel_dry"],
+  };
+  for (let i = 0; i < chains[condition].length; i++) {
+    const val = perf[chains[condition][i]];
+    // subTier: null — only populated externally when this result becomes a team average.
+    if (val != null)
+      return { value: val, tier: i === 0 ? 1 : 2, subTier: null };
   }
-  return isNight
-    ? perf.fuel_night_dry || perf.fuel_dry || perf.fuel_wet || null
-    : perf.fuel_dry || perf.fuel_wet || null;
+  return null;
+}
+
+// resolveLapTimeCalc — 4-step lap time fallback chains with signed modifier composition.
+// Returns { value, tier } or null.
+// Tier: 1=specific, 2=modifier-derived (all non-zero), 3=zero-modifier path (low confidence).
+// Tier 4 (team average) is assigned externally in calculateAllStints.
+// Mirrors resolveLapTime() in PerformanceData.js — keep in sync when modifying chains.
+function resolveLapTimeCalc(
+  perf,
+  condition,
+  { dayWetAdd = 0, nightDryAdd = 0, nightWetAdd = 0 } = {},
+) {
+  if (!perf) return null;
+  // Attempt one path: source field + array of signed modifier deltas.
+  // Returns { value, tier } or null if source is null or result ≤ 0.
+  const tryPath = (source, mods = []) => {
+    if (source == null) return null;
+    const val = source + mods.reduce((s, m) => s + m, 0);
+    if (val <= 0) return null;
+    if (mods.length === 0) return { value: val, tier: 1, subTier: null };
+    // Tier 3 when any modifier in this path is zero/unset — result is low-confidence.
+    // subTier: null here — only populated externally when this result becomes a team average.
+    return {
+      value: val,
+      tier: mods.some((m) => m === 0) ? 3 : 2,
+      subTier: null,
+    };
+  };
+  switch (condition) {
+    case "DD":
+      return (
+        tryPath(perf.lap_time_dry) ||
+        tryPath(perf.lap_time_wet, [-dayWetAdd]) ||
+        tryPath(perf.lap_time_night_dry, [-nightDryAdd]) ||
+        tryPath(perf.lap_time_night_wet, [-dayWetAdd, -nightWetAdd]) ||
+        null
+      );
+    case "DW":
+      return (
+        tryPath(perf.lap_time_wet) ||
+        tryPath(perf.lap_time_dry, [dayWetAdd]) ||
+        tryPath(perf.lap_time_night_wet, [-nightWetAdd]) ||
+        tryPath(perf.lap_time_night_dry, [dayWetAdd, -nightDryAdd]) ||
+        null
+      );
+    case "ND":
+      return (
+        tryPath(perf.lap_time_night_dry) ||
+        tryPath(perf.lap_time_dry, [nightDryAdd]) ||
+        tryPath(perf.lap_time_wet, [-dayWetAdd, nightDryAdd]) ||
+        tryPath(perf.lap_time_night_wet, [
+          -dayWetAdd,
+          -nightWetAdd,
+          nightDryAdd,
+        ]) ||
+        null
+      );
+    case "NW":
+      return (
+        tryPath(perf.lap_time_night_wet) ||
+        tryPath(perf.lap_time_wet, [nightWetAdd]) ||
+        tryPath(perf.lap_time_dry, [dayWetAdd, nightWetAdd]) ||
+        tryPath(perf.lap_time_night_dry, [
+          -nightDryAdd,
+          dayWetAdd,
+          nightWetAdd,
+        ]) ||
+        null
+      );
+    default:
+      return null;
+  }
+}
+
+// computeTeamAverages — averages each perf field across all drivers who have it.
+// Returns a perf-shaped object (null per field when no driver has it).
+// Used as tier-4 fallback in calcStint when a driver has no resolvable data.
+function computeTeamAverages(driverPerf) {
+  const fields = [
+    "lap_time_dry",
+    "lap_time_wet",
+    "lap_time_night_dry",
+    "lap_time_night_wet",
+    "fuel_dry",
+    "fuel_wet",
+    "fuel_night_dry",
+    "fuel_night_wet",
+  ];
+  const sums = Object.fromEntries(fields.map((f) => [f, 0]));
+  const counts = Object.fromEntries(fields.map((f) => [f, 0]));
+  Object.values(driverPerf).forEach((perf) => {
+    if (!perf) return;
+    fields.forEach((f) => {
+      if (perf[f] != null) {
+        sums[f] += perf[f];
+        counts[f]++;
+      }
+    });
+  });
+  return Object.fromEntries(
+    fields.map((f) => [f, counts[f] > 0 ? sums[f] / counts[f] : null]),
+  );
+}
+
+// markerFromTier — superscript character for a given fallback tier.
+function markerFromTier(tier) {
+  if (tier === 2) return "*";
+  if (tier === 3) return "~";
+  if (tier === 4) return "†";
+  return "";
+}
+
+// tierTextColor — text color for a given fallback tier.
+// baseColor is returned for tier 1 (specific data, no estimation).
+function tierTextColor(tier, baseColor = "var(--text)") {
+  if (!tier || tier === 1) return baseColor;
+  if (tier === 2) return "#c9a84c"; // amber — modifier-derived
+  if (tier === 3) return "#a07830"; // dim amber — zero modifier
+  if (tier === 4) return "#4a9fd4"; // blue — team average
+  return "var(--text-dim)";
 }
 
 // ─── Stint calculation engine ───────────────────────────────────────────────
@@ -116,6 +243,8 @@ function calcStint(
   irlStart,
   // fuelRemaining: fuel left in tank at end of previous stint (null for first stint)
   fuelRemaining = null,
+  // teamAverages: tier-4 fallback when driver has no resolvable perf data
+  teamAverages = null,
 ) {
   const pitLane = teamEntry?.events?.circuits?.pit_lane_time_seconds || 0;
   const tyreChange = teamEntry?.tyre_change_time_seconds || 0;
@@ -150,44 +279,45 @@ function calcStint(
   const phase = getPhase(igStart, igSunrise, igSunset);
   const isNight = phase === "🌑";
 
-  // Night additive fallback — applied only when no specific night lap time data exists
+  // Modifier values — used in lap time fallback chain composition
   const dayWetAdd = teamEntry?.day_wet_add_seconds || 0;
   const nightDryAdd = teamEntry?.night_dry_add_seconds || 0;
   const nightWetAdd = teamEntry?.night_wet_add_seconds || 0;
+  const mods = { dayWetAdd, nightDryAdd, nightWetAdd };
 
-  // Lap time selection priority:
-  //   Night + rain:    lap_time_night_wet → (lap_time_wet + nightWetAdd) → (lap_time_dry + nightWetAdd)
-  //   Night + dry:     lap_time_night_dry → (lap_time_dry + nightDryAdd) → (lap_time_wet + nightDryAdd)
-  //   Day + rain:      lap_time_wet → lap_time_dry
-  //   Day + dry:       lap_time_dry → lap_time_wet
-  let lapTimeSec;
-  if (stint.rain) {
-    lapTimeSec = isNight
-      ? // Night wet: specific → day wet + nightWetAdd → day dry + nightWetAdd
-        perf?.lap_time_night_wet ||
-        (perf?.lap_time_wet ? perf.lap_time_wet + nightWetAdd : null) ||
-        (perf?.lap_time_dry ? perf.lap_time_dry + nightWetAdd : null) ||
-        null
-      : // Day wet: specific → day dry + dayWetAdd → day dry
-        perf?.lap_time_wet ||
-        (perf?.lap_time_dry && dayWetAdd !== 0
-          ? perf.lap_time_dry + dayWetAdd
-          : null) ||
-        perf?.lap_time_dry ||
-        null;
-  } else {
-    lapTimeSec = isNight
-      ? // Night dry: specific → day dry + nightDryAdd → day wet + nightDryAdd
-        perf?.lap_time_night_dry ||
-        (perf?.lap_time_dry ? perf.lap_time_dry + nightDryAdd : null) ||
-        (perf?.lap_time_wet ? perf.lap_time_wet + nightDryAdd : null) ||
-        null
-      : // Day dry: specific → day wet
-        perf?.lap_time_dry || perf?.lap_time_wet || null;
+  // Condition code for this stint — drives fallback chain selection
+  const condition = stint.rain
+    ? isNight
+      ? "NW"
+      : "DW"
+    : isNight
+      ? "ND"
+      : "DD";
+
+  // Lap time: driver-specific fallback chain first, then team average (tier 4)
+  let resolvedLap = resolveLapTimeCalc(perf, condition, mods);
+  if (!resolvedLap && teamAverages) {
+    const avgLap = resolveLapTimeCalc(teamAverages, condition, mods);
+    // Propagate avgLap.tier as subTier — records how the average itself was derived
+    // (e.g. subTier 3 = team avg resolved via zero-modifier path, double low-confidence)
+    if (avgLap)
+      resolvedLap = { value: avgLap.value, tier: 4, subTier: avgLap.tier };
   }
+  const lapTimeSec = resolvedLap?.value ?? null;
+  const lapTimeTier = resolvedLap?.tier ?? null;
+  const lapTimeSubTier = resolvedLap?.subTier ?? null;
 
-  // Fuel selection delegated to selectFuelPerLap for reuse
-  const fuelPerLap = selectFuelPerLap(perf, stint.rain, isNight);
+  // Fuel: driver-specific fallback chain first, then team average (tier 4)
+  let resolvedFuel = selectFuelPerLap(perf, stint.rain, isNight);
+  if (!resolvedFuel && teamAverages) {
+    const avgFuel = selectFuelPerLap(teamAverages, stint.rain, isNight);
+    // Propagate avgFuel.tier as subTier — same pattern as lap time above
+    if (avgFuel)
+      resolvedFuel = { value: avgFuel.value, tier: 4, subTier: avgFuel.tier };
+  }
+  const fuelPerLap = resolvedFuel?.value ?? null;
+  const fuelTier = resolvedFuel?.tier ?? null;
+  const fuelSubTier = resolvedFuel?.subTier ?? null;
 
   const calcLaps =
     fuelPerLap && tankSize
@@ -223,8 +353,15 @@ function calcStint(
     _laps: laps,
     _calcLaps: calcLaps,
     _lapTimeSec: lapTimeSec,
+    // Fallback tier: null=no data, 1=specific, 2=modifier, 3=zero-modifier, 4=team avg
+    _lapTimeTier: lapTimeTier,
+    // subTier: how the team average was itself resolved (only set when _lapTimeTier === 4)
+    _lapTimeSubTier: lapTimeSubTier,
     _fuelUsed: fuelUsed,
     _fuelPerLap: fuelPerLap,
+    _fuelTier: fuelTier,
+    // subTier: how the team average was itself resolved (only set when _fuelTier === 4)
+    _fuelSubTier: fuelSubTier,
     _pitStopSec: pitStopSec,
     _stintDurationSec: stintDurationSec,
     _hasPerfData: !!lapTimeSec,
@@ -249,6 +386,8 @@ function calculateAllStints(
   igSunrise,
   igSunset,
 ) {
+  // Compute team averages once — passed to every calcStint call as tier-4 fallback
+  const teamAverages = computeTeamAverages(driverPerf);
   const raceStart = teamEntry?.event_start_times?.irl_start;
   const raceEnd =
     raceStart && teamEntry?.events?.duration_minutes
@@ -271,6 +410,7 @@ function calculateAllStints(
       igSunset,
       currentTime,
       fuelRemaining,
+      teamAverages,
     );
     result.push(calc);
     // Carry fuel remaining forward to next stint
@@ -315,7 +455,7 @@ function calculateAllStints(
             driverPerf[coveringStint.driver_id],
             coveringStint.rain,
             coveringStint._phase === "🌑",
-          );
+          )?.value;
         if (fuelPerLap)
           coveringStint._fuelUsed = coveringStint._laps * fuelPerLap;
       }
@@ -366,8 +506,9 @@ function calcSkipLastStintTarget(
     const fuels = assignedDrivers
       .map((d) => d.drivers?.id)
       .filter(Boolean)
-      .map((id) =>
-        selectFuelPerLap(driverPerf[id], lastStint.rain, lastIsNight),
+      .map(
+        (id) =>
+          selectFuelPerLap(driverPerf[id], lastStint.rain, lastIsNight)?.value,
       )
       .filter(Boolean);
     if (fuels.length > 0)
@@ -402,7 +543,7 @@ function calcSkipLastStintTarget(
       const fuels = assignedDrivers
         .map((d) => d.drivers?.id)
         .filter(Boolean)
-        .map((id) => selectFuelPerLap(driverPerf[id], st.rain, isNight))
+        .map((id) => selectFuelPerLap(driverPerf[id], st.rain, isNight)?.value)
         .filter(Boolean);
       if (fuels.length > 0)
         fuelPerLap = fuels.reduce((s, f) => s + f, 0) / fuels.length;
@@ -1664,12 +1805,12 @@ export default function StintGrid({
           );
         })()}
 
-      {/* Legend */}
+      {/* Legend — line 1: availability dots */}
       <div
         style={{
           display: "flex",
           gap: "1rem",
-          marginBottom: "0.5rem",
+          marginBottom: "0.25rem",
           fontSize: "0.72rem",
           color: "var(--text-dim)",
           flexWrap: "wrap",
@@ -1703,6 +1844,49 @@ export default function StintGrid({
         <span style={{ marginLeft: "0.5rem" }}>
           🛞 = Chgt pneus · 💧 = Pluie
         </span>
+      </div>
+      {/* Legend — line 2: data estimation tiers, with border-tint swatch for each */}
+      <div
+        style={{
+          display: "flex",
+          gap: "1.25rem",
+          marginBottom: "0.5rem",
+          fontSize: "0.72rem",
+          color: "var(--text-dim)",
+          flexWrap: "wrap",
+          alignItems: "center",
+        }}
+      >
+        <span style={{ fontWeight: 700, color: "var(--text)" }}>Données :</span>
+        {[
+          { color: "#c9a84c", marker: "*", label: "modificateur équipage" },
+          {
+            color: "#a07830",
+            marker: "~",
+            label: "sans modificateur configuré",
+          },
+          { color: "#4a9fd4", marker: "†", label: "moyenne équipe" },
+        ].map(({ color, marker, label }) => (
+          <span
+            key={marker}
+            style={{ display: "flex", alignItems: "center", gap: "0.4rem" }}
+          >
+            {/* Colored bar matches the row left-border tint for this tier */}
+            <span
+              style={{
+                display: "inline-block",
+                width: "3px",
+                height: "14px",
+                background: color,
+                borderRadius: "1px",
+                flexShrink: 0,
+              }}
+            />
+            <span>
+              <span style={{ color }}>{marker}</span> {label}
+            </span>
+          </span>
+        ))}
       </div>
       <div
         style={{
@@ -1864,6 +2048,75 @@ export default function StintGrid({
                 stint._isLastStint && stint._adjustedIrlEnd
                   ? stint._adjustedIrlEnd
                   : stint._irlEnd;
+
+              // Left-border style — reflects worst data tier across lap and fuel.
+              // Compound cases (tier 4 + subTier ≥ 2) use a background gradient strip
+              // instead of border-image, which is unreliable on <tr> with border-collapse.
+              // Returns { borderStyles, gradientBorder } — composed separately below.
+              const stintBorderStyle = (() => {
+                // Last-stint outcome always takes priority over tier tinting
+                if (stint._isLastStint) {
+                  return {
+                    borderStyles: {
+                      borderLeft: stint._doesNotCoverRaceEnd
+                        ? "3px solid var(--danger)"
+                        : "3px solid #2eb460",
+                    },
+                    gradientBorder: null,
+                  };
+                }
+                const lapTier = stint._lapTimeTier || 0;
+                const lapSub = stint._lapTimeSubTier || 0;
+                const fuelTier = stint._fuelTier || 0;
+                const fuelSub = stint._fuelSubTier || 0;
+                const maxTier = Math.max(lapTier, fuelTier);
+                // Only count subTier when the corresponding primary tier is 4
+                const maxSub = Math.max(
+                  lapTier === 4 ? lapSub : 0,
+                  fuelTier === 4 ? fuelSub : 0,
+                );
+                // Compound: background gradient strip split 50/50 top-to-bottom.
+                // border-image is unreliable on <tr> with border-collapse — background
+                // gradient is the only cross-browser-reliable way to show two colors.
+                if (maxTier >= 4 && maxSub >= 2) {
+                  const subColor = maxSub >= 3 ? "#a07830" : "#c9a84c";
+                  return {
+                    borderStyles: { borderLeft: "none" },
+                    gradientBorder: `linear-gradient(to bottom, #4a9fd4 50%, ${subColor} 50%) left / 6px 100% no-repeat`,
+                  };
+                }
+                if (maxTier >= 4)
+                  return {
+                    borderStyles: { borderLeft: "3px solid #4a9fd4" },
+                    gradientBorder: null,
+                  };
+                if (maxTier >= 3)
+                  return {
+                    borderStyles: { borderLeft: "3px solid #a07830" },
+                    gradientBorder: null,
+                  };
+                return {
+                  borderStyles: { borderLeft: "3px solid transparent" },
+                  gradientBorder: null,
+                };
+              })();
+
+              // Row background — compose gradient border strip on top of the normal row bg.
+              // The strip covers only the leftmost 6px; the rest shows the row bg normally.
+              const rowBg =
+                dragOverIndex === i && draggingIndex !== i
+                  ? "rgba(var(--accent-rgb), 0.1)"
+                  : stint._isLastStint
+                    ? stint._doesNotCoverRaceEnd
+                      ? "rgba(224,85,85,0.15)"
+                      : "rgba(46,180,96,0.12)"
+                    : i % 2 === 0
+                      ? "transparent"
+                      : "rgba(255,255,255,0.02)";
+              const rowBackground = stintBorderStyle.gradientBorder
+                ? `${stintBorderStyle.gradientBorder}, ${rowBg}`
+                : rowBg;
+
               return (
                 <tr
                   key={stint.id}
@@ -1907,16 +2160,8 @@ export default function StintGrid({
                     setDraggingIndex(null);
                   }}
                   style={{
-                    background:
-                      dragOverIndex === i && draggingIndex !== i
-                        ? "rgba(var(--accent-rgb), 0.1)"
-                        : stint._isLastStint
-                          ? stint._doesNotCoverRaceEnd
-                            ? "rgba(224,85,85,0.15)"
-                            : "rgba(46,180,96,0.12)"
-                          : i % 2 === 0
-                            ? "transparent"
-                            : "rgba(255,255,255,0.02)",
+                    // rowBackground composes gradient border strip + normal row bg (computed above)
+                    background: rowBackground,
                     opacity: draggingIndex === i ? 0.4 : isSaving ? 0.6 : 1,
                     cursor:
                       !archived && isEligible(stint) && !isTouchDevice
@@ -1926,11 +2171,8 @@ export default function StintGrid({
                       dragOverIndex === i && draggingIndex !== i
                         ? "2px solid var(--accent)"
                         : "none",
-                    borderLeft: stint._isLastStint
-                      ? stint._doesNotCoverRaceEnd
-                        ? "3px solid var(--danger)"
-                        : "3px solid #2eb460"
-                      : "3px solid transparent",
+                    // borderStyles: single-color borderLeft, or none when gradient strip is active
+                    ...stintBorderStyle.borderStyles,
                   }}
                 >
                   {/* # */}
@@ -2166,11 +2408,12 @@ export default function StintGrid({
                           : null;
                         if (val !== null) {
                           val = Math.max(1, val);
-                          const fuelPerLap = stint.rain
-                            ? driverPerf[stint.driver_id]?.fuel_wet ||
-                              driverPerf[stint.driver_id]?.fuel_dry
-                            : driverPerf[stint.driver_id]?.fuel_dry ||
-                              driverPerf[stint.driver_id]?.fuel_wet;
+                          // Use full fallback chain for tank-cap check
+                          const fuelPerLap = selectFuelPerLap(
+                            driverPerf[stint.driver_id],
+                            stint.rain,
+                            stint._phase === "🌑",
+                          )?.value;
                           const tankSize = teamEntry?.bop_tank_size_percent
                             ? teamEntry.cars?.tank_size_litres *
                               (teamEntry.bop_tank_size_percent / 100)
@@ -2195,6 +2438,37 @@ export default function StintGrid({
                           : "Saisissez les tours"
                       }
                     />
+                    {/* Tier marker — only when laps are calculated (not manually set) and estimated.
+                        Compound marker (e.g. †~) when team avg was itself derived via bad path. */}
+                    {!stint.laps_planned &&
+                      stint._lapTimeTier >= 2 &&
+                      stint._laps && (
+                        <div
+                          style={{
+                            fontSize: "0.65rem",
+                            // Primary tier drives color — markers carry the compound detail
+                            color: tierTextColor(stint._lapTimeTier),
+                            marginTop: "0.1rem",
+                          }}
+                          title={
+                            stint._lapTimeTier === 4
+                              ? stint._lapTimeSubTier >= 3
+                                ? "Tours calculés via moyenne équipe estimée sans modificateur configuré — fiabilité faible"
+                                : stint._lapTimeSubTier === 2
+                                  ? "Tours calculés via moyenne équipe estimée via modificateur"
+                                  : "Tours calculés via moyenne équipe — données pilote manquantes"
+                              : stint._lapTimeTier === 3
+                                ? "Tours calculés via modificateur non configuré — fiabilité faible"
+                                : "Tours calculés via modificateur équipage"
+                          }
+                        >
+                          {markerFromTier(stint._lapTimeTier)}
+                          {stint._lapTimeSubTier >= 2
+                            ? markerFromTier(stint._lapTimeSubTier)
+                            : ""}{" "}
+                          estimé
+                        </div>
+                      )}
                     {stint._isLastStint &&
                       stint._optimalLaps &&
                       stint.laps_planned &&
@@ -2212,23 +2486,43 @@ export default function StintGrid({
                       )}
                   </td>
 
-                  {/* Fuel */}
+                  {/* Fuel — color and compound marker reflect fallback tier when data is estimated */}
                   <td style={TD}>
                     <span
                       className="mono"
                       style={{
                         fontSize: "0.72rem",
-                        // Dim if using persisted fallback (no live perf data)
+                        // Primary tier drives color — subTier detail carried by the marker
                         color: stint._fuelUsed
-                          ? "var(--accent)"
-                          : stint.fuel_used_calc
-                            ? "var(--text-dim)"
-                            : "var(--text-dim)",
+                          ? tierTextColor(stint._fuelTier, "var(--accent)")
+                          : "var(--text-dim)",
                       }}
+                      title={
+                        stint._fuelTier === 4
+                          ? stint._fuelSubTier >= 3
+                            ? "Consommation calculée via moyenne équipe estimée sans modificateur configuré — fiabilité faible"
+                            : stint._fuelSubTier === 2
+                              ? "Consommation calculée via moyenne équipe estimée via modificateur"
+                              : "Consommation calculée via moyenne équipe — données pilote manquantes"
+                          : stint._fuelTier === 3
+                            ? "Consommation calculée via modificateur non configuré — fiabilité faible"
+                            : stint._fuelTier === 2
+                              ? "Consommation calculée via modificateur équipage"
+                              : undefined
+                      }
                     >
                       {(stint._fuelUsed ?? stint.fuel_used_calc)
                         ? `${(stint._fuelUsed ?? stint.fuel_used_calc).toFixed(1)}L`
                         : "—"}
+                      {/* Compound marker — †~ or †* when team avg was itself derived */}
+                      {stint._fuelUsed && stint._fuelTier >= 2 && (
+                        <sup style={{ fontSize: "0.65em", marginLeft: "1px" }}>
+                          {markerFromTier(stint._fuelTier)}
+                          {stint._fuelSubTier >= 2
+                            ? markerFromTier(stint._fuelSubTier)
+                            : ""}
+                        </sup>
+                      )}
                     </span>
                   </td>
 
@@ -2296,12 +2590,16 @@ export default function StintGrid({
                             >
                               −{skip.savingsPerLap.toFixed(2)} L/tr
                               {skip.hasWarning && (
-                                <span
-                                  title="Données manquantes — moyenne utilisée"
-                                  style={{ marginLeft: "0.2rem" }}
+                                <sup
+                                  style={{
+                                    fontSize: "0.65em",
+                                    marginLeft: "2px",
+                                    color: "#4a9fd4",
+                                  }}
+                                  title="Données pilote manquantes pour certains relais — moyenne équipe utilisée"
                                 >
-                                  ⚠️
-                                </span>
+                                  †
+                                </sup>
                               )}
                             </div>
                           </div>
