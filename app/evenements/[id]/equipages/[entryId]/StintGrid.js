@@ -1210,81 +1210,21 @@ export default function StintGrid({
   const [confirmModal, setConfirmModal] = useState(null);
   // null | { title, message, confirmLabel, onConfirm }
 
-  // Fetch strategies once on mount — initialises selectedStrategyId to the active strategy
   // Guard against concurrent default-strategy creation — the async insert can race
   // with a re-render that re-fires the effect before the first insert completes.
   const creatingDefaultStrategy = useRef(false);
 
+  // Single parallel fetch — strategies + stints + perf + avail in one Promise.all.
+  // Eliminates the previous two-step waterfall (strategies first → then stints).
   useEffect(() => {
     if (!teamEntryId) return;
-    supabase
-      .from("strategies")
-      .select("*")
-      .eq("team_entry_id", teamEntryId)
-      .order("sort_order")
-      .then(async ({ data }) => {
-        const strats = data || [];
-        if (strats.length === 0 && !archived) {
-          // Bail if another render already kicked off a creation
-          if (creatingDefaultStrategy.current) return;
-          creatingDefaultStrategy.current = true;
-          const { data: newStrat } = await supabase
-            .from("strategies")
-            .insert({
-              team_entry_id: teamEntryId,
-              name: "Stratégie 1",
-              sort_order: 1,
-              is_active: true,
-              actual_start_offset_minutes:
-                teamEntry?.events?.green_flag_offset_minutes || 0,
-            })
-            .select()
-            .single();
-          creatingDefaultStrategy.current = false;
-          if (newStrat) {
-            setStrategies([newStrat]);
-            setSelectedStrategyId(newStrat.id);
-          } else {
-            setLoading(false);
-          }
-        } else {
-          setStrategies(strats);
-          // Notify parent of the active strategy — used by RaceMode via EquipageTabs
-          onActiveStrategyChange?.(strats.find((s) => s.is_active) || null);
-          setSelectedStrategyId((prev) => {
-            if (prev && strats.find((s) => s.id === prev)) return prev;
-            return strats.find((s) => s.is_active)?.id || strats[0]?.id || null;
-          });
-          if (strats.length === 0) setLoading(false);
-        }
-      });
-  }, [teamEntryId]);
-
-  // Sync local edit fields when the selected strategy changes
-  useEffect(() => {
-    if (!currentStrategy) return;
-    setStrategyName(currentStrategy.name || "");
-    setStrategyDesc(currentStrategy.description || "");
-    setStrategyOffset(currentStrategy.actual_start_offset_minutes || 0);
-  }, [currentStrategy?.id]);
-
-  // Guard: if the selected strategy was deleted, fall back to the first available one
-  useEffect(() => {
-    if (
-      strategies.length > 0 &&
-      !strategies.find((s) => s.id === selectedStrategyId)
-    ) {
-      setSelectedStrategyId(strategies[0].id);
-    }
-  }, [strategies]);
-
-  useEffect(() => {
-    if (!teamEntryId || !selectedStrategyId) return;
     setLoading(true);
     Promise.all([
-      // Fetch all stints for this team entry across all strategies in one query —
-      // avoids a sequential round trip waiting for selectedStrategyId.
-      // Client-side filtering by selectedStrategyId happens after the fetch.
+      supabase
+        .from("strategies")
+        .select("*")
+        .eq("team_entry_id", teamEntryId)
+        .order("sort_order"),
       supabase
         .from("stints")
         .select("*")
@@ -1305,62 +1245,118 @@ export default function StintGrid({
             .in("driver_id", driverIds)
             .neq("team_entry_id", teamEntryId)
         : Promise.resolve({ data: [] }),
-    ]).then(
-      ([
-        { data: stintsData },
-        { data: perfData },
-        { data: availData },
-        { data: otherStints },
-      ]) => {
-        const perfMap = {};
-        (perfData || []).forEach((p) => {
-          perfMap[p.driver_id] = p;
-        });
-        setDriverPerf(perfMap);
+    ]).then(async ([
+      { data: stratsData },
+      { data: stintsData },
+      { data: perfData },
+      { data: availData },
+      { data: otherStints },
+    ]) => {
+      // ── Strategies ────────────────────────────────────────────────────────
+      let strats = stratsData || [];
 
-        const availMap = {};
-        (availData || []).forEach((a) => {
-          const key = `${a.driver_id}_${new Date(a.slot_start).toISOString()}`;
-          availMap[key] = a;
-        });
-        setAvailabilities(availMap);
-
-        // Filter to the selected strategy — all stints were fetched in one query above
-        const loadedStints = (stintsData || []).filter(
-          (s) => s.strategy_id === selectedStrategyId,
-        );
-        setStints(loadedStints);
-        setLoading(false);
-        setConflictStints(otherStints || []);
-
-        // Auto-generate stints only for the first strategy on initial load.
-        // New strategies (strategies.length > 1) deliberately start empty.
-        if (
-          loadedStints.length === 0 &&
-          !autoGenDone &&
-          !archived &&
-          strategies.length === 1
-        ) {
-          setAutoGenDone(true);
-          const count = estimateStintCount(teamEntry, perfMap, assignedDrivers);
-          const rows = Array.from({ length: count }, (_, i) => ({
+      // New team entry — no strategy exists yet (created after migration backfill).
+      // Auto-create the default so the grid can load normally.
+      if (strats.length === 0 && !archived) {
+        if (creatingDefaultStrategy.current) return;
+        creatingDefaultStrategy.current = true;
+        const { data: newStrat } = await supabase
+          .from("strategies")
+          .insert({
             team_entry_id: teamEntryId,
-            strategy_id: selectedStrategyId, // link stints to the current strategy
-            stint_number: i + 1,
-            rain: false,
-            tyre_change: false,
-          }));
-          supabase
-            .from("stints")
-            .insert(rows)
-            .select()
-            .then(({ data }) => {
-              if (data) setStints(data);
-            });
+            name: "Stratégie 1",
+            sort_order: 1,
+            is_active: true,
+            actual_start_offset_minutes:
+              teamEntry?.events?.green_flag_offset_minutes || 0,
+          })
+          .select()
+          .single();
+        creatingDefaultStrategy.current = false;
+        if (newStrat) {
+          strats = [newStrat];
+        } else {
+          setLoading(false);
+          return;
         }
-      },
-    );
-  }, [teamEntryId, selectedStrategyId, JSON.stringify(driverIds)]);
+      }
+
+      // Determine active strategy — preserve existing tab selection if still valid
+      const resolvedStratId =
+        selectedStrategyId && strats.find((s) => s.id === selectedStrategyId)
+          ? selectedStrategyId
+          : strats.find((s) => s.is_active)?.id || strats[0]?.id || null;
+
+      setStrategies(strats);
+      onActiveStrategyChange?.(strats.find((s) => s.is_active) || null);
+      setSelectedStrategyId(resolvedStratId);
+
+      // ── Perf + avail + conflicts ───────────────────────────────────────────
+      const perfMap = {};
+      (perfData || []).forEach((p) => { perfMap[p.driver_id] = p; });
+      setDriverPerf(perfMap);
+
+      const availMap = {};
+      (availData || []).forEach((a) => {
+        const key = `${a.driver_id}_${new Date(a.slot_start).toISOString()}`;
+        availMap[key] = a;
+      });
+      setAvailabilities(availMap);
+      setConflictStints(otherStints || []);
+
+      // ── Stints — filter to resolved strategy ──────────────────────────────
+      const loadedStints = (stintsData || []).filter(
+        (s) => s.strategy_id === resolvedStratId,
+      );
+      setStints(loadedStints);
+      setLoading(false);
+
+      // Auto-generate stints for first strategy only when none exist
+      if (loadedStints.length === 0 && !autoGenDone && !archived && strats.length === 1) {
+        setAutoGenDone(true);
+        const count = estimateStintCount(teamEntry, perfMap, assignedDrivers);
+        const rows = Array.from({ length: count }, (_, i) => ({
+          team_entry_id: teamEntryId,
+          strategy_id: resolvedStratId,
+          stint_number: i + 1,
+          rain: false,
+          tyre_change: false,
+        }));
+        supabase
+          .from("stints")
+          .insert(rows)
+          .select()
+          .then(({ data }) => { if (data) setStints(data); });
+      }
+    });
+  }, [teamEntryId, JSON.stringify(driverIds)]);
+
+  // Sync local edit fields when the selected strategy changes
+  useEffect(() => {
+    if (!currentStrategy) return;
+    setStrategyName(currentStrategy.name || "");
+    setStrategyDesc(currentStrategy.description || "");
+    setStrategyOffset(currentStrategy.actual_start_offset_minutes || 0);
+  }, [currentStrategy?.id]);
+
+  // Guard: if the selected strategy was deleted, fall back to first available
+  useEffect(() => {
+    if (strategies.length > 0 && !strategies.find((s) => s.id === selectedStrategyId)) {
+      setSelectedStrategyId(strategies[0].id);
+    }
+  }, [strategies]);
+
+  // Strategy switch — lightweight targeted fetch for just the new strategy's stints.
+  // Perf/avail/conflict data is already loaded and shared across all strategies.
+  useEffect(() => {
+    if (!selectedStrategyId || !teamEntryId || loading) return;
+    supabase
+      .from("stints")
+      .select("*")
+      .eq("strategy_id", selectedStrategyId)
+      .order("stint_number")
+      .then(({ data }) => { setStints(data || []); });
+  }, [selectedStrategyId]);
 
   const calculated = calculateAllStints(
     stints,
@@ -1589,9 +1585,10 @@ export default function StintGrid({
   const handleUpdateStrategy = async (id, fields) => {
     if (archived) return;
     await supabase.from("strategies").update(fields).eq("id", id);
-    const updated = strategies.map((s) => ({ ...s, is_active: s.id === id }));
-    setStrategies(updated);
-    onActiveStrategyChange?.(updated.find((s) => s.is_active) || null);
+    // Only update the fields that changed — don't touch is_active on other strategies
+    setStrategies((prev) =>
+      prev.map((s) => (s.id === id ? { ...s, ...fields } : s)),
+    );
   };
 
   const handleDeleteStrategy = (id) => {
