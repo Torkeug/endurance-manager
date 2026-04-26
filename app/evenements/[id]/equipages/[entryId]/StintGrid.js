@@ -700,6 +700,106 @@ function hasConflict(calc, otherStints) {
   return null;
 }
 
+// ─── Activate-before-delete modal ────────────────────────────────────────────
+// Shown when the user tries to delete the currently active strategy.
+// Forces them to pick a replacement before deletion proceeds —
+// avoids leaving Race Mode without an active strategy.
+function ActivateBeforeDeleteModal({ modal, strategies, onConfirm, onCancel }) {
+  const [chosenId, setChosenId] = useState(modal?.defaultId || "");
+
+  // Reset selection if modal changes (e.g. re-opened for a different strategy)
+  useEffect(() => {
+    setChosenId(modal?.defaultId || "");
+  }, [modal?.defaultId]);
+
+  if (!modal) return null;
+
+  return (
+    <div
+      style={{
+        position: "fixed",
+        inset: 0,
+        background: "rgba(0,0,0,0.6)",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        zIndex: 1000,
+        padding: "1.5rem",
+      }}
+    >
+      <div className="card" style={{ maxWidth: "440px", width: "100%" }}>
+        <h3 style={{ marginBottom: "0.5rem" }}>
+          Supprimer {modal.strategyName}
+        </h3>
+        <p
+          style={{
+            fontSize: "0.85rem",
+            color: "var(--text-dim)",
+            marginBottom: "1.25rem",
+          }}
+        >
+          Cette stratégie est <strong style={{ color: "#c9a84c" }}>active</strong> — Race Mode
+          l&apos;utilise actuellement. Choisissez une stratégie de remplacement
+          avant de la supprimer.
+        </p>
+        {/* Replacement strategy selector */}
+        <div style={{ marginBottom: "1.25rem" }}>
+          <label
+            style={{
+              fontSize: "0.72rem",
+              fontWeight: 700,
+              letterSpacing: "0.08em",
+              textTransform: "uppercase",
+              color: "var(--text-dim)",
+              display: "block",
+              marginBottom: "0.4rem",
+            }}
+          >
+            Nouvelle stratégie active
+          </label>
+          <select
+            value={chosenId}
+            onChange={(e) => setChosenId(e.target.value)}
+            style={{
+              width: "100%",
+              background: "var(--surface)",
+              border: "1px solid var(--border)",
+              borderRadius: "3px",
+              color: "var(--text)",
+              fontSize: "0.85rem",
+              padding: "0.4rem 0.6rem",
+            }}
+          >
+            <option value="">— Sélectionner —</option>
+            {strategies
+              .filter((s) => s.id !== modal.strategyId)
+              .map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.name}
+                  {s.description ? ` — ${s.description}` : ""}
+                </option>
+              ))}
+          </select>
+        </div>
+        <div
+          style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}
+        >
+          <button
+            onClick={() => chosenId && onConfirm(chosenId)}
+            className="btn btn-danger"
+            disabled={!chosenId}
+          >
+            Supprimer et activer la sélection
+          </button>
+          <button onClick={onCancel} className="btn btn-secondary">
+            Annuler
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── Clear driver stints modal ───────────────────────────────────────────────
 // Shown before clearing all eligible stints for a specific driver.
 // Replaces native confirm() for consistency with the rest of the app.
@@ -1087,6 +1187,10 @@ export default function StintGrid({
     strategies[0] ||
     null;
 
+  // Controls the activate-before-delete modal — shown when deleting the active strategy
+  const [activateBeforeDeleteModal, setActivateBeforeDeleteModal] = useState(null);
+  // null | { strategyId, strategyName, defaultId }
+
   // Controls the clear driver stints confirmation modal
   const [clearDriverModal, setClearDriverModal] = useState(null);
   // null | { driverId, driverName, stintCount }
@@ -1449,9 +1553,23 @@ export default function StintGrid({
     );
   };
 
-  const handleDeleteStrategy = (id) => {
+ const handleDeleteStrategy = (id) => {
     if (archived || strategies.length <= 1) return;
     const strat = strategies.find((s) => s.id === id);
+
+    if (strat?.is_active) {
+      // Active strategy — force user to pick a replacement first
+      const remaining = strategies.filter((s) => s.id !== id);
+      setActivateBeforeDeleteModal({
+        strategyId: id,
+        strategyName: strat.name,
+        // Pre-select first remaining strategy as a sensible default
+        defaultId: remaining[0]?.id || "",
+      });
+      return;
+    }
+
+    // Non-active strategy — standard confirm modal
     setConfirmModal({
       title: `Supprimer ${strat?.name || "cette stratégie"}`,
       message:
@@ -1464,6 +1582,34 @@ export default function StintGrid({
         setStrategies((prev) => prev.filter((s) => s.id !== id));
       },
     });
+  };
+
+  // Callback from ActivateBeforeDeleteModal — activates chosenId, then deletes the old one
+  const commitDeleteActiveStrategy = async (chosenId) => {
+    const { strategyId } = activateBeforeDeleteModal;
+    setActivateBeforeDeleteModal(null);
+
+    // Activate chosen replacement first — keeps Race Mode uninterrupted
+    await supabase
+      .from("strategies")
+      .update({ is_active: false })
+      .eq("team_entry_id", teamEntryId);
+    await supabase
+      .from("strategies")
+      .update({ is_active: true })
+      .eq("id", chosenId);
+
+    // Delete old strategy — cascade removes its stints
+    await supabase.from("strategies").delete().eq("id", strategyId);
+
+    setStrategies((prev) =>
+      prev
+        .filter((s) => s.id !== strategyId)
+        .map((s) => ({ ...s, is_active: s.id === chosenId })),
+    );
+
+    // Switch view to the newly active strategy
+    setSelectedStrategyId(chosenId);
   };
 
   const handleSetActive = (id) => {
@@ -3332,6 +3478,14 @@ export default function StintGrid({
         modal={confirmModal}
         onConfirm={() => confirmModal?.onConfirm?.()}
         onCancel={() => setConfirmModal(null)}
+      />
+
+      {/* Activate-before-delete modal — shown when deleting the active strategy */}
+      <ActivateBeforeDeleteModal
+        modal={activateBeforeDeleteModal}
+        strategies={strategies}
+        onConfirm={commitDeleteActiveStrategy}
+        onCancel={() => setActivateBeforeDeleteModal(null)}
       />
 
       {/* Clear driver stints confirmation modal */}
