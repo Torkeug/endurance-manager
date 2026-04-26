@@ -1,5 +1,6 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { supabaseBrowser as supabase } from "../../../../../lib/supabase-browser";
 import DriversAssignment from "./DriversAssignment";
 import AvailabilityGrid from "./AvailabilityGrid";
 import PerformanceData from "./PerformanceData";
@@ -35,6 +36,44 @@ export default function EquipageTabs({
   // Full access: admins and engineers can see and interact with everything
   // (engineers are read-only on non-relais tabs via the archived-style lock)
   const fullAccess = isAdmin || isEngineer;
+
+  // activeStrategy — fetched here so RaceMode always has the current active strategy.
+  // Must live before any conditional return to satisfy React hooks rules.
+  const [activeStrategy, setActiveStrategy] = useState(null);
+
+  const fetchActiveStrategy = () => {
+    supabase
+      .from("strategies")
+      .select("*")
+      .eq("team_entry_id", entryId)
+      .eq("is_active", true)
+      .maybeSingle()
+      .then(({ data }) => setActiveStrategy(data || null));
+  };
+
+  useEffect(() => {
+    if (!entryId) return;
+    fetchActiveStrategy();
+  }, [entryId]);
+
+  // Realtime — refreshes activeStrategy when StintGrid changes which strategy is active
+  useEffect(() => {
+    if (!entryId) return;
+    const channel = supabase
+      .channel(`equipage-strategies-${entryId}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "strategies",
+          filter: `team_entry_id=eq.${entryId}`,
+        },
+        fetchActiveStrategy,
+      )
+      .subscribe();
+    return () => supabase.removeChannel(channel);
+  }, [entryId]);
 
   // ── Access guard ─────────────────────────────────────────────────────────
   // Neither in event nor privileged role → hard block
@@ -256,6 +295,7 @@ export default function EquipageTabs({
           teamEntry={teamEntry}
           assignedDrivers={assignedDrivers}
           archived={archived}
+          activeStrategy={activeStrategy}
           onRequestRecalc={() => {
             setRecalcRequested(true);
             setActiveTab("relais");

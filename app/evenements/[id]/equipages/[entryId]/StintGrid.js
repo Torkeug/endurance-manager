@@ -385,15 +385,22 @@ function calculateAllStints(
   igStartTime,
   igSunrise,
   igSunset,
+  startOffsetMinutes = 0,
 ) {
   // Compute team averages once — passed to every calcStint call as tier-4 fallback
   const teamAverages = computeTeamAverages(driverPerf);
-  const raceStart = teamEntry?.event_start_times?.irl_start;
+  const raceStartRaw = teamEntry?.event_start_times?.irl_start;
+  // Apply strategy start offset — shifts the effective green-flag time without changing
+  // event config. Models delayed starts (practice + qualif + formation lap padding).
+  const raceStart = raceStartRaw
+    ? new Date(
+        new Date(raceStartRaw).getTime() + startOffsetMinutes * 60 * 1000,
+      )
+    : null;
   const raceEnd =
     raceStart && teamEntry?.events?.duration_minutes
       ? new Date(
-          new Date(raceStart).getTime() +
-            teamEntry.events.duration_minutes * 60 * 1000,
+          raceStart.getTime() + teamEntry.events.duration_minutes * 60 * 1000,
         )
       : null;
   let currentTime = raceStart ? new Date(raceStart) : null;
@@ -1048,6 +1055,14 @@ export default function StintGrid({
   // Called after auto-open so EquipageTabs can reset the flag
   onAutoOpenHandled = null,
 }) {
+  // Strategy state — strategies fetched from DB, selectedStrategyId is the viewed tab
+  const [strategies, setStrategies] = useState([]);
+  const [selectedStrategyId, setSelectedStrategyId] = useState(null);
+  // Local edit fields for selected strategy metadata — synced via useEffect on strategy switch
+  const [strategyName, setStrategyName] = useState("");
+  const [strategyDesc, setStrategyDesc] = useState("");
+  const [strategyOffset, setStrategyOffset] = useState(0);
+
   const [stints, setStints] = useState([]);
   const [driverPerf, setDriverPerf] = useState({});
   const [availabilities, setAvailabilities] = useState({});
@@ -1066,6 +1081,11 @@ export default function StintGrid({
   const igSunrise = event?.ig_sunrise;
   const igSunset = event?.ig_sunset;
   const driverIds = assignedDrivers.map((d) => d.drivers?.id).filter(Boolean);
+  // The strategy object for the currently selected tab
+  const currentStrategy =
+    strategies.find((s) => s.id === selectedStrategyId) ||
+    strategies[0] ||
+    null;
 
   // Controls the clear driver stints confirmation modal
   const [clearDriverModal, setClearDriverModal] = useState(null);
@@ -1083,13 +1103,52 @@ export default function StintGrid({
   const [confirmModal, setConfirmModal] = useState(null);
   // null | { title, message, confirmLabel, onConfirm }
 
+  // Fetch strategies once on mount — initialises selectedStrategyId to the active strategy
   useEffect(() => {
     if (!teamEntryId) return;
+    supabase
+      .from("strategies")
+      .select("*")
+      .eq("team_entry_id", teamEntryId)
+      .order("sort_order")
+      .then(({ data }) => {
+        const strats = data || [];
+        setStrategies(strats);
+        setSelectedStrategyId((prev) => {
+          // Keep current selection if still valid — avoids reset after CRUD operations
+          if (prev && strats.find((s) => s.id === prev)) return prev;
+          return strats.find((s) => s.is_active)?.id || strats[0]?.id || null;
+        });
+      });
+  }, [teamEntryId]);
+
+  // Sync local edit fields when the selected strategy changes
+  useEffect(() => {
+    if (!currentStrategy) return;
+    setStrategyName(currentStrategy.name || "");
+    setStrategyDesc(currentStrategy.description || "");
+    setStrategyOffset(currentStrategy.actual_start_offset_minutes || 0);
+  }, [currentStrategy?.id]);
+
+  // Guard: if the selected strategy was deleted, fall back to the first available one
+  useEffect(() => {
+    if (
+      strategies.length > 0 &&
+      !strategies.find((s) => s.id === selectedStrategyId)
+    ) {
+      setSelectedStrategyId(strategies[0].id);
+    }
+  }, [strategies]);
+
+  useEffect(() => {
+    if (!teamEntryId || !selectedStrategyId) return;
+    setLoading(true);
     Promise.all([
+      // Stints are scoped to the selected strategy — each strategy has its own grid
       supabase
         .from("stints")
         .select("*")
-        .eq("team_entry_id", teamEntryId)
+        .eq("strategy_id", selectedStrategyId)
         .order("stint_number"),
       supabase
         .from("driver_performance")
@@ -1131,12 +1190,19 @@ export default function StintGrid({
         setLoading(false);
         setConflictStints(otherStints || []);
 
-        // Auto-generate stints if none exist — skipped for archived events
-        if (loadedStints.length === 0 && !autoGenDone && !archived) {
+        // Auto-generate stints only for the first strategy on initial load.
+        // New strategies (strategies.length > 1) deliberately start empty.
+        if (
+          loadedStints.length === 0 &&
+          !autoGenDone &&
+          !archived &&
+          strategies.length === 1
+        ) {
           setAutoGenDone(true);
           const count = estimateStintCount(teamEntry, perfMap, assignedDrivers);
           const rows = Array.from({ length: count }, (_, i) => ({
             team_entry_id: teamEntryId,
+            strategy_id: selectedStrategyId, // link stints to the current strategy
             stint_number: i + 1,
             rain: false,
             tyre_change: false,
@@ -1151,7 +1217,7 @@ export default function StintGrid({
         }
       },
     );
-  }, [teamEntryId, JSON.stringify(driverIds)]);
+  }, [teamEntryId, selectedStrategyId, JSON.stringify(driverIds)]);
 
   const calculated = calculateAllStints(
     stints,
@@ -1160,6 +1226,7 @@ export default function StintGrid({
     igStartTime,
     igSunrise,
     igSunset,
+    currentStrategy?.actual_start_offset_minutes || 0,
   );
 
   // Persist calculated IRL start/end times for conflict detection — skipped when archived
@@ -1257,7 +1324,7 @@ export default function StintGrid({
     // Merge actual perf from completed stints into driverPerf
     const mergedPerf = extractAndMergeActualPerf(completedCalc, driverPerf);
 
-    // Rerun calculation with merged perf
+    // Rerun calculation with merged perf — preserve current strategy offset
     const recalculated = calculateAllStints(
       stints,
       teamEntry,
@@ -1265,6 +1332,7 @@ export default function StintGrid({
       igStartTime,
       igSunrise,
       igSunset,
+      currentStrategy?.actual_start_offset_minutes || 0,
     );
 
     // Build diff for remaining stints only
@@ -1309,7 +1377,7 @@ export default function StintGrid({
     if (!recalcMergedPerf) return;
     setRecalcSaving(true);
 
-    // Rerun with merged perf to get final laps
+    // Rerun with merged perf to get final laps — preserve current strategy offset
     const recalculated = calculateAllStints(
       stints,
       teamEntry,
@@ -1317,6 +1385,7 @@ export default function StintGrid({
       igStartTime,
       igSunrise,
       igSunset,
+      currentStrategy?.actual_start_offset_minutes || 0,
     );
 
     const remainingCalc = recalculated.filter((s) => !isStintCompleted(s));
@@ -1347,6 +1416,81 @@ export default function StintGrid({
     setRecalcMergedPerf(null);
   };
 
+  // ── Strategy CRUD handlers ──────────────────────────────────────────────────
+
+  const handleCreateStrategy = async () => {
+    if (strategies.length >= 5 || archived) return;
+    const nextSort =
+      strategies.length > 0
+        ? Math.max(...strategies.map((s) => s.sort_order)) + 1
+        : 1;
+    const { data } = await supabase
+      .from("strategies")
+      .insert({
+        team_entry_id: teamEntryId,
+        name: `Stratégie ${nextSort}`,
+        sort_order: nextSort,
+        is_active: false,
+        actual_start_offset_minutes: 0,
+      })
+      .select()
+      .single();
+    if (data) {
+      setStrategies((prev) => [...prev, data]);
+      setSelectedStrategyId(data.id);
+    }
+  };
+
+  const handleUpdateStrategy = async (id, fields) => {
+    if (archived) return;
+    await supabase.from("strategies").update(fields).eq("id", id);
+    setStrategies((prev) =>
+      prev.map((s) => (s.id === id ? { ...s, ...fields } : s)),
+    );
+  };
+
+  const handleDeleteStrategy = (id) => {
+    if (archived || strategies.length <= 1) return;
+    const strat = strategies.find((s) => s.id === id);
+    setConfirmModal({
+      title: `Supprimer ${strat?.name || "cette stratégie"}`,
+      message:
+        "Tous les relais de cette stratégie seront supprimés définitivement. Cette action est irréversible.",
+      confirmLabel: "Supprimer",
+      onConfirm: async () => {
+        setConfirmModal(null);
+        // Cascade on FK deletes all stints for this strategy automatically
+        await supabase.from("strategies").delete().eq("id", id);
+        setStrategies((prev) => prev.filter((s) => s.id !== id));
+      },
+    });
+  };
+
+  const handleSetActive = (id) => {
+    if (archived) return;
+    const strat = strategies.find((s) => s.id === id);
+    setConfirmModal({
+      title: "Changer la stratégie active",
+      message: `Race Mode utilisera désormais "${strat?.name || "cette stratégie"}".`,
+      confirmLabel: "Confirmer",
+      onConfirm: async () => {
+        setConfirmModal(null);
+        // Deactivate all, then activate the chosen one
+        await supabase
+          .from("strategies")
+          .update({ is_active: false })
+          .eq("team_entry_id", teamEntryId);
+        await supabase
+          .from("strategies")
+          .update({ is_active: true })
+          .eq("id", id);
+        setStrategies((prev) =>
+          prev.map((s) => ({ ...s, is_active: s.id === id })),
+        );
+      },
+    });
+  };
+
   const addStint = async () => {
     if (archived) return;
     const nextNum =
@@ -1358,6 +1502,7 @@ export default function StintGrid({
       .insert([
         {
           team_entry_id: teamEntryId,
+          strategy_id: currentStrategy?.id || null, // link new stints to the current strategy
           stint_number: nextNum,
           rain: false,
           tyre_change: false,
@@ -1424,7 +1569,11 @@ export default function StintGrid({
       confirmLabel: "Tout supprimer",
       onConfirm: async () => {
         setConfirmModal(null);
-        await supabase.from("stints").delete().eq("team_entry_id", teamEntryId);
+        // Delete stints for the current strategy only — other strategies unaffected
+        await supabase
+          .from("stints")
+          .delete()
+          .eq("strategy_id", selectedStrategyId);
         setStints([]);
       },
     });
@@ -1589,11 +1738,17 @@ export default function StintGrid({
       </div>
     );
 
+  // effectiveStartTime applies the strategy offset — matches what calculateAllStints uses
+  const effectiveStartTime = teamEntry?.event_start_times?.irl_start
+    ? new Date(
+        new Date(teamEntry.event_start_times.irl_start).getTime() +
+          (currentStrategy?.actual_start_offset_minutes || 0) * 60 * 1000,
+      )
+    : null;
   const raceEndTime =
-    teamEntry?.event_start_times?.irl_start && event?.duration_minutes
+    effectiveStartTime && event?.duration_minutes
       ? new Date(
-          new Date(teamEntry.event_start_times.irl_start).getTime() +
-            event.duration_minutes * 60 * 1000,
+          effectiveStartTime.getTime() + event.duration_minutes * 60 * 1000,
         )
       : null;
 
@@ -1602,6 +1757,298 @@ export default function StintGrid({
 
   return (
     <div>
+      {/* ── Strategy tab bar ─────────────────────────────────────────────── */}
+      <div
+        style={{
+          display: "flex",
+          gap: "0.25rem",
+          borderBottom: "1px solid var(--border)",
+          marginBottom: "0.75rem",
+          overflowX: "auto",
+          WebkitOverflowScrolling: "touch",
+          scrollbarWidth: "none",
+          msOverflowStyle: "none",
+          alignItems: "flex-end",
+        }}
+      >
+        {strategies.map((s) => (
+          <button
+            key={s.id}
+            onClick={() => setSelectedStrategyId(s.id)}
+            style={{
+              padding: "0.5rem 1rem",
+              background: "transparent",
+              border: "none",
+              borderBottom:
+                selectedStrategyId === s.id
+                  ? "2px solid var(--accent)"
+                  : "2px solid transparent",
+              color:
+                selectedStrategyId === s.id
+                  ? "var(--accent)"
+                  : "var(--text-dim)",
+              fontFamily: "var(--font-rajdhani), sans-serif",
+              fontSize: "0.85rem",
+              fontWeight: 700,
+              letterSpacing: "0.06em",
+              textTransform: "uppercase",
+              cursor: "pointer",
+              marginBottom: "-1px",
+              whiteSpace: "nowrap",
+              flexShrink: 0,
+              display: "flex",
+              alignItems: "center",
+              gap: "0.3rem",
+            }}
+          >
+            {/* ★ marks the strategy used by Race Mode */}
+            {s.is_active && (
+              <span
+                title="Stratégie active — utilisée par Race Mode"
+                style={{ color: "#c9a84c", fontSize: "0.75rem" }}
+              >
+                ★
+              </span>
+            )}
+            {s.name}
+          </button>
+        ))}
+        {/* Add strategy — hidden when at cap (5) or archived */}
+        {!archived && strategies.length < 5 && (
+          <button
+            onClick={handleCreateStrategy}
+            style={{
+              padding: "0.4rem 0.75rem",
+              background: "transparent",
+              border: "none",
+              borderBottom: "2px solid transparent",
+              color: "var(--text-dim)",
+              fontFamily: "var(--font-rajdhani), sans-serif",
+              fontSize: "0.85rem",
+              fontWeight: 700,
+              cursor: "pointer",
+              marginBottom: "-1px",
+              whiteSpace: "nowrap",
+              flexShrink: 0,
+            }}
+            title="Ajouter une stratégie (max 5)"
+          >
+            + Nouvelle
+          </button>
+        )}
+      </div>
+
+      {/* ── Strategy controls — editable metadata for the selected strategy ── */}
+      {currentStrategy && !archived && (
+        <div
+          style={{
+            marginBottom: "1rem",
+            padding: "0.75rem 1rem",
+            background: "var(--surface-2)",
+            border: "1px solid var(--border)",
+            borderRadius: "4px",
+            display: "flex",
+            flexWrap: "wrap",
+            gap: "1rem",
+            alignItems: "flex-end",
+          }}
+        >
+          {/* Name — inline edit, auto-save on blur */}
+          <div
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              gap: "0.25rem",
+              minWidth: "140px",
+            }}
+          >
+            <label
+              style={{
+                fontSize: "0.65rem",
+                fontWeight: 700,
+                letterSpacing: "0.08em",
+                textTransform: "uppercase",
+                color: "var(--text-dim)",
+              }}
+            >
+              Nom
+            </label>
+            <input
+              type="text"
+              value={strategyName}
+              onChange={(e) => setStrategyName(e.target.value)}
+              onBlur={() => {
+                const trimmed = strategyName.trim();
+                // Revert to saved name if blank
+                if (!trimmed) {
+                  setStrategyName(currentStrategy.name);
+                  return;
+                }
+                handleUpdateStrategy(currentStrategy.id, { name: trimmed });
+              }}
+              style={{
+                background: "var(--surface)",
+                border: "1px solid var(--border)",
+                borderRadius: "3px",
+                color: "var(--text)",
+                fontSize: "0.82rem",
+                padding: "0.3rem 0.5rem",
+                fontFamily: "var(--font-rajdhani), sans-serif",
+                fontWeight: 700,
+              }}
+            />
+          </div>
+
+          {/* Description — inline edit, auto-save on blur */}
+          <div
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              gap: "0.25rem",
+              flex: 1,
+              minWidth: "180px",
+            }}
+          >
+            <label
+              style={{
+                fontSize: "0.65rem",
+                fontWeight: 700,
+                letterSpacing: "0.08em",
+                textTransform: "uppercase",
+                color: "var(--text-dim)",
+              }}
+            >
+              Description
+            </label>
+            <input
+              type="text"
+              placeholder="ex : Plan nominal — météo sèche"
+              value={strategyDesc}
+              onChange={(e) => setStrategyDesc(e.target.value)}
+              onBlur={() =>
+                handleUpdateStrategy(currentStrategy.id, {
+                  description: strategyDesc.trim() || null,
+                })
+              }
+              style={{
+                background: "var(--surface)",
+                border: "1px solid var(--border)",
+                borderRadius: "3px",
+                color: "var(--text)",
+                fontSize: "0.82rem",
+                padding: "0.3rem 0.5rem",
+              }}
+            />
+          </div>
+
+          {/* Start offset — shifts the effective green-flag time for this strategy */}
+          <div
+            style={{ display: "flex", flexDirection: "column", gap: "0.25rem" }}
+          >
+            <label
+              style={{
+                fontSize: "0.65rem",
+                fontWeight: 700,
+                letterSpacing: "0.08em",
+                textTransform: "uppercase",
+                color: "var(--text-dim)",
+              }}
+              title="Minutes entre l'heure officielle de départ et le drapeau vert effectif"
+            >
+              Décalage départ
+            </label>
+            <div
+              style={{ display: "flex", alignItems: "center", gap: "0.4rem" }}
+            >
+              <input
+                type="number"
+                value={strategyOffset}
+                min={-60}
+                max={120}
+                onChange={(e) =>
+                  setStrategyOffset(parseInt(e.target.value) || 0)
+                }
+                onBlur={() =>
+                  handleUpdateStrategy(currentStrategy.id, {
+                    actual_start_offset_minutes: strategyOffset,
+                  })
+                }
+                style={{
+                  width: "64px",
+                  background: "var(--surface)",
+                  border: "1px solid var(--border)",
+                  borderRadius: "3px",
+                  color: "var(--text)",
+                  fontSize: "0.82rem",
+                  padding: "0.3rem 0.5rem",
+                  fontFamily: "var(--font-mono), monospace",
+                }}
+              />
+              <span style={{ fontSize: "0.82rem", color: "var(--text-dim)" }}>
+                min
+              </span>
+            </div>
+          </div>
+
+          {/* Active badge / Set active button + Delete */}
+          <div
+            style={{ display: "flex", gap: "0.5rem", alignItems: "flex-end" }}
+          >
+            {currentStrategy.is_active ? (
+              <span
+                style={{
+                  fontSize: "0.75rem",
+                  color: "#c9a84c",
+                  padding: "0.3rem 0.6rem",
+                  background: "rgba(201,168,76,0.08)",
+                  border: "1px solid rgba(201,168,76,0.3)",
+                  borderRadius: "3px",
+                  whiteSpace: "nowrap",
+                }}
+              >
+                ★ Active
+              </span>
+            ) : (
+              <button
+                onClick={() => handleSetActive(currentStrategy.id)}
+                className="btn btn-secondary btn-sm"
+                style={{
+                  borderColor: "#a06020",
+                  color: "#d4904a",
+                  whiteSpace: "nowrap",
+                }}
+                title="Définir comme stratégie utilisée par Race Mode"
+              >
+                ★ Définir comme active
+              </button>
+            )}
+            {strategies.length > 1 && (
+              <button
+                onClick={() => handleDeleteStrategy(currentStrategy.id)}
+                className="btn btn-danger btn-sm"
+                title="Supprimer cette stratégie et tous ses relais"
+              >
+                Supprimer
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Strategy description — read-only when archived */}
+      {currentStrategy && archived && currentStrategy.description && (
+        <div
+          style={{
+            marginBottom: "0.75rem",
+            fontSize: "0.82rem",
+            color: "var(--text-dim)",
+            fontStyle: "italic",
+          }}
+        >
+          {currentStrategy.description}
+        </div>
+      )}
+
       {/* Summary bar */}
       <div
         style={{
@@ -1614,7 +2061,10 @@ export default function StintGrid({
         {[
           {
             label: "Départ",
-            value: formatDatetime(teamEntry.event_start_times?.irl_start),
+            // Show effective start (with offset) so displayed time matches the engine
+            value: formatDatetime(
+              effectiveStartTime || teamEntry.event_start_times?.irl_start,
+            ),
           },
           {
             label: "Fin course",
