@@ -1151,10 +1151,11 @@ export default function StintGrid({
   teamEntry,
   assignedDrivers,
   archived = false,
-  // When true, automatically opens the recalc modal (triggered from Race Mode)
   autoOpenRecalc = false,
-  // Called after auto-open so EquipageTabs can reset the flag
   onAutoOpenHandled = null,
+  // Lifts the active strategy up to EquipageTabs so RaceMode can use it
+  // without a redundant fetch
+  onActiveStrategyChange = null,
 }) {
   // Strategy state — strategies fetched from DB, selectedStrategyId is the viewed tab
   const [strategies, setStrategies] = useState([]);
@@ -1248,6 +1249,8 @@ export default function StintGrid({
           }
         } else {
           setStrategies(strats);
+          // Notify parent of the active strategy — used by RaceMode via EquipageTabs
+          onActiveStrategyChange?.(strats.find((s) => s.is_active) || null);
           setSelectedStrategyId((prev) => {
             if (prev && strats.find((s) => s.id === prev)) return prev;
             return strats.find((s) => s.is_active)?.id || strats[0]?.id || null;
@@ -1279,11 +1282,13 @@ export default function StintGrid({
     if (!teamEntryId || !selectedStrategyId) return;
     setLoading(true);
     Promise.all([
-      // Stints are scoped to the selected strategy — each strategy has its own grid
+      // Fetch all stints for this team entry across all strategies in one query —
+      // avoids a sequential round trip waiting for selectedStrategyId.
+      // Client-side filtering by selectedStrategyId happens after the fetch.
       supabase
         .from("stints")
         .select("*")
-        .eq("strategy_id", selectedStrategyId)
+        .eq("team_entry_id", teamEntryId)
         .order("stint_number"),
       supabase
         .from("driver_performance")
@@ -1320,7 +1325,10 @@ export default function StintGrid({
         });
         setAvailabilities(availMap);
 
-        const loadedStints = stintsData || [];
+        // Filter to the selected strategy — all stints were fetched in one query above
+        const loadedStints = (stintsData || []).filter(
+          (s) => s.strategy_id === selectedStrategyId,
+        );
         setStints(loadedStints);
         setLoading(false);
         setConflictStints(otherStints || []);
@@ -1581,9 +1589,9 @@ export default function StintGrid({
   const handleUpdateStrategy = async (id, fields) => {
     if (archived) return;
     await supabase.from("strategies").update(fields).eq("id", id);
-    setStrategies((prev) =>
-      prev.map((s) => (s.id === id ? { ...s, ...fields } : s)),
-    );
+    const updated = strategies.map((s) => ({ ...s, is_active: s.id === id }));
+    setStrategies(updated);
+    onActiveStrategyChange?.(updated.find((s) => s.is_active) || null);
   };
 
   const handleDeleteStrategy = (id) => {
@@ -1635,11 +1643,11 @@ export default function StintGrid({
     // Delete old strategy — cascade removes its stints
     await supabase.from("strategies").delete().eq("id", strategyId);
 
-    setStrategies((prev) =>
-      prev
-        .filter((s) => s.id !== strategyId)
-        .map((s) => ({ ...s, is_active: s.id === chosenId })),
-    );
+    const updated = strategies
+      .filter((s) => s.id !== strategyId)
+      .map((s) => ({ ...s, is_active: s.id === chosenId }));
+    setStrategies(updated);
+    onActiveStrategyChange?.(updated.find((s) => s.is_active) || null);
 
     // Switch view to the newly active strategy
     setSelectedStrategyId(chosenId);

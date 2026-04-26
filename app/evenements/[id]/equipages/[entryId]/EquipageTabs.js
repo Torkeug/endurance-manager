@@ -37,43 +37,9 @@ export default function EquipageTabs({
   // (engineers are read-only on non-relais tabs via the archived-style lock)
   const fullAccess = isAdmin || isEngineer;
 
-  // activeStrategy — fetched here so RaceMode always has the current active strategy.
-  // Must live before any conditional return to satisfy React hooks rules.
+  // activeStrategy — lifted from StintGrid via onActiveStrategyChange callback.
+  // Avoids a redundant fetch since StintGrid already fetches all strategies.
   const [activeStrategy, setActiveStrategy] = useState(null);
-
-  const fetchActiveStrategy = () => {
-    supabase
-      .from("strategies")
-      .select("*")
-      .eq("team_entry_id", entryId)
-      .eq("is_active", true)
-      .maybeSingle()
-      .then(({ data }) => setActiveStrategy(data || null));
-  };
-
-  useEffect(() => {
-    if (!entryId) return;
-    fetchActiveStrategy();
-  }, [entryId]);
-
-  // Realtime — refreshes activeStrategy when StintGrid changes which strategy is active
-  useEffect(() => {
-    if (!entryId) return;
-    const channel = supabase
-      .channel(`equipage-strategies-${entryId}`)
-      .on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "strategies",
-          filter: `team_entry_id=eq.${entryId}`,
-        },
-        fetchActiveStrategy,
-      )
-      .subscribe();
-    return () => supabase.removeChannel(channel);
-  }, [entryId]);
 
   // ── Access guard ─────────────────────────────────────────────────────────
   // Neither in event nor privileged role → hard block
@@ -262,6 +228,7 @@ export default function EquipageTabs({
             archived={archived}
             autoOpenRecalc={recalcRequested}
             onAutoOpenHandled={() => setRecalcRequested(false)}
+            onActiveStrategyChange={setActiveStrategy}
           />
         </>
       )}
