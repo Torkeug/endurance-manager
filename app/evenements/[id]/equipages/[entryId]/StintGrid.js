@@ -738,7 +738,8 @@ function ActivateBeforeDeleteModal({ modal, strategies, onConfirm, onCancel }) {
             marginBottom: "1.25rem",
           }}
         >
-          Cette stratégie est <strong style={{ color: "#c9a84c" }}>active</strong> — Race Mode
+          Cette stratégie est{" "}
+          <strong style={{ color: "#c9a84c" }}>active</strong> — Race Mode
           l&apos;utilise actuellement. Choisissez une stratégie de remplacement
           avant de la supprimer.
         </p>
@@ -1188,7 +1189,8 @@ export default function StintGrid({
     null;
 
   // Controls the activate-before-delete modal — shown when deleting the active strategy
-  const [activateBeforeDeleteModal, setActivateBeforeDeleteModal] = useState(null);
+  const [activateBeforeDeleteModal, setActivateBeforeDeleteModal] =
+    useState(null);
   // null | { strategyId, strategyName, defaultId }
 
   // Controls the clear driver stints confirmation modal
@@ -1330,7 +1332,7 @@ export default function StintGrid({
     igStartTime,
     igSunrise,
     igSunset,
-    currentStrategy?.actual_start_offset_minutes || 0,
+    strategyOffset, // live local state — updates on every keystroke, not just on blur
   );
 
   // Persist calculated IRL start/end times for conflict detection — skipped when archived
@@ -1436,7 +1438,7 @@ export default function StintGrid({
       igStartTime,
       igSunrise,
       igSunset,
-      currentStrategy?.actual_start_offset_minutes || 0,
+      strategyOffset,
     );
 
     // Build diff for remaining stints only
@@ -1489,7 +1491,7 @@ export default function StintGrid({
       igStartTime,
       igSunrise,
       igSunset,
-      currentStrategy?.actual_start_offset_minutes || 0,
+      strategyOffset,
     );
 
     const remainingCalc = recalculated.filter((s) => !isStintCompleted(s));
@@ -1553,7 +1555,7 @@ export default function StintGrid({
     );
   };
 
- const handleDeleteStrategy = (id) => {
+  const handleDeleteStrategy = (id) => {
     if (archived || strategies.length <= 1) return;
     const strat = strategies.find((s) => s.id === id);
 
@@ -1888,7 +1890,7 @@ export default function StintGrid({
   const effectiveStartTime = teamEntry?.event_start_times?.irl_start
     ? new Date(
         new Date(teamEntry.event_start_times.irl_start).getTime() +
-          (currentStrategy?.actual_start_offset_minutes || 0) * 60 * 1000,
+          strategyOffset * 60 * 1000,
       )
     : null;
   const raceEndTime =
