@@ -373,23 +373,46 @@ export default async function DriverDetail({ params, searchParams }) {
         )}
       </div>
 
-      {/* iRacing sync timestamp — shown if data has been synced at least once */}
-      {driver.iracing_synced_at && (
+      {/* iRacing sync timestamps — iRating updated by syncall or driver mode,
+          inventory only updated by driver mode (last_driver_sync_at) */}
+      {(driver.iracing_synced_at || driver.last_driver_sync_at) && (
         <div
           style={{
             marginBottom: "1.5rem",
             fontSize: "0.8rem",
             color: "var(--text-dim)",
+            display: "flex",
+            flexDirection: "column",
+            gap: "0.2rem",
           }}
         >
-          Données iRacing synchronisées le{" "}
-          {new Date(driver.iracing_synced_at).toLocaleDateString("fr-FR", {
-            day: "2-digit",
-            month: "2-digit",
-            year: "numeric",
-            hour: "2-digit",
-            minute: "2-digit",
-          })}
+          {driver.iracing_synced_at && (
+            <span>
+              iRating synchronisé le{" "}
+              {new Date(driver.iracing_synced_at).toLocaleDateString("fr-FR", {
+                day: "2-digit",
+                month: "2-digit",
+                year: "numeric",
+                hour: "2-digit",
+                minute: "2-digit",
+              })}
+            </span>
+          )}
+          {driver.last_driver_sync_at && (
+            <span>
+              Inventaire synchronisé le{" "}
+              {new Date(driver.last_driver_sync_at).toLocaleDateString(
+                "fr-FR",
+                {
+                  day: "2-digit",
+                  month: "2-digit",
+                  year: "numeric",
+                  hour: "2-digit",
+                  minute: "2-digit",
+                },
+              )}
+            </span>
+          )}
         </div>
       )}
 
