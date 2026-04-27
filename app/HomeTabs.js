@@ -25,12 +25,7 @@ export default function HomeTabs({
 
   const tabs = [
     { id: "planning", label: "Mon planning", count: signupCount },
-    {
-      id: "incomplete",
-      label: "Équipes incomplètes",
-      count: incompleteCount,
-      danger: true,
-    },
+    { id: "incomplete", label: "Suivi", count: incompleteCount, danger: true },
   ];
 
   return (

@@ -3,6 +3,7 @@ import { getSessionAndDriver, isAdmin, isEngineer } from "../lib/auth";
 import Link from "next/link";
 import { formatInZone } from "../lib/timezone";
 import HomeTabs from "./HomeTabs";
+import IncompleteTab from "./IncompleteTab";
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
@@ -70,6 +71,8 @@ export default async function HomePage() {
     { data: championships },
     // Active strategies — used to scope the "no stints" incomplete teams check
     { data: activeStrategies },
+    // Signups with no team entry assigned — drivers floating without a crew
+    { data: unassignedSignupsRaw },
   ] = await Promise.all([
     supabase
       .from("events")
@@ -145,11 +148,13 @@ export default async function HomePage() {
           .from("team_entries")
           .select(
             // strategy_id included so the derived-data check can filter to active strategy only
-            `id, crew_name, event_id, events (name), signups (id), stints (id, driver_id, strategy_id)`,
+            // archived included so completed events are excluded from the incomplete sections
+            `id, crew_name, event_id, events (name, archived), signups (id), stints (id, driver_id, strategy_id)`,
           )
           .order("crew_name")
       : { data: [] },
 
+    // Championships — used to build the name map and archived set
     supabase.from("championships").select("id, name, archived").order("name"),
 
     // Fetch active strategy IDs — one per team entry — to scope the stints check below
@@ -158,6 +163,18 @@ export default async function HomePage() {
           .from("strategies")
           .select("id, team_entry_id")
           .eq("is_active", true)
+      : { data: [] },
+
+    // Drivers who signed up for an event but are not yet assigned to a team entry
+    admin
+      ? supabase
+          .from("signups")
+          .select(
+            `id, driver_id, event_id,
+             drivers (name),
+             events (id, name, archived)`,
+          )
+          .is("team_entry_id", null)
       : { data: [] },
   ]);
 
@@ -225,9 +242,11 @@ export default async function HomePage() {
   const pendingCount = (pendingDrivers || []).length;
   const totalEvents = (events || []).length;
 
-  // Admin: team entries with zero signups
+  // Admin: team entries with zero signups — exclude archived events
   const noDrivers = admin
-    ? (teamEntries || []).filter((te) => (te.signups || []).length === 0)
+    ? (teamEntries || []).filter(
+        (te) => !te.events?.archived && (te.signups || []).length === 0,
+      )
     : [];
 
   // Active strategy IDs as a Set for O(1) lookup
@@ -238,14 +257,21 @@ export default async function HomePage() {
   // Admin: team entries with signups but no assigned stints in their active strategy.
   // Scoped to active strategy only — inactive scenario strategies are excluded
   // so a team with stints only in a non-active strategy correctly appears here.
+  // Also excludes archived events.
   const noStints = admin
     ? (teamEntries || []).filter(
         (te) =>
+          !te.events?.archived &&
           (te.signups || []).length > 0 &&
           (te.stints || []).filter(
             (s) => s.driver_id && activeStrategyIdSet.has(s.strategy_id),
           ).length === 0,
       )
+    : [];
+
+  // Admin: drivers who signed up for a non-archived event but have no team entry assigned
+  const unassignedSignups = admin
+    ? (unassignedSignupsRaw || []).filter((s) => !s.events?.archived)
     : [];
 
   // ── Planning section — server-rendered JSX, passed as a slot to HomeTabs ──
@@ -529,135 +555,154 @@ export default async function HomePage() {
     </div>
   );
 
-  // ── Incomplete teams section — server-rendered JSX ──────────────────────
+  // ── Suivi sub-tab sections — server-rendered JSX slots ───────────────────
 
-  const incompleteTab = (
-    <div>
-      {noDrivers.length === 0 && noStints.length === 0 ? (
-        <div className="table-wrap">
-          <div className="empty">Aucun équipage incomplet. ✓</div>
-        </div>
-      ) : (
-        <>
-          {noDrivers.length > 0 && (
-            <div style={{ marginBottom: "2rem" }}>
-              <h2 style={{ marginBottom: "1rem" }}>Équipages sans pilotes</h2>
-              <div
+  // Section 1: team entries with no drivers signed up
+  const noDriversSection =
+    noDrivers.length === 0 ? (
+      <div className="table-wrap">
+        <div className="empty">Aucun équipage sans pilote. ✓</div>
+      </div>
+    ) : (
+      <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+        {noDrivers.map((te) => (
+          <Link
+            key={te.id}
+            href={`/evenements/${te.event_id}/equipages/${te.id}`}
+            style={{ textDecoration: "none" }}
+          >
+            <div
+              className="card event-card"
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                gap: "1rem",
+                cursor: "pointer",
+                padding: "0.75rem 1rem",
+              }}
+            >
+              <div>
+                <div style={{ fontWeight: 600 }}>{te.crew_name}</div>
+                <div style={{ fontSize: "0.8rem", color: "var(--text-dim)" }}>
+                  {te.events?.name}
+                </div>
+              </div>
+              <span
                 style={{
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: "0.5rem",
+                  fontSize: "0.72rem",
+                  padding: "0.15rem 0.4rem",
+                  background: "rgba(224,85,85,0.1)",
+                  border: "1px solid var(--danger)",
+                  borderRadius: "2px",
+                  color: "var(--danger)",
                 }}
               >
-                {noDrivers.map((te) => (
-                  <Link
-                    key={te.id}
-                    href={`/evenements/${te.event_id}/equipages/${te.id}`}
-                    style={{ textDecoration: "none" }}
-                  >
-                    <div
-                      className="card event-card"
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "space-between",
-                        gap: "1rem",
-                        cursor: "pointer",
-                        padding: "0.75rem 1rem",
-                      }}
-                    >
-                      <div>
-                        <div style={{ fontWeight: 600 }}>{te.crew_name}</div>
-                        <div
-                          style={{
-                            fontSize: "0.8rem",
-                            color: "var(--text-dim)",
-                          }}
-                        >
-                          {te.events?.name}
-                        </div>
-                      </div>
-                      <span
-                        style={{
-                          fontSize: "0.72rem",
-                          padding: "0.15rem 0.4rem",
-                          background: "rgba(224,85,85,0.1)",
-                          border: "1px solid var(--danger)",
-                          borderRadius: "2px",
-                          color: "var(--danger)",
-                        }}
-                      >
-                        Aucun pilote
-                      </span>
-                    </div>
-                  </Link>
-                ))}
-              </div>
+                Aucun pilote
+              </span>
             </div>
-          )}
+          </Link>
+        ))}
+      </div>
+    );
 
-          {noStints.length > 0 && (
-            <div>
-              <h2 style={{ marginBottom: "1rem" }}>
-                Équipages sans relais planifiés
-              </h2>
-              <div
+  // Section 2: team entries with drivers but no stints in the active strategy
+  const noStintsSection =
+    noStints.length === 0 ? (
+      <div className="table-wrap">
+        <div className="empty">Aucun équipage sans relais. ✓</div>
+      </div>
+    ) : (
+      <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+        {noStints.map((te) => (
+          <Link
+            key={te.id}
+            href={`/evenements/${te.event_id}/equipages/${te.id}`}
+            style={{ textDecoration: "none" }}
+          >
+            <div
+              className="card event-card"
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                gap: "1rem",
+                cursor: "pointer",
+                padding: "0.75rem 1rem",
+              }}
+            >
+              <div>
+                <div style={{ fontWeight: 600 }}>{te.crew_name}</div>
+                <div style={{ fontSize: "0.8rem", color: "var(--text-dim)" }}>
+                  {te.events?.name}
+                </div>
+              </div>
+              <span
                 style={{
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: "0.5rem",
+                  fontSize: "0.72rem",
+                  padding: "0.15rem 0.4rem",
+                  background: "rgba(224,85,85,0.1)",
+                  border: "1px solid var(--danger)",
+                  borderRadius: "2px",
+                  color: "var(--danger)",
                 }}
               >
-                {noStints.map((te) => (
-                  <Link
-                    key={te.id}
-                    href={`/evenements/${te.event_id}/equipages/${te.id}`}
-                    style={{ textDecoration: "none" }}
-                  >
-                    <div
-                      className="card event-card"
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "space-between",
-                        gap: "1rem",
-                        cursor: "pointer",
-                        padding: "0.75rem 1rem",
-                      }}
-                    >
-                      <div>
-                        <div style={{ fontWeight: 600 }}>{te.crew_name}</div>
-                        <div
-                          style={{
-                            fontSize: "0.8rem",
-                            color: "var(--text-dim)",
-                          }}
-                        >
-                          {te.events?.name}
-                        </div>
-                      </div>
-                      <span
-                        style={{
-                          fontSize: "0.72rem",
-                          padding: "0.15rem 0.4rem",
-                          background: "rgba(224,85,85,0.1)",
-                          border: "1px solid var(--danger)",
-                          borderRadius: "2px",
-                          color: "var(--danger)",
-                        }}
-                      >
-                        Aucun relais
-                      </span>
-                    </div>
-                  </Link>
-                ))}
-              </div>
+                Aucun relais
+              </span>
             </div>
-          )}
-        </>
-      )}
-    </div>
-  );
+          </Link>
+        ))}
+      </div>
+    );
+
+  // Section 3: drivers with a signup on a non-archived event but no team entry assigned
+  const unassignedSection =
+    unassignedSignups.length === 0 ? (
+      <div className="table-wrap">
+        <div className="empty">Aucun pilote sans équipage. ✓</div>
+      </div>
+    ) : (
+      <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+        {unassignedSignups.map((s) => (
+          <Link
+            key={s.id}
+            href={`/evenements/${s.event_id}`}
+            style={{ textDecoration: "none" }}
+          >
+            <div
+              className="card event-card"
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                gap: "1rem",
+                cursor: "pointer",
+                padding: "0.75rem 1rem",
+              }}
+            >
+              <div>
+                <div style={{ fontWeight: 600 }}>{s.drivers?.name}</div>
+                <div style={{ fontSize: "0.8rem", color: "var(--text-dim)" }}>
+                  {s.events?.name}
+                </div>
+              </div>
+              <span
+                style={{
+                  fontSize: "0.72rem",
+                  padding: "0.15rem 0.4rem",
+                  background: "rgba(224,85,85,0.1)",
+                  border: "1px solid var(--danger)",
+                  borderRadius: "2px",
+                  color: "var(--danger)",
+                }}
+              >
+                Sans équipage
+              </span>
+            </div>
+          </Link>
+        ))}
+      </div>
+    );
 
   // ── Render ─────────────────────────────────────────────────────────────────
 
@@ -864,9 +909,20 @@ export default async function HomePage() {
       {admin ? (
         <HomeTabs
           signupCount={myUpcomingSignups.length}
-          incompleteCount={noDrivers.length + noStints.length}
+          incompleteCount={
+            noDrivers.length + noStints.length + unassignedSignups.length
+          }
           planningTab={planningTab}
-          incompleteTab={incompleteTab}
+          incompleteTab={
+            <IncompleteTab
+              noDriversSection={noDriversSection}
+              noStintsSection={noStintsSection}
+              unassignedSection={unassignedSection}
+              noDriversCount={noDrivers.length}
+              noStintsCount={noStints.length}
+              unassignedCount={unassignedSignups.length}
+            />
+          }
         />
       ) : (
         // Non-admin: render planning content directly, no client component needed
