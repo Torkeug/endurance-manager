@@ -1245,90 +1245,101 @@ export default function StintGrid({
             .in("driver_id", driverIds)
             .neq("team_entry_id", teamEntryId)
         : Promise.resolve({ data: [] }),
-    ]).then(async ([
-      { data: stratsData },
-      { data: stintsData },
-      { data: perfData },
-      { data: availData },
-      { data: otherStints },
-    ]) => {
-      // ── Strategies ────────────────────────────────────────────────────────
-      let strats = stratsData || [];
+    ]).then(
+      async ([
+        { data: stratsData },
+        { data: stintsData },
+        { data: perfData },
+        { data: availData },
+        { data: otherStints },
+      ]) => {
+        // ── Strategies ────────────────────────────────────────────────────────
+        let strats = stratsData || [];
 
-      // New team entry — no strategy exists yet (created after migration backfill).
-      // Auto-create the default so the grid can load normally.
-      if (strats.length === 0 && !archived) {
-        if (creatingDefaultStrategy.current) return;
-        creatingDefaultStrategy.current = true;
-        const { data: newStrat } = await supabase
-          .from("strategies")
-          .insert({
-            team_entry_id: teamEntryId,
-            name: "Stratégie 1",
-            sort_order: 1,
-            is_active: true,
-            actual_start_offset_minutes:
-              teamEntry?.events?.green_flag_offset_minutes || 0,
-          })
-          .select()
-          .single();
-        creatingDefaultStrategy.current = false;
-        if (newStrat) {
-          strats = [newStrat];
-        } else {
-          setLoading(false);
-          return;
+        // New team entry — no strategy exists yet (created after migration backfill).
+        // Auto-create the default so the grid can load normally.
+        if (strats.length === 0 && !archived) {
+          if (creatingDefaultStrategy.current) return;
+          creatingDefaultStrategy.current = true;
+          const { data: newStrat } = await supabase
+            .from("strategies")
+            .insert({
+              team_entry_id: teamEntryId,
+              name: "Stratégie 1",
+              sort_order: 1,
+              is_active: true,
+              actual_start_offset_minutes:
+                teamEntry?.events?.green_flag_offset_minutes || 0,
+            })
+            .select()
+            .single();
+          creatingDefaultStrategy.current = false;
+          if (newStrat) {
+            strats = [newStrat];
+          } else {
+            setLoading(false);
+            return;
+          }
         }
-      }
 
-      // Determine active strategy — preserve existing tab selection if still valid
-      const resolvedStratId =
-        selectedStrategyId && strats.find((s) => s.id === selectedStrategyId)
-          ? selectedStrategyId
-          : strats.find((s) => s.is_active)?.id || strats[0]?.id || null;
+        // Determine active strategy — preserve existing tab selection if still valid
+        const resolvedStratId =
+          selectedStrategyId && strats.find((s) => s.id === selectedStrategyId)
+            ? selectedStrategyId
+            : strats.find((s) => s.is_active)?.id || strats[0]?.id || null;
 
-      setStrategies(strats);
-      onActiveStrategyChange?.(strats.find((s) => s.is_active) || null);
-      setSelectedStrategyId(resolvedStratId);
+        setStrategies(strats);
+        onActiveStrategyChange?.(strats.find((s) => s.is_active) || null);
+        setSelectedStrategyId(resolvedStratId);
 
-      // ── Perf + avail + conflicts ───────────────────────────────────────────
-      const perfMap = {};
-      (perfData || []).forEach((p) => { perfMap[p.driver_id] = p; });
-      setDriverPerf(perfMap);
+        // ── Perf + avail + conflicts ───────────────────────────────────────────
+        const perfMap = {};
+        (perfData || []).forEach((p) => {
+          perfMap[p.driver_id] = p;
+        });
+        setDriverPerf(perfMap);
 
-      const availMap = {};
-      (availData || []).forEach((a) => {
-        const key = `${a.driver_id}_${new Date(a.slot_start).toISOString()}`;
-        availMap[key] = a;
-      });
-      setAvailabilities(availMap);
-      setConflictStints(otherStints || []);
+        const availMap = {};
+        (availData || []).forEach((a) => {
+          const key = `${a.driver_id}_${new Date(a.slot_start).toISOString()}`;
+          availMap[key] = a;
+        });
+        setAvailabilities(availMap);
+        setConflictStints(otherStints || []);
 
-      // ── Stints — filter to resolved strategy ──────────────────────────────
-      const loadedStints = (stintsData || []).filter(
-        (s) => s.strategy_id === resolvedStratId,
-      );
-      setStints(loadedStints);
-      setLoading(false);
+        // ── Stints — filter to resolved strategy ──────────────────────────────
+        const loadedStints = (stintsData || []).filter(
+          (s) => s.strategy_id === resolvedStratId,
+        );
+        setStints(loadedStints);
+        setLoading(false);
 
-      // Auto-generate stints for first strategy only when none exist
-      if (loadedStints.length === 0 && !autoGenDone && !archived && strats.length === 1) {
-        setAutoGenDone(true);
-        const count = estimateStintCount(teamEntry, perfMap, assignedDrivers);
-        const rows = Array.from({ length: count }, (_, i) => ({
-          team_entry_id: teamEntryId,
-          strategy_id: resolvedStratId,
-          stint_number: i + 1,
-          rain: false,
-          tyre_change: false,
-        }));
-        supabase
-          .from("stints")
-          .insert(rows)
-          .select()
-          .then(({ data }) => { if (data) setStints(data); });
-      }
-    });
+        // Auto-generate stints for first strategy only when none exist
+        if (
+          loadedStints.length === 0 &&
+          !autoGenDone &&
+          !archived &&
+          strats.length === 1
+        ) {
+          setAutoGenDone(true);
+          const count = estimateStintCount(teamEntry, perfMap, assignedDrivers);
+          const rows = Array.from({ length: count }, (_, i) => ({
+            team_entry_id: teamEntryId,
+            strategy_id: resolvedStratId,
+            stint_number: i + 1,
+            rain: false,
+            tyre_change: false,
+          }));
+          supabase
+            .from("stints")
+            .insert(rows)
+            .select()
+            .then(({ data }) => {
+              if (data) setStints(data);
+            });
+        }
+      },
+    );
   }, [teamEntryId, JSON.stringify(driverIds)]);
 
   // Sync local edit fields when the selected strategy changes
@@ -1341,7 +1352,10 @@ export default function StintGrid({
 
   // Guard: if the selected strategy was deleted, fall back to first available
   useEffect(() => {
-    if (strategies.length > 0 && !strategies.find((s) => s.id === selectedStrategyId)) {
+    if (
+      strategies.length > 0 &&
+      !strategies.find((s) => s.id === selectedStrategyId)
+    ) {
       setSelectedStrategyId(strategies[0].id);
     }
   }, [strategies]);
@@ -1355,7 +1369,9 @@ export default function StintGrid({
       .select("*")
       .eq("strategy_id", selectedStrategyId)
       .order("stint_number")
-      .then(({ data }) => { setStints(data || []); });
+      .then(({ data }) => {
+        setStints(data || []);
+      });
   }, [selectedStrategyId]);
 
   const calculated = calculateAllStints(
@@ -1563,23 +1579,50 @@ export default function StintGrid({
       strategies.length > 0
         ? Math.max(...strategies.map((s) => s.sort_order)) + 1
         : 1;
-    const { data } = await supabase
+
+    // Insert the new strategy row first
+    const { data: newStrat } = await supabase
       .from("strategies")
       .insert({
         team_entry_id: teamEntryId,
         name: `Stratégie ${nextSort}`,
         sort_order: nextSort,
         is_active: false,
-        // Pre-fill from event-level green flag offset — driver can override per strategy
+        // Inherit offset from current strategy — driver can adjust per strategy
         actual_start_offset_minutes:
-          teamEntry?.events?.green_flag_offset_minutes || 0,
+          currentStrategy?.actual_start_offset_minutes || 0,
       })
       .select()
       .single();
-    if (data) {
-      setStrategies((prev) => [...prev, data]);
-      setSelectedStrategyId(data.id);
+
+    if (!newStrat) return;
+
+    // Clone stints from the currently viewed strategy into the new one.
+    // Copies planning fields only — runtime/calculated fields are left null
+    // so the engine recalculates them fresh for this strategy.
+    let clonedStints = [];
+    if (stints.length > 0) {
+      const rows = stints.map((s) => ({
+        team_entry_id: teamEntryId,
+        strategy_id: newStrat.id,
+        stint_number: s.stint_number,
+        driver_id: s.driver_id || null,
+        laps_planned: s.laps_planned || null,
+        rain: s.rain || false,
+        tyre_change: s.tyre_change || false,
+        // previous_driver_id, irl_end_actual, fuel_*_calc etc. intentionally omitted
+      }));
+      const { data: inserted } = await supabase
+        .from("stints")
+        .insert(rows)
+        .select();
+      clonedStints = inserted || [];
     }
+
+    // Update strategies list, switch to new tab, and load its stints
+    setStrategies((prev) => [...prev, newStrat]);
+    setSelectedStrategyId(newStrat.id);
+    setStints(clonedStints);
   };
 
   const handleUpdateStrategy = async (id, fields) => {
