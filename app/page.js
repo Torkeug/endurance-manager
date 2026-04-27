@@ -242,6 +242,18 @@ export default async function HomePage() {
   const pendingCount = (pendingDrivers || []).length;
   const totalEvents = (events || []).length;
 
+  // Map of eventId → next upcoming start Date — used to sort Suivi sections by urgency
+  const eventNextStartMap = Object.fromEntries(
+    (events || []).map((ev) => {
+      const next =
+        (ev.event_start_times || [])
+          .map((s) => new Date(s.irl_start))
+          .filter((d) => d > now)
+          .sort((a, b) => a - b)[0] || null;
+      return [ev.id, next];
+    }),
+  );
+
   // Admin: team entries with zero signups — exclude archived events
   const noDrivers = admin
     ? (teamEntries || []).filter(
@@ -557,149 +569,264 @@ export default async function HomePage() {
 
   // ── Suivi sub-tab sections — server-rendered JSX slots ───────────────────
 
-  // Section 1: team entries with no drivers signed up
+  // Helper: group an array by event_id and sort groups by urgency
+  function groupByEvent(items, getEventId, getEventName) {
+    const groups = {};
+    for (const item of items) {
+      const eid = getEventId(item);
+      if (!groups[eid]) groups[eid] = { name: getEventName(item), items: [] };
+      groups[eid].items.push(item);
+    }
+    // Sort groups soonest-first using the pre-built eventNextStartMap
+    return Object.entries(groups).sort(([aId], [bId]) => {
+      const aNext = eventNextStartMap[aId];
+      const bNext = eventNextStartMap[bId];
+      if (!aNext && !bNext) return 0;
+      if (!aNext) return 1;
+      if (!bNext) return -1;
+      return aNext - bNext;
+    });
+  }
+
+  // Section 1: team entries with no drivers signed up — grouped by event, sorted by urgency
   const noDriversSection =
     noDrivers.length === 0 ? (
       <div className="table-wrap">
         <div className="empty">Aucun équipage sans pilote. ✓</div>
       </div>
     ) : (
-      <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
-        {noDrivers.map((te) => (
-          <Link
-            key={te.id}
-            href={`/evenements/${te.event_id}/equipages/${te.id}`}
-            style={{ textDecoration: "none" }}
-          >
+      <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
+        {groupByEvent(
+          noDrivers,
+          (te) => te.event_id,
+          (te) => te.events?.name,
+        ).map(([eventId, { name, items }]) => (
+          <div key={eventId}>
+            {/* Event header with urgency */}
             <div
-              className="card event-card"
               style={{
                 display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-                gap: "1rem",
-                cursor: "pointer",
-                padding: "0.75rem 1rem",
+                alignItems: "baseline",
+                gap: "0.5rem",
+                marginBottom: "0.4rem",
               }}
             >
-              <div>
-                <div style={{ fontWeight: 600 }}>{te.crew_name}</div>
-                <div style={{ fontSize: "0.8rem", color: "var(--text-dim)" }}>
-                  {te.events?.name}
-                </div>
-              </div>
-              <span
-                style={{
-                  fontSize: "0.72rem",
-                  padding: "0.15rem 0.4rem",
-                  background: "rgba(224,85,85,0.1)",
-                  border: "1px solid var(--danger)",
-                  borderRadius: "2px",
-                  color: "var(--danger)",
-                }}
-              >
-                Aucun pilote
+              <span style={{ fontWeight: 700, fontSize: "0.85rem" }}>
+                {name}
               </span>
+              {eventNextStartMap[eventId] && (
+                <span style={{ fontSize: "0.75rem", color: "var(--accent)" }}>
+                  {timeUntil(eventNextStartMap[eventId].toISOString())}
+                </span>
+              )}
             </div>
-          </Link>
+            {/* Entries indented under event */}
+            <div
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                gap: "0.35rem",
+                paddingLeft: "0.75rem",
+                borderLeft: "2px solid var(--border)",
+              }}
+            >
+              {items.map((te) => (
+                <Link
+                  key={te.id}
+                  href={`/evenements/${te.event_id}/equipages/${te.id}`}
+                  style={{ textDecoration: "none" }}
+                >
+                  <div
+                    className="card event-card"
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      gap: "1rem",
+                      cursor: "pointer",
+                      padding: "0.6rem 0.85rem",
+                    }}
+                  >
+                    <div style={{ fontWeight: 600 }}>{te.crew_name}</div>
+                    <span
+                      style={{
+                        fontSize: "0.72rem",
+                        padding: "0.15rem 0.4rem",
+                        background: "rgba(224,85,85,0.1)",
+                        border: "1px solid var(--danger)",
+                        borderRadius: "2px",
+                        color: "var(--danger)",
+                      }}
+                    >
+                      Aucun pilote
+                    </span>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          </div>
         ))}
       </div>
     );
 
-  // Section 2: team entries with drivers but no stints in the active strategy
+  // Section 2: team entries with drivers but no stints — grouped by event, sorted by urgency
   const noStintsSection =
     noStints.length === 0 ? (
       <div className="table-wrap">
         <div className="empty">Aucun équipage sans relais. ✓</div>
       </div>
     ) : (
-      <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
-        {noStints.map((te) => (
-          <Link
-            key={te.id}
-            href={`/evenements/${te.event_id}/equipages/${te.id}`}
-            style={{ textDecoration: "none" }}
-          >
+      <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
+        {groupByEvent(
+          noStints,
+          (te) => te.event_id,
+          (te) => te.events?.name,
+        ).map(([eventId, { name, items }]) => (
+          <div key={eventId}>
+            {/* Event header with urgency */}
             <div
-              className="card event-card"
               style={{
                 display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-                gap: "1rem",
-                cursor: "pointer",
-                padding: "0.75rem 1rem",
+                alignItems: "baseline",
+                gap: "0.5rem",
+                marginBottom: "0.4rem",
               }}
             >
-              <div>
-                <div style={{ fontWeight: 600 }}>{te.crew_name}</div>
-                <div style={{ fontSize: "0.8rem", color: "var(--text-dim)" }}>
-                  {te.events?.name}
-                </div>
-              </div>
-              <span
-                style={{
-                  fontSize: "0.72rem",
-                  padding: "0.15rem 0.4rem",
-                  background: "rgba(224,85,85,0.1)",
-                  border: "1px solid var(--danger)",
-                  borderRadius: "2px",
-                  color: "var(--danger)",
-                }}
-              >
-                Aucun relais
+              <span style={{ fontWeight: 700, fontSize: "0.85rem" }}>
+                {name}
               </span>
+              {eventNextStartMap[eventId] && (
+                <span style={{ fontSize: "0.75rem", color: "var(--accent)" }}>
+                  {timeUntil(eventNextStartMap[eventId].toISOString())}
+                </span>
+              )}
             </div>
-          </Link>
+            {/* Entries indented under event */}
+            <div
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                gap: "0.35rem",
+                paddingLeft: "0.75rem",
+                borderLeft: "2px solid var(--border)",
+              }}
+            >
+              {items.map((te) => (
+                <Link
+                  key={te.id}
+                  href={`/evenements/${te.event_id}/equipages/${te.id}`}
+                  style={{ textDecoration: "none" }}
+                >
+                  <div
+                    className="card event-card"
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      gap: "1rem",
+                      cursor: "pointer",
+                      padding: "0.6rem 0.85rem",
+                    }}
+                  >
+                    <div style={{ fontWeight: 600 }}>{te.crew_name}</div>
+                    <span
+                      style={{
+                        fontSize: "0.72rem",
+                        padding: "0.15rem 0.4rem",
+                        background: "rgba(224,85,85,0.1)",
+                        border: "1px solid var(--danger)",
+                        borderRadius: "2px",
+                        color: "var(--danger)",
+                      }}
+                    >
+                      Aucun relais
+                    </span>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          </div>
         ))}
       </div>
     );
 
-  // Section 3: drivers with a signup on a non-archived event but no team entry assigned
+  // Section 3: drivers with no team entry assigned — grouped by event, sorted by urgency
   const unassignedSection =
     unassignedSignups.length === 0 ? (
       <div className="table-wrap">
         <div className="empty">Aucun pilote sans équipage. ✓</div>
       </div>
     ) : (
-      <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
-        {unassignedSignups.map((s) => (
-          <Link
-            key={s.id}
-            href={`/evenements/${s.event_id}`}
-            style={{ textDecoration: "none" }}
-          >
+      <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
+        {groupByEvent(
+          unassignedSignups,
+          (s) => s.event_id,
+          (s) => s.events?.name,
+        ).map(([eventId, { name, items }]) => (
+          <div key={eventId}>
+            {/* Event header with urgency */}
             <div
-              className="card event-card"
               style={{
                 display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-                gap: "1rem",
-                cursor: "pointer",
-                padding: "0.75rem 1rem",
+                alignItems: "baseline",
+                gap: "0.5rem",
+                marginBottom: "0.4rem",
               }}
             >
-              <div>
-                <div style={{ fontWeight: 600 }}>{s.drivers?.name}</div>
-                <div style={{ fontSize: "0.8rem", color: "var(--text-dim)" }}>
-                  {s.events?.name}
-                </div>
-              </div>
-              <span
-                style={{
-                  fontSize: "0.72rem",
-                  padding: "0.15rem 0.4rem",
-                  background: "rgba(224,85,85,0.1)",
-                  border: "1px solid var(--danger)",
-                  borderRadius: "2px",
-                  color: "var(--danger)",
-                }}
-              >
-                Sans équipage
+              <span style={{ fontWeight: 700, fontSize: "0.85rem" }}>
+                {name}
               </span>
+              {eventNextStartMap[eventId] && (
+                <span style={{ fontSize: "0.75rem", color: "var(--accent)" }}>
+                  {timeUntil(eventNextStartMap[eventId].toISOString())}
+                </span>
+              )}
             </div>
-          </Link>
+            {/* Drivers indented under event — link goes to event page for assignment */}
+            <div
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                gap: "0.35rem",
+                paddingLeft: "0.75rem",
+                borderLeft: "2px solid var(--border)",
+              }}
+            >
+              {items.map((s) => (
+                <Link
+                  key={s.id}
+                  href={`/evenements/${s.event_id}`}
+                  style={{ textDecoration: "none" }}
+                >
+                  <div
+                    className="card event-card"
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      gap: "1rem",
+                      cursor: "pointer",
+                      padding: "0.6rem 0.85rem",
+                    }}
+                  >
+                    <div style={{ fontWeight: 600 }}>{s.drivers?.name}</div>
+                    <span
+                      style={{
+                        fontSize: "0.72rem",
+                        padding: "0.15rem 0.4rem",
+                        background: "rgba(224,85,85,0.1)",
+                        border: "1px solid var(--danger)",
+                        borderRadius: "2px",
+                        color: "var(--danger)",
+                      }}
+                    >
+                      Sans équipage
+                    </span>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          </div>
         ))}
       </div>
     );
