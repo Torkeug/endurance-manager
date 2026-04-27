@@ -31,7 +31,6 @@ export default function ActualEndInput({
   // Date is hidden by default — most actual ends are on the same day as planned.
   // The toggle avoids cluttering the grid for the common case.
   const [showDate, setShowDate] = useState(false);
-  const [editing, setEditing] = useState(false);
 
   // Reset inputs when plannedEnd changes (e.g. stint recalculated) and no actual end is set.
   // Keeps the date default in sync with the new planned end.

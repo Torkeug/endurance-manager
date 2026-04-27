@@ -2,7 +2,6 @@ import { supabaseServer as supabase } from "../../../lib/supabase-server";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getSessionAndDriver, isAdmin } from "../../../lib/auth";
-import { formatInZone, formatTimeInZone } from "../../../lib/timezone";
 import DriverPageTabs from "./DriverPageTabs";
 import DriverStats from "./DriverStats";
 import EngagementsTab from "./EngagementsTab";
