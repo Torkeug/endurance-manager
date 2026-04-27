@@ -33,6 +33,7 @@ export default function EquipageTabs({
   const isAdmin =
     currentDriver?.role === "admin" || currentDriver?.role === "super_admin";
   const isEngineer = currentDriver?.role === "engineer";
+  const isExternalDriver = currentDriver?.role === "external";
   // Full access: admins and engineers can see and interact with everything
   // (engineers are read-only on non-relais tabs via the archived-style lock)
   const fullAccess = isAdmin || isEngineer;
@@ -166,7 +167,7 @@ export default function EquipageTabs({
           carsMap={carsMap}
           startTimesMap={startTimesMap}
           assignedDrivers={assignedDrivers}
-          unassignedDrivers={unassignedDrivers}
+          unassignedDrivers={isExternalDriver ? [] : unassignedDrivers}
           currentDriver={currentDriver}
           archived={archived || isEngineer}
           isInEvent={isInEvent}

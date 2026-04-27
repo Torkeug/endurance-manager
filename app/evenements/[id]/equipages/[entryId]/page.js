@@ -2,7 +2,11 @@ import { supabaseServer as supabase } from "../../../../../lib/supabase-server";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import EquipageTabs from "./EquipageTabs";
-import { getSessionAndDriver, isAdmin } from "../../../../../lib/auth";
+import {
+  getSessionAndDriver,
+  isAdmin,
+  isExternal as checkIsExternal,
+} from "../../../../../lib/auth";
 import { formatTimeInZone } from "../../../../../lib/timezone";
 import CollapsibleSummary from "./CollapsibleSummary";
 
@@ -209,15 +213,18 @@ export default async function EquipageDetail({ params }) {
           </div>
         </div>
         <div style={{ display: "flex", gap: "0.75rem" }}>
-          {/* Modifier hidden for archived events — all data is read-only */}
-          {!archived && !isEngineer && (isAdmin(currentDriver) || isInTeam) && (
-            <Link
-              href={`/evenements/${id}/equipages/${entryId}/modifier`}
-              className="btn btn-secondary"
-            >
-              Modifier
-            </Link>
-          )}
+          {/* Modifier hidden for archived events, engineers, and external drivers */}
+          {!archived &&
+            !isEngineer &&
+            !checkIsExternal(currentDriver) &&
+            (isAdmin(currentDriver) || isInTeam) && (
+              <Link
+                href={`/evenements/${id}/equipages/${entryId}/modifier`}
+                className="btn btn-secondary"
+              >
+                Modifier
+              </Link>
+            )}
           <Link href={`/evenements/${id}`} className="btn btn-secondary">
             Événement
           </Link>

@@ -141,6 +141,7 @@ function SignupForm({
   onSaved,
   onCancel,
   onDelete,
+  readOnly = false, // when true: all inputs disabled, only a "Fermer" button shown
 }) {
   const [preferredClasses, setPreferredClasses] = useState(
     signup?.preferred_class || [],
@@ -330,7 +331,8 @@ function SignupForm({
                 <input
                   type="checkbox"
                   checked={preferredStartTimeIds.includes(st.id)}
-                  onChange={() => toggleST(st.id)}
+                  onChange={() => !readOnly && toggleST(st.id)}
+                  disabled={readOnly}
                   style={{ accentColor: "var(--accent)" }}
                 />
                 <div>
@@ -402,7 +404,8 @@ function SignupForm({
                   name="team_entry_id"
                   value=""
                   checked={carEntryId === ""}
-                  onChange={() => setCarEntryId("")}
+                  onChange={() => !readOnly && setCarEntryId("")}
+                  disabled={readOnly}
                   style={{ accentColor: "var(--accent)" }}
                 />
                 <span style={{ color: "var(--text-dim)", fontSize: "0.9rem" }}>
@@ -438,7 +441,8 @@ function SignupForm({
                       name="team_entry_id"
                       value={entry.id}
                       checked={isSelected}
-                      onChange={() => setCarEntryId(entry.id)}
+                      onChange={() => !readOnly && setCarEntryId(entry.id)}
+                      disabled={readOnly}
                       style={{ accentColor: "var(--accent)" }}
                     />
                     <div style={{ flex: 1 }}>
@@ -497,7 +501,7 @@ function SignupForm({
                 key={cls}
                 cls={cls}
                 checked={preferredClasses.includes(cls)}
-                onChange={() => toggleClass(cls)}
+                onChange={() => !readOnly && toggleClass(cls)}
               />
             ))}
         </div>
@@ -547,7 +551,7 @@ function SignupForm({
                       key={car.id}
                       car={car}
                       checked={preferredCarIds.includes(car.id)}
-                      onChange={() => toggleCar(car.id)}
+                      onChange={() => !readOnly && toggleCar(car.id)}
                     />
                   ))}
                 </div>
@@ -565,7 +569,8 @@ function SignupForm({
         <div className="form-group">
           <textarea
             value={notes}
-            onChange={(e) => setNotes(e.target.value)}
+            onChange={(e) => !readOnly && setNotes(e.target.value)}
+            readOnly={readOnly}
             rows={3}
             placeholder="ex : disponible uniquement le samedi soir…"
           />
@@ -577,40 +582,51 @@ function SignupForm({
           {error}
         </div>
       )}
-      <div
-        style={{
-          display: "flex",
-          gap: "0.75rem",
-          justifyContent: "space-between",
-          flexWrap: "wrap",
-        }}
-      >
-        <div style={{ display: "flex", gap: "0.75rem" }}>
-          <button type="submit" className="btn btn-primary" disabled={loading}>
-            {loading
-              ? "Enregistrement…"
-              : signup?.id
-                ? "✓ Mettre à jour"
-                : "✓ S'inscrire"}
-          </button>
-          <button
-            type="button"
-            className="btn btn-secondary"
-            onClick={onCancel}
-          >
-            Annuler
-          </button>
+      {/* Read-only mode (external drivers): only show a close button */}
+      {readOnly ? (
+        <button type="button" className="btn btn-secondary" onClick={onCancel}>
+          Fermer
+        </button>
+      ) : (
+        <div
+          style={{
+            display: "flex",
+            gap: "0.75rem",
+            justifyContent: "space-between",
+            flexWrap: "wrap",
+          }}
+        >
+          <div style={{ display: "flex", gap: "0.75rem" }}>
+            <button
+              type="submit"
+              className="btn btn-primary"
+              disabled={loading}
+            >
+              {loading
+                ? "Enregistrement…"
+                : signup?.id
+                  ? "✓ Mettre à jour"
+                  : "✓ S'inscrire"}
+            </button>
+            <button
+              type="button"
+              className="btn btn-secondary"
+              onClick={onCancel}
+            >
+              Annuler
+            </button>
+          </div>
+          {signup?.id && (
+            <button
+              type="button"
+              className="btn btn-danger"
+              onClick={handleDelete}
+            >
+              Se désinscrire
+            </button>
+          )}
         </div>
-        {signup?.id && (
-          <button
-            type="button"
-            className="btn btn-danger"
-            onClick={handleDelete}
-          >
-            Se désinscrire
-          </button>
-        )}
-      </div>
+      )}
     </form>
   );
 }
@@ -719,32 +735,32 @@ function InscriptionPage({ params }) {
         setCars(filteredCars);
         setFetching(false);
 
-        // Preselect driver from URL param (admin managing another driver's signup)
-        // or from the logged-in user's own driver record.
+        // Always resolve the current user's identity and role — needed for
+        // permission gating regardless of whether a driver was preselected via
+        // URL param (e.g. admin managing another driver, or external "Voir" link).
+        // preselect only overrides which driver ID is displayed in the form.
         const preselect = searchParams.get("driver");
-        if (preselect) {
-          setDriverId(preselect);
-        } else {
-          // Auto-select the logged-in driver's own record.
-          supabase.auth.getUser().then(async ({ data: { user } }) => {
-            if (!user) return;
+        supabase.auth.getUser().then(async ({ data: { user } }) => {
+          if (!user) return;
 
-            const { data: driver } = await supabase
-              .from("drivers")
-              .select("id, role")
-              .eq("auth_user_id", user.id)
-              .single();
+          const { data: driver } = await supabase
+            .from("drivers")
+            .select("id, role")
+            .eq("auth_user_id", user.id)
+            .single();
 
-            if (driver) {
-              setDriverId(driver.id);
-              setCurrentUserId(driver.id);
-              setCurrentUserRole(driver.role);
-              setCurrentUserIsAdmin(
-                driver.role === "admin" || driver.role === "super_admin",
-              );
-            }
-          });
-        }
+          if (driver) {
+            // If a ?driver= param is present, use it for the selected driver
+            // (admin use case), but always record the actual logged-in user's
+            // role so all !isExternal / !isAdmin guards evaluate correctly.
+            setDriverId(preselect || driver.id);
+            setCurrentUserId(driver.id);
+            setCurrentUserRole(driver.role);
+            setCurrentUserIsAdmin(
+              driver.role === "admin" || driver.role === "super_admin",
+            );
+          }
+        });
       },
     );
   }, [id, searchParams]);
@@ -877,7 +893,7 @@ function InscriptionPage({ params }) {
               >
                 {existingSignups.map((signup) => (
                   <div key={signup.id}>
-                    {!isExternal && editingSignup?.id === signup.id ? (
+                    {editingSignup?.id === signup.id ? (
                       <div className="card">
                         <h3
                           style={{
@@ -885,7 +901,7 @@ function InscriptionPage({ params }) {
                             color: "var(--text-dim)",
                           }}
                         >
-                          Modifier —{" "}
+                          {isExternal ? "Voir — " : "Modifier — "}
                           {signup.team_entries?.crew_name || "Sans équipe"}
                         </h3>
                         <SignupForm
@@ -899,6 +915,7 @@ function InscriptionPage({ params }) {
                           onSaved={refreshSignups}
                           onCancel={() => setEditingSignup(null)}
                           onDelete={refreshSignups}
+                          readOnly={isExternal}
                         />
                       </div>
                     ) : (
@@ -985,7 +1002,15 @@ function InscriptionPage({ params }) {
                             </div>
                           )}
                         </div>
-                        {!isExternal && (
+                        {/* External drivers see read-only "Voir", others see "Modifier" */}
+                        {isExternal ? (
+                          <button
+                            onClick={() => setEditingSignup(signup)}
+                            className="btn btn-secondary btn-sm"
+                          >
+                            Voir
+                          </button>
+                        ) : (
                           <button
                             onClick={() => setEditingSignup(signup)}
                             className="btn btn-secondary btn-sm"

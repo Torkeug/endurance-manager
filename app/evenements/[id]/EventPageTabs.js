@@ -478,8 +478,8 @@ export default function EventPageTabs({
                     teamCount !== 1 ? "s" : ""
                   }`}
             </div>
-            {/* Engineers cannot create team entries */}
-            {!event.archived && !engineer && (
+            {/* Engineers and external drivers cannot create team entries */}
+            {!event.archived && !engineer && !isExternal && (
               <Link
                 href={`/evenements/${event.id}/equipages/nouveau`}
                 className="btn btn-primary"
