@@ -7,7 +7,7 @@ import { supabaseBrowser as supabase } from "../../../../../lib/supabase-browser
 function secToDisplay(sec) {
   if (!sec && sec !== 0) return "";
   const m = Math.floor(sec / 60);
-  const s = (sec % 60).toFixed(3).padStart(6, "0");
+  const s = (sec % 60).toFixed(3).padStart(6, "0"); // 6 = "SS.mmm" — ensures leading zero on single-digit seconds
   return `${m}:${s}`;
 }
 
@@ -18,7 +18,7 @@ function displayToSec(str) {
   return (
     parseInt(match[1]) * 60 +
     parseInt(match[2]) +
-    parseFloat(`0.${match[3].padEnd(3, "0")}`)
+    parseFloat(`0.${match[3].padEnd(3, "0")}`) // padEnd: "3" → "300" (300 ms), not "003" (3 ms) — fractional, not leading zeros
   );
 }
 
@@ -60,7 +60,7 @@ function resolveLapTime(
   const tryPath = (source, mods = []) => {
     if (source == null) return null;
     const val = source + mods.reduce((s, m) => s + m, 0);
-    if (val <= 0) return null;
+    if (val <= 0) return null; // prevents nonsensical lap time when a subtracted modifier overshoots the source
     if (mods.length === 0) return { value: val, tier: 1, marker: "" };
     // Tier 3 when any modifier used in this path is zero/unset
     const tier = mods.some((m) => m === 0) ? 3 : 2;
@@ -885,7 +885,7 @@ export default function PerformanceData({
       }
       setLoading(false);
     });
-  }, [teamEntryId, assignedDrivers.length]);
+  }, [teamEntryId, assignedDrivers.length]); // length as stable dep proxy — avoids re-firing on every array reference change
 
   const handleSaved = (data) => {
     setPerfData((prev) => ({ ...prev, [data.driver_id]: data }));
