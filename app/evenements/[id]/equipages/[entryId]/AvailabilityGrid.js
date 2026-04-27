@@ -13,7 +13,7 @@ function generateSlots(irlStart, durationMinutes) {
     new Date(irlStart).getTime() + (durationMinutes + 60) * 60 * 1000,
   );
   let current = new Date(start);
-  current.setMinutes(Math.floor(current.getMinutes() / 30) * 30, 0, 0);
+  current.setMinutes(Math.floor(current.getMinutes() / 30) * 30, 0, 0); // snap to 30-min boundary
   while (current <= end) {
     slots.push(new Date(current));
     current = new Date(current.getTime() + 30 * 60 * 1000);
@@ -27,7 +27,7 @@ function getIGTime(irlSlot, irlStartStr, igStartTimeStr) {
   const irlStart = new Date(irlStartStr);
   const igStart = new Date(irlStart);
   igStart.setHours(igH, igM, 0, 0);
-  return new Date(igStart.getTime() + (new Date(irlSlot) - irlStart));
+  return new Date(igStart.getTime() + (new Date(irlSlot) - irlStart)); // IG advances 1:1 with IRL time
 }
 
 function getPhase(igTime, sunriseStr, sunsetStr) {
@@ -37,11 +37,13 @@ function getPhase(igTime, sunriseStr, sunsetStr) {
   const [ssH, ssM] = sunsetStr.split(":").map(Number);
   const sunrise = srH * 60 + srM;
   const sunset = ssH * 60 + ssM;
+  // Normal: sunrise before sunset (e.g., 06:00 → 20:00)
   if (sunrise < sunset) {
     if (minutes >= sunrise + 30 && minutes < sunset - 30) return "☀️";
     if (minutes >= sunset + 30 || minutes < sunrise - 30) return "🌑";
     return "🌗";
   } else {
+    // Inverted: IG start time crosses midnight (e.g., 22:00 → 06:00)
     if (minutes >= sunrise + 30 || minutes < sunset - 30) return "☀️";
     if (minutes >= sunset + 30 && minutes < sunrise - 30) return "🌑";
     return "🌗";
@@ -238,7 +240,7 @@ export default function AvailabilityGrid({
         ? true
         : dragMode === "unavailable"
           ? false
-          : null;
+          : null; // null = "tentative" in DB — maps to orange cell color
     pendingUpdates.current = {};
     applyDrag(slot);
   };
@@ -292,7 +294,7 @@ export default function AvailabilityGrid({
   }, [commitDrag]);
 
   const isRaceStart = (slot) =>
-    raceStart && Math.abs(slot - raceStart) < 15 * 60 * 1000;
+    raceStart && Math.abs(slot - raceStart) < 15 * 60 * 1000; // half-slot window to catch the nearest 30-min slot
   const isRaceEnd = (slot) =>
     raceEnd && Math.abs(slot - raceEnd) < 15 * 60 * 1000;
   const isAfterEnd = (slot) => raceEnd && slot > raceEnd;
@@ -628,7 +630,7 @@ export default function AvailabilityGrid({
             style={{
               borderCollapse: "collapse",
               width: "100%",
-              minWidth: `${160 + assignedDrivers.length * 52}px`,
+              minWidth: `${160 + assignedDrivers.length * 52}px`, // 160px base (IRL+IG+phase cols) + 52px per driver col
             }}
           >
             <thead style={{ position: "sticky", top: 0, zIndex: 3 }}>
@@ -639,7 +641,7 @@ export default function AvailabilityGrid({
                     textAlign: "left",
                     position: "sticky",
                     left: 0,
-                    zIndex: 4,
+                    zIndex: 4, // above sticky thead (3) and sticky left column (1) — intersection cell
                     minWidth: "56px",
                     width: "56px",
                   }}
@@ -824,7 +826,7 @@ export default function AvailabilityGrid({
                             }}
                           >
                             <div
-                              data-slot={slot.toISOString()}
+                              data-slot={slot.toISOString()} // touch target: elementFromPoint reads this to identify slot on drag
                               style={{
                                 width: "100%",
                                 height: "22px",

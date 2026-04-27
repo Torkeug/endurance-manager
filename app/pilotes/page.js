@@ -61,7 +61,32 @@ export default async function PilotesPage() {
             <tbody>
               {pilotes.map((p) => (
                 <tr key={p.id}>
-                  <td style={{ fontWeight: 600 }}>{p.name}</td>
+                  <td style={{ fontWeight: 600 }}>
+                    <span style={{ display: "flex", alignItems: "center", gap: "0.4rem" }}>
+                      {p.name}
+                      {/* Staleness badge — shown to admins and to the driver themselves */}
+                      {(admin || currentDriver?.id === p.id) &&
+                        (!p.last_driver_sync_at ||
+                          Date.now() - new Date(p.last_driver_sync_at).getTime() >
+                            100 * 24 * 60 * 60 * 1000) && (
+                          <span
+                            title="Données iRacing non synchronisées depuis plus de 100 jours"
+                            style={{
+                              fontSize: "0.68rem",
+                              fontWeight: 700,
+                              padding: "0.1rem 0.35rem",
+                              background: "rgba(245,158,11,0.1)",
+                              border: "1px solid #f59e0b",
+                              borderRadius: "3px",
+                              color: "#f59e0b",
+                              whiteSpace: "nowrap",
+                            }}
+                          >
+                            ⚠️ Sync requise
+                          </span>
+                        )}
+                    </span>
+                  </td>
                   <td className="mono" style={{ fontSize: "0.85rem" }}>
                     {p.iracing_id ? (
                       <a

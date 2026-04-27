@@ -52,11 +52,13 @@ function getPhase(igTime, sunriseStr, sunsetStr) {
   const [ssH, ssM] = sunsetStr.split(":").map(Number);
   const sunrise = srH * 60 + srM;
   const sunset = ssH * 60 + ssM;
+  // Normal: sunrise before sunset — standard day/night within the same IG calendar day
   if (sunrise < sunset) {
     if (minutes >= sunrise + 30 && minutes < sunset - 30) return "☀️";
     if (minutes >= sunset + 30 || minutes < sunrise - 30) return "🌑";
     return "🌗";
   }
+  // Inverted: IG start time crosses midnight — sunrise and sunset are on opposite sides of 00:00
   if (minutes >= sunrise + 30 || minutes < sunset - 30) return "☀️";
   if (minutes >= sunset + 30 && minutes < sunrise - 30) return "🌑";
   return "🌗";
@@ -71,7 +73,7 @@ function checkAvailability(availabilities, driverId, irlStart, irlEnd) {
   const windowSlots = Object.values(availabilities).filter((a) => {
     if (a.driver_id !== driverId) return false;
     const t = new Date(a.slot_start).getTime();
-    return t < end && t + 30 * 60 * 1000 > start;
+    return t < end && t + 30 * 60 * 1000 > start; // 30 min = slot granularity used in AvailabilityGrid
   });
   if (windowSlots.length === 0) return "unavailable";
   const availableCount = windowSlots.filter((a) => a.available === true).length;
@@ -266,6 +268,8 @@ function calcStint(
     refuelRate && fuelToAdd > 0
       ? fuelToAdd / refuelRate
       : teamEntry?.refuel_time_seconds || 0;
+  // Separate from tankSizeForRefuel — refuel time and lap budget apply the same BOP reduction
+  // but are kept as distinct variables so either can be adjusted independently if rules diverge.
   const tankSize = teamEntry?.bop_tank_size_percent
     ? carTankSize * (teamEntry.bop_tank_size_percent / 100)
     : carTankSize;
@@ -326,15 +330,15 @@ function calcStint(
   const laps =
     stint.laps_planned ||
     calcLaps ||
-    (lapTimeSec ? Math.floor(3600 / lapTimeSec) : null);
+    (lapTimeSec ? Math.floor(3600 / lapTimeSec) : null); // last resort: ~1 h stint when tank size unknown
   const stintDurationSec =
     laps && lapTimeSec
       ? Math.round(laps * lapTimeSec)
       : stint.duration_minutes
         ? stint.duration_minutes * 60
         : 3600;
-  const _durationFromPerf = !!(lapTimeSec && (stint.laps_planned || calcLaps));
-  const _durationIsDefault = !laps && !lapTimeSec && !stint.duration_minutes;
+  const _durationFromPerf = !!(lapTimeSec && (stint.laps_planned || calcLaps)); // JSX: show calc text, not manual input
+  const _durationIsDefault = !laps && !lapTimeSec && !stint.duration_minutes; // JSX: no perf/manual data — engine used 3600 s default
   const fuelUsed = laps && fuelPerLap ? laps * fuelPerLap : null;
   const pitStopSec = pitLane + refuel + (stint.tyre_change ? tyreChange : 0);
   const stintIrlEnd =
@@ -679,7 +683,7 @@ function estimateStintCount(teamEntry, driverPerf, assignedDrivers) {
   const avgFuel = perfs.reduce((s, p) => s + p.fuel_dry, 0) / perfs.length;
   const lapsPerStint = tankSize
     ? Math.floor(tankSize / avgFuel)
-    : Math.ceil((60 * 60) / avgLapSec);
+    : Math.ceil((60 * 60) / avgLapSec); // fallback: laps per hour when tank size unknown
   const stintDurMin = Math.round((lapsPerStint * avgLapSec) / 60);
   return Math.max(1, Math.ceil(durationMinutes / stintDurMin));
 }
@@ -1431,6 +1435,7 @@ export default function StintGrid({
           .eq("id", u.id),
       ),
     );
+  // Serialized to avoid re-firing on every re-render — only triggers when timing or fuel changes.
   }, [
     JSON.stringify(
       calculated.map((s) => ({
@@ -2351,7 +2356,7 @@ export default function StintGrid({
             0,
           );
           const equalShare = totalLaps / assignedDrivers.length;
-          const fairShareMin = Math.ceil(equalShare * 0.25);
+          const fairShareMin = Math.ceil(equalShare * 0.25); // 25%: lenient floor that flags only significant imbalances
           const lapsByDriver = {};
           assignedDrivers.forEach((d) => {
             if (d.drivers?.id) lapsByDriver[d.drivers.id] = 0;
@@ -2648,7 +2653,7 @@ export default function StintGrid({
           style={{
             borderCollapse: "collapse",
             width: "100%",
-            minWidth: `${680 + assignedDrivers.length * 26}px`,
+            minWidth: `${680 + assignedDrivers.length * 26}px`, // 680px base + 26px per driver avail-dot column
           }}
         >
           <thead>
