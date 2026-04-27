@@ -62,7 +62,8 @@ export default async function DriverDetail({ params, searchParams }) {
           .in("team_entry_id", teamEntryIds)
       : { data: [] };
 
-  // Fetch assigned stints
+  // Fetch assigned stints — scoped to active strategy per team entry so driver
+  // stats and stint history don't double-count laps across scenario strategies.
   const { data: stints } =
     teamEntryIds.length > 0
       ? await supabase
@@ -70,6 +71,7 @@ export default async function DriverDetail({ params, searchParams }) {
           .select(
             `
             *,
+            strategies!inner(is_active),
             team_entries(
               crew_name,
               event_start_times(irl_start),
@@ -79,6 +81,7 @@ export default async function DriverDetail({ params, searchParams }) {
           )
           .eq("driver_id", id)
           .in("team_entry_id", teamEntryIds)
+          .eq("strategies.is_active", true)
           .order("stint_number")
       : { data: [] };
 

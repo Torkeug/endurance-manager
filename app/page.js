@@ -68,6 +68,8 @@ export default async function HomePage() {
     { count: overdueMembers },
     { data: teamEntries },
     { data: championships },
+    // Active strategies — used to scope the "no stints" incomplete teams check
+    { data: activeStrategies },
   ] = await Promise.all([
     supabase
       .from("events")
@@ -96,9 +98,13 @@ export default async function HomePage() {
       ? supabase
           .from("stints")
           .select(
-            `*, team_entries(id, crew_name, event_id, events(name, timezone), event_start_times(label, irl_start))`,
+            // strategies!inner filters to stints that belong to a strategy — .eq below
+            // restricts to the active one so "Mon prochain relais" never shows
+            // stints from inactive scenario strategies.
+            `*, strategies!inner(is_active), team_entries(id, crew_name, event_id, events(name, timezone), event_start_times(label, irl_start))`,
           )
           .eq("driver_id", currentDriver.id)
+          .eq("strategies.is_active", true)
           .order("irl_start")
       : { data: [] },
 
@@ -138,12 +144,21 @@ export default async function HomePage() {
       ? supabase
           .from("team_entries")
           .select(
-            `id, crew_name, event_id, events (name), signups (id), stints (id, driver_id)`,
+            // strategy_id included so the derived-data check can filter to active strategy only
+            `id, crew_name, event_id, events (name), signups (id), stints (id, driver_id, strategy_id)`,
           )
           .order("crew_name")
       : { data: [] },
 
     supabase.from("championships").select("id, name, archived").order("name"),
+
+    // Fetch active strategy IDs — one per team entry — to scope the stints check below
+    admin
+      ? supabase
+          .from("strategies")
+          .select("id, team_entry_id")
+          .eq("is_active", true)
+      : { data: [] },
   ]);
 
   // ── Derived data ───────────────────────────────────────────────────────────
@@ -215,12 +230,21 @@ export default async function HomePage() {
     ? (teamEntries || []).filter((te) => (te.signups || []).length === 0)
     : [];
 
-  // Admin: team entries with signups but no assigned stints
+  // Active strategy IDs as a Set for O(1) lookup
+  const activeStrategyIdSet = new Set(
+    (activeStrategies || []).map((s) => s.id),
+  );
+
+  // Admin: team entries with signups but no assigned stints in their active strategy.
+  // Scoped to active strategy only — inactive scenario strategies are excluded
+  // so a team with stints only in a non-active strategy correctly appears here.
   const noStints = admin
     ? (teamEntries || []).filter(
         (te) =>
           (te.signups || []).length > 0 &&
-          (te.stints || []).filter((s) => s.driver_id).length === 0,
+          (te.stints || []).filter(
+            (s) => s.driver_id && activeStrategyIdSet.has(s.strategy_id),
+          ).length === 0,
       )
     : [];
 
