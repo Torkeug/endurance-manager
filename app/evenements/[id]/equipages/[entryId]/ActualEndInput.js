@@ -6,6 +6,7 @@ export default function ActualEndInput({
   actualEnd,
   onSave,
   saving,
+  archived = false,
 }) {
   const planned = plannedEnd ? new Date(plannedEnd) : null;
 
@@ -81,6 +82,7 @@ export default function ActualEndInput({
           type="time"
           value={time}
           onChange={(e) => handleTimeChange(e.target.value)}
+          disabled={archived || saving}
           style={{
             background: "var(--surface)",
             border: "1px solid",
@@ -93,7 +95,7 @@ export default function ActualEndInput({
             width: "90px",
           }}
         />
-        {isSet && (
+        {isSet && !archived && (
           <button
             onClick={handleClear}
             title="Effacer"
@@ -131,6 +133,7 @@ export default function ActualEndInput({
             type="date"
             value={date}
             onChange={(e) => handleDateChange(e.target.value)}
+            disabled={archived}
             style={{
               background: "var(--surface)",
               border: "1px solid var(--border)",

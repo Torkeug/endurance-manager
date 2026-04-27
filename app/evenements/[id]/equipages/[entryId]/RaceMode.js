@@ -482,6 +482,7 @@ export default function RaceMode({
   };
 
   const undoLastPit = () => {
+    if (archived) return;
     const last = [...stints].reverse().find((s) => s.irl_end_actual);
     if (!last) return;
     setConfirmModal({

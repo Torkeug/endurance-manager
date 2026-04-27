@@ -3039,6 +3039,7 @@ export default function StintGrid({
                           updateActualEnd(stint.id, isoString)
                         }
                         saving={saving === stint.id}
+                        archived={archived}
                       />
                     </td>
                   )}

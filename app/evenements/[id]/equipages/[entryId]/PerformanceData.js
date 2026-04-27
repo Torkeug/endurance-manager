@@ -276,6 +276,7 @@ function DriverRow({
   };
 
   const handleSave = async () => {
+    if (archived) return;
     if (form.lap_time_dry.trim() && displayToSec(form.lap_time_dry) === null) {
       setLapDryError(true);
       return;
@@ -892,6 +893,7 @@ export default function PerformanceData({
 
   // Auto-save modifier on blur — handles night dry, night wet, and day wet
   const saveModifier = async (field, value) => {
+    if (archived) return;
     setNightSaving(true);
     // parseFloat handles negative values correctly — only falls back to 0 for empty/NaN
     const parsed =
