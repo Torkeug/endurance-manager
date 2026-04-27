@@ -259,7 +259,7 @@ export default function DriverStats({
   // Sports Car: include Road data before split (March 2024)
   if (selectedCategory === 5) {
     const roadData = (historyByCategory[2] || []).filter(
-      (h) => new Date(h.recorded_at) < new Date("2024-03-15"),
+      (h) => new Date(h.recorded_at) < new Date("2024-03-15"), // iRacing split Road → Sports Car + Formula Car on this date
     );
     rawChartData = [...roadData, ...rawChartData];
   }
@@ -278,7 +278,7 @@ export default function DriverStats({
     // Apply date range filter
     const selectedRange = DATE_RANGES.find((r) => r.key === dateRange);
     const cutoff = selectedRange?.months
-      ? new Date(Date.now() - selectedRange.months * 30 * 24 * 60 * 60 * 1000)
+      ? new Date(Date.now() - selectedRange.months * 30 * 24 * 60 * 60 * 1000) // 30-day month approximation — accurate enough for a chart cutoff
       : null;
 
     const points = rawChartData
@@ -301,13 +301,13 @@ export default function DriverStats({
   const iratingMin = iratingValues.length > 0 ? Math.min(...iratingValues) : 0;
   const iratingMax =
     iratingValues.length > 0 ? Math.max(...iratingValues) : 2000;
-  const yPadding = Math.max(100, Math.round((iratingMax - iratingMin) * 0.2));
-  const yDomain = [Math.max(0, iratingMin - yPadding), iratingMax + yPadding];
+  const yPadding = Math.max(100, Math.round((iratingMax - iratingMin) * 0.2)); // 20% of range, min 100 so a flat series still has visible axis room
+  const yDomain = [Math.max(0, iratingMin - yPadding), iratingMax + yPadding]; // lower bound clamped at 0 — iRating can't go negative
 
   // ── Totals ─────────────────────────────────────────────────────────────────
   const totalRaces = new Set(
     (signups || []).map((s) => s.events?.id).filter(Boolean),
-  ).size;
+  ).size; // Set deduplicates — a driver can have multiple signups per event via different team entries
 
   const totalChampionships = new Set(
     (signups || []).map((s) => s.events?.championship_id).filter(Boolean),

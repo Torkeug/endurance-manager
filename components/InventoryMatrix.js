@@ -129,7 +129,6 @@ export default function InventoryMatrix({
   kronosCircuitsByTrackId,
   kronosCircuitNames,
   currentDriverId = null,
-  currentDriverHasIracingId = false,
 }) {
   const [subTab, setSubTab] = useState("cars");
   const [loaded, setLoaded] = useState(false);
@@ -492,7 +491,7 @@ export default function InventoryMatrix({
           ownershipSets[d.id]?.has(getId(b)),
         ).length;
         const diff = sort.dir === "asc" ? aCount - bCount : bCount - aCount;
-        return diff !== 0 ? diff : getName(a).localeCompare(getName(b));
+        return diff !== 0 ? diff : getName(a).localeCompare(getName(b)); // tie-break: name asc when counts are equal
       }
       const diff = getName(a).localeCompare(getName(b));
       return sort.dir === "asc" ? diff : -diff;

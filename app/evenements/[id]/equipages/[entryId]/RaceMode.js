@@ -71,7 +71,7 @@ function formatCountdown(sec) {
   const h = Math.floor((absS % 86400) / 3600);
   const m = Math.floor((absS % 3600) / 60);
   const s = absS % 60;
-  const sign = sec < 0 ? "+" : "";
+  const sign = sec < 0 ? "+" : ""; // negative remaining time = overtime, displayed as positive
   if (d > 0)
     return `${sign}${d}j ${String(h).padStart(2, "0")}h ${String(m).padStart(2, "0")}min ${String(s).padStart(2, "0")}s`;
   if (h > 0)
@@ -431,7 +431,7 @@ export default function RaceMode({
   const inPitWindow =
     stintRemainingSec !== null &&
     stintRemainingSec >= 0 &&
-    stintRemainingSec <= 300;
+    stintRemainingSec <= 300; // 5-minute window — standard pit window alert threshold
 
   // ── Derived: fuel to add at next pit stop ─────────────────────────────────
   // fuel_remaining_calc is persisted by StintGrid — it represents how much
@@ -440,7 +440,7 @@ export default function RaceMode({
   const carTankSize = teamEntry?.cars?.tank_size_litres;
   const tankSize =
     carTankSize && teamEntry?.bop_tank_size_percent
-      ? carTankSize * (teamEntry.bop_tank_size_percent / 100)
+      ? carTankSize * (teamEntry.bop_tank_size_percent / 100) // BOP reduces usable tank capacity
       : (carTankSize ?? null);
   const fuelToAdd =
     activeStint?.fuel_remaining_calc != null && tankSize != null

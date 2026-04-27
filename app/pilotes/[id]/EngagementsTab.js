@@ -29,7 +29,7 @@ function SignupCard({ signup, availMap, stintsMap, carsMap = {} }) {
   const startTimes = event?.event_start_times || [];
   const earliest =
     startTimes.length > 0
-      ? startTimes.reduce((a, b) => (a.irl_start < b.irl_start ? a : b))
+      ? startTimes.reduce((a, b) => (a.irl_start < b.irl_start ? a : b)) // ISO string comparison is lexicographic — valid because irl_start is UTC
       : null;
 
   const prefStartLabels = (signup.preferred_start_time_ids || [])
@@ -306,7 +306,7 @@ function SignupCard({ signup, availMap, stintsMap, carsMap = {} }) {
                       background: "var(--accent)",
                       width: `${Math.min(
                         100,
-                        (avail.available / Math.max(1, avail.filled)) * 100,
+                        (avail.available / Math.max(1, avail.filled)) * 100, // Math.max(1, …) prevents division by zero
                       )}%`,
                       transition: "width 0.3s",
                     }}
@@ -318,7 +318,7 @@ function SignupCard({ signup, availMap, stintsMap, carsMap = {} }) {
                         background: "#d4904a",
                         width: `${Math.min(
                           100,
-                          (avail.tentative / Math.max(1, avail.filled)) * 100,
+                          (avail.tentative / Math.max(1, avail.filled)) * 100, // Math.max(1, …) prevents division by zero
                         )}%`,
                         transition: "width 0.3s",
                       }}
