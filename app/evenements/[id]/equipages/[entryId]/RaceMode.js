@@ -289,6 +289,8 @@ export default function RaceMode({
   teamEntry,
   assignedDrivers,
   archived,
+  // activeStrategy: set via StintGrid's "Définir comme active" — drives which stints Race Mode uses
+  activeStrategy = null,
   onRequestRecalc = null,
 }) {
   const [stints, setStints] = useState([]);
@@ -308,12 +310,20 @@ export default function RaceMode({
   }, []);
 
   // ── Data fetch ─────────────────────────────────────────────────────────────
-  const fetchData = useCallback(async () => {
+ const fetchData = useCallback(async () => {
+    // No active strategy → clear stints and bail out
+    if (!activeStrategy?.id) {
+      setStints([]);
+      setDriverPerf({});
+      setLoading(false);
+      return;
+    }
     const [{ data: stintsData }, { data: perfData }] = await Promise.all([
+      // Filter stints by the active strategy — Race Mode only operates on one strategy
       supabase
         .from("stints")
         .select("*")
-        .eq("team_entry_id", teamEntryId)
+        .eq("strategy_id", activeStrategy.id)
         .order("stint_number"),
       supabase
         .from("driver_performance")
@@ -329,7 +339,7 @@ export default function RaceMode({
     setStints(stintsData || []);
     setDriverPerf(perfMap);
     setLoading(false);
-  }, [teamEntryId]);
+ }, [teamEntryId, activeStrategy?.id]);
 
   useEffect(() => {
     fetchData();
@@ -337,25 +347,30 @@ export default function RaceMode({
 
   // ── Realtime subscription ──────────────────────────────────────────────────
   useEffect(() => {
+    if (!activeStrategy?.id) return;
     const channel = supabase
-      .channel(`race-mode-${teamEntryId}`)
+      .channel(`race-mode-${teamEntryId}-${activeStrategy.id}`)
       .on(
         "postgres_changes",
         {
           event: "*",
           schema: "public",
           table: "stints",
-          filter: `team_entry_id=eq.${teamEntryId}`,
+          filter: `strategy_id=eq.${activeStrategy.id}`,
         },
         () => fetchData(),
       )
       .subscribe();
     return () => supabase.removeChannel(channel);
-  }, [teamEntryId, fetchData]);
+  }, [teamEntryId, activeStrategy?.id, fetchData]);
 
-  // ── Derived: timing ────────────────────────────────────────────────────────
+ // ── Derived: timing ────────────────────────────────────────────────────────
+  // Apply strategy start offset — mirrors calculateAllStints logic in StintGrid
   const raceStart = teamEntry?.event_start_times?.irl_start
-    ? new Date(teamEntry.event_start_times.irl_start)
+    ? new Date(
+        new Date(teamEntry.event_start_times.irl_start).getTime() +
+          (activeStrategy?.actual_start_offset_minutes || 0) * 60 * 1000,
+      )
     : null;
   const raceEnd =
     raceStart && teamEntry?.events?.duration_minutes
@@ -501,6 +516,18 @@ export default function RaceMode({
   };
 
   // ── Render guards ──────────────────────────────────────────────────────────
+ // No active strategy — prompt user to set one in StintGrid
+  if (!activeStrategy) {
+    return (
+      <div className="card">
+        <div className="empty">
+          Aucune stratégie active — définissez une stratégie comme active dans
+          l&apos;onglet Relais.
+        </div>
+      </div>
+    );
+  }
+
   if (loading) {
     return (
       <div className="card">

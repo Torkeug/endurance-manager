@@ -262,12 +262,23 @@ export default function DriversManager({ initialDrivers, currentDriver }) {
     setSaving(null);
     router.refresh();
 
-    // Send approval email — fire and forget, failure must not block the approval action
+    // Send approval email to the driver — fire and forget
     fetch("/api/notify-driver-approved", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ driver_id: driverId }),
-    }).catch((e) => console.error("[approve] Email notification failed:", e));
+    }).catch((e) => console.error("[approve] Driver email failed:", e));
+
+    // Notify other admins that this driver was approved — excludes the approving admin
+    fetch("/api/notify-admins-approval", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        driver_name: drivers.find((d) => d.id === driverId)?.name || "—",
+        approved_by_name: currentDriver?.name || "Un admin",
+        approved_by_id: currentDriver?.id,
+      }),
+    }).catch((e) => console.error("[approve] Admin notify failed:", e));
   };
 
   const refuse = (driverId) => {
