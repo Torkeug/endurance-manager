@@ -513,72 +513,49 @@ function calcSkipLastStintTarget(
   // Hide on the last stint itself — no pit stop to skip from there
   if (lastIdx === -1 || stintIndex >= lastIdx) return null;
 
-  const lastStint = calculated[lastIdx];
+  // ── Remaining laps: current stint through last stint (inclusive) ──
+  // This is the total laps we need to cover starting from now.
+  const remainingLaps = calculated
+    .slice(stintIndex, lastIdx + 1)
+    .reduce((sum, s) => sum + (s._laps || 0), 0);
+  if (remainingLaps === 0) return null;
 
-  // ── Fuel cost of the last stint (the stop we're trying to eliminate) ──
-  const lastIsNight = lastStint._phase === "🌑";
-  let lastFuelPerLap = lastStint._fuelPerLap;
+  // ── N: stints available to absorb the saving (current → second-to-last) ──
+  // As stintIndex increases, N shrinks — target tightens naturally because
+  // there are fewer stints left to spread the fuel saving over.
+  const N = lastIdx - stintIndex;
+  if (N === 0) return null;
+
+  // ── Target: fill tank once per stint, cover remainingLaps in N stints ──
+  // lapsNeeded = how many laps each of the N stints must cover on one tank.
+  // target = tankSize / lapsNeeded — fixed consumption to achieve that.
+  const lapsNeeded = Math.ceil(remainingLaps / N);
+  const targetConsumption = tankSize / lapsNeeded;
+
+  // ── Delta: how much per lap to save vs this stint's actual consumption ──
+  // Uses the current stint's driver fuel data as the reference point.
   let hasWarning = false;
+  const currentStint = calculated[stintIndex];
+  const isNight = currentStint._phase === "🌑";
+  let actualFuelPerLap = currentStint._fuelPerLap;
 
-  if (!lastFuelPerLap) {
-    // Fall back to team average for last stint's condition
+  if (!actualFuelPerLap) {
+    // Fall back to team average for this stint's condition
     const fuels = assignedDrivers
       .map((d) => d.drivers?.id)
       .filter(Boolean)
       .map(
         (id) =>
-          selectFuelPerLap(driverPerf[id], lastStint.rain, lastIsNight)?.value,
+          selectFuelPerLap(driverPerf[id], currentStint.rain, isNight)?.value,
       )
       .filter(Boolean);
     if (fuels.length > 0)
-      lastFuelPerLap = fuels.reduce((s, f) => s + f, 0) / fuels.length;
+      actualFuelPerLap = fuels.reduce((s, f) => s + f, 0) / fuels.length;
     hasWarning = true;
   }
 
-  if (!lastFuelPerLap || !lastStint._laps) return null;
-
-  const lastStintFuel = lastStint._laps * lastFuelPerLap;
-
-  // ── Stints over which savings are spread: current stint → second-to-last ──
-  // Includes the current stint (stintIndex) so that the second-to-last row
-  // shows savings spread over 1 stint — the hardest case.
-  const middleStints = calculated.slice(stintIndex, lastIdx);
-  const lapsToSaveOver = middleStints.reduce(
-    (sum, s) => sum + (s._laps || 0),
-    0,
-  );
-  if (lapsToSaveOver === 0) return null;
-
-  const savingsPerLap = lastStintFuel / lapsToSaveOver;
-
-  // ── Weighted average actual consumption across the same window ──
-  let weightedFuelSum = 0;
-  let weightedLapSum = 0;
-
-  for (const st of middleStints) {
-    const isNight = st._phase === "🌑";
-    let fuelPerLap = st._fuelPerLap;
-    if (!fuelPerLap) {
-      const fuels = assignedDrivers
-        .map((d) => d.drivers?.id)
-        .filter(Boolean)
-        .map((id) => selectFuelPerLap(driverPerf[id], st.rain, isNight)?.value)
-        .filter(Boolean);
-      if (fuels.length > 0)
-        fuelPerLap = fuels.reduce((s, f) => s + f, 0) / fuels.length;
-      hasWarning = true;
-    }
-    if (fuelPerLap && st._laps) {
-      weightedFuelSum += fuelPerLap * st._laps;
-      weightedLapSum += st._laps;
-    }
-  }
-
-  const actualAvg =
-    weightedLapSum > 0 ? weightedFuelSum / weightedLapSum : null;
-  // Target: what average consumption needs to be across remaining stints
-  const targetConsumption =
-    actualAvg !== null ? actualAvg - savingsPerLap : null;
+  const savingsPerLap =
+    actualFuelPerLap != null ? actualFuelPerLap - targetConsumption : null;
 
   return { savingsPerLap, targetConsumption, hasWarning };
 }
