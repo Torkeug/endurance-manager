@@ -247,6 +247,10 @@ function calcStint(
   fuelRemaining = null,
   // teamAverages: tier-4 fallback when driver has no resolvable perf data
   teamAverages = null,
+  // offsetRaceStart: the strategy-offset race start used as IG time baseline.
+  // Passed from calculateAllStints so the offset only shifts IRL timing,
+  // not in-game time progression.
+  offsetRaceStart = null,
 ) {
   const pitLane = teamEntry?.events?.circuits?.pit_lane_time_seconds || 0;
   const tyreChange = teamEntry?.tyre_change_time_seconds || 0;
@@ -273,7 +277,10 @@ function calcStint(
   const tankSize = teamEntry?.bop_tank_size_percent
     ? carTankSize * (teamEntry.bop_tank_size_percent / 100)
     : carTankSize;
-  const raceStart = teamEntry?.event_start_times?.irl_start;
+  // Use the strategy-offset race start as the IG time baseline so the offset only
+  // shifts IRL timing — in-game time progresses from the unmodified scheduled start.
+  // Falls back to the raw event start when no offset is provided (e.g. direct calls).
+  const raceStart = offsetRaceStart || teamEntry?.event_start_times?.irl_start;
   const perf = driverPerf[stint.driver_id];
 
   // Compute phase first so lap time selection can account for night conditions.
@@ -422,6 +429,7 @@ function calculateAllStints(
       currentTime,
       fuelRemaining,
       teamAverages,
+      raceStart, // offset-adjusted baseline — keeps IG time independent of strategy offset
     );
     result.push(calc);
     // Carry fuel remaining forward to next stint
@@ -1435,7 +1443,7 @@ export default function StintGrid({
           .eq("id", u.id),
       ),
     );
-  // Serialized to avoid re-firing on every re-render — only triggers when timing or fuel changes.
+    // Serialized to avoid re-firing on every re-render — only triggers when timing or fuel changes.
   }, [
     JSON.stringify(
       calculated.map((s) => ({
