@@ -206,11 +206,13 @@ function selectLapTime(
 
 // ─── Compute actual fuel stats for a completed stint ────────────────────────
 
-function calcActualFuel(stint, driverPerf, teamEntry) {
+function calcActualFuel(stint, driverPerf, teamEntry, offsetRaceStart = null) {
   if (!stint.irl_end_actual || !stint.irl_start) return null;
 
   const perf = driverPerf[stint.driver_id];
-  const raceStart = teamEntry?.event_start_times?.irl_start;
+  // Use offset-adjusted start as IG time baseline — mirrors the fix in StintGrid.
+  // Falls back to raw event start when no offset is provided.
+  const raceStart = offsetRaceStart ?? teamEntry?.event_start_times?.irl_start;
   const igStartTime = teamEntry?.events?.ig_start_time;
   const igSunrise = teamEntry?.events?.ig_sunrise;
   const igSunset = teamEntry?.events?.ig_sunset;
@@ -310,7 +312,7 @@ export default function RaceMode({
   }, []);
 
   // ── Data fetch ─────────────────────────────────────────────────────────────
- const fetchData = useCallback(async () => {
+  const fetchData = useCallback(async () => {
     // No active strategy → clear stints and bail out
     if (!activeStrategy?.id) {
       setStints([]);
@@ -339,7 +341,7 @@ export default function RaceMode({
     setStints(stintsData || []);
     setDriverPerf(perfMap);
     setLoading(false);
- }, [teamEntryId, activeStrategy?.id]);
+  }, [teamEntryId, activeStrategy?.id]);
 
   useEffect(() => {
     fetchData();
@@ -364,7 +366,7 @@ export default function RaceMode({
     return () => supabase.removeChannel(channel);
   }, [teamEntryId, activeStrategy?.id, fetchData]);
 
- // ── Derived: timing ────────────────────────────────────────────────────────
+  // ── Derived: timing ────────────────────────────────────────────────────────
   // Apply strategy start offset — mirrors calculateAllStints logic in StintGrid
   const raceStart = teamEntry?.event_start_times?.irl_start
     ? new Date(
@@ -450,7 +452,8 @@ export default function RaceMode({
   // ── Derived: fuel stats for completed stints ──────────────────────────────
   const completedWithFuel = completedStints.map((s) => ({
     ...s,
-    _fuel: calcActualFuel(s, driverPerf, teamEntry),
+    // Pass offset-adjusted raceStart so IG time baseline matches StintGrid
+    _fuel: calcActualFuel(s, driverPerf, teamEntry, raceStart),
   }));
 
   const fuelDriftStints = completedWithFuel.filter(
@@ -517,7 +520,7 @@ export default function RaceMode({
   };
 
   // ── Render guards ──────────────────────────────────────────────────────────
- // No active strategy — prompt user to set one in StintGrid
+  // No active strategy — prompt user to set one in StintGrid
   if (!activeStrategy) {
     return (
       <div className="card">
