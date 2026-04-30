@@ -1933,6 +1933,10 @@ export default function StintGrid({
     borderBottom: "2px solid var(--border)",
     whiteSpace: "nowrap",
     textAlign: "left",
+    // Sticky header — works because the wrapper is the scroll container (overflowY: auto)
+    position: "sticky",
+    top: 0,
+    zIndex: 2,
   };
   const TD = {
     padding: "0.35rem 0.5rem",
@@ -2652,6 +2656,8 @@ export default function StintGrid({
       <div
         style={{
           overflowX: "auto",
+          overflowY: "auto",
+          maxHeight: "80vh",
           border: "1px solid var(--border)",
           borderRadius: "4px",
           marginBottom: "1rem",
