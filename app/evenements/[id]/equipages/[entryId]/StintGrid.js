@@ -185,34 +185,62 @@ function resolveLapTimeCalc(
   }
 }
 
-// computeTeamAverages — averages each perf field across all drivers who have it.
-// Returns a perf-shaped object (null per field when no driver has it).
-// Used as tier-4 fallback in calcStint when a driver has no resolvable data.
-function computeTeamAverages(driverPerf) {
-  const fields = [
-    "lap_time_dry",
-    "lap_time_wet",
-    "lap_time_night_dry",
-    "lap_time_night_wet",
-    "fuel_dry",
-    "fuel_wet",
-    "fuel_night_dry",
-    "fuel_night_wet",
-  ];
-  const sums = Object.fromEntries(fields.map((f) => [f, 0]));
-  const counts = Object.fromEntries(fields.map((f) => [f, 0]));
-  Object.values(driverPerf).forEach((perf) => {
-    if (!perf) return;
-    fields.forEach((f) => {
-      if (perf[f] != null) {
-        sums[f] += perf[f];
-        counts[f]++;
-      }
-    });
-  });
-  return Object.fromEntries(
-    fields.map((f) => [f, counts[f] > 0 ? sums[f] / counts[f] : null]),
-  );
+// computeTeamAveragesByCondition — resolves each driver's lap time and fuel through
+// their full fallback chain first, then averages the results per condition.
+// This ensures drivers without specific night/wet data still contribute via their
+// day values (same fallback chain as calcStint), giving a correct team average.
+// Returns { DD, DW, ND, NW } — each with { lap, lapTier, fuel, fuelTier }.
+// lapTier/fuelTier = worst tier among contributing drivers — used as subTier
+// in calcStint to reflect how confidently the average was derived.
+function computeTeamAveragesByCondition(driverPerf, teamEntry) {
+  const dayWetAdd = teamEntry?.day_wet_add_seconds || 0;
+  const nightDryAdd = teamEntry?.night_dry_add_seconds || 0;
+  const nightWetAdd = teamEntry?.night_wet_add_seconds || 0;
+  const mods = { dayWetAdd, nightDryAdd, nightWetAdd };
+
+  const conditions = ["DD", "DW", "ND", "NW"];
+  const result = {};
+
+  for (const condition of conditions) {
+    const rain = condition === "DW" || condition === "NW";
+    const isNight = condition === "ND" || condition === "NW";
+
+    const lapResolutions = [];
+    const fuelResolutions = [];
+
+    for (const perf of Object.values(driverPerf)) {
+      if (!perf) continue;
+      const lap = resolveLapTimeCalc(perf, condition, mods);
+      if (lap) lapResolutions.push(lap);
+      const fuel = selectFuelPerLap(perf, rain, isNight);
+      if (fuel) fuelResolutions.push(fuel);
+    }
+
+    result[condition] = {
+      lap:
+        lapResolutions.length > 0
+          ? lapResolutions.reduce((s, r) => s + r.value, 0) /
+            lapResolutions.length
+          : null,
+      // Worst tier among contributors — a mix of tier-1 and tier-2 drivers
+      // yields tier 2, signalling the average is partially estimated.
+      lapTier:
+        lapResolutions.length > 0
+          ? Math.max(...lapResolutions.map((r) => r.tier))
+          : null,
+      fuel:
+        fuelResolutions.length > 0
+          ? fuelResolutions.reduce((s, r) => s + r.value, 0) /
+            fuelResolutions.length
+          : null,
+      fuelTier:
+        fuelResolutions.length > 0
+          ? Math.max(...fuelResolutions.map((r) => r.tier))
+          : null,
+    };
+  }
+
+  return result;
 }
 
 // markerFromTier — superscript character for a given fallback tier.
@@ -305,27 +333,27 @@ function calcStint(
       ? "ND"
       : "DD";
 
-  // Lap time: driver-specific fallback chain first, then team average (tier 4)
+  // Lap time: driver-specific fallback chain first, then pre-resolved team average (tier 4).
+  // Team average is already resolved per condition — no re-resolution needed here.
   let resolvedLap = resolveLapTimeCalc(perf, condition, mods);
   if (!resolvedLap && teamAverages) {
-    const avgLap = resolveLapTimeCalc(teamAverages, condition, mods);
-    // Propagate avgLap.tier as subTier — records how the average itself was derived
-    // (e.g. subTier 3 = team avg resolved via zero-modifier path, double low-confidence)
-    if (avgLap)
-      resolvedLap = { value: avgLap.value, tier: 4, subTier: avgLap.tier };
+    const avg = teamAverages[condition];
+    if (avg?.lap != null)
+      resolvedLap = { value: avg.lap, tier: 4, subTier: avg.lapTier };
   }
   const lapTimeSec = resolvedLap?.value ?? null;
   const lapTimeTier = resolvedLap?.tier ?? null;
   const lapTimeSubTier = resolvedLap?.subTier ?? null;
 
-  // Fuel: driver-specific fallback chain first, then team average (tier 4)
+  // Fuel: driver-specific fallback chain first, then pre-resolved team average (tier 4).
+  // Team average is already resolved per condition — no re-resolution needed here.
   let resolvedFuel = selectFuelPerLap(perf, stint.rain, isNight);
   if (!resolvedFuel && teamAverages) {
-    const avgFuel = selectFuelPerLap(teamAverages, stint.rain, isNight);
-    // Propagate avgFuel.tier as subTier — same pattern as lap time above
-    if (avgFuel)
-      resolvedFuel = { value: avgFuel.value, tier: 4, subTier: avgFuel.tier };
+    const avg = teamAverages[condition];
+    if (avg?.fuel != null)
+      resolvedFuel = { value: avg.fuel, tier: 4, subTier: avg.fuelTier };
   }
+
   const fuelPerLap = resolvedFuel?.value ?? null;
   const fuelTier = resolvedFuel?.tier ?? null;
   const fuelSubTier = resolvedFuel?.subTier ?? null;
@@ -398,8 +426,9 @@ function calculateAllStints(
   igSunset,
   startOffsetMinutes = 0,
 ) {
-  // Compute team averages once — passed to every calcStint call as tier-4 fallback
-  const teamAverages = computeTeamAverages(driverPerf);
+  // Compute team averages once — passed to every calcStint call as tier-4 fallback.
+  // Resolved per condition via full fallback chains so all drivers contribute correctly.
+  const teamAverages = computeTeamAveragesByCondition(driverPerf, teamEntry);
   const raceStartRaw = teamEntry?.event_start_times?.irl_start;
   // Apply strategy start offset — shifts the effective green-flag time without changing
   // event config. Models delayed starts (practice + qualif + formation lap padding).
