@@ -3131,27 +3131,9 @@ export default function StintGrid({
                       placeholder="—"
                       onFocus={(e) => e.target.select()}
                       onChange={(e) => {
-                        let val = e.target.value
-                          ? parseInt(e.target.value)
+                        const val = e.target.value
+                          ? Math.max(1, parseInt(e.target.value))
                           : null;
-                        if (val !== null) {
-                          val = Math.max(1, val);
-                          // Use full fallback chain for tank-cap check
-                          const fuelPerLap = selectFuelPerLap(
-                            driverPerf[stint.driver_id],
-                            stint.rain,
-                            stint._phase === "🌑",
-                          )?.value;
-                          const tankSize = teamEntry?.bop_tank_size_percent
-                            ? teamEntry.cars?.tank_size_litres *
-                              (teamEntry.bop_tank_size_percent / 100)
-                            : teamEntry?.cars?.tank_size_litres;
-                          if (fuelPerLap && tankSize)
-                            val = Math.min(
-                              val,
-                              Math.floor(tankSize / fuelPerLap),
-                            );
-                        }
                         updateStint(stint.id, "laps_planned", val);
                       }}
                       disabled={archived}
@@ -3214,44 +3196,77 @@ export default function StintGrid({
                       )}
                   </td>
 
-                  {/* Fuel — color and compound marker reflect fallback tier when data is estimated */}
+                  {/* Fuel — red + warning when laps_planned exceeds theoretical tank capacity */}
                   <td style={TD}>
-                    <span
-                      className="mono"
-                      style={{
-                        fontSize: "0.72rem",
-                        // Primary tier drives color — subTier detail carried by the marker
-                        color: stint._fuelUsed
-                          ? tierTextColor(stint._fuelTier, "var(--accent)")
-                          : "var(--text-dim)",
-                      }}
-                      title={
-                        stint._fuelTier === 4
-                          ? stint._fuelSubTier >= 3
-                            ? "Consommation calculée via moyenne équipe estimée sans modificateur configuré — fiabilité faible"
-                            : stint._fuelSubTier === 2
-                              ? "Consommation calculée via moyenne équipe estimée via modificateur"
-                              : "Consommation calculée via moyenne équipe — données pilote manquantes"
-                          : stint._fuelTier === 3
-                            ? "Consommation calculée via modificateur non configuré — fiabilité faible"
-                            : stint._fuelTier === 2
-                              ? "Consommation calculée via modificateur équipage"
-                              : undefined
-                      }
-                    >
-                      {(stint._fuelUsed ?? stint.fuel_used_calc)
-                        ? `${(stint._fuelUsed ?? stint.fuel_used_calc).toFixed(1)}L`
-                        : "—"}
-                      {/* Compound marker — †~ or †* when team avg was itself derived */}
-                      {stint._fuelUsed && stint._fuelTier >= 2 && (
-                        <sup style={{ fontSize: "0.65em", marginLeft: "1px" }}>
-                          {markerFromTier(stint._fuelTier)}
-                          {stint._fuelSubTier >= 2
-                            ? markerFromTier(stint._fuelSubTier)
-                            : ""}
-                        </sup>
-                      )}
-                    </span>
+                    {(() => {
+                      const exceedsTank =
+                        stint.laps_planned &&
+                        stint._calcLaps &&
+                        stint.laps_planned > stint._calcLaps;
+                      const fuelValue = stint._fuelUsed ?? stint.fuel_used_calc;
+                      return (
+                        <>
+                          <span
+                            className="mono"
+                            style={{
+                              fontSize: "0.72rem",
+                              // Red overrides tier color when tank is exceeded
+                              color: exceedsTank
+                                ? "var(--danger)"
+                                : stint._fuelUsed
+                                  ? tierTextColor(
+                                      stint._fuelTier,
+                                      "var(--accent)",
+                                    )
+                                  : "var(--text-dim)",
+                            }}
+                            title={
+                              exceedsTank
+                                ? "Tours saisis au-delà de la capacité du réservoir"
+                                : stint._fuelTier === 4
+                                  ? stint._fuelSubTier >= 3
+                                    ? "Consommation calculée via moyenne équipe estimée sans modificateur configuré — fiabilité faible"
+                                    : stint._fuelSubTier === 2
+                                      ? "Consommation calculée via moyenne équipe estimée via modificateur"
+                                      : "Consommation calculée via moyenne équipe — données pilote manquantes"
+                                  : stint._fuelTier === 3
+                                    ? "Consommation calculée via modificateur non configuré — fiabilité faible"
+                                    : stint._fuelTier === 2
+                                      ? "Consommation calculée via modificateur équipage"
+                                      : undefined
+                            }
+                          >
+                            {fuelValue ? `${fuelValue.toFixed(1)}L` : "—"}
+                            {/* Compound marker — †~ or †* when team avg was itself derived */}
+                            {stint._fuelUsed && stint._fuelTier >= 2 && (
+                              <sup
+                                style={{
+                                  fontSize: "0.65em",
+                                  marginLeft: "1px",
+                                }}
+                              >
+                                {markerFromTier(stint._fuelTier)}
+                                {stint._fuelSubTier >= 2
+                                  ? markerFromTier(stint._fuelSubTier)
+                                  : ""}
+                              </sup>
+                            )}
+                          </span>
+                          {/* Warning — shown when user manually exceeds tank capacity */}
+                          {exceedsTank && (
+                            <div
+                              style={{
+                                fontSize: "0.65rem",
+                                color: "var(--danger)",
+                                marginTop: "0.1rem",
+                              }}
+                            >
+                              ⚠ dépasse réservoir
+                            </div>
+                          )}
+                        </>
+                      );
+                    })()}
                   </td>
 
                   {/* Skip last pit target consumption */}
