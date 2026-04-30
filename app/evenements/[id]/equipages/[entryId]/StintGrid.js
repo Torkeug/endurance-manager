@@ -1806,6 +1806,33 @@ export default function StintGrid({
     });
   };
 
+  const resetStint = (stintId) => {
+    if (archived) return;
+    setConfirmModal({
+      title: "Réinitialiser ce relais",
+      message:
+        "Le pilote, les tours, les notes et les options de ce relais seront effacés. Le créneau restera dans le planning.",
+      confirmLabel: "Réinitialiser",
+      onConfirm: async () => {
+        setConfirmModal(null);
+        const payload = {
+          driver_id: null,
+          previous_driver_id: null,
+          laps_planned: null,
+          rain: false,
+          tyre_change: false,
+          notes: null,
+          irl_end_actual: null,
+        };
+        // Optimistic update
+        setStints((prev) =>
+          prev.map((s) => (s.id === stintId ? { ...s, ...payload } : s)),
+        );
+        await supabase.from("stints").update(payload).eq("id", stintId);
+      },
+    });
+  };
+
   const clearAllStints = () => {
     if (archived) return;
     setConfirmModal({
@@ -3526,6 +3553,14 @@ export default function StintGrid({
                               )}
                           </div>
                         )}
+                        <button
+                          onClick={() => resetStint(stint.id)}
+                          className="btn btn-secondary btn-sm"
+                          style={{ padding: "0.15rem 0.4rem" }}
+                          title="Réinitialiser ce relais"
+                        >
+                          ↺
+                        </button>
                         <button
                           onClick={() => deleteStint(stint.id)}
                           className="btn btn-danger btn-sm"
