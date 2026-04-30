@@ -3565,6 +3565,7 @@ export default function StintGrid({
                           onClick={() => deleteStint(stint.id)}
                           className="btn btn-danger btn-sm"
                           style={{ padding: "0.15rem 0.4rem" }}
+                          title="Supprimer ce relais"
                         >
                           ×
                         </button>
