@@ -3279,28 +3279,32 @@ export default function StintGrid({
                                 ? `${skip.targetConsumption.toFixed(2)} L/tr`
                                 : "—"}
                             </div>
-                            {/* Savings needed per lap vs current plan */}
-                            <div
-                              style={{
-                                fontSize: "0.65rem",
-                                color: "var(--danger)",
-                                marginTop: "0.1rem",
-                              }}
-                            >
-                              −{skip.savingsPerLap.toFixed(2)} L/tr
-                              {skip.hasWarning && (
-                                <sup
-                                  style={{
-                                    fontSize: "0.65em",
-                                    marginLeft: "2px",
-                                    color: "#4a9fd4",
-                                  }}
-                                  title="Données pilote manquantes pour certains relais — moyenne équipe utilisée"
-                                >
-                                  †
-                                </sup>
-                              )}
-                            </div>
+                            {/* Savings needed per lap vs current consumption —
+                                only shown when a real saving is required (guard against
+                                edge case where last stint is already naturally covered) */}
+                            {skip.savingsPerLap > 0 && (
+                              <div
+                                style={{
+                                  fontSize: "0.65rem",
+                                  color: "var(--danger)",
+                                  marginTop: "0.1rem",
+                                }}
+                              >
+                                −{skip.savingsPerLap.toFixed(2)} L/tr
+                                {skip.hasWarning && (
+                                  <sup
+                                    style={{
+                                      fontSize: "0.65em",
+                                      marginLeft: "2px",
+                                      color: "#4a9fd4",
+                                    }}
+                                    title="Données pilote manquantes pour certains relais — moyenne équipe utilisée"
+                                  >
+                                    †
+                                  </sup>
+                                )}
+                              </div>
+                            )}
                           </div>
                         );
                       })()}
