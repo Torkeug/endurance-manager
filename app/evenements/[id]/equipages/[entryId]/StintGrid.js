@@ -1263,6 +1263,17 @@ export default function StintGrid({
             .in("driver_id", driverIds)
             .neq("team_entry_id", teamEntryId)
         : Promise.resolve({ data: [] }),
+      // Fetch active signups for these drivers elsewhere — used to filter conflict
+      // detection to only drivers genuinely committed to another team entry.
+      // Orphaned stints (driver removed from team) are excluded this way.
+      driverIds.length > 0
+        ? supabase
+            .from("signups")
+            .select("driver_id, team_entry_id")
+            .in("driver_id", driverIds)
+            .not("team_entry_id", "is", null)
+            .neq("team_entry_id", teamEntryId)
+        : Promise.resolve({ data: [] }),
     ]).then(
       async ([
         { data: stratsData },
