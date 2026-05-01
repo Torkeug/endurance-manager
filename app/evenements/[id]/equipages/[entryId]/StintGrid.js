@@ -1281,6 +1281,7 @@ export default function StintGrid({
         { data: perfData },
         { data: availData },
         { data: otherStints },
+        { data: activeSignups },
       ]) => {
         // ── Strategies ────────────────────────────────────────────────────────
         let strats = stratsData || [];
@@ -1334,7 +1335,17 @@ export default function StintGrid({
           availMap[key] = a;
         });
         setAvailabilities(availMap);
-        setConflictStints(otherStints || []);
+        // Only flag conflicts for drivers actively signed up on another team entry.
+        // Stints orphaned by a prior unassignment retain driver_id in the DB but
+        // the driver has no current commitment there — exclude them from detection.
+        const activeAssignments = new Set(
+          (activeSignups || []).map((s) => `${s.driver_id}:${s.team_entry_id}`)
+        );
+        setConflictStints(
+          (otherStints || []).filter((s) =>
+            activeAssignments.has(`${s.driver_id}:${s.team_entry_id}`)
+          )
+        );
 
         // ── Stints — filter to resolved strategy ──────────────────────────────
         const loadedStints = (stintsData || []).filter(
