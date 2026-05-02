@@ -1171,9 +1171,8 @@ export default function StintGrid({
   archived = false,
   autoOpenRecalc = false,
   onAutoOpenHandled = null,
-  // Lifts the active strategy up to EquipageTabs so RaceMode can use it
-  // without a redundant fetch
   onActiveStrategyChange = null,
+  isActive = false,
 }) {
   // Strategy state — strategies fetched from DB, selectedStrategyId is the viewed tab
   const [strategies, setStrategies] = useState([]);
@@ -1231,11 +1230,15 @@ export default function StintGrid({
   // Guard against concurrent default-strategy creation — the async insert can race
   // with a re-render that re-fires the effect before the first insert completes.
   const creatingDefaultStrategy = useRef(false);
+  // Tracks whether initial fetch has completed — used to skip re-fetch when inactive
+  const hasLoadedOnce = useRef(false);
 
   // Single parallel fetch — strategies + stints + perf + avail in one Promise.all.
   // Eliminates the previous two-step waterfall (strategies first → then stints).
   useEffect(() => {
     if (!teamEntryId) return;
+    // Skip re-fetch if not active — but always fetch on first mount
+    if (!isActive && hasLoadedOnce.current) return;
     setLoading(true);
     Promise.all([
       supabase
@@ -1339,12 +1342,12 @@ export default function StintGrid({
         // Stints orphaned by a prior unassignment retain driver_id in the DB but
         // the driver has no current commitment there — exclude them from detection.
         const activeAssignments = new Set(
-          (activeSignups || []).map((s) => `${s.driver_id}:${s.team_entry_id}`)
+          (activeSignups || []).map((s) => `${s.driver_id}:${s.team_entry_id}`),
         );
         setConflictStints(
           (otherStints || []).filter((s) =>
-            activeAssignments.has(`${s.driver_id}:${s.team_entry_id}`)
-          )
+            activeAssignments.has(`${s.driver_id}:${s.team_entry_id}`),
+          ),
         );
 
         // ── Stints — filter to resolved strategy ──────────────────────────────
@@ -1378,9 +1381,10 @@ export default function StintGrid({
               if (data) setStints(data);
             });
         }
+        hasLoadedOnce.current = true;
       },
     );
-  }, [teamEntryId, JSON.stringify(driverIds)]);
+  }, [teamEntryId, JSON.stringify(driverIds), isActive]);
 
   // Sync local edit fields when the selected strategy changes
   useEffect(() => {
@@ -3133,12 +3137,22 @@ export default function StintGrid({
                         Takes priority over all calculated/manual values. */}
                     {stint.irl_end_actual && stint._irlStart ? (
                       <div>
-                        <span className="mono" style={{ fontSize: "0.75rem", color: "#2eb460" }}>
+                        <span
+                          className="mono"
+                          style={{ fontSize: "0.75rem", color: "#2eb460" }}
+                        >
                           {formatDuration(
-                            (new Date(stint.irl_end_actual) - stint._irlStart) / 1000,
+                            (new Date(stint.irl_end_actual) - stint._irlStart) /
+                              1000,
                           )}
                         </span>
-                        <div style={{ fontSize: "0.65rem", color: "var(--text-dim)", marginTop: "0.1rem" }}>
+                        <div
+                          style={{
+                            fontSize: "0.65rem",
+                            color: "var(--text-dim)",
+                            marginTop: "0.1rem",
+                          }}
+                        >
                           réel
                         </div>
                       </div>

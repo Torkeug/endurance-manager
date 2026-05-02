@@ -65,9 +65,16 @@ export default function EquipageTabs({
   const limitedToAssignment = isInEvent && !isInTeam && !fullAccess;
 
   // Default to relais — most-used view during race preparation
-  const [activeTab, setActiveTab] = useState(
-    limitedToAssignment ? "pilotes" : "relais",
-  );
+  const initialTab = limitedToAssignment ? "pilotes" : "relais";
+  const [activeTab, setActiveTab] = useState(initialTab);
+  // Tracks which tabs have been visited — mounted once, then kept alive via
+  // display:none instead of unmounting. Prevents expensive remount on every switch.
+  const [mountedTabs, setMountedTabs] = useState(new Set([initialTab]));
+
+  const handleTabChange = (tabId) => {
+    setActiveTab(tabId);
+    setMountedTabs((prev) => new Set([...prev, tabId]));
+  };
 
   // When true: switches to relais tab and tells StintGrid to auto-open the recalc modal
   const [recalcRequested, setRecalcRequested] = useState(false);
@@ -94,7 +101,7 @@ export default function EquipageTabs({
         {visibleTabs.map((tab) => (
           <button
             key={tab.id}
-            onClick={() => setActiveTab(tab.id)}
+            onClick={() => handleTabChange(tab.id)}
             style={{
               padding: "0.6rem 1.25rem",
               background: "transparent",
@@ -160,127 +167,145 @@ export default function EquipageTabs({
         )}
 
       {/* ── Tab: Pilotes ──────────────────────────────────────────────────── */}
-      {activeTab === "pilotes" && (
-        <DriversAssignment
-          entryId={entryId}
-          entryCarId={entryCarId}
-          entryCarName={entryCarName}
-          entryClass={entryClass}
-          carsMap={carsMap}
-          startTimesMap={startTimesMap}
-          assignedDrivers={assignedDrivers}
-          unassignedDrivers={isExternalDriver ? [] : unassignedDrivers}
-          currentDriver={currentDriver}
-          archived={archived || isEngineer}
-          isInEvent={isInEvent}
-          isInTeam={isInTeam}
-          isAdmin={isAdmin}
-          teamStartTimeId={teamEntry.start_time_id}
-          irlStart={teamEntry.event_start_times?.irl_start || null}
-          durationMinutes={teamEntry.events?.duration_minutes || 0}
-        />
+      {mountedTabs.has("pilotes") && (
+        <div style={{ display: activeTab === "pilotes" ? "block" : "none" }}>
+          <DriversAssignment
+            entryId={entryId}
+            entryCarId={entryCarId}
+            entryCarName={entryCarName}
+            entryClass={entryClass}
+            carsMap={carsMap}
+            startTimesMap={startTimesMap}
+            assignedDrivers={assignedDrivers}
+            unassignedDrivers={isExternalDriver ? [] : unassignedDrivers}
+            currentDriver={currentDriver}
+            archived={archived || isEngineer}
+            isInEvent={isInEvent}
+            isInTeam={isInTeam}
+            isAdmin={isAdmin}
+            teamStartTimeId={teamEntry.start_time_id}
+            irlStart={teamEntry.event_start_times?.irl_start || null}
+            durationMinutes={teamEntry.events?.duration_minutes || 0}
+          />
+        </div>
       )}
 
       {/* ── Tab: Disponibilités ───────────────────────────────────────────── */}
-      {activeTab === "disponibilites" && (
-        <>
-          <p
-            style={{
-              fontSize: "0.85rem",
-              color: "var(--text-dim)",
-              marginBottom: "1rem",
-            }}
-          >
-            {archived
-              ? "Disponibilités enregistrées au moment de l'archivage."
-              : "Sélectionnez votre nom et cliquez ou glissez sur les créneaux pour marquer votre disponibilité."}
-          </p>
-          <AvailabilityGrid
-            teamEntryId={entryId}
-            assignedDrivers={assignedDrivers}
-            irlStart={teamEntry.event_start_times?.irl_start || null}
-            durationMinutes={teamEntry.events?.duration_minutes || 0}
-            igStartTime={teamEntry.events?.ig_start_time || null}
-            igSunrise={teamEntry.events?.ig_sunrise || null}
-            igSunset={teamEntry.events?.ig_sunset || null}
-            archived={archived || isEngineer}
-            currentDriverId={currentDriver?.id || null}
-            isExternalUser={currentDriver?.role === "external"}
-          />
-        </>
+      {mountedTabs.has("disponibilites") && (
+        <div
+          style={{ display: activeTab === "disponibilites" ? "block" : "none" }}
+        >
+          <>
+            <p
+              style={{
+                fontSize: "0.85rem",
+                color: "var(--text-dim)",
+                marginBottom: "1rem",
+              }}
+            >
+              {archived
+                ? "Disponibilités enregistrées au moment de l'archivage."
+                : "Sélectionnez votre nom et cliquez ou glissez sur les créneaux pour marquer votre disponibilité."}
+            </p>
+            <AvailabilityGrid
+              teamEntryId={entryId}
+              assignedDrivers={assignedDrivers}
+              irlStart={teamEntry.event_start_times?.irl_start || null}
+              durationMinutes={teamEntry.events?.duration_minutes || 0}
+              igStartTime={teamEntry.events?.ig_start_time || null}
+              igSunrise={teamEntry.events?.ig_sunrise || null}
+              igSunset={teamEntry.events?.ig_sunset || null}
+              archived={archived || isEngineer}
+              currentDriverId={currentDriver?.id || null}
+              isExternalUser={currentDriver?.role === "external"}
+            />
+          </>
+        </div>
       )}
 
       {/* ── Tab: Relais ───────────────────────────────────────────────────── */}
-      {activeTab === "relais" && (
-        <>
-          <p
-            style={{
-              fontSize: "0.85rem",
-              color: "var(--text-dim)",
-              marginBottom: "1rem",
-            }}
-          >
-            {archived
-              ? "Relais planifiés au moment de l'archivage."
-              : "Les temps IRL et IG sont calculés automatiquement. Les points colorés indiquent la disponibilité de chaque pilote."}
-          </p>
-          <StintGrid
+      {mountedTabs.has("relais") && (
+        <div style={{ display: activeTab === "relais" ? "block" : "none" }}>
+          <>
+            <p
+              style={{
+                fontSize: "0.85rem",
+                color: "var(--text-dim)",
+                marginBottom: "1rem",
+              }}
+            >
+              {archived
+                ? "Relais planifiés au moment de l'archivage."
+                : "Les temps IRL et IG sont calculés automatiquement. Les points colorés indiquent la disponibilité de chaque pilote."}
+            </p>
+            <StintGrid
+              teamEntryId={entryId}
+              teamEntry={teamEntry}
+              assignedDrivers={assignedDrivers}
+              archived={archived}
+              autoOpenRecalc={recalcRequested}
+              onAutoOpenHandled={() => setRecalcRequested(false)}
+              onActiveStrategyChange={setActiveStrategy}
+              isActive={activeTab === "relais"}
+            />
+          </>
+        </div>
+      )}
+
+      {/* ── Tab: Planning ─────────────────────────────────────────────────── */}
+      {mountedTabs.has("planning") && (
+        <div style={{ display: activeTab === "planning" ? "block" : "none" }}>
+          <PlanningTab
+            teamEntryId={entryId}
+            teamEntry={teamEntry}
+            assignedDrivers={assignedDrivers}
+            currentDriver={currentDriver}
+            isActive={activeTab === "planning"}
+          />
+        </div>
+      )}
+
+      {/* ── Tab: Performances ─────────────────────────────────────────────── */}
+      {mountedTabs.has("performances") && (
+        <div
+          style={{ display: activeTab === "performances" ? "block" : "none" }}
+        >
+          <>
+            <p
+              style={{
+                fontSize: "0.85rem",
+                color: "var(--text-dim)",
+                marginBottom: "1rem",
+              }}
+            >
+              {archived
+                ? "Données de performance enregistrées au moment de l'archivage."
+                : "Chronos et consommations relevés lors des essais. Cliquez sur Modifier pour renseigner vos données."}
+            </p>
+            <PerformanceData
+              teamEntryId={entryId}
+              assignedDrivers={assignedDrivers}
+              archived={archived || isEngineer}
+            />
+          </>
+        </div>
+      )}
+
+      {/* ── Tab: Course (Race Mode) ───────────────────────────────────────────── */}
+      {mountedTabs.has("course") && (
+        <div style={{ display: activeTab === "course" ? "block" : "none" }}>
+          <RaceMode
             teamEntryId={entryId}
             teamEntry={teamEntry}
             assignedDrivers={assignedDrivers}
             archived={archived}
-            autoOpenRecalc={recalcRequested}
-            onAutoOpenHandled={() => setRecalcRequested(false)}
-            onActiveStrategyChange={setActiveStrategy}
-          />
-        </>
-      )}
-
-      {/* ── Tab: Planning ─────────────────────────────────────────────────── */}
-      {activeTab === "planning" && (
-        <PlanningTab
-          teamEntryId={entryId}
-          teamEntry={teamEntry}
-          assignedDrivers={assignedDrivers}
-          currentDriver={currentDriver}
-        />
-      )}
-
-      {/* ── Tab: Performances ─────────────────────────────────────────────── */}
-      {activeTab === "performances" && (
-        <>
-          <p
-            style={{
-              fontSize: "0.85rem",
-              color: "var(--text-dim)",
-              marginBottom: "1rem",
+            activeStrategy={activeStrategy}
+            onRequestRecalc={() => {
+              setRecalcRequested(true);
+              handleTabChange("relais");
             }}
-          >
-            {archived
-              ? "Données de performance enregistrées au moment de l'archivage."
-              : "Chronos et consommations relevés lors des essais. Cliquez sur Modifier pour renseigner vos données."}
-          </p>
-          <PerformanceData
-            teamEntryId={entryId}
-            assignedDrivers={assignedDrivers}
-            archived={archived || isEngineer}
           />
-        </>
-      )}
-
-      {/* ── Tab: Course (Race Mode) ───────────────────────────────────────────── */}
-      {activeTab === "course" && (
-        <RaceMode
-          teamEntryId={entryId}
-          teamEntry={teamEntry}
-          assignedDrivers={assignedDrivers}
-          archived={archived}
-          activeStrategy={activeStrategy}
-          onRequestRecalc={() => {
-            setRecalcRequested(true);
-            setActiveTab("relais");
-          }}
-        />
+        </div>
       )}
     </div>
   );

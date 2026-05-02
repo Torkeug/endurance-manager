@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { supabaseBrowser as supabase } from "../../../../../lib/supabase-browser";
 
 // ─── Driver color palette ────────────────────────────────────────────────────
@@ -42,17 +42,24 @@ export default function PlanningTab({
   teamEntry,
   assignedDrivers,
   currentDriver,
+  isActive = false,
 }) {
   const [stints, setStints] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   // Hovered stint object — displayed in the detail panel below the Gantt
   const [hoveredStint, setHoveredStint] = useState(null);
+  // Tracks whether initial fetch has completed — used to skip re-fetch when inactive
+  const hasLoadedOnce = useRef(false);
 
   // ── Fetch active strategy → stints with persisted IRL times ───────────────
   // StintGrid already writes irl_start and irl_end_planned to the DB on every
   // recalc, so we can read them directly without re-running the calc engine.
   useEffect(() => {
     if (!teamEntryId) return;
+
+    // Skip re-fetch if not active — but always fetch on first mount
+    // (isActive can be false on initial render due to React batching)
+    if (!isActive && hasLoadedOnce.current) return;
 
     let cancelled = false;
 
@@ -75,8 +82,7 @@ export default function PlanningTab({
         if (!strategies || strategies.length === 0) return;
 
         // Prefer the marked-active strategy; fall back to first in sort order
-        const strategy =
-          strategies.find((s) => s.is_active) || strategies[0];
+        const strategy = strategies.find((s) => s.is_active) || strategies[0];
 
         // 2. Fetch stints for that strategy — only fields needed for the Gantt
         const { data: stintsData, error: stintsError } = await supabase
@@ -96,16 +102,20 @@ export default function PlanningTab({
       } catch (err) {
         if (!cancelled) console.error("[PlanningTab] unexpected error:", err);
       } finally {
-        if (!cancelled) setLoading(false);
+        if (!cancelled) {
+          setLoading(false);
+          hasLoadedOnce.current = true;
+        }
       }
     }
 
     loadStints();
 
-    // Cleanup — cancels any in-flight fetch result when teamEntryId changes
-    // or the component unmounts (e.g. switching away from Planning tab)
-    return () => { cancelled = true; };
-  }, [teamEntryId]);
+    // Cleanup — cancels any in-flight fetch result when isActive or teamEntryId changes
+    return () => {
+      cancelled = true;
+    };
+  }, [teamEntryId, isActive]);
 
   if (loading)
     return (
@@ -133,8 +143,8 @@ export default function PlanningTab({
     return (
       <div className="card">
         <div className="empty">
-          Horaires non encore calculés — ouvrez l&apos;onglet Relais pour
-          lancer le calcul, puis revenez ici.
+          Horaires non encore calculés — ouvrez l&apos;onglet Relais pour lancer
+          le calcul, puis revenez ici.
         </div>
       </div>
     );
@@ -415,16 +425,36 @@ export default function PlanningTab({
 
                   {/* Duration — green + "réel" label when actual end is stamped */}
                   {s.irl_end_actual ? (
-                    <span style={{ display: "flex", alignItems: "center", gap: "0.35rem" }}>
-                      <span style={{ fontSize: "0.85rem", fontWeight: 700, color: "#2eb460" }}>
+                    <span
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "0.35rem",
+                      }}
+                    >
+                      <span
+                        style={{
+                          fontSize: "0.85rem",
+                          fontWeight: 700,
+                          color: "#2eb460",
+                        }}
+                      >
                         {formatDuration(durationMs)}
                       </span>
-                      <span style={{ fontSize: "0.68rem", color: "#2eb460", opacity: 0.8 }}>
+                      <span
+                        style={{
+                          fontSize: "0.68rem",
+                          color: "#2eb460",
+                          opacity: 0.8,
+                        }}
+                      >
                         réel
                       </span>
                     </span>
                   ) : (
-                    <span style={{ fontSize: "0.78rem", color: "var(--text-dim)" }}>
+                    <span
+                      style={{ fontSize: "0.78rem", color: "var(--text-dim)" }}
+                    >
                       {formatDuration(durationMs)}
                     </span>
                   )}
