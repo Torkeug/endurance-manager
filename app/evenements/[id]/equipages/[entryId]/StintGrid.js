@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { supabaseBrowser as supabase } from "../../../../../lib/supabase-browser";
 import ActualEndInput from "./ActualEndInput";
 
@@ -1414,14 +1414,23 @@ export default function StintGrid({
       });
   }, [selectedStrategyId]);
 
-  const calculated = calculateAllStints(
-    stints,
-    teamEntry,
-    driverPerf,
-    igStartTime,
-    igSunrise,
-    igSunset,
-    strategyOffset, // live local state — updates on every keystroke, not just on blur
+  // Memoized — only reruns when stints, perf data, or strategy offset actually change.
+  // Prevents the full chain recalculation (fuel, lap time, team averages) on every render,
+  // which was causing ~1.7s render times when switching back from the Planning tab.
+  const calculated = useMemo(
+    () =>
+      calculateAllStints(
+        stints,
+        teamEntry,
+        driverPerf,
+        igStartTime,
+        igSunrise,
+        igSunset,
+        strategyOffset,
+      ),
+    // teamEntry/event fields are stable props — only these three drive recalculation
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [stints, driverPerf, strategyOffset],
   );
 
   // Persist calculated IRL start/end times for conflict detection — skipped when archived
@@ -3120,7 +3129,20 @@ export default function StintGrid({
 
                   {/* Duration */}
                   <td style={TD}>
-                    {stint._isLastStint && stint._adjustedDurationSec ? (
+                    {/* Actual end stamped via Race Mode — show real elapsed time.
+                        Takes priority over all calculated/manual values. */}
+                    {stint.irl_end_actual && stint._irlStart ? (
+                      <div>
+                        <span className="mono" style={{ fontSize: "0.75rem", color: "#2eb460" }}>
+                          {formatDuration(
+                            (new Date(stint.irl_end_actual) - stint._irlStart) / 1000,
+                          )}
+                        </span>
+                        <div style={{ fontSize: "0.65rem", color: "var(--text-dim)", marginTop: "0.1rem" }}>
+                          réel
+                        </div>
+                      </div>
+                    ) : stint._isLastStint && stint._adjustedDurationSec ? (
                       <div>
                         <div
                           className="mono"

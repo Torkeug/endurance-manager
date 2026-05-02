@@ -1,0 +1,692 @@
+"use client";
+import { useState, useEffect } from "react";
+import { supabaseBrowser as supabase } from "../../../../../lib/supabase-browser";
+
+// ─── Driver color palette ────────────────────────────────────────────────────
+// Cycles when there are more than 8 drivers.
+const DRIVER_COLORS = [
+  "#7c6af0", // purple
+  "#4a9fd4", // blue
+  "#2eb460", // green
+  "#c9a84c", // amber
+  "#e05555", // red
+  "#e0855a", // orange
+  "#5ac8c8", // teal
+  "#c46ab0", // pink
+];
+
+// ─── Display helpers ────────────────────────────────────────────────────────
+
+function formatTime(date) {
+  if (!date) return "—";
+  return new Date(date).toLocaleTimeString("fr-FR", {
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  });
+}
+
+function formatDuration(ms) {
+  if (!ms || ms <= 0) return "—";
+  const totalMin = Math.round(ms / 60000);
+  const h = Math.floor(totalMin / 60);
+  const m = totalMin % 60;
+  if (h > 0) return `${h}h${String(m).padStart(2, "0")}`;
+  return `${m}min`;
+}
+
+// ─── Main component ──────────────────────────────────────────────────────────
+
+export default function PlanningTab({
+  teamEntryId,
+  teamEntry,
+  assignedDrivers,
+  currentDriver,
+}) {
+  const [stints, setStints] = useState([]);
+  const [loading, setLoading] = useState(true);
+  // Hovered stint object — displayed in the detail panel below the Gantt
+  const [hoveredStint, setHoveredStint] = useState(null);
+
+  // ── Fetch active strategy → stints with persisted IRL times ───────────────
+  // StintGrid already writes irl_start and irl_end_planned to the DB on every
+  // recalc, so we can read them directly without re-running the calc engine.
+  useEffect(() => {
+    if (!teamEntryId) return;
+
+    let cancelled = false;
+
+    async function loadStints() {
+      setLoading(true);
+      try {
+        // 1. Fetch all strategies for this team entry in one query —
+        //    avoids a separate is_active round trip and is more resilient to RLS.
+        const { data: strategies, error: stratError } = await supabase
+          .from("strategies")
+          .select("id, is_active")
+          .eq("team_entry_id", teamEntryId)
+          .order("sort_order");
+
+        if (stratError) {
+          console.error("[PlanningTab] strategies fetch error:", stratError);
+          return;
+        }
+
+        if (!strategies || strategies.length === 0) return;
+
+        // Prefer the marked-active strategy; fall back to first in sort order
+        const strategy =
+          strategies.find((s) => s.is_active) || strategies[0];
+
+        // 2. Fetch stints for that strategy — only fields needed for the Gantt
+        const { data: stintsData, error: stintsError } = await supabase
+          .from("stints")
+          .select(
+            "id, stint_number, driver_id, driver_name_snapshot, laps_planned, rain, irl_start, irl_end_planned, irl_end_actual",
+          )
+          .eq("strategy_id", strategy.id)
+          .order("stint_number");
+
+        if (stintsError) {
+          console.error("[PlanningTab] stints fetch error:", stintsError);
+        }
+
+        // Discard result if the effect was cleaned up before this resolved
+        if (!cancelled) setStints(stintsData || []);
+      } catch (err) {
+        if (!cancelled) console.error("[PlanningTab] unexpected error:", err);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+
+    loadStints();
+
+    // Cleanup — cancels any in-flight fetch result when teamEntryId changes
+    // or the component unmounts (e.g. switching away from Planning tab)
+    return () => { cancelled = true; };
+  }, [teamEntryId]);
+
+  if (loading)
+    return (
+      <div className="card">
+        <div className="empty">Chargement…</div>
+      </div>
+    );
+
+  // Only render stints whose IRL times have been calculated and persisted
+  const validStints = stints.filter(
+    (s) => s.irl_start && (s.irl_end_planned || s.irl_end_actual),
+  );
+
+  if (stints.length === 0) {
+    return (
+      <div className="card">
+        <div className="empty">
+          Aucun relais configuré dans la stratégie active.
+        </div>
+      </div>
+    );
+  }
+
+  if (validStints.length === 0) {
+    return (
+      <div className="card">
+        <div className="empty">
+          Horaires non encore calculés — ouvrez l&apos;onglet Relais pour
+          lancer le calcul, puis revenez ici.
+        </div>
+      </div>
+    );
+  }
+
+  // ── Timeline bounds ────────────────────────────────────────────────────────
+  const timelineStart = Math.min(
+    ...validStints.map((s) => new Date(s.irl_start).getTime()),
+  );
+  const timelineEnd = Math.max(
+    ...validStints.map((s) =>
+      new Date(s.irl_end_actual || s.irl_end_planned).getTime(),
+    ),
+  );
+  const timelineMs = timelineEnd - timelineStart;
+
+  // Convert an absolute timestamp to a % position on the timeline
+  const toPercent = (ts) => ((ts - timelineStart) / timelineMs) * 100;
+
+  // ── Driver → color map (stable index = consistent color per driver) ────────
+  const driverColorMap = {};
+  assignedDrivers.forEach((d, i) => {
+    if (d.drivers?.id)
+      driverColorMap[d.drivers.id] = DRIVER_COLORS[i % DRIVER_COLORS.length];
+  });
+
+  // ── Current driver's stints — used for the summary card ───────────────────
+  const currentDriverId = currentDriver?.id;
+  const myStints = validStints.filter((s) => s.driver_id === currentDriverId);
+
+  // ── Night band computation ────────────────────────────────────────────────
+  // iRacing time progresses 1:1 with IRL time, so we can compute the IRL
+  // offset for any IG clock moment using: offset = (igTime - igStart) in minutes.
+  const nightBands = [];
+  const igStartStr = teamEntry?.events?.ig_start_time; // "HH:MM"
+  const igSunsetStr = teamEntry?.events?.ig_sunset;
+  const igSunriseStr = teamEntry?.events?.ig_sunrise;
+  const irlRaceStart = teamEntry?.event_start_times?.irl_start;
+
+  if (igStartStr && igSunsetStr && igSunriseStr && irlRaceStart) {
+    const toMinutes = (str) => {
+      const [h, m] = str.split(":").map(Number);
+      return h * 60 + m;
+    };
+    const igStartMin = toMinutes(igStartStr);
+    const sunsetMin = toMinutes(igSunsetStr);
+    const sunriseMin = toMinutes(igSunriseStr);
+    const irlStartMs = new Date(irlRaceStart).getTime();
+
+    // Convert an IG minute-of-day value to an IRL timestamp
+    const igMinToIrlMs = (igMin) => {
+      let offsetMin = igMin - igStartMin;
+      if (offsetMin < 0) offsetMin += 24 * 60; // handle midnight crossing
+      return irlStartMs + offsetMin * 60 * 1000;
+    };
+
+    const sunsetIrlMs = igMinToIrlMs(sunsetMin);
+    // Sunrise is always after sunset — add the gap, wrapping over midnight if needed
+    const nightDurationMin = (sunriseMin - sunsetMin + 24 * 60) % (24 * 60);
+    const sunriseIrlMs = sunsetIrlMs + nightDurationMin * 60 * 1000;
+
+    // Clamp to visible timeline and only render if the band overlaps
+    if (sunsetIrlMs < timelineEnd && sunriseIrlMs > timelineStart) {
+      const bandStart = Math.max(sunsetIrlMs, timelineStart);
+      const bandEnd = Math.min(sunriseIrlMs, timelineEnd);
+      nightBands.push({
+        left: toPercent(bandStart),
+        width: toPercent(bandEnd) - toPercent(bandStart),
+      });
+    }
+  }
+
+  // ── Hour tick marks ────────────────────────────────────────────────────────
+  const hourTicks = [];
+  const firstHour = new Date(timelineStart);
+  firstHour.setMinutes(0, 0, 0);
+  // Advance to the next whole hour if we're past it
+  if (firstHour.getTime() < timelineStart)
+    firstHour.setHours(firstHour.getHours() + 1);
+  let tick = firstHour.getTime();
+  while (tick <= timelineEnd) {
+    hourTicks.push({ ts: tick, label: formatTime(new Date(tick)) });
+    tick += 60 * 60 * 1000;
+  }
+
+  // ── Gantt rows — one per assigned driver ──────────────────────────────────
+  const rows = assignedDrivers.map((d) => ({
+    driverId: d.drivers?.id,
+    driverName: d.drivers?.name || "—",
+    color: driverColorMap[d.drivers?.id] || DRIVER_COLORS[0],
+    stints: validStints.filter((s) => s.driver_id === d.drivers?.id),
+    isCurrentDriver: d.drivers?.id === currentDriverId,
+  }));
+
+  // Unassigned stints — rendered at the bottom of the chart
+  const unassignedStints = validStints.filter((s) => !s.driver_id);
+
+  // ── Shared row bar area renderer ───────────────────────────────────────────
+  // Extracted to avoid repetition between driver rows and the unassigned row.
+  const renderBarArea = (rowStints, color, isUnassigned = false) => (
+    <div
+      style={{
+        position: "relative",
+        flex: 1,
+        height: "32px",
+        background: "var(--surface-2)",
+        borderRadius: "3px",
+        overflow: "hidden",
+      }}
+    >
+      {/* Night band overlay — rendered behind stint bars */}
+      {nightBands.map((band, bi) => (
+        <div
+          key={bi}
+          style={{
+            position: "absolute",
+            top: 0,
+            bottom: 0,
+            left: `${band.left}%`,
+            width: `${band.width}%`,
+            background: "rgba(10, 10, 30, 0.45)",
+            pointerEvents: "none",
+            zIndex: 0,
+          }}
+        />
+      ))}
+
+      {/* Stint bars */}
+      {rowStints.map((stint) => {
+        const startMs = new Date(stint.irl_start).getTime();
+        const endMs = new Date(
+          stint.irl_end_actual || stint.irl_end_planned,
+        ).getTime();
+        const left = toPercent(startMs);
+        const width = toPercent(endMs) - left;
+        const isHovered = hoveredStint?.id === stint.id;
+
+        // Rain stints use a blue tint instead of the driver color
+        const barColor = stint.rain
+          ? "rgba(74, 159, 212, 0.8)"
+          : isUnassigned
+            ? "rgba(120, 120, 140, 0.45)"
+            : color;
+
+        return (
+          <div
+            key={stint.id}
+            onMouseEnter={() =>
+              setHoveredStint({ ...stint, _startMs: startMs, _endMs: endMs })
+            }
+            onMouseLeave={() => setHoveredStint(null)}
+            style={{
+              position: "absolute",
+              top: "4px",
+              bottom: "4px",
+              left: `${left}%`,
+              // Minimum 0.5% width so very short stints are still visible
+              width: `${Math.max(width, 0.5)}%`,
+              background: barColor,
+              borderRadius: "3px",
+              border: isUnassigned ? "1px dashed var(--border)" : "none",
+              display: "flex",
+              alignItems: "center",
+              paddingLeft: "5px",
+              overflow: "hidden",
+              cursor: "default",
+              // Highlight on hover — white ring around the bar
+              boxShadow: isHovered ? "0 0 0 2px rgba(255,255,255,0.7)" : "none",
+              opacity: isHovered ? 1 : isUnassigned ? 0.7 : 0.88,
+              zIndex: 1,
+              transition: "opacity 0.1s, box-shadow 0.1s",
+            }}
+            title={`Relais ${stint.stint_number}${stint.laps_planned ? ` · ${stint.laps_planned} tours` : ""}`}
+          >
+            <span
+              style={{
+                fontSize: "0.62rem",
+                fontWeight: 700,
+                color: isUnassigned ? "var(--text-dim)" : "#fff",
+                whiteSpace: "nowrap",
+                textShadow: isUnassigned ? "none" : "0 1px 2px rgba(0,0,0,0.5)",
+              }}
+            >
+              R{stint.stint_number}
+              {stint.rain ? " 🌧" : ""}
+            </span>
+          </div>
+        );
+      })}
+
+      {/* Empty state label for rows with no stints */}
+      {rowStints.length === 0 && (
+        <div
+          style={{
+            position: "absolute",
+            inset: 0,
+            display: "flex",
+            alignItems: "center",
+            paddingLeft: "8px",
+          }}
+        >
+          <span
+            style={{
+              fontSize: "0.65rem",
+              color: "var(--text-dim)",
+              fontStyle: "italic",
+              opacity: 0.5,
+            }}
+          >
+            Aucun relais assigné
+          </span>
+        </div>
+      )}
+    </div>
+  );
+
+  return (
+    <div>
+      {/* ── Summary card — current driver's stints only ──────────────────── */}
+      {myStints.length > 0 && (
+        <div
+          style={{
+            marginBottom: "1.5rem",
+            padding: "1rem 1.25rem",
+            background: "rgba(var(--accent-rgb), 0.06)",
+            border: "1px solid var(--accent)",
+            borderRadius: "4px",
+          }}
+        >
+          <div
+            style={{
+              fontSize: "0.72rem",
+              fontWeight: 700,
+              letterSpacing: "0.08em",
+              textTransform: "uppercase",
+              color: "var(--accent)",
+              marginBottom: "0.75rem",
+            }}
+          >
+            Vos relais
+          </div>
+          <div
+            style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}
+          >
+            {myStints.map((s) => {
+              const start = new Date(s.irl_start);
+              const end = new Date(s.irl_end_actual || s.irl_end_planned);
+              const durationMs = end - start;
+              return (
+                <div
+                  key={s.id}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "1rem",
+                    flexWrap: "wrap",
+                  }}
+                >
+                  {/* Stint number */}
+                  <span
+                    style={{
+                      fontFamily: "var(--font-mono), monospace",
+                      fontSize: "0.78rem",
+                      color: "var(--text-dim)",
+                      minWidth: "64px",
+                    }}
+                  >
+                    Relais {s.stint_number}
+                  </span>
+
+                  {/* IRL window */}
+                  <span
+                    className="mono"
+                    style={{ fontSize: "0.85rem", fontWeight: 600 }}
+                  >
+                    {formatTime(start)} → {formatTime(end)}
+                  </span>
+
+                  {/* Duration — green + "réel" label when actual end is stamped */}
+                  {s.irl_end_actual ? (
+                    <span style={{ display: "flex", alignItems: "center", gap: "0.35rem" }}>
+                      <span style={{ fontSize: "0.85rem", fontWeight: 700, color: "#2eb460" }}>
+                        {formatDuration(durationMs)}
+                      </span>
+                      <span style={{ fontSize: "0.68rem", color: "#2eb460", opacity: 0.8 }}>
+                        réel
+                      </span>
+                    </span>
+                  ) : (
+                    <span style={{ fontSize: "0.78rem", color: "var(--text-dim)" }}>
+                      {formatDuration(durationMs)}
+                    </span>
+                  )}
+
+                  {/* Laps — only when planned */}
+                  {s.laps_planned && (
+                    <span
+                      style={{ fontSize: "0.78rem", color: "var(--text-dim)" }}
+                    >
+                      · {s.laps_planned} tours
+                    </span>
+                  )}
+
+                  {/* Rain flag */}
+                  {s.rain && (
+                    <span style={{ fontSize: "0.8rem" }} title="Pluie">
+                      🌧
+                    </span>
+                  )}
+
+                  {/* Completed badge — shown when actual end is stamped */}
+                  {s.irl_end_actual && (
+                    <span
+                      style={{
+                        fontSize: "0.72rem",
+                        color: "#2eb460",
+                        background: "rgba(46,180,96,0.1)",
+                        border: "1px solid rgba(46,180,96,0.3)",
+                        borderRadius: "3px",
+                        padding: "0.1rem 0.4rem",
+                      }}
+                    >
+                      ✓ complété
+                    </span>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* ── Gantt chart ──────────────────────────────────────────────────── */}
+      {/* overflowX: auto allows horizontal scroll on narrow screens */}
+      <div style={{ overflowX: "auto" }}>
+        <div style={{ minWidth: "600px" }}>
+          {/* Hour axis — positioned above the chart rows */}
+          <div
+            style={{
+              position: "relative",
+              height: "20px",
+              // 130px left offset to align with the driver label column
+              marginLeft: "130px",
+              marginBottom: "4px",
+            }}
+          >
+            {hourTicks.map(({ ts, label }) => (
+              <div
+                key={ts}
+                style={{
+                  position: "absolute",
+                  left: `${toPercent(ts)}%`,
+                  transform: "translateX(-50%)",
+                  fontSize: "0.65rem",
+                  color: "var(--text-dim)",
+                  fontFamily: "var(--font-mono), monospace",
+                  whiteSpace: "nowrap",
+                }}
+              >
+                {label}
+              </div>
+            ))}
+          </div>
+
+          {/* Driver rows */}
+          <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+            {rows.map(
+              ({
+                driverId,
+                driverName,
+                color,
+                stints: rowStints,
+                isCurrentDriver,
+              }) => (
+                <div
+                  key={driverId}
+                  style={{ display: "flex", alignItems: "center", gap: "8px" }}
+                >
+                  {/* Driver label — accent color + bold for current driver */}
+                  <div
+                    style={{
+                      width: "122px",
+                      flexShrink: 0,
+                      fontSize: "0.78rem",
+                      fontWeight: isCurrentDriver ? 700 : 400,
+                      color: isCurrentDriver
+                        ? "var(--accent)"
+                        : "var(--text-dim)",
+                      textAlign: "right",
+                      paddingRight: "8px",
+                      // Accent border on the right edge for the current driver row
+                      borderRight: isCurrentDriver
+                        ? "2px solid var(--accent)"
+                        : "2px solid var(--border)",
+                      whiteSpace: "nowrap",
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                    }}
+                    title={driverName}
+                  >
+                    {driverName}
+                  </div>
+
+                  {/* Bar area — contains night overlay + stint bars */}
+                  {renderBarArea(rowStints, color)}
+                </div>
+              ),
+            )}
+
+            {/* Unassigned row — only rendered when stints have no driver yet */}
+            {unassignedStints.length > 0 && (
+              <div
+                style={{ display: "flex", alignItems: "center", gap: "8px" }}
+              >
+                <div
+                  style={{
+                    width: "122px",
+                    flexShrink: 0,
+                    fontSize: "0.78rem",
+                    color: "var(--text-dim)",
+                    textAlign: "right",
+                    paddingRight: "8px",
+                    borderRight: "2px solid var(--border)",
+                    fontStyle: "italic",
+                  }}
+                >
+                  Non assigné
+                </div>
+                {renderBarArea(unassignedStints, null, true)}
+              </div>
+            )}
+          </div>
+
+          {/* ── Hover detail panel ──────────────────────────────────────────── */}
+          {/* Shows enriched info for the currently hovered stint bar */}
+          <div
+            style={{
+              marginTop: "0.75rem",
+              minHeight: "40px",
+            }}
+          >
+            {hoveredStint ? (
+              <div
+                style={{
+                  padding: "0.65rem 0.9rem",
+                  background: "var(--surface-2)",
+                  border: "1px solid var(--border)",
+                  borderRadius: "4px",
+                  fontSize: "0.82rem",
+                  display: "flex",
+                  gap: "1.25rem",
+                  flexWrap: "wrap",
+                  alignItems: "center",
+                }}
+              >
+                <span style={{ fontWeight: 700 }}>
+                  Relais {hoveredStint.stint_number}
+                </span>
+                <span className="mono">
+                  {formatTime(new Date(hoveredStint._startMs))} →{" "}
+                  {formatTime(new Date(hoveredStint._endMs))}
+                </span>
+                <span style={{ color: "var(--text-dim)" }}>
+                  {formatDuration(hoveredStint._endMs - hoveredStint._startMs)}
+                </span>
+                {hoveredStint.laps_planned && (
+                  <span style={{ color: "var(--text-dim)" }}>
+                    {hoveredStint.laps_planned} tours
+                  </span>
+                )}
+                {hoveredStint.rain && <span>🌧 Pluie</span>}
+                {hoveredStint.irl_end_actual && (
+                  <span
+                    style={{
+                      fontSize: "0.75rem",
+                      color: "#2eb460",
+                      background: "rgba(46,180,96,0.1)",
+                      border: "1px solid rgba(46,180,96,0.3)",
+                      borderRadius: "3px",
+                      padding: "0.1rem 0.4rem",
+                    }}
+                  >
+                    ✓ complété
+                  </span>
+                )}
+              </div>
+            ) : (
+              // Placeholder so the layout doesn't shift on hover
+              <div
+                style={{
+                  padding: "0.65rem 0.9rem",
+                  fontSize: "0.75rem",
+                  color: "var(--text-dim)",
+                  fontStyle: "italic",
+                  opacity: 0.5,
+                }}
+              >
+                Survolez un relais pour voir les détails
+              </div>
+            )}
+          </div>
+
+          {/* ── Legend ──────────────────────────────────────────────────────── */}
+          <div
+            style={{
+              marginTop: "0.75rem",
+              display: "flex",
+              gap: "1.25rem",
+              flexWrap: "wrap",
+              fontSize: "0.72rem",
+              color: "var(--text-dim)",
+              alignItems: "center",
+            }}
+          >
+            {/* Night band swatch */}
+            <span style={{ display: "flex", alignItems: "center", gap: "4px" }}>
+              <span
+                style={{
+                  display: "inline-block",
+                  width: "12px",
+                  height: "10px",
+                  background: "rgba(10,10,30,0.45)",
+                  border: "1px solid var(--border)",
+                  borderRadius: "2px",
+                }}
+              />
+              Nuit IG
+            </span>
+
+            {/* Rain swatch */}
+            <span style={{ display: "flex", alignItems: "center", gap: "4px" }}>
+              <span
+                style={{
+                  display: "inline-block",
+                  width: "12px",
+                  height: "10px",
+                  background: "rgba(74,159,212,0.8)",
+                  borderRadius: "2px",
+                }}
+              />
+              🌧 Pluie
+            </span>
+
+            {/* Current driver highlight explanation */}
+            {currentDriverId && (
+              <span style={{ color: "var(--accent)", fontWeight: 600 }}>
+                Votre ligne en surbrillance
+              </span>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
