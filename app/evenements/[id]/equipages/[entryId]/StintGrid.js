@@ -1225,6 +1225,12 @@ export default function StintGrid({
 
   // Controls the shared confirm modal for deleteStint and clearAllStints
   const [confirmModal, setConfirmModal] = useState(null);
+  // Live clock — updates every 10s, used to highlight the current active stint row
+  const [now, setNow] = useState(new Date());
+  useEffect(() => {
+    const interval = setInterval(() => setNow(new Date()), 10000);
+    return () => clearInterval(interval);
+  }, []);
   // null | { title, message, confirmLabel, onConfirm }
 
   // Guard against concurrent default-strategy creation — the async insert can race
@@ -1465,6 +1471,12 @@ export default function StintGrid({
         fuel_used_calc: s._fuelUsed ?? null,
         fuel_remaining_calc: s._fuelRemaining ?? null,
         target_consumption_skip_last: skip?.targetConsumption ?? null,
+        // Persist calculated laps so PlanningTab can display them without
+        // re-running the calc engine or fetching performance data
+        laps_calc: s.laps_planned ? null : (s._laps ?? null),
+        // Persist engine-computed duration so PlanningTab doesn't need to
+        // subtract DB irl_start (which can be stale by ~1 min)
+        duration_sec_calc: s._stintDurationSec ?? null,
       };
     });
 
@@ -2867,16 +2879,26 @@ export default function StintGrid({
 
               // Row background — compose gradient border strip on top of the normal row bg.
               // The strip covers only the leftmost 6px; the rest shows the row bg normally.
+              // Active stint: irl_start is in the past and irl_end_planned is in the future
+              const isActiveStint =
+                stint._irlStart &&
+                stint._irlEnd &&
+                stint._irlStart <= now &&
+                stint._irlEnd > now &&
+                !stint.irl_end_actual;
+
               const rowBg =
                 dragOverIndex === i && draggingIndex !== i
                   ? "rgba(var(--accent-rgb), 0.1)"
-                  : stint._isLastStint
-                    ? stint._doesNotCoverRaceEnd
-                      ? "rgba(224,85,85,0.15)"
-                      : "rgba(46,180,96,0.12)"
-                    : i % 2 === 0
-                      ? "transparent"
-                      : "rgba(255,255,255,0.02)";
+                  : isActiveStint
+                    ? "rgba(var(--accent-rgb), 0.18)"
+                    : stint._isLastStint
+                      ? stint._doesNotCoverRaceEnd
+                        ? "rgba(224,85,85,0.15)"
+                        : "rgba(46,180,96,0.12)"
+                      : i % 2 === 0
+                        ? "transparent"
+                        : "rgba(255,255,255,0.02)";
               // First-cell border style — applied to the # <td> instead of <tr> background,
               // since <tr> background positioning is unreliable with border-collapse: collapse.
               // inset box-shadow for single colors, background gradient for compound splits.
@@ -2946,7 +2968,7 @@ export default function StintGrid({
                     setDraggingIndex(null);
                   }}
                   style={{
-                    background: rowBg,
+                   background: rowBg,
                     opacity: draggingIndex === i ? 0.4 : isSaving ? 0.6 : 1,
                     cursor:
                       !archived && isEligible(stint) && !isTouchDevice
@@ -2963,7 +2985,10 @@ export default function StintGrid({
                     style={{
                       ...TD,
                       textAlign: "center",
-                      ...firstCellBorderStyle,
+                      // Active stint overrides the tier border — accent pulse takes priority
+                      ...(isActiveStint
+                        ? { boxShadow: "inset 3px 0 0 0 var(--accent)", background: "rgba(var(--accent-rgb), 0.12)" }
+                        : firstCellBorderStyle),
                     }}
                   >
                     <div
@@ -2974,11 +2999,25 @@ export default function StintGrid({
                         gap: "0.3rem",
                       }}
                     >
+                      {isActiveStint && (
+                        <span
+                          style={{
+                            width: "7px",
+                            height: "7px",
+                            borderRadius: "50%",
+                            background: "var(--accent)",
+                            flexShrink: 0,
+                            // CSS pulse animation — no JS needed
+                            animation: "pulse 1.5s ease-in-out infinite",
+                          }}
+                        />
+                      )}
                       <span
                         className="mono"
                         style={{
-                          color: "var(--text-dim)",
+                          color: isActiveStint ? "var(--accent)" : "var(--text-dim)",
                           fontSize: "0.72rem",
+                          fontWeight: isActiveStint ? 700 : 400,
                         }}
                       >
                         {stint.stint_number}

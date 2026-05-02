@@ -394,8 +394,11 @@ export default function RaceMode({
   });
 
   // ── Derived: active stint (IRL-time based) ─────────────────────────────────
+  // findLast — returns the most recently started unstamped stint.
+  // find() would return the first match, which sticks on stint 1 even after
+  // stint 2 has started, until a pit stop is manually stamped.
   const activeStint = isInRace
-    ? (stints.find(
+    ? (stints.findLast(
         (s) => s.irl_start && new Date(s.irl_start) <= now && !s.irl_end_actual,
       ) ?? null)
     : null;
@@ -624,7 +627,9 @@ export default function RaceMode({
       <div style={{ display: "flex", gap: "0.25rem", flexWrap: "wrap" }}>
         {stints.map((s) => {
           const isActive = s.id === activeStint?.id;
-          const isDone = !!s.irl_end_actual;
+          const isDone =
+            !!s.irl_end_actual ||
+            (s.irl_end_planned && new Date(s.irl_end_planned) <= now);
           return (
             <div
               key={s.id}

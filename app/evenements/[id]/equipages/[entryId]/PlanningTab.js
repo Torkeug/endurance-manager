@@ -48,8 +48,14 @@ export default function PlanningTab({
   const [loading, setLoading] = useState(false);
   // Hovered stint object — displayed in the detail panel below the Gantt
   const [hoveredStint, setHoveredStint] = useState(null);
+  const [now, setNow] = useState(new Date());
   // Tracks whether initial fetch has completed — used to skip re-fetch when inactive
   const hasLoadedOnce = useRef(false);
+  // Live clock — updates every 10s for active stint highlight
+  useEffect(() => {
+    const interval = setInterval(() => setNow(new Date()), 10000);
+    return () => clearInterval(interval);
+  }, []);
 
   // ── Fetch active strategy → stints with persisted IRL times ───────────────
   // StintGrid already writes irl_start and irl_end_planned to the DB on every
@@ -88,7 +94,7 @@ export default function PlanningTab({
         const { data: stintsData, error: stintsError } = await supabase
           .from("stints")
           .select(
-            "id, stint_number, driver_id, driver_name_snapshot, laps_planned, rain, irl_start, irl_end_planned, irl_end_actual",
+            "id, stint_number, driver_id, driver_name_snapshot, laps_planned, laps_calc, rain, irl_start, irl_end_planned, irl_end_actual, duration_sec_calc",
           )
           .eq("strategy_id", strategy.id)
           .order("stint_number");
@@ -281,6 +287,15 @@ export default function PlanningTab({
         const left = toPercent(startMs);
         const width = toPercent(endMs) - left;
         const isHovered = hoveredStint?.id === stint.id;
+        const isPast =
+          !!stint.irl_end_actual ||
+          (stint.irl_end_planned && new Date(stint.irl_end_planned) <= now);
+        const isActive =
+          stint.irl_start &&
+          stint.irl_end_planned &&
+          new Date(stint.irl_start) <= now &&
+          new Date(stint.irl_end_planned) > now &&
+          !stint.irl_end_actual;
 
         // Rain stints use a blue tint instead of the driver color
         const barColor = stint.rain
@@ -312,8 +327,13 @@ export default function PlanningTab({
               overflow: "hidden",
               cursor: "default",
               // Highlight on hover — white ring around the bar
-              boxShadow: isHovered ? "0 0 0 2px rgba(255,255,255,0.7)" : "none",
-              opacity: isHovered ? 1 : isUnassigned ? 0.7 : 0.88,
+              boxShadow: isActive
+                ? "0 0 0 2px var(--accent)"
+                : isHovered
+                  ? "0 0 0 2px rgba(255,255,255,0.7)"
+                  : "none",
+              opacity: isHovered ? 1 : isActive ? 1 : isUnassigned ? 0.7 : isPast ? 0.5 : 0.88,
+              filter: isPast && !isUnassigned ? "saturate(0.4)" : "none",
               zIndex: 1,
               transition: "opacity 0.1s, box-shadow 0.1s",
             }}
@@ -391,8 +411,16 @@ export default function PlanningTab({
           >
             {myStints.map((s) => {
               const start = new Date(s.irl_start);
-              const end = new Date(s.irl_end_actual || s.irl_end_planned);
-              const durationMs = end - start;
+              const end = s.irl_end_actual
+                ? new Date(s.irl_end_actual)
+                : new Date(s.irl_end_planned);
+              // Prefer engine-persisted duration — avoids stale irl_start discrepancy.
+              // Fall back to end - start when not yet populated.
+              const durationMs = s.irl_end_actual
+                ? end - start  // actual: use real elapsed time
+                : s.duration_sec_calc
+                  ? s.duration_sec_calc * 1000
+                  : end - start;
               return (
                 <div
                   key={s.id}
@@ -459,12 +487,15 @@ export default function PlanningTab({
                     </span>
                   )}
 
-                  {/* Laps — only when planned */}
-                  {s.laps_planned && (
+                  {/* Laps — manually set takes priority, fall back to engine-calculated */}
+                  {(s.laps_planned || s.laps_calc) && (
                     <span
                       style={{ fontSize: "0.78rem", color: "var(--text-dim)" }}
                     >
-                      · {s.laps_planned} tours
+                      · {s.laps_planned || s.laps_calc} tours
+                      {!s.laps_planned && (
+                        <span style={{ opacity: 0.6 }}> *</span>
+                      )}
                     </span>
                   )}
 
@@ -475,8 +506,9 @@ export default function PlanningTab({
                     </span>
                   )}
 
-                  {/* Completed badge — shown when actual end is stamped */}
-                  {s.irl_end_actual && (
+                  {/* Completed badge — stamped or planned end already passed */}
+                  {(s.irl_end_actual ||
+                    new Date(s.irl_end_planned) <= new Date()) && (
                     <span
                       style={{
                         fontSize: "0.72rem",
