@@ -1236,6 +1236,39 @@ export default function StintGrid({
   // Guard against concurrent default-strategy creation — the async insert can race
   // with a re-render that re-fires the effect before the first insert completes.
   const creatingDefaultStrategy = useRef(false);
+
+  // Realtime subscription — silently patches irl_end_actual into local stints
+  // so the active-stint highlight updates when a pit stop is stamped in RaceMode
+  // without waiting for the next tab activation refetch.
+  useEffect(() => {
+    if (!teamEntryId) return;
+    const channel = supabase
+      .channel(`stintgrid-actual-${teamEntryId}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "stints",
+          filter: `team_entry_id=eq.${teamEntryId}`,
+        },
+        (payload) => {
+          // Only patch irl_end_actual — ignore all other field changes to avoid
+          // conflicting with the persist effect which writes irl_start/irl_end_planned
+          if (payload.new?.irl_end_actual !== undefined) {
+            setStints((prev) =>
+              prev.map((s) =>
+                s.id === payload.new.id
+                  ? { ...s, irl_end_actual: payload.new.irl_end_actual }
+                  : s,
+              ),
+            );
+          }
+        },
+      )
+      .subscribe();
+    return () => supabase.removeChannel(channel);
+  }, [teamEntryId]);
   // Tracks whether initial fetch has completed — used to skip re-fetch when inactive
   const hasLoadedOnce = useRef(false);
 
@@ -1245,7 +1278,9 @@ export default function StintGrid({
     if (!teamEntryId) return;
     // Skip re-fetch if not active — but always fetch on first mount
     if (!isActive && hasLoadedOnce.current) return;
-    setLoading(true);
+    // First load: show spinner. Subsequent activations: refresh silently in
+    // background so existing data stays visible during refetch.
+    if (!hasLoadedOnce.current) setLoading(true);
     Promise.all([
       supabase
         .from("strategies")
@@ -2968,7 +3003,7 @@ export default function StintGrid({
                     setDraggingIndex(null);
                   }}
                   style={{
-                   background: rowBg,
+                    background: rowBg,
                     opacity: draggingIndex === i ? 0.4 : isSaving ? 0.6 : 1,
                     cursor:
                       !archived && isEligible(stint) && !isTouchDevice
@@ -2987,7 +3022,10 @@ export default function StintGrid({
                       textAlign: "center",
                       // Active stint overrides the tier border — accent pulse takes priority
                       ...(isActiveStint
-                        ? { boxShadow: "inset 3px 0 0 0 var(--accent)", background: "rgba(var(--accent-rgb), 0.12)" }
+                        ? {
+                            boxShadow: "inset 3px 0 0 0 var(--accent)",
+                            background: "rgba(var(--accent-rgb), 0.12)",
+                          }
                         : firstCellBorderStyle),
                     }}
                   >
@@ -3015,7 +3053,9 @@ export default function StintGrid({
                       <span
                         className="mono"
                         style={{
-                          color: isActiveStint ? "var(--accent)" : "var(--text-dim)",
+                          color: isActiveStint
+                            ? "var(--accent)"
+                            : "var(--text-dim)",
                           fontSize: "0.72rem",
                           fontWeight: isActiveStint ? 700 : 400,
                         }}

@@ -57,6 +57,36 @@ export default function PlanningTab({
     return () => clearInterval(interval);
   }, []);
 
+  // Realtime subscription — patches irl_end_actual silently so completed state
+  // updates without waiting for next tab activation
+  useEffect(() => {
+    if (!teamEntryId) return;
+    const channel = supabase
+      .channel(`planning-actual-${teamEntryId}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "stints",
+          filter: `team_entry_id=eq.${teamEntryId}`,
+        },
+        (payload) => {
+          if (payload.new?.irl_end_actual !== undefined) {
+            setStints((prev) =>
+              prev.map((s) =>
+                s.id === payload.new.id
+                  ? { ...s, irl_end_actual: payload.new.irl_end_actual }
+                  : s,
+              ),
+            );
+          }
+        },
+      )
+      .subscribe();
+    return () => supabase.removeChannel(channel);
+  }, [teamEntryId]);
+
   // ── Fetch active strategy → stints with persisted IRL times ───────────────
   // StintGrid already writes irl_start and irl_end_planned to the DB on every
   // recalc, so we can read them directly without re-running the calc engine.
@@ -72,39 +102,46 @@ export default function PlanningTab({
     async function loadStints() {
       setLoading(true);
       try {
-        // 1. Fetch all strategies for this team entry in one query —
-        //    avoids a separate is_active round trip and is more resilient to RLS.
-        const { data: strategies, error: stratError } = await supabase
-          .from("strategies")
-          .select("id, is_active")
-          .eq("team_entry_id", teamEntryId)
-          .order("sort_order");
+        // 1. Fetch strategies and ALL stints for this team entry in parallel —
+        //    avoids sequential round trips (strategy fetch → stints fetch).
+        //    Stints are filtered client-side once the active strategy is known.
+        const [
+          { data: strategies, error: stratError },
+          { data: allStints, error: stintsError },
+        ] = await Promise.all([
+          supabase
+            .from("strategies")
+            .select("id, is_active, actual_start_offset_minutes")
+            .eq("team_entry_id", teamEntryId)
+            .order("sort_order"),
+          supabase
+            .from("stints")
+            .select(
+              "id, strategy_id, stint_number, driver_id, driver_name_snapshot, laps_planned, laps_calc, rain, irl_start, irl_end_planned, irl_end_actual, duration_sec_calc",
+            )
+            .eq("team_entry_id", teamEntryId)
+            .order("stint_number"),
+        ]);
 
         if (stratError) {
           console.error("[PlanningTab] strategies fetch error:", stratError);
           return;
         }
-
+        if (stintsError) {
+          console.error("[PlanningTab] stints fetch error:", stintsError);
+          return;
+        }
         if (!strategies || strategies.length === 0) return;
 
         // Prefer the marked-active strategy; fall back to first in sort order
         const strategy = strategies.find((s) => s.is_active) || strategies[0];
 
-        // 2. Fetch stints for that strategy — only fields needed for the Gantt
-        const { data: stintsData, error: stintsError } = await supabase
-          .from("stints")
-          .select(
-            "id, stint_number, driver_id, driver_name_snapshot, laps_planned, laps_calc, rain, irl_start, irl_end_planned, irl_end_actual, duration_sec_calc",
-          )
-          .eq("strategy_id", strategy.id)
-          .order("stint_number");
+        // Filter stints to the active strategy client-side
+        const stintsData = (allStints || []).filter(
+          (s) => s.strategy_id === strategy.id,
+        );
 
-        if (stintsError) {
-          console.error("[PlanningTab] stints fetch error:", stintsError);
-        }
-
-        // Discard result if the effect was cleaned up before this resolved
-        if (!cancelled) setStints(stintsData || []);
+        if (!cancelled) setStints(stintsData);
       } catch (err) {
         if (!cancelled) console.error("[PlanningTab] unexpected error:", err);
       } finally {
@@ -332,7 +369,15 @@ export default function PlanningTab({
                 : isHovered
                   ? "0 0 0 2px rgba(255,255,255,0.7)"
                   : "none",
-              opacity: isHovered ? 1 : isActive ? 1 : isUnassigned ? 0.7 : isPast ? 0.5 : 0.88,
+              opacity: isHovered
+                ? 1
+                : isActive
+                  ? 1
+                  : isUnassigned
+                    ? 0.7
+                    : isPast
+                      ? 0.5
+                      : 0.88,
               filter: isPast && !isUnassigned ? "saturate(0.4)" : "none",
               zIndex: 1,
               transition: "opacity 0.1s, box-shadow 0.1s",
@@ -417,7 +462,7 @@ export default function PlanningTab({
               // Prefer engine-persisted duration — avoids stale irl_start discrepancy.
               // Fall back to end - start when not yet populated.
               const durationMs = s.irl_end_actual
-                ? end - start  // actual: use real elapsed time
+                ? end - start // actual: use real elapsed time
                 : s.duration_sec_calc
                   ? s.duration_sec_calc * 1000
                   : end - start;
