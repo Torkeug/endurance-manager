@@ -846,6 +846,20 @@ export default function RaceMode({
           </div>
         )}
 
+        {/* Undo last pit — inside the card, above the pit button, only when relevant */}
+        {!archived && completedStints.length > 0 && (
+          <div style={{ textAlign: "right", marginBottom: "0.5rem" }}>
+            <button
+              onClick={undoLastPit}
+              className="btn btn-danger"
+              disabled={saving}
+              style={{ fontSize: "0.78rem" }}
+            >
+              ↩ Annuler dernier arrêt
+            </button>
+          </div>
+        )}
+
         {/* Pit stop buttons */}
         {!archived && (
           <div
@@ -913,9 +927,9 @@ export default function RaceMode({
                   fontWeight: 700,
                   letterSpacing: "0.06em",
                   textTransform: "uppercase",
-                  background: "rgba(224,85,85,0.08)",
-                  color: "var(--danger)",
-                  border: "1px solid var(--danger)",
+                  background: "rgba(90,200,200,0.08)",
+                  color: "#5ac8c8",
+                  border: "1px solid rgba(90,200,200,0.4)",
                   borderRadius: "4px",
                   cursor: saving ? "not-allowed" : "pointer",
                   opacity: saving ? 0.7 : 1,
@@ -1280,19 +1294,6 @@ export default function RaceMode({
               </div>
             ))}
           </div>
-        </div>
-      )}
-      {/* ── Undo button ────────────────────────────────────────────────── */}
-      {!archived && completedStints.length > 0 && (
-        <div style={{ textAlign: "right" }}>
-          <button
-            onClick={undoLastPit}
-            className="btn btn-secondary"
-            disabled={saving}
-            style={{ fontSize: "0.78rem" }}
-          >
-            ↩ Annuler dernier arrêt
-          </button>
         </div>
       )}
       {/* ── Dev state override ─────────────────────────────────────────── */}
