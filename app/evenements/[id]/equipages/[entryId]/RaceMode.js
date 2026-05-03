@@ -207,7 +207,9 @@ function selectLapTime(
 // ─── Compute actual fuel stats for a completed stint ────────────────────────
 
 function calcActualFuel(stint, driverPerf, teamEntry, offsetRaceStart = null) {
-  if (!stint.irl_end_actual || !stint.irl_start) return null;
+  // Accept time-elapsed stints (no irl_end_actual) using planned end as fallback
+  const effectiveEnd = stint.irl_end_actual || stint.irl_end_planned;
+  if (!effectiveEnd || !stint.irl_start) return null;
 
   const perf = driverPerf[stint.driver_id];
   // Use offset-adjusted start as IG time baseline — mirrors the fix in StintGrid.
@@ -238,7 +240,7 @@ function calcActualFuel(stint, driverPerf, teamEntry, offsetRaceStart = null) {
   const fuelPerLapVal = resolvedFuel?.value ?? null;
 
   const actualDurationSec =
-    (new Date(stint.irl_end_actual) - new Date(stint.irl_start)) / 1000;
+    (new Date(effectiveEnd) - new Date(stint.irl_start)) / 1000;
   const actualLaps =
     lapTimeSec && actualDurationSec > 0
       ? Math.round(actualDurationSec / lapTimeSec)
@@ -414,18 +416,20 @@ export default function RaceMode({
       ) ?? null)
     : null;
 
- const activeIndex = activeStint
+  // overdueStint = earliest unstamped started stint that comes BEFORE activeStint.
+  // These are stints that were skipped over (race auto-advanced past them)
+  // and need to be retroactively stamped via the secondary button.
+  const activeIndex = activeStint
     ? stints.findIndex((s) => s.id === activeStint.id)
     : -1;
-
-  // Earliest unstamped started stint — differs from activeStint when a previous
-  // stint was never stamped and the race auto-advanced past it.
-  const overdueStint = isInRace
-    ? (stints.find(
-        (s) => s.irl_start && new Date(s.irl_start) <= now && !s.irl_end_actual,
-      ) ?? null)
-    : null;
-  const hasOverdue = overdueStint && overdueStint.id !== activeStint?.id;
+  // overdueStint = the stint immediately before the active one, if unstamped.
+  // Only one at a time — user stamps backwards one by one if multiple were skipped.
+  const previousStint = activeIndex > 0 ? stints[activeIndex - 1] : null;
+  const overdueStint =
+    isInRace && previousStint && !previousStint.irl_end_actual
+      ? previousStint
+      : null;
+  const hasOverdue = !!overdueStint;
 
   const nextStint = activeIndex >= 0 ? (stints[activeIndex + 1] ?? null) : null;
   const completedStints = stints.filter(
@@ -844,7 +848,9 @@ export default function RaceMode({
 
         {/* Pit stop buttons */}
         {!archived && (
-          <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+          <div
+            style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}
+          >
             {/* Main button — stamps the current active (auto-advanced) stint */}
             <button
               onClick={() => markPitStop(activeStint)}
@@ -1096,6 +1102,7 @@ export default function RaceMode({
               display: "flex",
               flexDirection: "column",
               gap: "0.4rem",
+              width: "100%",
             }}
           >
             {completedWithFuel
@@ -1114,18 +1121,20 @@ export default function RaceMode({
                   <div
                     key={s.id}
                     style={{
-                      display: "flex",
-                      justifyContent: "space-between",
+                      display: "grid",
+                      gridTemplateColumns: "2fr 0.8fr 0.8fr 1.8fr 0.5fr 0.1fr",
                       alignItems: "center",
                       padding: "0.4rem 0.6rem",
                       background: "var(--surface-2)",
                       borderRadius: "3px",
                       fontSize: "0.82rem",
                       gap: "0.5rem",
-                      flexWrap: "wrap",
+                      width: "100%",
+                      boxSizing: "border-box",
                     }}
                   >
-                    <span style={{ color: "var(--text-dim)", flexShrink: 0 }}>
+                    {/* Stint # + driver */}
+                    <span style={{ color: "var(--text-dim)" }}>
                       #{s.stint_number}{" "}
                       <span style={{ color: "var(--text)", fontWeight: 600 }}>
                         {driverMap[s.driver_id] ||
@@ -1133,23 +1142,24 @@ export default function RaceMode({
                           "—"}
                       </span>
                     </span>
+
+                    {/* Duration */}
                     <span
                       className="mono"
                       style={{ color: "var(--text-dim)", fontSize: "0.75rem" }}
                     >
                       {formatDuration(f.actualDurationSec)}
                     </span>
-                    {f.actualLaps !== null && (
-                      <span
-                        className="mono"
-                        style={{
-                          color: "var(--text-dim)",
-                          fontSize: "0.75rem",
-                        }}
-                      >
-                        {f.actualLaps} tours
-                      </span>
-                    )}
+
+                    {/* Laps */}
+                    <span
+                      className="mono"
+                      style={{ color: "var(--text-dim)", fontSize: "0.75rem" }}
+                    >
+                      {f.actualLaps !== null ? `${f.actualLaps} tours` : "—"}
+                    </span>
+
+                    {/* Fuel actual / planned */}
                     <span className="mono" style={{ fontSize: "0.75rem" }}>
                       {f.actualFuel !== null ? (
                         <>
@@ -1158,8 +1168,8 @@ export default function RaceMode({
                           </span>
                           {f.plannedFuel !== null && (
                             <span style={{ color: "var(--text-dim)" }}>
-                              {" "}
-                              / {f.plannedFuel.toFixed(1)}L prévu
+                              {" / "}
+                              {f.plannedFuel.toFixed(1)}L prévu
                             </span>
                           )}
                         </>
@@ -1167,52 +1177,56 @@ export default function RaceMode({
                         <span style={{ color: "var(--text-dim)" }}>— L</span>
                       )}
                     </span>
-                    {f.drift !== null && (
-                      <span
-                        className="mono"
-                        style={{
-                          fontSize: "0.75rem",
-                          fontWeight: 700,
-                          color: driftColor,
-                          flexShrink: 0,
-                        }}
-                      >
-                        {f.drift > 0 ? "+" : ""}
-                        {f.drift.toFixed(1)}L
-                      </span>
-                    )}
-                    {/* Tier marker when data is estimated, ⚠️ only when no data at all.
-                        Compound marker (e.g. †~) when team avg was itself derived via bad path. */}
-                    {f.maxTier >= 2 ? (
-                      <sup
-                        style={{
-                          fontSize: "0.7em",
-                          // Primary tier drives color — compound marker carries subTier detail
-                          color: f.maxTier >= 3 ? "#a07830" : "#c9a84c",
-                        }}
-                        title={
-                          f.maxTier === 4
-                            ? f.maxSubTier >= 3
-                              ? "Estimé via moyenne équipe sans modificateur configuré — fiabilité faible"
-                              : f.maxSubTier === 2
-                                ? "Estimé via moyenne équipe + modificateur"
-                                : "Estimé via moyenne équipe"
-                            : f.maxTier === 3
-                              ? "Estimé — modificateur non configuré"
-                              : "Estimé via modificateur équipage"
-                        }
-                      >
-                        {markerFromTier(f.maxTier)}
-                        {f.maxSubTier >= 2 ? markerFromTier(f.maxSubTier) : ""}
-                      </sup>
-                    ) : !f.hasPerfData ? (
-                      <span
-                        title="Données de performance manquantes"
-                        style={{ fontSize: "0.75rem" }}
-                      >
-                        ⚠️
-                      </span>
-                    ) : null}
+
+                    {/* Drift */}
+                    <span
+                      className="mono"
+                      style={{
+                        fontSize: "0.75rem",
+                        fontWeight: 700,
+                        color: driftColor,
+                        textAlign: "right",
+                      }}
+                    >
+                      {f.drift !== null
+                        ? `${f.drift > 0 ? "+" : ""}${f.drift.toFixed(1)}L`
+                        : "—"}
+                    </span>
+
+                    {/* Tier marker / warning — always occupies the last column */}
+                    <span style={{ textAlign: "center" }}>
+                      {f.maxTier >= 2 ? (
+                        <sup
+                          style={{
+                            fontSize: "0.7em",
+                            color: f.maxTier >= 3 ? "#a07830" : "#c9a84c",
+                          }}
+                          title={
+                            f.maxTier === 4
+                              ? f.maxSubTier >= 3
+                                ? "Estimé via moyenne équipe sans modificateur configuré — fiabilité faible"
+                                : f.maxSubTier === 2
+                                  ? "Estimé via moyenne équipe + modificateur"
+                                  : "Estimé via moyenne équipe"
+                              : f.maxTier === 3
+                                ? "Estimé — modificateur non configuré"
+                                : "Estimé via modificateur équipage"
+                          }
+                        >
+                          {markerFromTier(f.maxTier)}
+                          {f.maxSubTier >= 2
+                            ? markerFromTier(f.maxSubTier)
+                            : ""}
+                        </sup>
+                      ) : !f.hasPerfData ? (
+                        <span
+                          title="Données de performance manquantes"
+                          style={{ fontSize: "0.75rem" }}
+                        >
+                          ⚠️
+                        </span>
+                      ) : null}
+                    </span>
                   </div>
                 );
               })}
@@ -1252,7 +1266,16 @@ export default function RaceMode({
                   className="mono"
                   style={{ fontSize: "0.75rem", color: "#2eb460" }}
                 >
-                  ✓ {formatTime(s.irl_end_actual)}
+                  ✓ {formatTime(s.irl_end_actual || s.irl_end_planned)}
+                  <span
+                    style={{
+                      opacity: 0.5,
+                      fontSize: "0.68rem",
+                      marginLeft: "0.3rem",
+                    }}
+                  >
+                    {s.irl_end_actual ? "réel" : "prévu"}
+                  </span>
                 </span>
               </div>
             ))}
