@@ -394,21 +394,45 @@ export default function RaceMode({
   });
 
   // ── Derived: active stint (IRL-time based) ─────────────────────────────────
-  // findLast — returns the most recently started unstamped stint.
-  // find() would return the first match, which sticks on stint 1 even after
-  // stint 2 has started, until a pit stop is manually stamped.
+  // lastStampedIndex — used to exclude already-stamped stints from active detection.
+  // Prevents findLast from cycling backwards to previous unstamped stints after stamping.
+  const lastStampedIndex = stints.reduce(
+    (max, s, i) => (s.irl_end_actual ? i : max),
+    -1,
+  );
+
+  // activeStint = latest started unstamped stint that comes AFTER the last stamped one.
+  // findLast gives us the correct current stint in overtime (multiple started, one running).
+  // The index guard prevents backward cycling after each stamp.
   const activeStint = isInRace
     ? (stints.findLast(
-        (s) => s.irl_start && new Date(s.irl_start) <= now && !s.irl_end_actual,
+        (s, i) =>
+          i > lastStampedIndex &&
+          s.irl_start &&
+          new Date(s.irl_start) <= now &&
+          !s.irl_end_actual,
       ) ?? null)
     : null;
 
-  const activeIndex = activeStint
+ const activeIndex = activeStint
     ? stints.findIndex((s) => s.id === activeStint.id)
     : -1;
 
+  // Earliest unstamped started stint — differs from activeStint when a previous
+  // stint was never stamped and the race auto-advanced past it.
+  const overdueStint = isInRace
+    ? (stints.find(
+        (s) => s.irl_start && new Date(s.irl_start) <= now && !s.irl_end_actual,
+      ) ?? null)
+    : null;
+  const hasOverdue = overdueStint && overdueStint.id !== activeStint?.id;
+
   const nextStint = activeIndex >= 0 ? (stints[activeIndex + 1] ?? null) : null;
-  const completedStints = stints.filter((s) => s.irl_end_actual);
+  const completedStints = stints.filter(
+    (s) =>
+      s.irl_end_actual ||
+      (s.irl_end_planned && new Date(s.irl_end_planned) <= now),
+  );
 
   // ── Derived: race progress ─────────────────────────────────────────────────
   const raceProgressPct =
@@ -459,8 +483,9 @@ export default function RaceMode({
     _fuel: calcActualFuel(s, driverPerf, teamEntry, raceStart),
   }));
 
+  // != null catches both null (_fuel is null — no irl_end_actual) and undefined
   const fuelDriftStints = completedWithFuel.filter(
-    (s) => s._fuel?.drift !== null,
+    (s) => s._fuel?.drift != null,
   );
   const cumulativeDrift =
     fuelDriftStints.length > 0
@@ -470,20 +495,20 @@ export default function RaceMode({
 
   // ── Actions ────────────────────────────────────────────────────────────────
 
-  const markPitStop = async () => {
-    if (!activeStint || archived || saving || !isInRace) return;
+  const markPitStop = async (stint) => {
+    if (!stint || archived || saving || !isInRace) return;
     setSaving(true);
     const actualEnd = new Date().toISOString();
     // Optimistic update — instant UI response before realtime confirms
     setStints((prev) =>
       prev.map((s) =>
-        s.id === activeStint.id ? { ...s, irl_end_actual: actualEnd } : s,
+        s.id === stint.id ? { ...s, irl_end_actual: actualEnd } : s,
       ),
     );
     await supabase
       .from("stints")
       .update({ irl_end_actual: actualEnd })
-      .eq("id", activeStint.id);
+      .eq("id", stint.id);
     setSaving(false);
   };
 
@@ -817,53 +842,84 @@ export default function RaceMode({
           </div>
         )}
 
-        {/* Pit stop button */}
+        {/* Pit stop buttons */}
         {!archived && (
-          <button
-            onClick={markPitStop}
-            disabled={saving || isPreRace || isFinished || !activeStint}
-            style={{
-              width: "100%",
-              padding: "1rem",
-              fontSize: "1rem",
-              fontFamily: "var(--font-rajdhani), sans-serif",
-              fontWeight: 700,
-              letterSpacing: "0.08em",
-              textTransform: "uppercase",
-              background:
-                isPreRace || isFinished || !activeStint
-                  ? "var(--surface-2)"
-                  : isOvertime
-                    ? "var(--danger)"
-                    : inPitWindow
-                      ? "#d97706"
-                      : "var(--accent)",
-              color:
-                isPreRace || isFinished || !activeStint
-                  ? "var(--text-dim)"
-                  : "#fff",
-              border: `1px solid ${
-                isPreRace || isFinished || !activeStint
-                  ? "var(--border)"
-                  : "transparent"
-              }`,
-              borderRadius: "4px",
-              cursor:
-                saving || isPreRace || isFinished || !activeStint
-                  ? "not-allowed"
-                  : "pointer",
-              opacity: saving ? 0.7 : 1,
-              transition: "all 0.15s",
-            }}
-          >
-            {saving
-              ? "Enregistrement…"
-              : isFinished
-                ? "Course terminée"
-                : isPreRace
-                  ? "Course non démarrée"
-                  : "⏱ Marquer arrêt au stand"}
-          </button>
+          <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+            {/* Main button — stamps the current active (auto-advanced) stint */}
+            <button
+              onClick={() => markPitStop(activeStint)}
+              disabled={saving || isPreRace || isFinished || !activeStint}
+              style={{
+                width: "100%",
+                padding: "1rem",
+                fontSize: "1rem",
+                fontFamily: "var(--font-rajdhani), sans-serif",
+                fontWeight: 700,
+                letterSpacing: "0.08em",
+                textTransform: "uppercase",
+                background:
+                  isPreRace || isFinished || !activeStint
+                    ? "var(--surface-2)"
+                    : isOvertime
+                      ? "var(--danger)"
+                      : inPitWindow
+                        ? "#d97706"
+                        : "var(--accent)",
+                color:
+                  isPreRace || isFinished || !activeStint
+                    ? "var(--text-dim)"
+                    : "#fff",
+                border: `1px solid ${
+                  isPreRace || isFinished || !activeStint
+                    ? "var(--border)"
+                    : "transparent"
+                }`,
+                borderRadius: "4px",
+                cursor:
+                  saving || isPreRace || isFinished || !activeStint
+                    ? "not-allowed"
+                    : "pointer",
+                opacity: saving ? 0.7 : 1,
+                transition: "all 0.15s",
+              }}
+            >
+              {saving
+                ? "Enregistrement…"
+                : isFinished
+                  ? "Course terminée"
+                  : isPreRace
+                    ? "Course non démarrée"
+                    : "⏱ Marquer arrêt au stand"}
+            </button>
+
+            {/* Secondary button — only shown when a previous stint was never stamped.
+                Lets the user retroactively record the actual end of an overdue stint
+                without disrupting the auto-advanced active display. */}
+            {hasOverdue && (
+              <button
+                onClick={() => markPitStop(overdueStint)}
+                disabled={saving}
+                style={{
+                  width: "100%",
+                  padding: "0.6rem 1rem",
+                  fontSize: "0.82rem",
+                  fontFamily: "var(--font-rajdhani), sans-serif",
+                  fontWeight: 700,
+                  letterSpacing: "0.06em",
+                  textTransform: "uppercase",
+                  background: "rgba(224,85,85,0.08)",
+                  color: "var(--danger)",
+                  border: "1px solid var(--danger)",
+                  borderRadius: "4px",
+                  cursor: saving ? "not-allowed" : "pointer",
+                  opacity: saving ? 0.7 : 1,
+                  transition: "all 0.15s",
+                }}
+              >
+                ⏱ Marquer fin Relais {overdueStint.stint_number} (non marqué)
+              </button>
+            )}
+          </div>
         )}
       </div>
       {/* ── Next stint card ────────────────────────────────────────────── */}

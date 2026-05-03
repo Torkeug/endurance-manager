@@ -1253,6 +1253,9 @@ export default function StintGrid({
           filter: `team_entry_id=eq.${teamEntryId}`,
         },
         (payload) => {
+          // Guard — ignore patches before initial load completes to avoid
+          // merging into an empty stints array
+          if (!hasLoadedOnce.current) return;
           // Only patch irl_end_actual — ignore all other field changes to avoid
           // conflicting with the persist effect which writes irl_start/irl_end_planned
           if (payload.new?.irl_end_actual !== undefined) {
@@ -1457,7 +1460,9 @@ export default function StintGrid({
       .then(({ data }) => {
         setStints(data || []);
       });
-  }, [selectedStrategyId]);
+  // Only re-fetch stints when the tab is active — avoids unnecessary DB calls
+  // when switching strategies while the Relais tab is hidden.
+  }, [selectedStrategyId, isActive]);
 
   // Memoized — only reruns when stints, perf data, or strategy offset actually change.
   // Prevents the full chain recalculation (fuel, lap time, team averages) on every render,
@@ -1883,7 +1888,20 @@ export default function StintGrid({
       onConfirm: async () => {
         setConfirmModal(null);
         await supabase.from("stints").delete().eq("id", stintId);
-        setStints((prev) => prev.filter((s) => s.id !== stintId));
+        // Renumber remaining stints to keep stint_number sequential
+        const updated = stints
+          .filter((s) => s.id !== stintId)
+          .map((s, i) => ({ ...s, stint_number: i + 1 }));
+        setStints(updated);
+        // Persist renumbered stint_number values to DB
+        await Promise.all(
+          updated.map((s) =>
+            supabase
+              .from("stints")
+              .update({ stint_number: s.stint_number })
+              .eq("id", s.id),
+          ),
+        );
       },
     });
   };

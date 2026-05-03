@@ -72,6 +72,8 @@ export default function PlanningTab({
           filter: `team_entry_id=eq.${teamEntryId}`,
         },
         (payload) => {
+          // Guard — ignore patches before initial load completes
+          if (!hasLoadedOnce.current) return;
           if (payload.new?.irl_end_actual !== undefined) {
             setStints((prev) =>
               prev.map((s) =>
