@@ -45,6 +45,7 @@ export default function PlanningTab({
   isActive = false,
 }) {
   const [stints, setStints] = useState([]);
+  const [availabilities, setAvailabilities] = useState([]);
   const [loading, setLoading] = useState(false);
   // Hovered stint object — displayed in the detail panel below the Gantt
   const [hoveredStint, setHoveredStint] = useState(null);
@@ -110,6 +111,7 @@ export default function PlanningTab({
         const [
           { data: strategies, error: stratError },
           { data: allStints, error: stintsError },
+          { data: availData },
         ] = await Promise.all([
           supabase
             .from("strategies")
@@ -123,6 +125,10 @@ export default function PlanningTab({
             )
             .eq("team_entry_id", teamEntryId)
             .order("stint_number"),
+          supabase
+            .from("availabilities")
+            .select("driver_id, slot_start, available")
+            .eq("team_entry_id", teamEntryId),
         ]);
 
         if (stratError) {
@@ -143,7 +149,10 @@ export default function PlanningTab({
           (s) => s.strategy_id === strategy.id,
         );
 
-        if (!cancelled) setStints(stintsData);
+        if (!cancelled) {
+          setStints(stintsData);
+          setAvailabilities(availData || []);
+        }
       } catch (err) {
         if (!cancelled) console.error("[PlanningTab] unexpected error:", err);
       } finally {
@@ -289,7 +298,7 @@ export default function PlanningTab({
 
   // ── Shared row bar area renderer ───────────────────────────────────────────
   // Extracted to avoid repetition between driver rows and the unassigned row.
-  const renderBarArea = (rowStints, color, isUnassigned = false) => (
+    const renderBarArea = (rowStints, color, isUnassigned = false, driverId = null) => (
     <div
       style={{
         position: "relative",
@@ -300,6 +309,39 @@ export default function PlanningTab({
         overflow: "hidden",
       }}
     >
+      {/* Availability background strips — rendered first, behind everything else */}
+      {driverId && availabilities
+        .filter((a) => a.driver_id === driverId)
+        .map((a) => {
+          const slotStart = new Date(a.slot_start).getTime();
+          const slotEnd = slotStart + 30 * 60 * 1000; // 30min slots
+          // Only render slots that overlap the visible timeline
+          if (slotEnd <= timelineStart || slotStart >= timelineEnd) return null;
+          const left = toPercent(Math.max(slotStart, timelineStart));
+          const width = toPercent(Math.min(slotEnd, timelineEnd)) - left;
+          const bg =
+            a.available === true
+              ? "rgba(46,180,96,0.18)"
+              : a.available === false
+                ? "rgba(224,85,85,0.18)"
+                : "rgba(74,74,106,0.12)"; // null = tentative
+          return (
+            <div
+              key={a.slot_start}
+              style={{
+                position: "absolute",
+                top: 0,
+                bottom: 0,
+                left: `${left}%`,
+                width: `${width}%`,
+                background: bg,
+                pointerEvents: "none",
+                zIndex: 0,
+              }}
+            />
+          );
+        })}
+
       {/* Night band overlay — rendered behind stint bars */}
       {nightBands.map((band, bi) => (
         <div
@@ -647,8 +689,8 @@ export default function PlanningTab({
                     {driverName}
                   </div>
 
-                  {/* Bar area — contains night overlay + stint bars */}
-                  {renderBarArea(rowStints, color)}
+                  {/* Bar area — contains availability bg, night overlay + stint bars */}
+                  {renderBarArea(rowStints, color, false, driverId)}
                 </div>
               ),
             )}
@@ -758,6 +800,20 @@ export default function PlanningTab({
               alignItems: "center",
             }}
           >
+            {/* Availability swatches */}
+            <span style={{ display: "flex", alignItems: "center", gap: "4px" }}>
+              <span style={{ display: "inline-block", width: "12px", height: "10px", background: "rgba(46,180,96,0.35)", border: "1px solid var(--border)", borderRadius: "2px" }} />
+              Disponible
+            </span>
+            <span style={{ display: "flex", alignItems: "center", gap: "4px" }}>
+              <span style={{ display: "inline-block", width: "12px", height: "10px", background: "rgba(224,85,85,0.35)", border: "1px solid var(--border)", borderRadius: "2px" }} />
+              Indisponible
+            </span>
+            <span style={{ display: "flex", alignItems: "center", gap: "4px" }}>
+              <span style={{ display: "inline-block", width: "12px", height: "10px", background: "rgba(74,74,106,0.35)", border: "1px solid var(--border)", borderRadius: "2px" }} />
+              Incertain
+            </span>
+
             {/* Night band swatch */}
             <span style={{ display: "flex", alignItems: "center", gap: "4px" }}>
               <span
