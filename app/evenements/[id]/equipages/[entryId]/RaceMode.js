@@ -936,7 +936,7 @@ export default function RaceMode({
                   transition: "all 0.15s",
                 }}
               >
-                ⏱ Marquer fin Relais {overdueStint.stint_number} (non marqué)
+                ⏱ Clôturer relais {overdueStint.stint_number}
               </button>
             )}
           </div>
