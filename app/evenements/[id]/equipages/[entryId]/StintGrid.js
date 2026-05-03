@@ -1532,6 +1532,8 @@ export default function StintGrid({
             fuel_used_calc: u.fuel_used_calc,
             fuel_remaining_calc: u.fuel_remaining_calc,
             target_consumption_skip_last: u.target_consumption_skip_last,
+            laps_calc: u.laps_calc,
+            duration_sec_calc: u.duration_sec_calc,
           })
           .eq("id", u.id),
       ),
