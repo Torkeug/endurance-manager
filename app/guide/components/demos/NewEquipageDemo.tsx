@@ -169,14 +169,16 @@ export default function NewEquipageDemo() {
             </div>
           ))}
         </div>
-        <div style={{ display: "flex", gap: 0 }}>
-          <span style={{ padding: "0.55rem 0.6rem", background: "var(--surface-2)", border: "1px solid var(--border)", borderRight: "none", borderRadius: "3px 0 0 3px", fontSize: "0.85rem", color: "var(--text-dim)", whiteSpace: "nowrap", fontFamily: "var(--font-mono), monospace" }}>
-            twitch.tv/
-          </span>
-          <div style={{ flex: 1, background: "var(--surface-2)", border: "1px solid var(--border)", borderLeft: "none", borderRadius: "0 3px 3px 0", padding: "0.55rem 0.75rem", fontSize: "0.9rem", color: "var(--text-dim)" }}>
-            nom_de_chaine
+        <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
+          <div style={{ flex: 1, minWidth: 0, display: "flex" }}>
+            <span style={{ padding: "0.55rem 0.6rem", background: "var(--surface-2)", border: "1px solid var(--border)", borderRight: "none", borderRadius: "3px 0 0 3px", fontSize: "0.85rem", color: "var(--text-dim)", whiteSpace: "nowrap", fontFamily: "var(--font-mono), monospace", flexShrink: 0 }}>
+              twitch.tv/
+            </span>
+            <div style={{ flex: 1, minWidth: 0, background: "var(--surface-2)", border: "1px solid var(--border)", borderLeft: "none", borderRadius: "0 3px 3px 0", padding: "0.55rem 0.75rem", fontSize: "0.9rem", color: "var(--text-dim)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+              nom_de_chaine
+            </div>
           </div>
-          <button className="btn btn-secondary" style={{ marginLeft: "0.5rem", whiteSpace: "nowrap" }}>+ Ajouter</button>
+          <button className="btn btn-secondary" style={{ whiteSpace: "nowrap", flexShrink: 0 }}>+ Ajouter</button>
         </div>
       </div>
 
