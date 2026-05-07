@@ -36,7 +36,7 @@ export default function GuideClient({ guide }: { guide: GuideSection[] }) {
       {/* Main content */}
       <main
         id="guide-main"
-        style={{ flex: 1, overflowY: "auto", backgroundColor: "var(--bg)" }}
+        style={{ flex: 1, minWidth: 0, overflowY: "auto", overflowX: "hidden", backgroundColor: "var(--bg)" }}
       >
         {/* Mobile sticky nav bar */}
         <div

@@ -45,7 +45,7 @@ function renderBlock(block: any, i: number) {
   }
   if (block.type === "feature-list") return <FeatureList key={i} items={block.items} />;
   if (block.type === "component-demo") return (
-    <div key={i} style={{ margin: "1.75rem 0" }}>
+    <div key={i} style={{ margin: "1.75rem 0", overflowX: "auto" }}>
       <ComponentDemo type={block.componentType} config={block.config} />
     </div>
   );

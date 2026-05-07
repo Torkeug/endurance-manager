@@ -28,11 +28,11 @@ const DOTS: Array<[string, string, string]> = [
 ];
 
 const STINTS = [
-  { n: 1, driver: "Marc Dubois",  start: "14:00", end: "15:52", endActual: "15:50", duration: "1h 52min", laps: 42, fuel: 87.4, skipFuel: "47.20 L/tr", ig: "☀️", timer: false, rain: false, tyre: false, notes: "" },
-  { n: 2, driver: "Léa Fontaine", start: "15:52", end: "17:44", endActual: null,    duration: "1h 52min", laps: 42, fuel: 87.4, skipFuel: "47.20 L/tr", ig: "🌗", timer: false, rain: false, tyre: true,  notes: "Pneus neufs" },
-  { n: 3, driver: "Théo Bernard", start: "17:44", end: "19:36", endActual: null,    duration: "1h 52min", laps: 41, fuel: 85.3, skipFuel: "48.10 L/tr", ig: "🌑", timer: false, rain: false, tyre: false, notes: "" },
-  { n: 4, driver: "Marc Dubois",  start: "19:36", end: "21:28", endActual: null,    duration: "1h 52min", laps: 38, fuel: 82.1, skipFuel: "51.30 L/tr", ig: "🌑", timer: true,  rain: true,  tyre: false, notes: "" },
-  { n: 5, driver: "À définir",    start: "21:28", end: "23:20", endActual: null,    duration: "1h 52min", laps: 42, fuel: 87.4, skipFuel: null,          ig: "🌑", timer: false, rain: false, tyre: false, notes: "" },
+  { n: 1, driver: "Marc Dubois",  start: "14:00", end: "15:52", endActual: "15:50", duration: "1h 52min", laps: 42, fuel: 87.4, skipFuel: "47.20 L/tr", ig: "☀️", timer: false, rain: false, tyre: false },
+  { n: 2, driver: "Léa Fontaine", start: "15:52", end: "17:44", endActual: null,    duration: "1h 52min", laps: 42, fuel: 87.4, skipFuel: "47.20 L/tr", ig: "🌗", timer: false, rain: false, tyre: true  },
+  { n: 3, driver: "Théo Bernard", start: "17:44", end: "19:36", endActual: null,    duration: "1h 52min", laps: 41, fuel: 85.3, skipFuel: "48.10 L/tr", ig: "🌑", timer: false, rain: false, tyre: false },
+  { n: 4, driver: "Marc Dubois",  start: "19:36", end: "21:28", endActual: null,    duration: "1h 52min", laps: 38, fuel: 82.1, skipFuel: "51.30 L/tr", ig: "🌑", timer: true,  rain: true,  tyre: false },
+  { n: 5, driver: "À définir",    start: "21:28", end: "23:20", endActual: null,    duration: "1h 52min", laps: 42, fuel: 87.4, skipFuel: null,          ig: "🌑", timer: false, rain: false, tyre: false },
 ];
 
 const TH: CSSProperties = {
@@ -166,7 +166,6 @@ export default function StintGridDemo() {
               <th style={{ ...TH, width: "52px" }}>Tours</th>
               <th style={{ ...TH, width: "62px" }}>Conso</th>
               <th style={{ ...TH, width: "92px" }}>Skip fin</th>
-              <th style={{ ...TH, minWidth: "100px" }}>Notes</th>
               <th style={{ ...TH, width: "52px" }}>IG</th>
               <th style={{ ...TH, width: "24px" }}>⏱</th>
               <th style={{ ...TH, width: "24px" }}>💧</th>
@@ -200,7 +199,6 @@ export default function StintGridDemo() {
                 <td style={{ ...TD, ...MONO, fontSize: "0.72rem", color: s.skipFuel ? "var(--accent)" : "var(--text-dim)" }}>
                   {s.skipFuel ?? "—"}
                 </td>
-                <td style={{ ...TD, fontSize: "0.8rem", color: "var(--text-dim)" }}>{s.notes || "—"}</td>
                 <td style={{ ...TD, textAlign: "center" }}>{s.ig}</td>
                 <td style={{ ...TD, textAlign: "center", fontSize: "0.75rem" }}>{s.timer ? "✓" : ""}</td>
                 <td style={{ ...TD, textAlign: "center" }}>{s.rain ? "✓" : ""}</td>
