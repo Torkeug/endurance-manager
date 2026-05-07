@@ -1,11 +1,18 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import Sidebar from "./Sidebar";
 import GuideRenderer from "./GuideRenderer";
 import type { GuideSection } from "../guide.data";
 
 export default function GuideClient({ guide }: { guide: GuideSection[] }) {
   const [open, setOpen] = useState(false);
+  const mainRef = useRef<HTMLElement>(null);
+
+  useEffect(() => {
+    // Chrome on Android saves/restores scroll of named containers independently
+    // of history.scrollRestoration. Reset explicitly so refresh always starts at top.
+    if (mainRef.current) mainRef.current.scrollTop = 0;
+  }, []);
 
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100%", width: "100%", position: "relative" }}>
@@ -66,6 +73,7 @@ export default function GuideClient({ guide }: { guide: GuideSection[] }) {
 
         {/* Scrollable content */}
         <main
+          ref={mainRef}
           id="guide-main"
           style={{ flex: 1, minWidth: 0, overflowY: "auto", overflowX: "hidden", backgroundColor: "var(--bg)" }}
         >
