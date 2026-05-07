@@ -38,12 +38,22 @@ export default function GuideClient({ guide }: { guide: GuideSection[] }) {
         id="guide-main"
         style={{ flex: 1, overflowY: "auto", backgroundColor: "var(--bg)" }}
       >
-        {/* Mobile toggle button */}
-        <div className="md:hidden" style={{ padding: "1rem 4% 0" }}>
+        {/* Mobile sticky nav bar */}
+        <div
+          className="md:hidden"
+          style={{
+            position: "sticky",
+            top: 0,
+            zIndex: 5,
+            padding: "0.5rem 4%",
+            background: "var(--surface)",
+            borderBottom: "1px solid var(--border)",
+          }}
+        >
           <button
             onClick={() => setOpen(true)}
             style={{
-              padding: "0.4rem 0.85rem",
+              padding: "0.35rem 0.85rem",
               background: "var(--surface-2)",
               border: "1px solid var(--border)",
               borderRadius: "3px",
