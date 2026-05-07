@@ -8,13 +8,25 @@ export default function PullToRefresh({ children }) {
   const startYRef = useRef(null);
   const pullRef = useRef(0); // kept in sync with state for use inside event handlers
   const [pull, setPull] = useState(0);
+  const recentlyScrolledRef = useRef(false);
+  const scrollTimerRef = useRef(null);
 
   useEffect(() => {
     const el = containerRef.current;
     if (!el) return;
 
+    const onScroll = () => {
+      if (el.scrollTop > 0) {
+        recentlyScrolledRef.current = true;
+        clearTimeout(scrollTimerRef.current);
+        scrollTimerRef.current = setTimeout(() => {
+          recentlyScrolledRef.current = false;
+        }, 350);
+      }
+    };
+
     const onTouchStart = (e) => {
-      if (el.scrollTop > 0) return;
+      if (el.scrollTop > 0 || recentlyScrolledRef.current) return;
       startYRef.current = e.touches[0].clientY;
     };
 
@@ -43,13 +55,16 @@ export default function PullToRefresh({ children }) {
       setPull(0);
     };
 
+    el.addEventListener("scroll", onScroll, { passive: true });
     el.addEventListener("touchstart", onTouchStart, { passive: true });
     el.addEventListener("touchmove", onTouchMove, { passive: false });
     el.addEventListener("touchend", onTouchEnd, { passive: true });
     return () => {
+      el.removeEventListener("scroll", onScroll);
       el.removeEventListener("touchstart", onTouchStart);
       el.removeEventListener("touchmove", onTouchMove);
       el.removeEventListener("touchend", onTouchEnd);
+      clearTimeout(scrollTimerRef.current);
     };
   }, []);
 
