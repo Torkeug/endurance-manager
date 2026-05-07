@@ -10,6 +10,7 @@ const links = [
   { href: "/evenements", label: "Événements" },
   { href: "/inventaire", label: "Inventaire" },
   { href: "/admin", label: "Admin" },
+  { href: "/guide", label: "Guide" },
 ];
 
 export default function Nav() {

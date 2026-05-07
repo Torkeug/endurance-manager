@@ -1,0 +1,637 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Kronos Endurance Planner — Guide d'utilisation</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #f8f9fa;
+      --surface: #ffffff;
+      --border: #dee2e6;
+      --border-light: #f1f3f5;
+      --text: #212529;
+      --text-dim: #495057;
+      --text-muted: #868e96;
+      --accent: #c49a1a;
+      --accent-bg: #fdf8ec;
+      --accent-border: #e8d48e;
+      --green: #2f9e44;
+      --green-bg: #ebfbee;
+      --green-border: #8ce99a;
+      --red: #c92a2a;
+      --red-bg: #fff5f5;
+      --red-border: #ffa8a8;
+      --blue: #1971c2;
+      --blue-bg: #e7f5ff;
+      --blue-border: #74c0fc;
+      --mono: 'DM Mono', monospace;
+      --sans: 'Inter', system-ui, sans-serif;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--sans);
+      font-size: 15px;
+      line-height: 1.6;
+    }
+
+    .layout { display: flex; min-height: 100vh; }
+
+    .sidebar {
+      width: 240px;
+      flex-shrink: 0;
+      background: var(--surface);
+      border-right: 1px solid var(--border);
+      position: sticky;
+      top: 0;
+      height: 100vh;
+      overflow-y: auto;
+      padding: 24px 0;
+    }
+
+    .sidebar-logo {
+      font-family: var(--mono);
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--text-muted);
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      padding: 0 20px 20px;
+      border-bottom: 1px solid var(--border-light);
+      margin-bottom: 16px;
+    }
+    .sidebar-logo strong {
+      display: block;
+      font-size: 13px;
+      color: var(--text);
+      margin-bottom: 2px;
+    }
+
+    .sidebar-section { padding: 0 12px; margin-bottom: 4px; }
+    .sidebar-label {
+      font-family: var(--mono);
+      font-size: 10px;
+      font-weight: 500;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      padding: 12px 8px 6px;
+      display: block;
+    }
+    .sidebar-link {
+      display: block;
+      padding: 6px 8px;
+      border-radius: 4px;
+      color: var(--text-dim);
+      text-decoration: none;
+      font-size: 14px;
+      transition: background 0.15s, color 0.15s;
+    }
+    .sidebar-link:hover { background: var(--border-light); color: var(--text); }
+    .sidebar-link.sub { padding-left: 20px; font-size: 13px; color: var(--text-muted); }
+
+    main {
+      flex: 1;
+      min-width: 0;
+      padding: 48px 64px;
+      max-width: 920px;
+    }
+
+    h1 { font-size: 26px; font-weight: 600; color: var(--text); margin-bottom: 8px; }
+    .page-subtitle {
+      color: var(--text-muted);
+      font-size: 15px;
+      margin-bottom: 40px;
+      padding-bottom: 24px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    h2 {
+      font-size: 19px;
+      font-weight: 600;
+      color: var(--text);
+      margin: 48px 0 16px;
+      padding-top: 24px;
+      border-top: 1px solid var(--border);
+      scroll-margin-top: 24px;
+    }
+    h2:first-of-type { border-top: none; padding-top: 0; margin-top: 0; }
+
+    h3 {
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--text);
+      margin: 28px 0 10px;
+      scroll-margin-top: 24px;
+    }
+
+    p { color: var(--text-dim); margin-bottom: 14px; }
+    p:last-child { margin-bottom: 0; }
+    strong { color: var(--text); font-weight: 600; }
+
+    ul, ol { color: var(--text-dim); padding-left: 20px; margin-bottom: 14px; }
+    li { margin-bottom: 6px; }
+    li strong { color: var(--text); }
+
+    .callout {
+      display: flex;
+      gap: 12px;
+      padding: 14px 16px;
+      border-radius: 6px;
+      margin: 16px 0;
+      font-size: 14px;
+      line-height: 1.55;
+    }
+    .callout-icon { flex-shrink: 0; font-size: 15px; margin-top: 1px; }
+    .callout-body { color: var(--text-dim); }
+    .callout-body strong { color: var(--text); }
+    .callout.info { background: var(--blue-bg); border: 1px solid var(--blue-border); }
+    .callout.tip { background: var(--green-bg); border: 1px solid var(--green-border); }
+    .callout.warn { background: var(--red-bg); border: 1px solid var(--red-border); }
+    .callout.note { background: var(--accent-bg); border: 1px solid var(--accent-border); }
+
+    .steps { margin: 16px 0; }
+    .step-item { display: flex; gap: 14px; margin-bottom: 14px; align-items: flex-start; }
+    .step-badge {
+      flex-shrink: 0;
+      width: 24px; height: 24px;
+      background: var(--text);
+      color: white;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      font-weight: 600;
+      margin-top: 1px;
+    }
+    .step-content { font-size: 14px; color: var(--text-dim); line-height: 1.55; }
+    .step-content strong { color: var(--text); }
+
+    .feature-list {
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      overflow: hidden;
+      margin: 16px 0;
+    }
+    .feature-item {
+      display: flex;
+      gap: 16px;
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--border-light);
+      align-items: flex-start;
+    }
+    .feature-item:last-child { border-bottom: none; }
+    .feature-item-icon { font-size: 16px; flex-shrink: 0; margin-top: 1px; }
+    .feature-item-title { font-size: 14px; font-weight: 600; color: var(--text); margin-bottom: 2px; }
+    .feature-item-desc { font-size: 13px; color: var(--text-muted); line-height: 1.5; }
+
+    .tabs-demo {
+      display: flex;
+      border-bottom: 1px solid var(--border);
+      margin: 16px 0 0;
+      gap: 0;
+      flex-wrap: wrap;
+    }
+    .tab {
+      padding: 8px 16px;
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text-muted);
+      border-bottom: 2px solid transparent;
+      margin-bottom: -1px;
+      cursor: default;
+    }
+    .tab.active { color: var(--text); border-bottom-color: var(--text); }
+
+    .states { display: flex; gap: 8px; margin: 12px 0; flex-wrap: wrap; }
+    .state-cell {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 7px 12px;
+      border-radius: 4px;
+      font-size: 13px;
+      font-weight: 500;
+    }
+    .state-yes { background: var(--green-bg); color: var(--green); border: 1px solid var(--green-border); }
+    .state-no { background: var(--red-bg); color: var(--red); border: 1px solid var(--red-border); }
+    .state-neutral { background: var(--accent-bg); color: var(--accent); border: 1px solid var(--accent-border); }
+
+    code { font-family: var(--mono); background: var(--border-light); padding: 2px 6px; border-radius: 3px; color: var(--text); }
+
+    .spacer { height: 8px; }
+
+    @media (max-width: 760px) {
+      .sidebar { display: none; }
+      main { padding: 32px 24px; max-width: 100%; }
+    }
+  </style>
+</head>
+<body>
+<div class="layout">
+
+  <nav class="sidebar">
+    <div class="sidebar-logo">
+      <strong>Kronos Endurance Planner</strong>
+      Guide d'utilisation
+    </div>
+    <div class="sidebar-section">
+      <span class="sidebar-label">Vue d'ensemble</span>
+      <a class="sidebar-link" href="#navbar">Barre de navigation</a>
+      <a class="sidebar-link" href="#accueil">Accueil</a>
+      <a class="sidebar-link" href="#pilotes">Pilotes</a>
+    </div>
+    <div class="sidebar-section">
+      <span class="sidebar-label">Événements</span>
+      <a class="sidebar-link" href="#evenements">Liste des événements</a>
+      <a class="sidebar-link" href="#inscription">S'inscrire</a>
+    </div>
+    <div class="sidebar-section">
+      <span class="sidebar-label">Équipage — 6 onglets</span>
+      <a class="sidebar-link sub" href="#onglet-pilotes">1. Pilotes</a>
+      <a class="sidebar-link sub" href="#onglet-disponibilites">2. Disponibilités</a>
+      <a class="sidebar-link sub" href="#onglet-relais">3. Relais</a>
+      <a class="sidebar-link sub" href="#onglet-planning">4. Planning</a>
+      <a class="sidebar-link sub" href="#onglet-performances">5. Performances</a>
+      <a class="sidebar-link sub" href="#onglet-course">6. Course</a>
+    </div>
+    <div class="sidebar-section">
+      <span class="sidebar-label">Autres</span>
+      <a class="sidebar-link" href="#inventaire">Inventaire</a>
+      <a class="sidebar-link" href="#profil">Profil</a>
+    </div>
+  </nav>
+
+  <main>
+    <h1>Guide d'utilisation — Pilotes</h1>
+    <p class="page-subtitle">Maîtrise chaque section du Kronos Endurance Planner et prépare tes courses comme un pro.</p>
+
+    <!-- ═══════════════════════════════════════════ -->
+    <h2 id="navbar">Barre de navigation</h2>
+
+    <p>En haut de chaque page, la barre de navigation te permet d'accéder aux grandes sections :</p>
+
+    <div class="feature-list">
+      <div class="feature-item">
+        <div class="feature-item-icon">🏠</div>
+        <div>
+          <div class="feature-item-title">Accueil</div>
+          <div class="feature-item-desc">Vue d'ensemble : prochains événements, mon prochain relais, mes inscriptions à venir. Zone personnalisée selon ton rôle.</div>
+        </div>
+      </div>
+      <div class="feature-item">
+        <div class="feature-item-icon">👥</div>
+        <div>
+          <div class="feature-item-title">Pilotes</div>
+          <div class="feature-item-desc">Liste des pilotes de l'équipe. Clique sur un nom pour voir son profil détaillé (iRating, stats, disponibilité).</div>
+        </div>
+      </div>
+      <div class="feature-item">
+        <div class="feature-item-icon">📅</div>
+        <div>
+          <div class="feature-item-title">Événements</div>
+          <div class="feature-item-desc">Toutes les courses (normales, spéciales, championnats). T'inscrire et accéder aux équipages d'une course.</div>
+        </div>
+      </div>
+      <div class="feature-item">
+        <div class="feature-item-icon">📊</div>
+        <div>
+          <div class="feature-item-title">Inventaire</div>
+          <div class="feature-item-desc">Matrice croisée voitures × circuits : qui possède quoi et maîtrise où.</div>
+        </div>
+      </div>
+      <div class="feature-item">
+        <div class="feature-item-icon">👤</div>
+        <div>
+          <div class="feature-item-title">Profil</div>
+          <div class="feature-item-desc">Ton compte : iRating, historique, stats, paramètres personnels.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════ -->
+    <h2 id="accueil">Accueil</h2>
+
+    <p>Tableau de bord personnalisé affichant tes informations clés :</p>
+
+    <ul>
+      <li><strong>Prochains événements</strong> — Card cliquable vers ton prochain événement inscrit.</li>
+      <li><strong>Mon prochain relais</strong> — Détails du relais assigné si tu en as un à venir (masqué pour les ingénieurs).</li>
+      <li><strong>Mes événements à venir</strong> — Liste complète de tes inscriptions futures avec équipage assigné ou "Non assigné".</li>
+    </ul>
+
+    <div class="callout info">
+      <div class="callout-icon">ℹ️</div>
+      <div class="callout-body"><strong>Pour les admins :</strong> Onglets supplémentaires <strong>« Suivi »</strong> montrant équipages incomplets (sans pilotes, sans relais) et pilotes en attente d'approbation.</div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════ -->
+    <h2 id="pilotes">Pilotes</h2>
+
+    <p>Page listant tous les pilotes de l'équipe avec iRating et statut. Clique sur un nom pour ouvrir son profil détaillé.</p>
+
+    <!-- ═══════════════════════════════════════════ -->
+    <h2 id="evenements">Événements</h2>
+
+    <p>Trois onglets selon le type de course :</p>
+
+    <ul>
+      <li><strong>Normaux</strong> — Courses classiques avec horaires de départ éditables.</li>
+      <li><strong>Spéciaux</strong> — Événements avec créneaux de départ fixes prédéfinis (ex : vendredi 20h30, samedi 14h00).</li>
+      <li><strong>Championnats</strong> — Séries de manches avec classement cumulé.</li>
+    </ul>
+
+    <!-- ═══════════════════════════════════════════ -->
+    <h2 id="inscription">S'inscrire à un événement</h2>
+
+    <p>Pour participer à une course, tu dois d'abord t'inscrire :</p>
+
+    <div class="steps">
+      <div class="step-item">
+        <div class="step-badge">1</div>
+        <div class="step-content">Va dans <strong>Événements</strong> et sélectionne l'événement souhaité.</div>
+      </div>
+      <div class="step-item">
+        <div class="step-badge">2</div>
+        <div class="step-content">Clique sur <strong>« S'inscrire »</strong>.</div>
+      </div>
+      <div class="step-item">
+        <div class="step-badge">3</div>
+        <div class="step-content">Remplis le formulaire : préférences de classe, voiture(s) préférée(s), horaires de départ souhaités, et notes optionnelles.</div>
+      </div>
+      <div class="step-item">
+        <div class="step-badge">4</div>
+        <div class="step-content">Valide. Tu es maintenant inscrit et les admins peuvent t'assigner à un équipage.</div>
+      </div>
+    </div>
+
+    <div class="callout note">
+      <div class="callout-icon">📝</div>
+      <div class="callout-body">Tu peux t'inscrire à <strong>plusieurs équipages</strong> au sein d'un même événement.</div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════ -->
+    <h2 id="onglet-pilotes">Équipage — Onglet 1. Pilotes</h2>
+
+    <div class="tabs-demo">
+      <div class="tab active">Pilotes</div>
+      <div class="tab">Disponibilités</div>
+      <div class="tab">Relais</div>
+      <div class="tab">Planning</div>
+      <div class="tab">Performances</div>
+      <div class="tab">Course</div>
+    </div>
+    <div class="spacer"></div>
+
+    <p>Liste des pilotes assignés à l'équipage avec iRating et notes. Un icône d'avertissement (⚠️) s'affiche si tes préférences (classe, voiture, ou horaire) ne correspondent pas l'équipage.</p>
+
+    <h3>Si tu es inscrit mais pas encore assigné</h3>
+    <p>Tu verras une section <strong>« Rejoindre cet équipage »</strong> affichant les pilotes déjà inscrits. Clique sur ton nom pour t'assigner. Une fois assigné, tu accéderas aux autres onglets (Disponibilités, Relais, etc.).</p>
+
+    <div class="callout info">
+      <div class="callout-icon">ℹ️</div>
+      <div class="callout-body"><strong>Pour les admins :</strong> Vous pouvez assigner/retirer des pilotes, voir leurs préférences, et gérer les mismatchs.</div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════ -->
+    <h2 id="onglet-disponibilites">Équipage — Onglet 2. Disponibilités</h2>
+
+    <div class="tabs-demo">
+      <div class="tab">Pilotes</div>
+      <div class="tab active">Disponibilités</div>
+      <div class="tab">Relais</div>
+      <div class="tab">Planning</div>
+      <div class="tab">Performances</div>
+      <div class="tab">Course</div>
+    </div>
+    <div class="spacer"></div>
+
+    <p>Grille interactive couvrant la durée complète de la course, découpée en créneaux horaires de 30 minutes. Tu renseignes ta disponibilité pour chaque créneau.</p>
+
+    <h3>États de disponibilité</h3>
+    <div class="states">
+      <div class="state-cell state-yes">✓ Disponible</div>
+      <div class="state-cell state-no">✗ Indisponible</div>
+      <div class="state-cell state-neutral">? Incertain</div>
+    </div>
+
+    <h3>Comment remplir la grille</h3>
+    <ul>
+      <li>Sélectionne ton nom dans le dropdown (ou c'est auto-sélectionné si tu es un pilote externe).</li>
+      <li>Choisis un mode de saisie (Disponible / Indisponible / Incertain).</li>
+      <li>Clique ou glisse sur les créneaux pour peindre ta disponibilité.</li>
+      <li>Bonus : « Tout marquer disponible » pour couvrir instantanément tous les créneaux.</li>
+    </ul>
+
+    <div class="callout tip">
+      <div class="callout-icon">💡</div>
+      <div class="callout-body"><strong>Astuce mobile :</strong> Appuie et glisse pour couvrir rapidement plusieurs créneaux d'un coup. Le mode "Incertain" est idéal si tu n'es pas sûr d'un horaire.</div>
+    </div>
+
+    <h3>Légende</h3>
+    <p>Les marqueurs ▶ (vert) et ■ (rouge) indiquent le départ et la fin de la course. Les créneaux après la fin sont grisés.</p>
+
+    <!-- ═══════════════════════════════════════════ -->
+    <h2 id="onglet-relais">Équipage — Onglet 3. Relais</h2>
+
+    <div class="tabs-demo">
+      <div class="tab">Pilotes</div>
+      <div class="tab">Disponibilités</div>
+      <div class="tab active">Relais</div>
+      <div class="tab">Planning</div>
+      <div class="tab">Performances</div>
+      <div class="tab">Course</div>
+    </div>
+    <div class="spacer"></div>
+
+    <p><strong>Le cœur du système :</strong> Planification des relais (stints), calcul automatique des durées et carburants, gestion des stratégies, détection des conflits.</p>
+
+    <h3>Stratégies</h3>
+    <p>Tu peux créer jusqu'à <strong>5 stratégies</strong> différentes (ex : « Plan A sec », « Plan B pluie »). Chaque stratégie a :</p>
+    <ul>
+      <li><strong>Nom + Description</strong> — Éditables au-dessus du tableau.</li>
+      <li><strong>Décalage départ (minutes)</strong> — Offset pour compenser formation lap ou autres délais.</li>
+      <li><strong>★ Statut actif</strong> — Une seule stratégie est active (celle que Race Mode utilise).</li>
+    </ul>
+
+    <h3>Tableau de relais</h3>
+    <p>Colonnes principales :</p>
+    <ul>
+      <li><strong>#</strong> — Numéro du relais (séquentiel).</li>
+      <li><strong>Pilote</strong> — Dropdown pour assigner un pilote ou laisser « À définir ».</li>
+      <li><strong>Départ IRL / Fin IRL</strong> — Temps réels calculés automatiquement.</li>
+      <li><strong>Fin réelle</strong> — Remplie quand tu marques un pit stop (Race Mode).</li>
+      <li><strong>Durée</strong> — Calcul auto depuis chrono/carburant, ou saisie manuelle.</li>
+      <li><strong>Tours</strong> — Nombre de tours plannifiés (manuel ou calculé).</li>
+      <li><strong>Conso</strong> — Carburant estimé. Badge rouge si tu dépasses la capacité du réservoir.</li>
+      <li><strong>Skip fin</strong> — Consommation cible pour supprimer le dernier pit stop (visible si la course est entièrement couverte).</li>
+      <li><strong>Pluie / Chgt pneus</strong> — Cases à cocher.</li>
+    </ul>
+
+    <h3>Fair Share</h3>
+    <p>Indicateurs visuels montrant si chaque pilote a au minimum 25% de la "part égale" de tours. Vert = OK, rouge = déséquilibre. Utile pour équilibrer la charge.</p>
+
+    <h3>Données de fallback</h3>
+    <p>Certains colonnes affichent des petits marqueurs (<code>*</code>, <code>~</code>, <code>†</code>) qui indiquent comment la valeur a été calculée : données spécifiques, modificateurs d'équipage, ou moyenne équipe.</p>
+
+    <h3>Récalculer la stratégie</h3>
+    <p>Une fois la course lancée et des relais complétés, clique <strong>« Recalculer la stratégie »</strong> pour revoir les tours restants en fonction des vraies données. Le système te montrera un diff des changements.</p>
+
+    <div class="callout warn">
+      <div class="callout-icon">⚠️</div>
+      <div class="callout-body"><strong>Important :</strong> Les temps IRL sont calculés quand tu ouvres cet onglet. Ils sont enregistrés en base et utilisés par Planning + Course. S'ils manquent, c'est que le calcul n'a pas eu lieu — simplement ré-ouvrir cet onglet les génère.</div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════ -->
+    <h2 id="onglet-planning">Équipage — Onglet 4. Planning</h2>
+
+    <div class="tabs-demo">
+      <div class="tab">Pilotes</div>
+      <div class="tab">Disponibilités</div>
+      <div class="tab">Relais</div>
+      <div class="tab active">Planning</div>
+      <div class="tab">Performances</div>
+      <div class="tab">Course</div>
+    </div>
+    <div class="spacer"></div>
+
+    <p>Diagramme de Gantt visualisant ta stratégie active. Une ligne par pilote, bandes de relais colorées, avec fond de disponibilité et bande nuit IG.</p>
+
+    <h3>Lecture du diagramme</h3>
+    <ul>
+      <li><strong>Axe horizontal</strong> — Temps réel (heures marquées en haut).</li>
+      <li><strong>Lignes</strong> — Un pilote par ligne (label à gauche).</li>
+      <li><strong>Bandes colorées</strong> — Relais assignés (couleur par pilote).</li>
+      <li><strong>Bandes grises pointillées</strong> — Relais non assignés.</li>
+      <li><strong>Fond vert/rouge/gris</strong> — Disponibilité du pilote à ce moment-là.</li>
+      <li><strong>Fond foncé</strong> — Nuit IG (ig_sunset → ig_sunrise).</li>
+    </ul>
+
+    <h3>Interactivité</h3>
+    <p>Survolez une bande de relais pour afficher ses détails dans un panneau ci-dessous (numéro, horaires, durée, tours, badge de complétion).</p>
+
+    <h3>Legende</h3>
+    <p>Les icônes indiquent les heures critiques (départ/fin), les phases jour/nuit, et si tu es le pilote courant ta ligne est surlignée en accent.</p>
+
+    <!-- ═══════════════════════════════════════════ -->
+    <h2 id="onglet-performances">Équipage — Onglet 5. Performances</h2>
+
+    <div class="tabs-demo">
+      <div class="tab">Pilotes</div>
+      <div class="tab">Disponibilités</div>
+      <div class="tab">Relais</div>
+      <div class="tab">Planning</div>
+      <div class="tab active">Performances</div>
+      <div class="tab">Course</div>
+    </div>
+    <div class="spacer"></div>
+
+    <p>Tableau des données de performance : chronométrages et consommations par pilote, par condition (jour sec, pluie, nuit). Ces données alimentent les calculs de tours et carburant du tab Relais.</p>
+
+    <h3>Structure jour et nuit</h3>
+    <p>Chaque pilote a deux lignes : <strong>jour</strong> (données secs/pluie) et <strong>🌙 nuit</strong> (données spécifiques nuit, optionnelles). Les valeurs affichées avec <code>*</code> ou <code>~</code> utilisent des fallbacks (modificateurs équipage ou données d'autres conditions).</p>
+
+    <h3>Modificateurs d'équipage</h3>
+    <p>Trois champs éditables au-dessus du tableau (auto-save on blur) :</p>
+    <ul>
+      <li><strong>💧 Pluie jour</strong> — Secondes à ajouter au chrono sec pour estimer la pluie jour.</li>
+      <li><strong>🌙☀️ Nuit sec</strong> — Offset pour estimer nuit-sec si le pilote n'a pas ces données.</li>
+      <li><strong>🌙💧 Nuit pluie</strong> — Offset pour nuit + pluie si le pilote n'a pas ces données.</li>
+    </ul>
+
+    <h3>Remplir tes données</h3>
+    <p>Clique <strong>« Modifier »</strong> à la fin de ta ligne. Format chrono : <code>M:SS.mmm</code> (ex : 1:52.345). Conso en L/tour. Ces données sont <strong>critiques</strong> — elles alimentent les calculs de stratégie. S'il manque données, le système utilise les modificateurs d'équipage ou la moyenne équipe.</p>
+
+    <div class="callout info">
+      <div class="callout-icon">ℹ️</div>
+      <div class="callout-body"><strong>Données nuit optionnelles :</strong> Si tu n'as pas de chrono nuit spécifique, le système ajoute l'offset nuit_sec/nuit_wet à tes données jour. Cela permet une estimation précise même sans tests nuit.</div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════ -->
+    <h2 id="onglet-course">Équipage — Onglet 6. 🏁 Course</h2>
+
+    <div class="tabs-demo">
+      <div class="tab">Pilotes</div>
+      <div class="tab">Disponibilités</div>
+      <div class="tab">Relais</div>
+      <div class="tab">Planning</div>
+      <div class="tab">Performances</div>
+      <div class="tab active">Course</div>
+    </div>
+    <div class="spacer"></div>
+
+    <p>Mode live pendant la course. Affiche l'état actuel, le relais en cours, le temps restant, le prochain pilote, et permet de marquer les pit stops en temps réel.</p>
+
+    <h3>États de la course</h3>
+    <div class="states">
+      <div class="state-cell state-neutral">⏳ Avant course</div>
+      <div class="state-cell state-yes">🟢 En course</div>
+      <div class="state-cell state-no">⚠️ Dépassement</div>
+      <div class="state-cell state-no">🏁 Terminée</div>
+    </div>
+
+    <h3>Affichage principal</h3>
+    <p>Une grande card affiche le nom du pilote courant, l'heure de départ et fin estimée, le temps restant (gros compteur). Quand la course est très proche de la fin, la couleur passe à orange (fenêtre de stand) puis rouge (dépassement).</p>
+
+    <h3>Actions pendant la course</h3>
+    <ul>
+      <li><strong>Marquer arrêt au stand</strong> — Enregistre l'heure réelle du pit stop pour le relais actif. L'app bascule automatiquement au relais suivant.</li>
+      <li><strong>Marquer fin relais précédent</strong> — Si un relais a été accidentellement "skippé", retrouver et le timestamper pour mettre à jour l'historique.</li>
+      <li><strong>Annuler dernier arrêt</strong> — Revert le pit stop le plus récent (utile en cas d'erreur).</li>
+    </ul>
+
+    <h3>Bilan carburant</h3>
+    <p>Une fois des relais complétés, un tableau résume consommation réelle vs prévue avec écart par relais. Écart cumulé en vert (sous budget) ou rouge (déficit). Les valeurs estimées affichent des petits marqueurs pour indiquer leur fiabilité.</p>
+
+    <h3>Synchronisation en temps réel</h3>
+    <p>Si un autre membre de l'équipe marque un pit stop dans le tab Relais ou Race Mode, cet onglet se met à jour automatiquement via WebSocket.</p>
+
+    <div class="callout tip">
+      <div class="callout-icon">💡</div>
+      <div class="callout-body"><strong>Pendant la course :</strong> Garde cet onglet ouvert pendant tes relais pour tracker facilement l'avancée. Les vraies données collectées alimentent l'onglet Performances après la course.</div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════ -->
+    <h2 id="inventaire">Inventaire</h2>
+
+    <p>Matrice croisée <strong>voitures × circuits</strong> : qui possède quelle voiture et maîtrise quel circuit.</p>
+
+    <ul>
+      <li><strong>Colonnes</strong> — Les circuits disponibles.</li>
+      <li><strong>Lignes</strong> — Les voitures disponibles.</li>
+      <li><strong>Cellules</strong> — Noms des pilotes (abrégés) qui maîtrisent cette combo voiture/circuit.</li>
+    </ul>
+
+    <p>Utile pour planifier : si tu dois choisir une voiture-circuit, tu vois instantanément qui peut la piloter.</p>
+
+    <!-- ═══════════════════════════════════════════ -->
+    <h2 id="profil">Profil</h2>
+
+    <p>Page personnelle du pilote affichant :</p>
+
+    <ul>
+      <li><strong>Infos de base</strong> — Nom, email, iRacing ID.</li>
+      <li><strong>iRating actuel</strong> — Mis à jour automatiquement lors de syncs iRacing.</li>
+      <li><strong>Historique iRating</strong> — Graphique multi-license (si applicable) avec courbes par catégorie (Sports Car, Formula, etc.).</li>
+      <li><strong>Stats de pilote</strong> — Summary cards (podia, victoires, etc.), graphiques de performance, tableau de lap times, efficacité carburant par circuit.</li>
+      <li><strong>Paramètres</strong> — Discord ID (pour les notifications), Twitch, notes personnelles.</li>
+    </ul>
+
+    <div class="callout note">
+      <div class="callout-icon">📝</div>
+      <div class="callout-body"><strong>Permissions :</strong> Seuls les admins peuvent modifier l'iRating et le Discord ID d'autres pilotes. Chacun peut éditer son propre Twitch et notes.</div>
+    </div>
+
+  </main>
+
+</div>
+</body>
+</html>

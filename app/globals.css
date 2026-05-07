@@ -385,3 +385,12 @@ input[type="number"].no-arrows {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.3; }
 }
+
+html {
+  scroll-behavior: smooth;
+}
+
+/* Prevent layout shift when clicking hash links */
+a[href^="#"] {
+  scroll-padding-top: 0;
+}

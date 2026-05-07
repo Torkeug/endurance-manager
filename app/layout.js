@@ -27,10 +27,10 @@ export const metadata = {
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="fr" className={`${rajdhani.variable} ${dmMono.variable}`}>
-      <body>
+    <html lang="fr" className={`${rajdhani.variable} ${dmMono.variable}`} data-scroll-behavior="smooth">
+      <body className="h-screen flex flex-col overflow-hidden">
         <Nav />
-        <main>{children}</main>
+        <main className="flex-1 overflow-auto">{children}</main>
       </body>
     </html>
   );
