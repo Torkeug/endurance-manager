@@ -867,7 +867,7 @@ export default function SettingsManager({
                 </tr>
               </thead>
               <tbody>
-                {signupTags.map((tag) => (
+                {[...signupTags].sort((a, b) => a.name.localeCompare(b.name)).map((tag) => (
                   <tr key={tag.id} style={{ opacity: savingTag === tag.id ? 0.5 : 1 }}>
                     <td style={TD}>
                       <span style={{ fontSize: "0.82rem", fontWeight: 600, padding: "0.15rem 0.55rem", borderRadius: "3px", background: "var(--surface-2)", border: "1px solid var(--border)", color: "var(--text)" }}>
