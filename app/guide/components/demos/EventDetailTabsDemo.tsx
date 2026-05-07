@@ -1,3 +1,6 @@
+"use client";
+import { useEffect, useRef } from "react";
+
 const TABS = [
   { id: "inscriptions", label: "Inscriptions", count: 8 },
   { id: "equipages", label: "Équipages", count: 3 },
@@ -6,6 +9,12 @@ const TABS = [
 ];
 
 export default function EventDetailTabsDemo({ activeTab = "inscriptions" }: { activeTab?: string }) {
+  const activeRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    activeRef.current?.scrollIntoView({ inline: "nearest", block: "nearest" });
+  }, [activeTab]);
+
   return (
     <div
       style={{
@@ -22,6 +31,7 @@ export default function EventDetailTabsDemo({ activeTab = "inscriptions" }: { ac
         return (
           <div
             key={tab.id}
+            ref={isActive ? activeRef : null}
             style={{
               padding: "0.6rem 1.25rem",
               borderBottom: isActive ? "2px solid var(--accent)" : "2px solid transparent",
