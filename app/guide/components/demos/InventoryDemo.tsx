@@ -51,9 +51,11 @@ export default function InventoryDemo() {
             </th>
             {/* Driver col headers — vertical text */}
             {DRIVERS.map((d) => (
-              <th key={d} style={{ background: "var(--surface-2)", borderBottom: "2px solid var(--border)", width: CELL_W, verticalAlign: "bottom", padding: "0 0 6px 0", textAlign: "center" }}>
-                <div style={{ writingMode: "vertical-rl", transform: "rotate(180deg)", fontSize: "0.68rem", fontWeight: 700, color: "var(--text-dim)", whiteSpace: "nowrap", lineHeight: CELL_W + "px" }}>
-                  {d}
+              <th key={d} style={{ background: "var(--surface-2)", borderBottom: "2px solid var(--border)", width: CELL_W, padding: 0, overflow: "hidden", boxSizing: "border-box" }}>
+                <div style={{ display: "flex", justifyContent: "center", alignItems: "flex-end", height: `${HEADER_H}px`, paddingBottom: "0.25rem" }}>
+                  <span style={{ writingMode: "vertical-rl", transform: "rotate(180deg)", fontSize: "0.68rem", fontWeight: 700, color: "var(--text-dim)", whiteSpace: "nowrap" }}>
+                    {d}
+                  </span>
                 </div>
               </th>
             ))}
@@ -87,8 +89,10 @@ export default function InventoryDemo() {
                     {/* Driver cells */}
                     {car.owned.map((has, di) => (
                       <td key={di} style={{ borderBottom: "1px solid var(--border)", width: CELL_W, textAlign: "center", padding: "0.25rem 0" }}>
-                        {has && (
-                          <div style={{ width: "10px", height: "10px", borderRadius: "50%", background: "var(--accent)", margin: "0 auto", opacity: 0.85 }} />
+                        {has ? (
+                          <span style={{ color: "var(--accent)", fontWeight: 700 }}>✓</span>
+                        ) : (
+                          <span style={{ color: "var(--text-dim)", opacity: 0.35 }}>—</span>
                         )}
                       </td>
                     ))}
