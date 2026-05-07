@@ -233,7 +233,7 @@ function SignupForm({
       team_entry_id: carEntryId || null,
       preferred_start_time_ids:
         preferredStartTimeIds.length > 0 ? preferredStartTimeIds : null,
-      tags: selectedTags.length > 0 ? selectedTags : null,
+      tags: selectedTags.length > 0 ? [...selectedTags].sort() : null,
     };
     let err;
     if (signup?.id) {

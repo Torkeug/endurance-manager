@@ -67,7 +67,7 @@ export default function InscriptionsDemo() {
                 <td style={TD}>
                   {r.tags.length > 0 ? (
                     <div style={{ display: "flex", flexWrap: "wrap", gap: "0.25rem" }}>
-                      {r.tags.map((tag) => (
+                      {[...r.tags].sort().map((tag) => (
                         <span key={tag} style={{ fontSize: "0.72rem", fontWeight: 600, padding: "0.1rem 0.45rem", borderRadius: "3px", background: "var(--surface-2)", border: "1px solid var(--border)", color: "var(--text-dim)", whiteSpace: "nowrap" }}>
                           {tag}
                         </span>
