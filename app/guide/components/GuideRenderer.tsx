@@ -45,8 +45,13 @@ function renderBlock(block: any, i: number) {
   }
   if (block.type === "feature-list") return <FeatureList key={i} items={block.items} />;
   if (block.type === "component-demo") return (
-    <div key={i} style={{ margin: "1.75rem 0", overflowX: "auto" }}>
-      <ComponentDemo type={block.componentType} config={block.config} />
+    <div key={i} style={{ margin: "2.5rem 0" }}>
+      <div style={{ fontSize: "0.6rem", fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", color: "var(--text-dim)", marginBottom: "0.5rem", paddingLeft: "0.1rem" }}>
+        Aperçu
+      </div>
+      <div style={{ border: "1px solid var(--border)", borderTop: "2px solid var(--accent)", borderRadius: "4px", padding: "1.5rem", background: "var(--bg)", overflowX: "auto" }}>
+        <ComponentDemo type={block.componentType} config={block.config} />
+      </div>
     </div>
   );
   if (block.type === "states") return <div key={i} style={{ margin: "1rem 0" }}><States items={block.items} /></div>;
