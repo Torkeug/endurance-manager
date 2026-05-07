@@ -2954,7 +2954,7 @@ export default function StintGrid({
                         : "rgba(46,180,96,0.12)"
                       : i % 2 === 0
                         ? "transparent"
-                        : "rgba(255,255,255,0.05)";
+                        : "var(--zebra)";
               // First-cell border style — applied to the # <td> instead of <tr> background,
               // since <tr> background positioning is unreliable with border-collapse: collapse.
               // inset box-shadow for single colors, background gradient for compound splits.

@@ -12,6 +12,7 @@
   --text-dim: #9090c0;
   --danger: #e05555;
   --success: #3aaa70;
+  --zebra: rgba(255,255,255,0.05);
 }
 
 [data-theme="light"] {
@@ -25,6 +26,7 @@
   --text-dim: #555580;
   --danger: #cc3333;
   --success: #1a8050;
+  --zebra: rgba(0,0,0,0.04);
 }
 
 * {
