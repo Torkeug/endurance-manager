@@ -2808,10 +2808,10 @@ export default function StintGrid({
             <tr>
               <th style={{ ...TH, width: "28px" }}>#</th>
               <th style={{ ...TH, minWidth: "130px" }}>Pilote</th>
-              <th style={{ ...TH, ...GS }}>Départ IRL</th>
-              <th style={TH}>Fin IRL</th>
+              <th style={{ ...TH, ...GS, textAlign: "center" }}>Départ IRL</th>
+              <th style={{ ...TH, textAlign: "center" }}>Fin IRL</th>
               {!archived && (
-                <th style={{ ...TH, minWidth: "110px" }}>Fin réelle</th>
+                <th style={{ ...TH, minWidth: "110px", textAlign: "center" }}>Fin réelle</th>
               )}
               <th style={{ ...TH, ...GS, width: "68px" }}>Durée</th>
               <th style={{ ...TH, width: "52px" }}>Tours</th>
@@ -3178,14 +3178,14 @@ export default function StintGrid({
                   </td>
 
                   {/* IRL start */}
-                  <td style={{ ...TD, ...GS }}>
+                  <td style={{ ...TD, ...GS, textAlign: "center" }}>
                     <span className="mono" style={{ fontSize: "0.75rem" }}>
                       {stint._irlStart ? formatDatetime(stint._irlStart) : "—"}
                     </span>
                   </td>
 
                   {/* IRL end */}
-                  <td style={TD}>
+                  <td style={{ ...TD, textAlign: "center" }}>
                     <span
                       className="mono"
                       style={{
@@ -3220,7 +3220,7 @@ export default function StintGrid({
                   {/* Actual end */}
                   {!archived && (
                     <td
-                      style={{ ...TD, padding: "4px 6px", minWidth: "110px" }}
+                      style={{ ...TD, padding: "4px 6px", minWidth: "110px", textAlign: "center" }}
                     >
                       <ActualEndInput
                         plannedEnd={stint._irlEnd}
