@@ -2071,7 +2071,7 @@ export default function StintGrid({
     zIndex: 2,
   };
   const GS = { borderLeft: "2px solid var(--border)" }; // group separator
-  const IS = { borderLeft: "1px solid var(--border)" }; // inner separator
+  const IS = { borderLeft: "1px solid var(--border-dim)" }; // inner separator
 
   const TD = {
     padding: "0.35rem 0.5rem",
@@ -2808,7 +2808,7 @@ export default function StintGrid({
           <thead>
             <tr>
               <th style={{ ...TH, width: "28px" }}>#</th>
-              <th style={{ ...TH, minWidth: "130px" }}>Pilote</th>
+              <th style={{ ...TH, minWidth: "130px", textAlign: "left" }}>Pilote</th>
               <th style={{ ...TH, ...GS, textAlign: "center" }}>Départ IRL</th>
               <th style={{ ...TH, ...IS, textAlign: "center" }}>Fin IRL</th>
               {!archived && (
