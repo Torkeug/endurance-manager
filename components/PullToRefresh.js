@@ -15,18 +15,29 @@ export default function PullToRefresh({ children }) {
     const el = containerRef.current;
     if (!el) return;
 
-    const onScroll = () => {
-      if (el.scrollTop > 0) {
-        recentlyScrolledRef.current = true;
-        clearTimeout(scrollTimerRef.current);
-        scrollTimerRef.current = setTimeout(() => {
-          recentlyScrolledRef.current = false;
-        }, 350);
-      }
+    const markScrolled = () => {
+      recentlyScrolledRef.current = true;
+      clearTimeout(scrollTimerRef.current);
+      scrollTimerRef.current = setTimeout(() => {
+        recentlyScrolledRef.current = false;
+      }, 350);
+    };
+
+    // capture: true catches scroll on nested containers (scroll doesn't bubble)
+    const onAnyScroll = (e) => {
+      const target = e.target;
+      if (!el.contains(target) && target !== el) return;
+      if (target.scrollTop > 0) markScrolled();
     };
 
     const onTouchStart = (e) => {
       if (el.scrollTop > 0 || recentlyScrolledRef.current) return;
+      // also reject if the touch originates inside a nested scrolled container
+      let node = e.target;
+      while (node && node !== el) {
+        if (node.scrollTop > 0) return;
+        node = node.parentElement;
+      }
       startYRef.current = e.touches[0].clientY;
     };
 
@@ -55,12 +66,12 @@ export default function PullToRefresh({ children }) {
       setPull(0);
     };
 
-    el.addEventListener("scroll", onScroll, { passive: true });
+    document.addEventListener("scroll", onAnyScroll, { passive: true, capture: true });
     el.addEventListener("touchstart", onTouchStart, { passive: true });
     el.addEventListener("touchmove", onTouchMove, { passive: false });
     el.addEventListener("touchend", onTouchEnd, { passive: true });
     return () => {
-      el.removeEventListener("scroll", onScroll);
+      document.removeEventListener("scroll", onAnyScroll, { capture: true });
       el.removeEventListener("touchstart", onTouchStart);
       el.removeEventListener("touchmove", onTouchMove);
       el.removeEventListener("touchend", onTouchEnd);
