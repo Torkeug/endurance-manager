@@ -503,16 +503,40 @@ export default function RaceMode({
     if (!stint || archived || saving || !isInRace) return;
     setSaving(true);
     const actualEnd = new Date().toISOString();
-    // Optimistic update — instant UI response before realtime confirms
+
+    // Compute pit stop duration to propagate the stamp to the next stint's irl_start.
+    // Uses fixed refuel fallback — StintGrid will correct variable-rate cars on next Relais open.
+    const pitLane = teamEntry?.events?.circuits?.pit_lane_time_seconds || 0;
+    const tyreChange = teamEntry?.tyre_change_time_seconds || 0;
+    const refuel = teamEntry?.refuel_time_seconds || 0;
+    const pitStopSec = pitLane + refuel + (stint.tyre_change ? tyreChange : 0);
+    const stintIndex = stints.findIndex((s) => s.id === stint.id);
+    const nextStint = stintIndex >= 0 ? (stints[stintIndex + 1] ?? null) : null;
+    const nextIrlStart = nextStint
+      ? new Date(new Date(actualEnd).getTime() + pitStopSec * 1000).toISOString()
+      : null;
+
+    // Optimistic update — instant UI response before DB confirms
     setStints((prev) =>
-      prev.map((s) =>
-        s.id === stint.id ? { ...s, irl_end_actual: actualEnd } : s,
-      ),
+      prev.map((s) => {
+        if (s.id === stint.id) return { ...s, irl_end_actual: actualEnd };
+        if (nextStint && s.id === nextStint.id) return { ...s, irl_start: nextIrlStart };
+        return s;
+      }),
     );
+
     await supabase
       .from("stints")
       .update({ irl_end_actual: actualEnd })
       .eq("id", stint.id);
+
+    if (nextStint && nextIrlStart) {
+      await supabase
+        .from("stints")
+        .update({ irl_start: nextIrlStart })
+        .eq("id", nextStint.id);
+    }
+
     setSaving(false);
   };
 

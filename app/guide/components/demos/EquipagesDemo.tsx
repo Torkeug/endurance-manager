@@ -35,8 +35,14 @@ const TD: React.CSSProperties = { padding: "0.5rem 0.65rem", borderBottom: "1px 
 
 import type { CSSProperties } from "react";
 
-export default function EquipagesDemo() {
+export default function EquipagesDemo({ showCreate }: { showCreate?: boolean }) {
   return (
+    <div>
+      {showCreate && (
+        <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: "0.75rem" }}>
+          <button className="btn btn-primary" style={{ opacity: 0.85 }}>+ Ajouter un équipage</button>
+        </div>
+      )}
     <div className="table-wrap" style={{ overflowX: "auto" }}>
       <table style={{ borderCollapse: "collapse", width: "100%", minWidth: "580px" }}>
         <thead>
@@ -64,6 +70,7 @@ export default function EquipagesDemo() {
           ))}
         </tbody>
       </table>
+    </div>
     </div>
   );
 }

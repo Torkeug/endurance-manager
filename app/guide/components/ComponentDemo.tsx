@@ -15,6 +15,7 @@ import PerformancesDemo from "./demos/PerformancesDemo";
 import CourseDemo from "./demos/CourseDemo";
 import StartTimesDemo from "./demos/StartTimesDemo";
 import InventoryDemo from "./demos/InventoryDemo";
+import NewEquipageDemo from "./demos/NewEquipageDemo";
 
 interface ComponentDemoProps {
   type: string;
@@ -32,7 +33,7 @@ export default function ComponentDemo({ type, config }: ComponentDemoProps) {
     case "profil":             return <ProfilDemo />;
     case "inscription-form":   return <InscriptionFormDemo />;
     case "inscriptions":       return <InscriptionsDemo />;
-    case "equipages-list":     return <EquipagesDemo />;
+    case "equipages-list":     return <EquipagesDemo {...config} />;
     case "availability":       return <AvailabilityDemo />;
     case "stint-grid":         return <StintGridDemo />;
     case "planning":           return <PlanningDemo />;
@@ -40,6 +41,7 @@ export default function ComponentDemo({ type, config }: ComponentDemoProps) {
     case "course":             return <CourseDemo />;
     case "horaires":           return <StartTimesDemo />;
     case "inventory":          return <InventoryDemo />;
+    case "new-equipage":       return <NewEquipageDemo />;
     default:
       return <div style={{ color: "var(--danger)" }}>Unknown component type: {type}</div>;
   }

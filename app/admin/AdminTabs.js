@@ -30,6 +30,7 @@ export default function AdminTabs({
   settings,
   durationPresets,
   specialStartTimes,
+  signupTags,
   iracingCars,
   iracingTracks,
 }) {
@@ -136,6 +137,7 @@ export default function AdminTabs({
             settings?.default_event_duration_minutes || "160",
           )}
           initialSpecialStartTimes={specialStartTimes}
+          initialSignupTags={signupTags}
         />
       )}
     </div>

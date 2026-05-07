@@ -6,12 +6,12 @@ import { Fragment } from "react";
 
 const DRIVERS = ["Marc D.", "Léa F.", "Théo B.", "Jules M."];
 
-const CARS: Array<{ name: string; class: string; kronos: boolean; owned: boolean[] }> = [
-  { name: "Audi R8 LMS GT3 Evo 2",          class: "GT3",  kronos: true,  owned: [true,  false, false, true ] },
-  { name: "Ferrari 488 GT3 Evo 2022",        class: "GT3",  kronos: false, owned: [false, true,  false, false] },
-  { name: "Porsche 911 GT3 R (992)",          class: "GT3",  kronos: true,  owned: [true,  true,  false, false] },
-  { name: "Ferrari 488 GTE",                  class: "GTE",  kronos: false, owned: [false, false, true,  false] },
-  { name: "Oreca 07 Gibson",                  class: "LMP2", kronos: false, owned: [false, false, true,  false] },
+const CARS: Array<{ name: string; class: string; kronos: boolean; free: boolean; owned: boolean[] }> = [
+  { name: "Audi R8 LMS GT3 Evo 2",          class: "GT3",  kronos: true,  free: false, owned: [true,  false, false, true ] },
+  { name: "Ferrari 488 GT3 Evo 2022",        class: "GT3",  kronos: false, free: false, owned: [false, true,  false, false] },
+  { name: "Porsche 911 GT3 R (992)",          class: "GT3",  kronos: true,  free: false, owned: [true,  true,  false, false] },
+  { name: "Ferrari 488 GTE",                  class: "GTE",  kronos: false, free: true,  owned: [true,  true,  true,  true ] },
+  { name: "Oreca 07 Gibson",                  class: "LMP2", kronos: false, free: false, owned: [false, false, true,  false] },
 ];
 
 const NAME_W = 210;
@@ -22,7 +22,13 @@ const HEADER_H = 110;
 
 function KBadge() {
   return (
-    <span style={{ fontSize: "0.55rem", fontWeight: 700, color: "#fff", background: "var(--accent)", border: "1px solid var(--accent)", padding: "0px 3px", borderRadius: "2px", marginLeft: "4px", verticalAlign: "middle" }}>K</span>
+    <span style={{ fontSize: "0.55rem", fontWeight: 700, color: "var(--accent)", border: "1px solid var(--accent)", padding: "0px 3px", borderRadius: "2px", marginLeft: "4px", verticalAlign: "middle" }}>K</span>
+  );
+}
+
+function FreeBadge() {
+  return (
+    <span style={{ fontSize: "0.55rem", fontWeight: 700, color: "#50c878", border: "1px solid #50c878", padding: "0px 3px", borderRadius: "2px", marginLeft: "4px", verticalAlign: "middle" }}>iR+</span>
   );
 }
 
@@ -72,6 +78,7 @@ export default function InventoryDemo() {
                     <td style={{ position: "sticky", left: 0, background: "var(--surface)", zIndex: 1, boxShadow: "inset -1px 0 0 var(--border)", borderBottom: "1px solid var(--border)", width: NAME_W, maxWidth: NAME_W, padding: "0.3rem 0.75rem", fontSize: "0.8rem", overflow: "hidden" }}>
                       {car.name}
                       {car.kronos && <KBadge />}
+                      {car.free && <FreeBadge />}
                     </td>
                     {/* Count */}
                     <td style={{ position: "sticky", left: NAME_W, background: "var(--surface)", zIndex: 1, boxShadow: "inset -1px 0 0 var(--border)", borderBottom: "1px solid var(--border)", width: COUNT_W, textAlign: "center", fontFamily: "var(--font-mono), monospace", fontSize: "0.75rem", fontWeight: 700, color: count > 0 ? "var(--accent)" : "var(--text-dim)" }}>

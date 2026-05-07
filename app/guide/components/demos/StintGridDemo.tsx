@@ -59,9 +59,83 @@ const MONO: CSSProperties = {
   fontSize: "0.8rem",
 };
 
+const STRATEGIES = [
+  { id: 1, name: "Plan A", desc: "Météo sèche — nominal", offset: 0,  active: true  },
+  { id: 2, name: "Plan B", desc: "Pluie probable",         offset: 3,  active: false },
+];
+
 export default function StintGridDemo() {
   return (
     <div>
+      {/* ── Strategy tabs ── */}
+      <div style={{ display: "flex", gap: "0.25rem", marginBottom: "0.75rem", flexWrap: "wrap" }}>
+        {STRATEGIES.map((s, i) => (
+          <div
+            key={s.id}
+            style={{
+              padding: "0.3rem 0.85rem",
+              borderRadius: "3px",
+              fontSize: "0.8rem",
+              fontWeight: 700,
+              fontFamily: "var(--font-rajdhani), sans-serif",
+              letterSpacing: "0.05em",
+              cursor: "default",
+              background: i === 0 ? "var(--accent)" : "var(--surface-2)",
+              color: i === 0 ? "#000" : "var(--text-dim)",
+              border: i === 0 ? "1px solid var(--accent)" : "1px solid var(--border)",
+            }}
+          >
+            {s.name}
+          </div>
+        ))}
+        <div style={{
+          padding: "0.3rem 0.75rem",
+          borderRadius: "3px",
+          fontSize: "0.8rem",
+          cursor: "default",
+          background: "var(--surface-2)",
+          color: "var(--text-dim)",
+          border: "1px solid var(--border)",
+        }}>
+          + Nouvelle
+        </div>
+      </div>
+
+      {/* ── Strategy metadata ── */}
+      <div style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap", alignItems: "flex-end", marginBottom: "0.75rem", padding: "0.65rem 0.85rem", background: "var(--surface-2)", border: "1px solid var(--border)", borderRadius: "4px" }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: "0.2rem" }}>
+          <span style={{ fontSize: "0.62rem", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "var(--text-dim)" }}>Nom</span>
+          <div style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "3px", padding: "0.28rem 0.5rem", fontSize: "0.82rem", fontWeight: 700, fontFamily: "var(--font-rajdhani), sans-serif", color: "var(--text)", minWidth: "90px" }}>Plan A</div>
+        </div>
+        <div style={{ display: "flex", flexDirection: "column", gap: "0.2rem", flex: 1, minWidth: "160px" }}>
+          <span style={{ fontSize: "0.62rem", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "var(--text-dim)" }}>Description</span>
+          <div style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "3px", padding: "0.28rem 0.5rem", fontSize: "0.82rem", color: "var(--text-dim)" }}>Météo sèche — nominal</div>
+        </div>
+        <div style={{ display: "flex", flexDirection: "column", gap: "0.2rem" }}>
+          <span style={{ fontSize: "0.62rem", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "var(--text-dim)" }}>Décalage départ</span>
+          <div style={{ display: "flex", alignItems: "center", gap: "0.35rem" }}>
+            <div style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "3px", padding: "0.28rem 0.5rem", fontSize: "0.82rem", fontFamily: "var(--font-mono), monospace", color: "var(--text)", width: "36px", textAlign: "right" }}>0</div>
+            <span style={{ fontSize: "0.82rem", color: "var(--text-dim)" }}>min</span>
+          </div>
+        </div>
+        <span style={{ fontSize: "0.75rem", color: "#c9a84c", padding: "0.3rem 0.6rem", background: "rgba(201,168,76,0.08)", border: "1px solid rgba(201,168,76,0.3)", borderRadius: "3px", whiteSpace: "nowrap" }}>★ Active</span>
+      </div>
+
+      {/* ── Summary bar ── */}
+      <div style={{ display: "flex", gap: "0.5rem", marginBottom: "0.75rem", flexWrap: "wrap" }}>
+        {[
+          { label: "Départ",     value: "14:00" },
+          { label: "Fin course", value: "23:00" },
+          { label: "Relais",     value: "5" },
+          { label: "Fin prévue", value: "23:02", color: "#2eb460" },
+        ].map(({ label, value, color }) => (
+          <div key={label} style={{ background: "var(--surface-2)", border: "1px solid var(--border)", borderRadius: "4px", padding: "0.5rem 0.85rem", flex: 1, minWidth: "100px" }}>
+            <div style={{ fontSize: "0.62rem", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "var(--text-dim)", marginBottom: "0.15rem" }}>{label}</div>
+            <div style={{ fontFamily: "var(--font-mono), monospace", fontSize: "0.88rem", fontWeight: 700, color: color ?? "var(--text)" }}>{value}</div>
+          </div>
+        ))}
+      </div>
+
       {/* Legend — availability dots */}
       <div style={{ display: "flex", gap: "1rem", marginBottom: "0.35rem", fontSize: "0.72rem", color: "var(--text-dim)", flexWrap: "wrap", alignItems: "center" }}>
         <span style={{ fontWeight: 700, color: "var(--text)" }}>Dispo :</span>

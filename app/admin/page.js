@@ -30,6 +30,7 @@ export default async function AdminPage() {
     { data: iracingTracks },
     { data: allCarOwnership },
     { data: allTrackOwnership },
+    { data: signupTags },
   ] = await Promise.all([
     supabase.from("circuits").select("*, iracing_track_id").order("name"),
     supabase.from("cars").select("*").order("class").order("name"),
@@ -64,6 +65,7 @@ export default async function AdminPage() {
     supabase
       .from("driver_track_ownership")
       .select("driver_id, track_name, track_category"),
+    supabase.from("signup_tags").select("*").order("sort_order").order("name"),
   ]);
 
   // Reshape settings rows into a plain key→value object for easier prop passing
@@ -188,6 +190,7 @@ export default async function AdminPage() {
         settings={settings}
         durationPresets={durationPresets || []}
         specialStartTimes={specialStartTimes || []}
+        signupTags={signupTags || []}
         iracingCars={iracingCars || []}
         matrixDrivers={matrixDrivers}
         allCarsMatrix={allCarsMatrix}

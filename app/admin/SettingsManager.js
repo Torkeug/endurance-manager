@@ -60,6 +60,7 @@ export default function SettingsManager({
   initialPresets,
   initialDefaultDuration,
   initialSpecialStartTimes,
+  initialSignupTags,
 }) {
   const router = useRouter();
   const [presets, setPresets] = useState(initialPresets || []);
@@ -85,6 +86,54 @@ export default function SettingsManager({
   const [editStM, setEditStM] = useState("");
   const [editStDay, setEditStDay] = useState("vendredi");
   const [confirmModal, setConfirmModal] = useState(null);
+
+  // Signup tags state
+  const [signupTags, setSignupTags] = useState(
+    [...(initialSignupTags || [])].sort((a, b) => a.sort_order - b.sort_order || a.name.localeCompare(b.name)),
+  );
+  const [addingTag, setAddingTag] = useState(false);
+  const [newTagName, setNewTagName] = useState("");
+  const [savingTag, setSavingTag] = useState(null);
+
+  const handleAddTag = async () => {
+    const name = newTagName.trim();
+    if (!name) { setError("Nom de tag requis."); return; }
+    if (signupTags.find((t) => t.name.toLowerCase() === name.toLowerCase())) {
+      setError("Ce tag existe déjà.");
+      return;
+    }
+    setSavingTag("new");
+    setError(null);
+    const { data, error: err } = await supabase
+      .from("signup_tags")
+      .insert([{ name, sort_order: signupTags.length }])
+      .select()
+      .single();
+    if (err) { setError(err.message); setSavingTag(null); return; }
+    setSignupTags((prev) => [...prev, data]);
+    setNewTagName("");
+    setAddingTag(false);
+    setSavingTag(null);
+    router.refresh();
+  };
+
+  const handleDeleteTag = (id) => {
+    setConfirmModal({
+      title: "Supprimer ce tag",
+      message: "Ce tag sera supprimé. Les inscriptions existantes qui l'utilisaient conserveront le nom en texte.",
+      confirmLabel: "Supprimer",
+      onConfirm: async () => {
+        setConfirmModal(null);
+        setSavingTag(id);
+        setError(null);
+        const { error: err } = await supabase.from("signup_tags").delete().eq("id", id);
+        if (err) { setError(err.message); setSavingTag(null); return; }
+        setSignupTags((prev) => prev.filter((t) => t.id !== id));
+        setSavingTag(null);
+        router.refresh();
+      },
+    });
+  };
 
   // Default duration state
   const [defaultDuration, setDefaultDuration] = useState(
@@ -769,6 +818,76 @@ export default function SettingsManager({
 
         {specialTimes.length === 0 && !addingSpecial && (
           <div className="empty">Aucun horaire prédéfini configuré.</div>
+        )}
+      </div>
+
+      {/* Signup tags */}
+      <div className="card" style={{ marginTop: "1.5rem" }}>
+        <h3 style={{ marginBottom: "1.25rem", color: "var(--text-dim)" }}>
+          Tags d&apos;inscription
+        </h3>
+
+        {addingTag && (
+          <div style={{ background: "var(--surface-2)", padding: "1rem", borderRadius: "3px", marginBottom: "0.75rem" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", flexWrap: "wrap", marginBottom: "0.75rem" }}>
+              <input
+                type="text"
+                value={newTagName}
+                onChange={(e) => setNewTagName(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && handleAddTag()}
+                placeholder="ex : chill, compet, solo…"
+                autoFocus
+                style={{ flex: 1, minWidth: "160px", padding: "0.45rem 0.65rem", background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "3px", color: "var(--text)", fontSize: "0.9rem", fontFamily: "var(--font-rajdhani), sans-serif" }}
+              />
+            </div>
+            <div style={{ display: "flex", gap: "0.5rem" }}>
+              <button onClick={handleAddTag} className="btn btn-primary" disabled={savingTag === "new"}>
+                {savingTag === "new" ? "…" : "✓ Ajouter"}
+              </button>
+              <button onClick={() => { setAddingTag(false); setNewTagName(""); setError(null); }} className="btn btn-secondary">
+                Annuler
+              </button>
+            </div>
+          </div>
+        )}
+
+        {!addingTag && (
+          <button onClick={() => setAddingTag(true)} className="btn btn-primary" style={{ marginBottom: "0.75rem" }}>
+            + Ajouter un tag
+          </button>
+        )}
+
+        {signupTags.length > 0 && (
+          <div className="table-wrap">
+            <table style={{ width: "100%", borderCollapse: "collapse" }}>
+              <thead>
+                <tr>
+                  <th style={TH}>Tag</th>
+                  <th style={TH}></th>
+                </tr>
+              </thead>
+              <tbody>
+                {signupTags.map((tag) => (
+                  <tr key={tag.id} style={{ opacity: savingTag === tag.id ? 0.5 : 1 }}>
+                    <td style={TD}>
+                      <span style={{ fontSize: "0.82rem", fontWeight: 600, padding: "0.15rem 0.55rem", borderRadius: "3px", background: "var(--surface-2)", border: "1px solid var(--border)", color: "var(--text)" }}>
+                        {tag.name}
+                      </span>
+                    </td>
+                    <td style={{ ...TD, textAlign: "right" }}>
+                      <button onClick={() => handleDeleteTag(tag.id)} className="btn btn-danger btn-sm" disabled={savingTag === tag.id}>
+                        Supprimer
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+
+        {signupTags.length === 0 && !addingTag && (
+          <div className="empty">Aucun tag configuré.</div>
         )}
       </div>
     </div>

@@ -236,6 +236,11 @@ export default function EventPageTabs({
       {/* ── Tab: Inscriptions ──────────────────────────────────────────── */}
       {activeTab === "inscriptions" && (
         <div>
+          {event.archived && (
+            <div style={{ marginBottom: "1.25rem", padding: "0.65rem 0.9rem", background: "rgba(224,85,85,0.08)", border: "1px solid var(--danger)", borderRadius: "3px", fontSize: "0.82rem", color: "var(--danger)" }}>
+              📦 Cet événement est archivé — toutes les données sont en lecture seule.
+            </div>
+          )}
           <div
             style={{
               display: "flex",
@@ -278,7 +283,7 @@ export default function EventPageTabs({
                     <th>Équipe</th>
                     <th>Préférences</th>
                     <th>Créneaux</th>
-                    <th>Notes</th>
+                    <th>Tags</th>
                     <th></th>
                   </tr>
                 </thead>
@@ -422,15 +427,18 @@ export default function EventPageTabs({
                                   </span>
                                 )}
                               </td>
-                              <td
-                                style={{
-                                  color: "var(--text-dim)",
-                                  fontSize: "0.85rem",
-                                  maxWidth: "160px",
-                                  borderTop: cellBorderTop,
-                                }}
-                              >
-                                {s.notes || "—"}
+                              <td style={{ borderTop: cellBorderTop }}>
+                                {(s.tags || []).length > 0 ? (
+                                  <div style={{ display: "flex", flexWrap: "wrap", gap: "0.25rem" }}>
+                                    {(s.tags || []).map((tag) => (
+                                      <span key={tag} style={{ fontSize: "0.72rem", fontWeight: 600, padding: "0.1rem 0.45rem", borderRadius: "3px", background: "var(--surface-2)", border: "1px solid var(--border)", color: "var(--text-dim)", whiteSpace: "nowrap" }}>
+                                        {tag}
+                                      </span>
+                                    ))}
+                                  </div>
+                                ) : (
+                                  <span style={{ color: "var(--text-dim)" }}>—</span>
+                                )}
                               </td>
                               {/* Gérer — content only in first row */}
                               <td style={{ borderTop: cellBorderTop }}>
@@ -463,6 +471,11 @@ export default function EventPageTabs({
       {/* ── Tab: Équipages ─────────────────────────────────────────────── */}
       {activeTab === "equipages" && (
         <div>
+          {event.archived && (
+            <div style={{ marginBottom: "1.25rem", padding: "0.65rem 0.9rem", background: "rgba(224,85,85,0.08)", border: "1px solid var(--danger)", borderRadius: "3px", fontSize: "0.82rem", color: "var(--danger)" }}>
+              📦 Cet événement est archivé — toutes les données sont en lecture seule.
+            </div>
+          )}
           <div
             style={{
               display: "flex",

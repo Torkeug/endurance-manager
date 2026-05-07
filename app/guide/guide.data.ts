@@ -113,8 +113,8 @@ export const guide: GuideSection[] = [
       },
       {
         type: "callout",
-        variant: "note",
-        content: "Permissions : Seuls les admins peuvent modifier l'iRating et le Discord ID d'autres pilotes. Chacun peut éditer ses propres réseaux sociaux.",
+        variant: "tip",
+        content: "Le bouton « Inventaire » (visible par le pilote et les admins) affiche les voitures et circuits iRacing possédés. La synchro se relance depuis ce même profil — elle met à jour l'inventaire et l'iRating.",
       },
     ],
   },
@@ -140,12 +140,12 @@ export const guide: GuideSection[] = [
         items: [
           "Normaux — Courses avec horaires éditables.",
           "Spéciaux — Courses avec créneaux horaires fixes.",
-          "Championnats — Courses qui font partie d'une série classée.",
+          "Championnats — Séries avec plusieurs manches. Chaque manche est une course appartenant à ce championnat.",
         ],
       },
       {
         type: "text",
-        content: "Clique sur une course pour voir les détails, t'inscrire, ou gérer l'équipage (si admin).",
+        content: "Clique sur une course pour voir les détails, t'inscrire, ou gérer l'équipage.",
       },
     ],
   },
@@ -167,7 +167,7 @@ export const guide: GuideSection[] = [
         items: [
           "Va dans Événements et clique sur la course qui t'intéresse.",
           "Clique sur « S'inscrire ».",
-          "Remplis tes préférences : créneaux horaires, équipe, classes et voitures souhaitées, notes.",
+          "Remplis tes préférences : créneaux horaires, équipe, classes et voitures souhaitées, tags.",
           "Valide — tu es inscrit(e) !",
         ],
       },
@@ -179,13 +179,51 @@ export const guide: GuideSection[] = [
         type: "states",
         items: [
           { variant: "hard", label: "Hard", description: "Incompatibilité de classe entre ta préférence et la voiture de l'équipage." },
-          { variant: "soft", label: "Soft", description: "Incompatibilité de voiture ou de créneau horaire dans une classe compatible." },
+          { variant: "soft", label: "Soft", description: "Incompatibilité de voiture dans une classe compatible." },
         ],
       },
       {
         type: "callout",
         variant: "note",
         content: "Tu peux t'inscrire à plusieurs équipages au sein d'une même course. C'est utile si plusieurs teams cherchent des drivers pour le même événement.",
+      },
+    ],
+  },
+
+  {
+    id: "creation-equipage",
+    navTab: "Événements",
+    label: "Événements",
+    title: "Ajouter un équipage",
+    parent: "evenements",
+    blocks: [
+      {
+        type: "component-demo",
+        componentType: "equipages-list",
+        config: { showCreate: true },
+      },
+      {
+        type: "component-demo",
+        componentType: "new-equipage",
+        config: {},
+      },
+      {
+        type: "text",
+        content: "Accessible via le bouton « + Ajouter un équipage » dans l'onglet Équipages (non disponible pour les pilotes externes et les ingénieurs). Champs à remplir :",
+      },
+      {
+        type: "list",
+        items: [
+          "Nom d'équipage — Dropdown issu du catalogue Kronos (ex : Kronos Alpha).",
+          "Voiture — Dropdown des voitures du catalogue, filtrées par format d'événement. La classe et la taille du réservoir sont déduites automatiquement.",
+          "Numéro de course — Pour les championnats uniquement.",
+          "Horaire de départ — Sélection parmi les créneaux configurés pour cet événement.",
+          "Pilotes — Sélection parmi les pilotes inscrits à l'événement sans équipage. Les conflits de préférences (classe, voiture, horaire) sont signalés par un badge ⚠️. Les disponibilités sont pré-initialisées à « indisponible » pour chaque pilote ajouté.",
+          "Streams Twitch — Chaînes associées à cet équipage pour le suivi en direct.",
+          "BOP — Ajustements de puissance (%), poids (kg) et taille de réservoir (%) imposés par l'organisateur.",
+          "Ravitaillement & pneus — Durée des arrêts en secondes.",
+          "Alerte relais Discord — Le bot Discord alertera X minutes avant la fin de chaque relais. Laisser vide pour désactiver.",
+        ],
       },
     ],
   },
@@ -219,7 +257,7 @@ export const guide: GuideSection[] = [
           "Équipe — L'équipage auquel le pilote est affecté (pill colorée).",
           "Préférences — Classe et voitures souhaitées lors de l'inscription.",
           "Créneaux — Horaires de départ préférés.",
-          "Notes — Commentaires libres saisis lors de l'inscription.",
+          "Tags — Profil de pilote choisi lors de l'inscription (ex : chill, compet, solo, gros rouleur).",
         ],
       },
     ],
@@ -318,7 +356,7 @@ export const guide: GuideSection[] = [
           "Colonnes — Pilotes inscrits à l'événement.",
           "Point — Le pilote possède cette voiture dans son compte iRacing.",
           "Badge K — Voiture configurée dans le catalogue Kronos pour les événements.",
-          "Badge F — Contenu gratuit avec abonnement iRacing.",
+          "Badge iR+ — Contenu gratuit avec abonnement iRacing.",
           "Ta colonne est mise en surbrillance pour repérer rapidement tes contenus.",
         ],
       },
@@ -357,6 +395,22 @@ export const guide: GuideSection[] = [
         items: [
           { variant: "hard", label: "Hard", description: "Incompatibilité de classe entre la préférence du pilote et la voiture de l'équipage." },
           { variant: "soft", label: "Soft", description: "Incompatibilité de voiture ou de créneau horaire dans une classe compatible." },
+        ],
+      },
+      {
+        type: "header",
+        content: "Rejoindre ou ajouter un pilote",
+      },
+      {
+        type: "text",
+        content: "Sous le tableau des pilotes assignés, une section « Pilotes inscrits sans équipe » liste les pilotes inscrits à l'événement mais pas encore affectés à cet équipage :",
+      },
+      {
+        type: "list",
+        items: [
+          "Pilote inscrit — Clique sur ton propre nom pour rejoindre l'équipage (si tu es inscrit à l'événement mais pas encore assigné).",
+          "Admin — Peut cliquer sur n'importe quel pilote de la liste pour l'assigner à l'équipage.",
+          "Un modal propose ensuite de synchroniser les préférences de créneau horaire du pilote avec celui de l'équipage.",
         ],
       },
     ],
@@ -450,7 +504,7 @@ export const guide: GuideSection[] = [
           "# — Numéro du relais (séquentiel).",
           "Pilote — Dropdown pour assigner un pilote ou laisser « À définir ».",
           "Départ IRL / Fin IRL — Temps réels calculés automatiquement depuis l'heure de départ + durées cumulées.",
-          "Fin réelle — Remplie automatiquement quand tu marques un pit stop en Race Mode.",
+          "Fin réelle — Remplie automatiquement par Race Mode lors d'un pit stop, ou saisissable manuellement directement dans la cellule.",
           "Durée — Calculée depuis Tours × chrono + temps de ravitaillement, ou saisie manuelle.",
           "Tours — Nombre de tours planifiés (manuel ou calculé depuis une durée cible).",
           "Conso — Carburant estimé. Badge rouge si tu dépasses la capacité du réservoir.",
@@ -470,6 +524,11 @@ export const guide: GuideSection[] = [
           "~ — Modificateur à zéro, estimation conservatrice.",
           "† — Moyenne équipe, aucune donnée pilote disponible.",
         ],
+      },
+      {
+        type: "callout",
+        variant: "tip",
+        content: "Glisse-dépose les lignes du tableau pour réordonner les relais. Seuls les relais non encore démarrés peuvent être bougés.",
       },
       {
         type: "callout",
@@ -663,7 +722,7 @@ export const guide: GuideSection[] = [
         type: "list",
         items: [
           "Marquer arrêt au stand — Enregistre l'heure réelle du pit stop pour le relais actif. L'app bascule automatiquement au relais suivant.",
-          "Marquer fin relais précédent — Si un relais a été accidentellement « skippé », retrouver et le timestamper pour mettre à jour l'historique.",
+          "Marquer fin relais précédent — Visible si Race Mode a automatiquement avancé au relais N alors que le relais N−1 n'avait jamais été stampé. Enregistre la fin de N−1 avec l'heure actuelle et recalcule le début de N en conséquence.",
           "Annuler dernier arrêt — Revert le pit stop le plus récent (utile en cas d'erreur).",
         ],
       },
@@ -704,7 +763,7 @@ export const guide: GuideSection[] = [
         items: [
           "Onglets Voitures / Circuits — Bascule entre les deux matrices.",
           "Badge K — Voiture ou circuit configuré dans le catalogue Kronos pour les événements.",
-          "Badge F — Contenu gratuit avec abonnement iRacing.",
+          "Badge iR+ — Contenu gratuit avec abonnement iRacing.",
           "Colonne # — Nombre de pilotes qui possèdent ce contenu.",
           "Filtres — Filtrer par catégorie de voiture ou de circuit.",
         ],

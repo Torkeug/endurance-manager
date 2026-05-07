@@ -138,6 +138,7 @@ function SignupForm({
   eventTimezone,
   eventId,
   driverId,
+  availableTags,
   onSaved,
   onCancel,
   onDelete,
@@ -153,7 +154,7 @@ function SignupForm({
     signup?.preferred_start_time_ids || [],
   );
   const [carEntryId, setCarEntryId] = useState(signup?.team_entry_id || "");
-  const [notes, setNotes] = useState(signup?.notes || "");
+  const [selectedTags, setSelectedTags] = useState(signup?.tags || []);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [confirmModal, setConfirmModal] = useState(null);
@@ -169,6 +170,10 @@ function SignupForm({
   const toggleST = (sid) =>
     setPreferredStartTimeIds((prev) =>
       prev.includes(sid) ? prev.filter((s) => s !== sid) : [...prev, sid],
+    );
+  const toggleTag = (name) =>
+    setSelectedTags((prev) =>
+      prev.includes(name) ? prev.filter((t) => t !== name) : [...prev, name],
     );
 
   // Returns an array of conflict descriptors matching the PreferenceBadge
@@ -228,7 +233,7 @@ function SignupForm({
       team_entry_id: carEntryId || null,
       preferred_start_time_ids:
         preferredStartTimeIds.length > 0 ? preferredStartTimeIds : null,
-      notes: notes.trim() || null,
+      tags: selectedTags.length > 0 ? selectedTags : null,
     };
     let err;
     if (signup?.id) {
@@ -561,21 +566,43 @@ function SignupForm({
         )}
       </div>
 
-      {/* Notes */}
-      <div className="card" style={{ marginBottom: "1.25rem" }}>
-        <h3 style={{ marginBottom: "1.25rem", color: "var(--text-dim)" }}>
-          Notes
-        </h3>
-        <div className="form-group">
-          <textarea
-            value={notes}
-            onChange={(e) => !readOnly && setNotes(e.target.value)}
-            readOnly={readOnly}
-            rows={3}
-            placeholder="ex : disponible uniquement le samedi soir…"
-          />
+      {/* Tags */}
+      {availableTags.length > 0 && (
+        <div className="card" style={{ marginBottom: "1.25rem" }}>
+          <h3 style={{ marginBottom: "0.5rem", color: "var(--text-dim)" }}>
+            Tags
+          </h3>
+          <p style={{ fontSize: "0.8rem", color: "var(--text-dim)", marginBottom: "1rem" }}>
+            Optionnel — sélectionnez un ou plusieurs tags pour décrire votre profil de pilote.
+          </p>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem" }}>
+            {availableTags.map((tag) => {
+              const selected = selectedTags.includes(tag.name);
+              return (
+                <button
+                  key={tag.id}
+                  type="button"
+                  onClick={() => !readOnly && toggleTag(tag.name)}
+                  style={{
+                    padding: "0.35rem 0.85rem",
+                    borderRadius: "3px",
+                    border: `1px solid ${selected ? "var(--accent)" : "var(--border)"}`,
+                    background: selected ? "var(--accent-dim)" : "var(--surface-2)",
+                    color: selected ? "var(--accent)" : "var(--text-dim)",
+                    fontSize: "0.88rem",
+                    fontWeight: 600,
+                    cursor: readOnly ? "default" : "pointer",
+                    fontFamily: "var(--font-rajdhani), sans-serif",
+                    transition: "all 0.15s",
+                  }}
+                >
+                  {selected ? "✓ " : ""}{tag.name}
+                </button>
+              );
+            })}
+          </div>
         </div>
-      </div>
+      )}
 
       {error && (
         <div className="alert alert-error" style={{ marginBottom: "0.75rem" }}>
@@ -638,6 +665,7 @@ function InscriptionPage({ params }) {
   const [drivers, setDrivers] = useState([]);
   const [cars, setCars] = useState([]);
   const [carEntries, setCarEntries] = useState([]);
+  const [availableTags, setAvailableTags] = useState([]);
   const [eventName, setEventName] = useState("");
   const [eventTimezone, setEventTimezone] = useState("Europe/Paris");
   const [startTimes, setStartTimes] = useState([]);
@@ -653,6 +681,7 @@ function InscriptionPage({ params }) {
 
   useEffect(() => {
     Promise.all([
+      supabase.from("signup_tags").select("*").order("sort_order").order("name"),
       // Engineers are staff — they don't sign up as drivers for events.
       // Test accounts are hidden from all dropdowns outside the admin panel.
       (() => {
@@ -691,12 +720,14 @@ function InscriptionPage({ params }) {
         .order("irl_start"),
     ]).then(
       async ([
+        { data: tagsData },
         { data: driversData },
         { data: carsData },
         { data: evData },
         { data: entriesData },
         { data: stData },
       ]) => {
+        setAvailableTags(tagsData || []);
         // Store full list — external drivers filtered out at render time
         // based on current user's role (admins can see everyone)
         setDrivers(driversData || []);
@@ -773,7 +804,7 @@ function InscriptionPage({ params }) {
     supabase
       .from("signups")
       .select(
-        "*, team_entries(id, crew_name, class, car_id, cars(name, class))",
+        "id, tags, preferred_class, preferred_car_ids, preferred_car_names_snapshot, preferred_start_time_ids, team_entry_id, team_entries(id, crew_name, class, car_id, cars(name, class))",
       )
       .eq("event_id", id)
       .eq("driver_id", driverId)
@@ -787,7 +818,7 @@ function InscriptionPage({ params }) {
     supabase
       .from("signups")
       .select(
-        "*, team_entries(id, crew_name, class, car_id, cars(name, class))",
+        "id, tags, preferred_class, preferred_car_ids, preferred_car_names_snapshot, preferred_start_time_ids, team_entry_id, team_entries(id, crew_name, class, car_id, cars(name, class))",
       )
       .eq("event_id", id)
       .eq("driver_id", driverId)
@@ -912,6 +943,7 @@ function InscriptionPage({ params }) {
                           eventTimezone={eventTimezone}
                           eventId={id}
                           driverId={driverId}
+                          availableTags={availableTags}
                           onSaved={refreshSignups}
                           onCancel={() => setEditingSignup(null)}
                           onDelete={refreshSignups}
@@ -1040,6 +1072,7 @@ function InscriptionPage({ params }) {
                 eventTimezone={eventTimezone}
                 eventId={id}
                 driverId={driverId}
+                availableTags={availableTags}
                 onSaved={refreshSignups}
                 onCancel={() => setEditingSignup(null)}
                 onDelete={refreshSignups}

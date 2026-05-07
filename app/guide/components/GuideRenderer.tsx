@@ -36,9 +36,11 @@ function renderBlock(block: any, i: number) {
   if (block.type === "steps") return <Steps key={i} steps={block.items} />;
   if (block.type === "callout") {
     return (
-      <Callout key={i} type={block.variant}>
-        {block.content}
-      </Callout>
+      <div key={i} style={{ margin: "1rem 0" }}>
+        <Callout type={block.variant}>
+          {block.content}
+        </Callout>
+      </div>
     );
   }
   if (block.type === "feature-list") return <FeatureList key={i} items={block.items} />;
