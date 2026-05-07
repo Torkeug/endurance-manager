@@ -102,13 +102,13 @@ export default function AvailabilityDemo() {
           <div style={{ fontSize: "0.75rem", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "var(--text-dim)", marginBottom: "0.5rem" }}>
             Mode de saisie
           </div>
-          <div style={{ display: "flex", gap: "0.5rem" }}>
+          <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
             {[
               { label: "✓ Disponible",   color: "var(--accent)",  active: true  },
               { label: "✗ Indisponible", color: "var(--danger)",  active: false },
               { label: "? Incertain",    color: "#3a8080",        active: false },
             ].map(({ label, color, active }) => (
-              <button key={label} type="button" style={{ padding: "0.4rem 0.85rem", borderRadius: "3px", border: "1px solid", borderColor: active ? color : "var(--border)", background: active ? `${color}22` : "var(--surface-2)", color: active ? color : "var(--text-dim)", fontFamily: "var(--font-rajdhani), sans-serif", fontSize: "0.85rem", fontWeight: 700, cursor: "default" }}>
+              <button key={label} type="button" style={{ padding: "0.4rem 0.85rem", borderRadius: "3px", border: "1px solid", borderColor: active ? color : "var(--border)", background: active ? `${color}22` : "var(--surface-2)", color: active ? color : "var(--text-dim)", fontFamily: "var(--font-rajdhani), sans-serif", fontSize: "0.85rem", fontWeight: 700, cursor: "default", flexShrink: 0 }}>
                 {label}
               </button>
             ))}

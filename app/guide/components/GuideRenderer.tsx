@@ -1,3 +1,4 @@
+import React from "react";
 import Section from "./Section";
 import Callout from "./Callout";
 import Steps from "./Steps";
@@ -44,18 +45,51 @@ function renderBlock(block: any, i: number) {
     );
   }
   if (block.type === "feature-list") return <FeatureList key={i} items={block.items} />;
-  if (block.type === "component-demo") return (
-    <div key={i} style={{ margin: "2.5rem 0" }}>
-      <div style={{ fontSize: "0.6rem", fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", color: "var(--text-dim)", marginBottom: "0.5rem", paddingLeft: "0.1rem" }}>
-        Aperçu
-      </div>
-      <div style={{ border: "1px solid var(--border)", borderTop: "2px solid var(--accent)", borderRadius: "4px", padding: "1.5rem", background: "var(--bg)", overflowX: "auto" }}>
-        <ComponentDemo type={block.componentType} config={block.config} />
-      </div>
-    </div>
-  );
   if (block.type === "states") return <div key={i} style={{ margin: "1rem 0" }}><States items={block.items} /></div>;
   return null;
+}
+
+const APERCU_LABEL: React.CSSProperties = { fontSize: "0.6rem", fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase" as const, color: "var(--text-dim)", marginBottom: "0.5rem", paddingLeft: "0.1rem" };
+const APERCU_BOX: React.CSSProperties = { border: "1px solid var(--border)", borderTop: "2px solid var(--accent)", borderRadius: "4px", background: "var(--bg)", overflowX: "auto" };
+
+function renderBlocks(blocks: any[]) {
+  const out: React.ReactNode[] = [];
+  let i = 0;
+  while (i < blocks.length) {
+    const block = blocks[i];
+    // Group event-detail-tabs with the immediately following demo
+    if (block.type === "component-demo" && block.componentType === "event-detail-tabs" && blocks[i + 1]?.type === "component-demo") {
+      const next = blocks[i + 1];
+      out.push(
+        <div key={i} style={{ margin: "2.5rem 0" }}>
+          <div style={APERCU_LABEL}>Aperçu</div>
+          <div style={APERCU_BOX}>
+            <div style={{ padding: "1.5rem 1.5rem 0", overflowX: "auto" }}>
+              <ComponentDemo type={block.componentType} config={block.config} />
+            </div>
+            <div style={{ padding: "0 1.5rem 1.5rem", overflowX: "auto" }}>
+              <ComponentDemo type={next.componentType} config={next.config} />
+            </div>
+          </div>
+        </div>
+      );
+      i += 2;
+    } else if (block.type === "component-demo") {
+      out.push(
+        <div key={i} style={{ margin: "2.5rem 0" }}>
+          <div style={APERCU_LABEL}>Aperçu</div>
+          <div style={{ ...APERCU_BOX, padding: "1.5rem" }}>
+            <ComponentDemo type={block.componentType} config={block.config} />
+          </div>
+        </div>
+      );
+      i++;
+    } else {
+      out.push(renderBlock(block, i));
+      i++;
+    }
+  }
+  return out;
 }
 
 export default function GuideRenderer({ data }: { data: any[] }) {
@@ -99,7 +133,7 @@ export default function GuideRenderer({ data }: { data: any[] }) {
               </div>
             )}
             <Section id={section.id} title={section.title} isSubsection={!!section.parent} showTitle={section.title !== navTab}>
-              {section.blocks.map(renderBlock)}
+              {renderBlocks(section.blocks)}
             </Section>
           </div>
         );
