@@ -2070,6 +2070,8 @@ export default function StintGrid({
     top: 0,
     zIndex: 2,
   };
+  const GS = { borderLeft: "2px solid var(--border)" }; // group separator
+
   const TD = {
     padding: "0.35rem 0.5rem",
     borderBottom: "1px solid var(--border)",
@@ -2806,12 +2808,12 @@ export default function StintGrid({
             <tr>
               <th style={{ ...TH, width: "28px" }}>#</th>
               <th style={{ ...TH, minWidth: "130px" }}>Pilote</th>
-              <th style={TH}>Départ IRL</th>
+              <th style={{ ...TH, ...GS }}>Départ IRL</th>
               <th style={TH}>Fin IRL</th>
               {!archived && (
                 <th style={{ ...TH, minWidth: "110px" }}>Fin réelle</th>
               )}
-              <th style={{ ...TH, width: "68px" }}>Durée</th>
+              <th style={{ ...TH, ...GS, width: "68px" }}>Durée</th>
               <th style={{ ...TH, width: "52px" }}>Tours</th>
               <th style={{ ...TH, width: "60px" }}>Conso</th>
               {/* Skip last pit — only shown when race is fully covered */}
@@ -2823,19 +2825,20 @@ export default function StintGrid({
                   Skip fin
                 </th>
               )}
-              <th style={{ ...TH, width: "52px" }}>IG</th>
+              <th style={{ ...TH, ...GS, width: "52px" }}>IG</th>
               <th style={{ ...TH, width: "24px" }}>⏱</th>
-              <th style={{ ...TH, width: "24px" }} title="Pluie">
+              <th style={{ ...TH, ...GS, width: "24px" }} title="Pluie">
                 💧
               </th>
               <th style={{ ...TH, width: "24px" }} title="Changement de pneus">
                 🛞
               </th>
-              {assignedDrivers.map((d) => (
+              {assignedDrivers.map((d, di) => (
                 <th
                   key={d.drivers?.id}
                   style={{
                     ...TH,
+                    ...(di === 0 ? GS : {}),
                     width: "32px",
                     textAlign: "center",
                     fontSize: "0.58rem",
@@ -2850,7 +2853,7 @@ export default function StintGrid({
                   })()}
                 </th>
               ))}
-              {!archived && <th style={{ ...TH, width: "36px" }}></th>}
+              {!archived && <th style={{ ...TH, ...GS, width: "36px" }}></th>}
             </tr>
           </thead>
           <tbody>
@@ -3175,7 +3178,7 @@ export default function StintGrid({
                   </td>
 
                   {/* IRL start */}
-                  <td style={TD}>
+                  <td style={{ ...TD, ...GS }}>
                     <span className="mono" style={{ fontSize: "0.75rem" }}>
                       {stint._irlStart ? formatDatetime(stint._irlStart) : "—"}
                     </span>
@@ -3232,7 +3235,7 @@ export default function StintGrid({
                   )}
 
                   {/* Duration */}
-                  <td style={TD}>
+                  <td style={{ ...TD, ...GS }}>
                     {/* Actual end stamped via Race Mode — show real elapsed time.
                         Takes priority over all calculated/manual values. */}
                     {stint.irl_end_actual && stint._irlStart ? (
@@ -3541,7 +3544,7 @@ export default function StintGrid({
                   )}
 
                   {/* IG start */}
-                  <td style={TD}>
+                  <td style={{ ...TD, ...GS }}>
                     <span
                       className="mono"
                       style={{ fontSize: "0.72rem", color: "var(--text-dim)" }}
@@ -3558,7 +3561,7 @@ export default function StintGrid({
                   </td>
 
                   {/* Rain */}
-                  <td style={{ ...TD, textAlign: "center" }}>
+                  <td style={{ ...TD, ...GS, textAlign: "center" }}>
                     <input
                       type="checkbox"
                       checked={!!stint.rain}
@@ -3590,7 +3593,7 @@ export default function StintGrid({
                   </td>
 
                   {/* Availability dots */}
-                  {assignedDrivers.map((d) => {
+                  {assignedDrivers.map((d, di) => {
                     const driverId = d.drivers?.id;
                     const status = checkAvailability(
                       availabilities,
@@ -3614,6 +3617,7 @@ export default function StintGrid({
                         key={driverId}
                         style={{
                           ...TD,
+                          ...(di === 0 ? GS : {}),
                           textAlign: "center",
                           padding: "0.35rem 0.2rem",
                         }}
@@ -3638,7 +3642,7 @@ export default function StintGrid({
 
                   {/* Delete + reorder controls */}
                   {!archived && (
-                    <td style={{ ...TD, textAlign: "center" }}>
+                    <td style={{ ...TD, ...GS, textAlign: "center" }}>
                       <div
                         style={{
                           display: "flex",
