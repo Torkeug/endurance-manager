@@ -2850,7 +2850,7 @@ export default function StintGrid({
                     const parts = (d.drivers?.name || "").trim().split(/\s+/);
                     const first = parts[0]?.slice(0, 3) || "?";
                     const last = parts.length > 1 ? parts[parts.length - 1][0] : "";
-                    return last ? `${first} ${last}` : first;
+                    return last ? `${first} ${last}.` : first;
                   })()}
                 </th>
               ))}
