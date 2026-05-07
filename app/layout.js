@@ -1,6 +1,7 @@
 import { Rajdhani, DM_Mono } from "next/font/google";
 import "./globals.css";
 import Nav from "../components/Nav";
+import PullToRefresh from "../components/PullToRefresh";
 
 const rajdhani = Rajdhani({
   subsets: ["latin"],
@@ -30,7 +31,7 @@ export default function RootLayout({ children }) {
     <html lang="fr" className={`${rajdhani.variable} ${dmMono.variable}`} data-scroll-behavior="smooth">
       <body className="h-screen flex flex-col overflow-hidden">
         <Nav />
-        <main className="flex-1 overflow-auto">{children}</main>
+        <PullToRefresh>{children}</PullToRefresh>
       </body>
     </html>
   );
