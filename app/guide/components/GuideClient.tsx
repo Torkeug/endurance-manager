@@ -25,7 +25,7 @@ export default function GuideClient({ guide }: { guide: GuideSection[] }) {
           />
           <div
             className="md:hidden"
-            style={{ position: "fixed", top: 0, left: 0, height: "100%", zIndex: 21 }}
+            style={{ position: "absolute", top: 0, left: 0, height: "100%", zIndex: 21 }}
             onClick={() => setOpen(false)}
           >
             <Sidebar sections={guide} scrollContainerId="guide-main" />
