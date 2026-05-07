@@ -358,7 +358,7 @@ export const guide: GuideSection[] = [
         items: [
           "Lignes — Voitures disponibles pour cet événement, groupées par classe.",
           "Colonnes — Pilotes inscrits à l'événement.",
-          "Point — Le pilote possède cette voiture dans son compte iRacing.",
+          "✓ — Le pilote possède cette voiture dans son compte iRacing.",
           "Badge K — Voiture configurée dans le catalogue Kronos pour les événements.",
           "Badge iR+ — Contenu gratuit avec abonnement iRacing.",
           "Ta colonne est mise en surbrillance pour repérer rapidement tes contenus.",
