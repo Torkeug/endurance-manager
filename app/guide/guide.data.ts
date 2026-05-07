@@ -163,17 +163,21 @@ export const guide: GuideSection[] = [
         config: {},
       },
       {
-        type: "steps",
+        type: "text",
+        content: "Accessible via le bouton « + S'inscrire » sur la page d'un événement. Tous les champs sont optionnels sauf le pilote :",
+      },
+      {
+        type: "list",
         items: [
-          "Va dans Événements et clique sur la course qui t'intéresse.",
-          "Clique sur « S'inscrire ».",
-          "Remplis tes préférences : créneaux horaires, équipe, classes et voitures souhaitées, tags.",
-          "Valide — tu es inscrit(e) !",
+          "Créneaux de départ préférés — Indique sur quelles vagues tu es disponible.",
+          "Équipe — Exprime une préférence pour un équipage existant. Laisse « Pas de préférence » si tu es flexible.",
+          "Classes et voitures — Filtres de préférence utilisés pour détecter les incompatibilités.",
+          "Tags — Décris ton profil de pilote (ex : chill, compet, solo, gros rouleur).",
         ],
       },
       {
         type: "text",
-        content: "Le formulaire affiche des alertes de compatibilité selon l'équipage choisi :",
+        content: "Si tu sélectionnes un équipage, le formulaire affiche des alertes de compatibilité :",
       },
       {
         type: "states",

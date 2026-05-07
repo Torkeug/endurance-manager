@@ -14,11 +14,11 @@ function CrewPill({ name }: { name: string }) {
 }
 
 const ROWS = [
-  { name: "Marc Dubois",   irating: 4210, crew: "Kronos Alpha", prefs: "GT3, Audi R8",       slot: "Départ A · 14:00", notes: "" },
-  { name: "Léa Fontaine",  irating: 3870, crew: "Kronos Alpha", prefs: "GT3",                slot: "Départ A · 14:00", notes: "Préfère relais nuit" },
-  { name: "Léa Fontaine",  irating: 3870, crew: "Kronos Beta",  prefs: "GT3",                slot: "Départ B · 20:00", notes: "Préfère relais nuit" },
-  { name: "Théo Bernard",  irating: 5120, crew: "Kronos Beta",  prefs: "GTE, Ferrari 488",  slot: "Départ A · 14:00", notes: "" },
-  { name: "Jules Martin",  irating: 3200, crew: "Kronos Gamma", prefs: "GT3",                slot: "Départ B · 20:00", notes: "Soir uniquement" },
+  { name: "Marc Dubois",   irating: 4210, crew: "Kronos Alpha", prefs: "GT3, Audi R8",      slot: "Départ A · 14:00", tags: ["chill", "gros rouleur"] },
+  { name: "Léa Fontaine",  irating: 3870, crew: "Kronos Alpha", prefs: "GT3",               slot: "Départ A · 14:00", tags: ["compet"] },
+  { name: "Léa Fontaine",  irating: 3870, crew: "Kronos Beta",  prefs: "GT3",               slot: "Départ B · 20:00", tags: ["compet"] },
+  { name: "Théo Bernard",  irating: 5120, crew: "Kronos Beta",  prefs: "GTE, Ferrari 488", slot: "Départ A · 14:00", tags: [] },
+  { name: "Jules Martin",  irating: 3200, crew: "Kronos Gamma", prefs: "GT3",               slot: "Départ B · 20:00", tags: ["solo", "chill"] },
 ];
 
 const TH: React.CSSProperties = {
@@ -48,7 +48,7 @@ export default function InscriptionsDemo() {
             <th style={TH}>Équipe</th>
             <th style={TH}>Préférences</th>
             <th style={TH}>Créneaux</th>
-            <th style={TH}>Notes</th>
+            <th style={TH}>Tags</th>
           </tr>
         </thead>
         <tbody>
@@ -64,7 +64,17 @@ export default function InscriptionsDemo() {
                   <div style={{ fontWeight: 600, fontSize: "0.82rem" }}>{r.slot.split(" · ")[0]}</div>
                   <div style={{ fontFamily: "var(--font-mono), monospace", fontSize: "0.75rem", color: "var(--accent)" }}>{r.slot.split(" · ")[1]}</div>
                 </td>
-                <td style={{ ...TD, color: "var(--text-dim)" }}>{r.notes || "—"}</td>
+                <td style={TD}>
+                  {r.tags.length > 0 ? (
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: "0.25rem" }}>
+                      {r.tags.map((tag) => (
+                        <span key={tag} style={{ fontSize: "0.72rem", fontWeight: 600, padding: "0.1rem 0.45rem", borderRadius: "3px", background: "var(--surface-2)", border: "1px solid var(--border)", color: "var(--text-dim)", whiteSpace: "nowrap" }}>
+                          {tag}
+                        </span>
+                      ))}
+                    </div>
+                  ) : <span style={{ color: "var(--text-dim)" }}>—</span>}
+                </td>
               </tr>
             );
           })}

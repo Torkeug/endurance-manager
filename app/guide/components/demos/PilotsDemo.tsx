@@ -1,9 +1,9 @@
 import type { CSSProperties } from "react";
 
 const DRIVERS = [
-  { name: "Marc Dubois",  irating: 4210, prefs: "GT3, Audi R8 LMS",  notes: "Disponible samedi soir" },
-  { name: "Léa Fontaine", irating: 3870, prefs: "GT3",                notes: "" },
-  { name: "Théo Bernard", irating: 5120, prefs: "GTE, Ferrari 488",   notes: "Préfère relais nuit" },
+  { name: "Marc Dubois",  irating: 4210, prefs: "GT3, Audi R8 LMS",  tags: ["chill", "gros rouleur"] },
+  { name: "Léa Fontaine", irating: 3870, prefs: "GT3",                tags: [] },
+  { name: "Théo Bernard", irating: 5120, prefs: "GTE, Ferrari 488",   tags: ["compet"] },
 ];
 
 const TH: CSSProperties = {
@@ -33,7 +33,7 @@ export default function PilotsDemo() {
             <th style={TH}>Pilote</th>
             <th style={TH}>iRating</th>
             <th style={TH}>Préférences</th>
-            <th style={TH}>Notes</th>
+            <th style={TH}>Tags</th>
           </tr>
         </thead>
         <tbody>
@@ -44,7 +44,17 @@ export default function PilotsDemo() {
                 {d.irating}
               </td>
               <td style={{ ...TD, color: "var(--text-dim)", fontSize: "0.85rem" }}>{d.prefs}</td>
-              <td style={{ ...TD, color: "var(--text-dim)", fontSize: "0.85rem" }}>{d.notes || "—"}</td>
+              <td style={TD}>
+                {d.tags.length > 0 ? (
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: "0.25rem" }}>
+                    {d.tags.map((tag) => (
+                      <span key={tag} style={{ fontSize: "0.72rem", fontWeight: 600, padding: "0.1rem 0.45rem", borderRadius: "3px", background: "var(--surface-2)", border: "1px solid var(--border)", color: "var(--text-dim)", whiteSpace: "nowrap" }}>
+                        {tag}
+                      </span>
+                    ))}
+                  </div>
+                ) : <span style={{ color: "var(--text-dim)" }}>—</span>}
+              </td>
             </tr>
           ))}
         </tbody>

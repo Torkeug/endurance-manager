@@ -11,7 +11,7 @@ export default function Page() {
         className="flex-1 overflow-y-auto"
         style={{ backgroundColor: "var(--bg)" }}
       >
-        <div className="px-12 py-16" style={{ marginLeft: "2rem", marginRight: "2rem", maxWidth: "900px" }}>
+        <div style={{ padding: "4rem 4%" }}>
           <h1 className="text-4xl font-bold mb-4 uppercase tracking-wider" style={{ color: "var(--text)", letterSpacing: "0.05em" }}>
             Guide d'utilisation — Pilotes
           </h1>
