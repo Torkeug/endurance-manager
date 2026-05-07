@@ -2802,7 +2802,7 @@ export default function StintGrid({
           style={{
             borderCollapse: "collapse",
             width: "100%",
-            minWidth: `${680 + assignedDrivers.length * 26}px`, // 680px base + 26px per driver avail-dot column
+            minWidth: `${680 + assignedDrivers.length * 32}px`, // 680px base + 32px per driver avail-dot column
           }}
         >
           <thead>
@@ -2840,13 +2840,18 @@ export default function StintGrid({
                   key={d.drivers?.id}
                   style={{
                     ...TH,
-                    width: "26px",
+                    width: "32px",
                     textAlign: "center",
                     fontSize: "0.58rem",
                   }}
                   title={d.drivers?.name}
                 >
-                  {d.drivers?.name?.split(" ")[0]?.slice(0, 3)}
+                  {(() => {
+                    const parts = (d.drivers?.name || "").trim().split(/\s+/);
+                    const first = parts[0]?.slice(0, 3) || "?";
+                    const last = parts.length > 1 ? parts[parts.length - 1][0] : "";
+                    return last ? `${first} ${last}` : first;
+                  })()}
                 </th>
               ))}
               {!archived && <th style={{ ...TH, width: "36px" }}></th>}
