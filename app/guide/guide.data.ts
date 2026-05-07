@@ -760,7 +760,7 @@ export const guide: GuideSection[] = [
       },
       {
         type: "text",
-        content: "Matrice des contenus iRacing achetés par les pilotes. Les lignes sont les voitures (ou circuits), les colonnes les pilotes. Un point indique que ce pilote possède ce contenu dans son compte iRacing.",
+        content: "Matrice des contenus iRacing achetés par les pilotes. Les lignes sont les voitures (ou circuits), les colonnes les pilotes. ✓ indique que ce pilote possède ce contenu dans son compte iRacing.",
       },
       {
         type: "list",
