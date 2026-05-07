@@ -12,7 +12,7 @@ export default function EventDetailTabsDemo({ activeTab = "inscriptions" }: { ac
   const activeRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    activeRef.current?.scrollIntoView({ inline: "nearest", block: "nearest" });
+    activeRef.current?.scrollIntoView({ inline: "start", block: "nearest" });
   }, [activeTab]);
 
   return (
