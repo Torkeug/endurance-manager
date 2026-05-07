@@ -854,7 +854,7 @@ function ClearDriverStintsModal({ modal, onConfirm, onCancel }) {
           </strong>{" "}
           de{" "}
           <strong style={{ color: "var(--text)" }}>{modal.driverName}</strong>{" "}
-          seront vidés. Les données (tours, notes) seront effacées mais les
+          seront vidés. Les données (tours) seront effacées mais les
           créneaux resteront dans le planning. Le pilote pourra être restauré
           lors d&apos;une réassignation.
         </p>
@@ -1913,7 +1913,7 @@ export default function StintGrid({
     setConfirmModal({
       title: "Réinitialiser ce relais",
       message:
-        "Le pilote, les tours, les notes et les options de ce relais seront effacés. Le créneau restera dans le planning.",
+        "Le pilote, les tours et les options de ce relais seront effacés. Le créneau restera dans le planning.",
       confirmLabel: "Réinitialiser",
       onConfirm: async () => {
         setConfirmModal(null);
@@ -1923,7 +1923,6 @@ export default function StintGrid({
           laps_planned: null,
           rain: false,
           tyre_change: false,
-          notes: null,
           irl_end_actual: null,
         };
         // Optimistic update
@@ -1976,7 +1975,6 @@ export default function StintGrid({
       "laps_planned",
       "rain",
       "tyre_change",
-      "notes",
       "irl_end_actual",
       "previous_driver_id",
     ];
@@ -2034,7 +2032,6 @@ export default function StintGrid({
       laps_planned: null,
       rain: false,
       tyre_change: false,
-      notes: null,
       irl_end_actual: null,
     };
 
@@ -2826,7 +2823,6 @@ export default function StintGrid({
                   Skip fin
                 </th>
               )}
-              <th style={{ ...TH, width: "140px" }}>Notes</th>
               <th style={{ ...TH, width: "52px" }}>IG</th>
               <th style={{ ...TH, width: "24px" }}>⏱</th>
               <th style={{ ...TH, width: "24px" }} title="Pluie">
@@ -3543,26 +3539,6 @@ export default function StintGrid({
                       })()}
                     </td>
                   )}
-
-                  {/* Notes — editable text input, truncated to fit the column */}
-                  <td style={{ ...TD, maxWidth: "140px" }}>
-                    <input
-                      type="text"
-                      value={stint.notes || ""}
-                      placeholder="—"
-                      onChange={(e) =>
-                        updateStint(stint.id, "notes", e.target.value || null)
-                      }
-                      disabled={archived}
-                      style={{
-                        ...INPUT,
-                        width: "130px",
-                        opacity: archived ? 0.7 : 1,
-                        color: stint.notes ? "var(--text)" : "var(--text-dim)",
-                      }}
-                      title={stint.notes || ""}
-                    />
-                  </td>
 
                   {/* IG start */}
                   <td style={TD}>
