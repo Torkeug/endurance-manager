@@ -3,7 +3,12 @@ import { useEffect, useState } from "react";
 export default function useScrollSpy(ids: string[], scrollContainerId: string) {
   const [active, setActive] = useState(ids[0]);
 
-  // Prevent browser's default hash scroll, handle manually instead
+  // Disable browser scroll restoration so refresh always starts at top
+  useEffect(() => {
+    history.scrollRestoration = "manual";
+  }, []);
+
+  // Intercept hash link clicks — scroll the right container, don't touch the URL
   useEffect(() => {
     const handleHashClick = (e: MouseEvent) => {
       const target = e.target as HTMLElement;
@@ -11,16 +16,10 @@ export default function useScrollSpy(ids: string[], scrollContainerId: string) {
         e.preventDefault();
         const hash = target.getAttribute("href")?.slice(1);
         if (hash && ids.includes(hash)) {
-          // Update URL without scrolling
-          window.history.pushState(null, "", `#${hash}`);
-          // Manual scroll
           const el = document.getElementById(hash);
-          if (el) {
-            const scrollContainer = document.getElementById(scrollContainerId);
-            if (scrollContainer) {
-              const offsetTop = el.offsetTop;
-              scrollContainer.scrollTo({ top: offsetTop - 100, behavior: "smooth" });
-            }
+          const scrollContainer = document.getElementById(scrollContainerId);
+          if (el && scrollContainer) {
+            scrollContainer.scrollTo({ top: el.offsetTop - 100, behavior: "smooth" });
           }
         }
       }
