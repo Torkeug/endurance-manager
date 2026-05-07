@@ -2064,7 +2064,7 @@ export default function StintGrid({
     padding: "0.5rem 0.5rem",
     borderBottom: "2px solid var(--border)",
     whiteSpace: "nowrap",
-    textAlign: "left",
+    textAlign: "center",
     // Sticky header — works because the wrapper is the scroll container (overflowY: auto)
     position: "sticky",
     top: 0,
@@ -2807,7 +2807,7 @@ export default function StintGrid({
           <thead>
             <tr>
               <th style={{ ...TH, width: "28px" }}>#</th>
-              <th style={{ ...TH, minWidth: "130px" }}>Pilote</th>
+              <th style={{ ...TH, minWidth: "130px", textAlign: "left" }}>Pilote</th>
               <th style={{ ...TH, ...GS, textAlign: "center" }}>Départ IRL</th>
               <th style={{ ...TH, textAlign: "center" }}>Fin IRL</th>
               {!archived && (
@@ -3235,7 +3235,7 @@ export default function StintGrid({
                   )}
 
                   {/* Duration */}
-                  <td style={{ ...TD, ...GS }}>
+                  <td style={{ ...TD, ...GS, textAlign: "center" }}>
                     {/* Actual end stamped via Race Mode — show real elapsed time.
                         Takes priority over all calculated/manual values. */}
                     {stint.irl_end_actual && stint._irlStart ? (
@@ -3311,7 +3311,7 @@ export default function StintGrid({
                   </td>
 
                   {/* Laps */}
-                  <td style={TD}>
+                  <td style={{ ...TD, textAlign: "center" }}>
                     <input
                       type="number"
                       min="1"
@@ -3385,7 +3385,7 @@ export default function StintGrid({
                   </td>
 
                   {/* Fuel — red + warning when laps_planned exceeds theoretical tank capacity */}
-                  <td style={TD}>
+                  <td style={{ ...TD, textAlign: "center" }}>
                     {(() => {
                       const exceedsTank =
                         stint.laps_planned &&
@@ -3459,7 +3459,7 @@ export default function StintGrid({
 
                   {/* Skip last pit target consumption */}
                   {raceCovered && (
-                    <td style={TD}>
+                    <td style={{ ...TD, textAlign: "center" }}>
                       {(() => {
                         // Last stint itself has no target — it is the stop being skipped
                         if (stint._isLastStint)
@@ -3544,7 +3544,7 @@ export default function StintGrid({
                   )}
 
                   {/* IG start */}
-                  <td style={{ ...TD, ...GS }}>
+                  <td style={{ ...TD, ...GS, textAlign: "center" }}>
                     <span
                       className="mono"
                       style={{ fontSize: "0.72rem", color: "var(--text-dim)" }}
