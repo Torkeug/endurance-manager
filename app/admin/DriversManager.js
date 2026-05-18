@@ -1111,6 +1111,7 @@ const TH = {
   textAlign: "left",
   borderBottom: "1px solid var(--border)",
   whiteSpace: "nowrap",
+  verticalAlign: "bottom",
 };
 
 const TD = {
