@@ -4,6 +4,38 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import remarkBreaks from "remark-breaks";
 
+function resolveDiscordTimestamps(text) {
+  return text.replace(/<t:(\d+):([tTdDfFR])>/g, (match, ts, format) => {
+    const date = new Date(parseInt(ts, 10) * 1000);
+    const locale = "fr-FR";
+    switch (format) {
+      case "t":
+        return date.toLocaleTimeString(locale, { hour: "2-digit", minute: "2-digit" });
+      case "T":
+        return date.toLocaleTimeString(locale, { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+      case "d":
+        return date.toLocaleDateString(locale);
+      case "D":
+        return date.toLocaleDateString(locale, { day: "numeric", month: "long", year: "numeric" });
+      case "f":
+        return date.toLocaleString(locale, { day: "numeric", month: "long", year: "numeric", hour: "2-digit", minute: "2-digit" });
+      case "F":
+        return date.toLocaleString(locale, { weekday: "long", day: "numeric", month: "long", year: "numeric", hour: "2-digit", minute: "2-digit" });
+      case "R": {
+        const diff = date - Date.now();
+        const abs = Math.abs(diff);
+        const rtf = new Intl.RelativeTimeFormat(locale, { numeric: "auto" });
+        if (abs < 60_000) return rtf.format(Math.round(diff / 1000), "second");
+        if (abs < 3_600_000) return rtf.format(Math.round(diff / 60_000), "minute");
+        if (abs < 86_400_000) return rtf.format(Math.round(diff / 3_600_000), "hour");
+        return rtf.format(Math.round(diff / 86_400_000), "day");
+      }
+      default:
+        return match;
+    }
+  });
+}
+
 // Collapsible info grid + notes panel for the event detail page.
 // When collapsed, shows a condensed one-line summary of the first 4 items
 // (Circuit · Format · Durée · Départ IG) so key facts are always visible.
@@ -195,7 +227,7 @@ export default function CollapsibleEventInfo({ eventId, items, notes }) {
                       ),
                     }}
                   >
-                    {notes}
+                    {resolveDiscordTimestamps(notes)}
                   </ReactMarkdown>
                 </div>
               </div>
