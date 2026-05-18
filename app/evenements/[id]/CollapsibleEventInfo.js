@@ -1,24 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
-
-function linkify(text) {
-  const urlRegex = /(https?:\/\/[^\s]+)/g;
-  return text.split(urlRegex).map((part, i) =>
-    urlRegex.test(part) ? (
-      <a
-        key={i}
-        href={part}
-        target="_blank"
-        rel="noopener noreferrer"
-        style={{ color: "var(--accent)" }}
-      >
-        {part}
-      </a>
-    ) : (
-      part
-    ),
-  );
-}
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 
 // Collapsible info grid + notes panel for the event detail page.
 // When collapsed, shows a condensed one-line summary of the first 4 items
@@ -181,12 +164,10 @@ export default function CollapsibleEventInfo({ eventId, items, notes }) {
                     </button>
                   )}
                 </div>
-                <p
+                <div
                   style={{
                     color: "var(--text)",
                     fontSize: "0.95rem",
-                    margin: 0,
-                    whiteSpace: "pre-wrap",
                     overflowWrap: "break-word",
                     ...(isLong && !notesExpanded
                       ? {
@@ -198,8 +179,24 @@ export default function CollapsibleEventInfo({ eventId, items, notes }) {
                       : {}),
                   }}
                 >
-                  {linkify(notes)}
-                </p>
+                  <ReactMarkdown
+                    remarkPlugins={[remarkGfm]}
+                    components={{
+                      a: ({ href, children }) => (
+                        <a
+                          href={href}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          style={{ color: "var(--accent)" }}
+                        >
+                          {children}
+                        </a>
+                      ),
+                    }}
+                  >
+                    {notes}
+                  </ReactMarkdown>
+                </div>
               </div>
             );
           })()}
