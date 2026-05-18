@@ -36,6 +36,51 @@ function resolveDiscordTimestamps(text) {
   });
 }
 
+const markdownComponents = {
+  a: ({ href, children }) => (
+    <a href={href} target="_blank" rel="noopener noreferrer" style={{ color: "var(--accent)" }}>
+      {children}
+    </a>
+  ),
+  ul: ({ children }) => (
+    <ul style={{ paddingLeft: "1.5rem", marginBottom: "0.5rem", listStyleType: "disc" }}>
+      {children}
+    </ul>
+  ),
+  ol: ({ children }) => (
+    <ol style={{ paddingLeft: "1.5rem", marginBottom: "0.5rem", listStyleType: "decimal" }}>
+      {children}
+    </ol>
+  ),
+  li: ({ children }) => <li style={{ marginBottom: "0.15rem" }}>{children}</li>,
+  p: ({ children }) => <p style={{ marginBottom: "0.5rem" }}>{children}</p>,
+  h1: ({ children }) => (
+    <h1 style={{ fontSize: "1.3rem", fontWeight: 700, textTransform: "none", letterSpacing: "normal", marginBottom: "0.4rem" }}>
+      {children}
+    </h1>
+  ),
+  h2: ({ children }) => (
+    <h2 style={{ fontSize: "1.1rem", fontWeight: 700, textTransform: "none", letterSpacing: "normal", marginBottom: "0.35rem" }}>
+      {children}
+    </h2>
+  ),
+  h3: ({ children }) => (
+    <h3 style={{ fontSize: "1rem", fontWeight: 600, textTransform: "none", letterSpacing: "normal", marginBottom: "0.3rem" }}>
+      {children}
+    </h3>
+  ),
+  blockquote: ({ children }) => (
+    <blockquote style={{ borderLeft: "3px solid var(--border)", paddingLeft: "0.75rem", color: "var(--text-dim)", margin: "0.5rem 0" }}>
+      {children}
+    </blockquote>
+  ),
+  code: ({ children }) => (
+    <code style={{ fontFamily: "var(--font-mono), monospace", fontSize: "0.85em", background: "var(--surface-2)", padding: "0.1em 0.3em", borderRadius: "3px" }}>
+      {children}
+    </code>
+  ),
+};
+
 // Collapsible info grid + notes panel for the event detail page.
 // When collapsed, shows a condensed one-line summary of the first 4 items
 // (Circuit · Format · Durée · Départ IG) so key facts are always visible.
@@ -214,18 +259,7 @@ export default function CollapsibleEventInfo({ eventId, items, notes }) {
                 >
                   <ReactMarkdown
                     remarkPlugins={[remarkGfm, remarkBreaks]}
-                    components={{
-                      a: ({ href, children }) => (
-                        <a
-                          href={href}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          style={{ color: "var(--accent)" }}
-                        >
-                          {children}
-                        </a>
-                      ),
-                    }}
+                    components={markdownComponents}
                   >
                     {resolveDiscordTimestamps(notes)}
                   </ReactMarkdown>
