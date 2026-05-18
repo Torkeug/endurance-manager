@@ -703,7 +703,7 @@ export default function DriversManager({ initialDrivers, currentDriver }) {
                   {/* Discord ID column — editable via pencil icon */}
                   <th style={TH}>Discord ID</th>
                   <th style={{ ...TH, textAlign: "center" }}>
-                    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "0.2rem" }}>
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "0.4rem" }}>
                       <span>Cotisation</span>
                       <input
                         type="checkbox"
@@ -1111,7 +1111,6 @@ const TH = {
   textAlign: "left",
   borderBottom: "1px solid var(--border)",
   whiteSpace: "nowrap",
-  verticalAlign: "bottom",
 };
 
 const TD = {
