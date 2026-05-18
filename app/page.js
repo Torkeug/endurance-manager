@@ -1020,33 +1020,42 @@ export default async function HomePage() {
               label: (syncRequired || 0) > 1 ? "Syncs iRacing" : "Sync iRacing",
               value: syncRequired || 0,
               color: (syncRequired || 0) > 0 ? "#f59e0b" : "var(--text-dim)",
+              href: "/pilotes",
             },
-          ].map(({ label, value, color }) => (
-            <div
-              key={label}
-              className="card"
-              style={{ padding: "1rem", textAlign: "center" }}
-            >
+          ].map(({ label, value, color, href }) => {
+            const inner = (
               <div
-                className="mono"
-                style={{ fontSize: "1.8rem", fontWeight: 700, color }}
+                className="card"
+                style={{ padding: "1rem", textAlign: "center", cursor: href ? "pointer" : "default" }}
               >
-                {value}
+                <div
+                  className="mono"
+                  style={{ fontSize: "1.8rem", fontWeight: 700, color }}
+                >
+                  {value}
+                </div>
+                <div
+                  style={{
+                    fontSize: "0.75rem",
+                    fontWeight: 700,
+                    letterSpacing: "0.08em",
+                    textTransform: "uppercase",
+                    color: "var(--text-dim)",
+                    marginTop: "0.25rem",
+                  }}
+                >
+                  {label}
+                </div>
               </div>
-              <div
-                style={{
-                  fontSize: "0.75rem",
-                  fontWeight: 700,
-                  letterSpacing: "0.08em",
-                  textTransform: "uppercase",
-                  color: "var(--text-dim)",
-                  marginTop: "0.25rem",
-                }}
-              >
-                {label}
-              </div>
-            </div>
-          ))}
+            );
+            return href ? (
+              <Link key={label} href={href} style={{ textDecoration: "none", display: "block" }}>
+                {inner}
+              </Link>
+            ) : (
+              <div key={label}>{inner}</div>
+            );
+          })}
         </div>
       )}
 
