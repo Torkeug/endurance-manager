@@ -1015,6 +1015,7 @@ export default async function HomePage() {
                   : "Cotisation expirée",
               value: overdueMembers || 0,
               color: overdueMembers > 0 ? "var(--danger)" : "var(--text-dim)",
+              href: "/admin?filter=all",
             },
             {
               label: (syncRequired || 0) > 1 ? "Syncs iRacing" : "Sync iRacing",
@@ -1023,15 +1024,9 @@ export default async function HomePage() {
               href: "/pilotes",
             },
           ].map(({ label, value, color, href }) => {
-            const inner = (
-              <div
-                className="card"
-                style={{ padding: "1rem", textAlign: "center", cursor: href ? "pointer" : "default" }}
-              >
-                <div
-                  className="mono"
-                  style={{ fontSize: "1.8rem", fontWeight: 700, color }}
-                >
+            const cardContent = (
+              <>
+                <div className="mono" style={{ fontSize: "1.8rem", fontWeight: 700, color }}>
                   {value}
                 </div>
                 <div
@@ -1046,14 +1041,18 @@ export default async function HomePage() {
                 >
                   {label}
                 </div>
-              </div>
+              </>
             );
             return href ? (
-              <Link key={label} href={href} style={{ textDecoration: "none", display: "block" }}>
-                {inner}
+              <Link key={label} href={href} style={{ textDecoration: "none" }}>
+                <div className="card" style={{ padding: "1rem", textAlign: "center", cursor: "pointer", height: "100%" }}>
+                  {cardContent}
+                </div>
               </Link>
             ) : (
-              <div key={label}>{inner}</div>
+              <div key={label} className="card" style={{ padding: "1rem", textAlign: "center" }}>
+                {cardContent}
+              </div>
             );
           })}
         </div>

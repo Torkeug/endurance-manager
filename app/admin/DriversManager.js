@@ -223,8 +223,9 @@ export default function DriversManager({ initialDrivers, currentDriver }) {
     searchParams.get("error") === "iracing_unauthorized";
   const [drivers, setDrivers] = useState(initialDrivers);
   const [saving, setSaving] = useState(null);
+  const [savingBulk, setSavingBulk] = useState(false);
   const [error, setError] = useState(null);
-  const [filter, setFilter] = useState("pending");
+  const [filter, setFilter] = useState(searchParams.get("filter") || "pending");
   // Controls the delete preview modal — null when closed, populated with
   // affected signup data when a driver has active event registrations.
   const [deleteModal, setDeleteModal] = useState(null);
@@ -422,6 +423,26 @@ export default function DriversManager({ initialDrivers, currentDriver }) {
       prev.map((d) => (d.id === driverId ? { ...d, membership_ok: value } : d)),
     );
     setSaving(null);
+  };
+
+  const toggleAllMembership = async (value) => {
+    const ids = approved.map((d) => d.id);
+    if (ids.length === 0) return;
+    setSavingBulk(true);
+    const { error: err } = await supabase
+      .from("drivers")
+      .update({ membership_ok: value })
+      .in("id", ids);
+    if (err) {
+      setError(err.message);
+      setSavingBulk(false);
+      return;
+    }
+    const idSet = new Set(ids);
+    setDrivers((prev) =>
+      prev.map((d) => (idSet.has(d.id) ? { ...d, membership_ok: value } : d)),
+    );
+    setSavingBulk(false);
   };
 
   const toggleTestDriver = async (driverId, value) => {
@@ -681,7 +702,22 @@ export default function DriversManager({ initialDrivers, currentDriver }) {
                   <th style={TH}>Rôle</th>
                   {/* Discord ID column — editable via pencil icon */}
                   <th style={TH}>Discord ID</th>
-                  <th style={{ ...TH, textAlign: "center" }}>Cotisation</th>
+                  <th style={{ ...TH, textAlign: "center" }}>
+                    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "0.2rem" }}>
+                      <span>Cotisation</span>
+                      <input
+                        type="checkbox"
+                        title="Tout cocher / décocher"
+                        checked={approved.length > 0 && approved.every((d) => d.membership_ok)}
+                        ref={(el) => {
+                          if (el) el.indeterminate = approved.some((d) => d.membership_ok) && !approved.every((d) => d.membership_ok);
+                        }}
+                        onChange={(e) => toggleAllMembership(e.target.checked)}
+                        disabled={savingBulk}
+                        style={{ accentColor: "var(--accent)", cursor: "pointer" }}
+                      />
+                    </div>
+                  </th>
                   <th style={{ ...TH, textAlign: "center" }}>Test</th>
                   {/* iRacing sync — read-only timestamp, populated by sync-all or driver self-sync */}
                   <th style={{ ...TH, textAlign: "center" }}>iRacing sync</th>
