@@ -2,6 +2,7 @@
 import { useState, useEffect } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import remarkBreaks from "remark-breaks";
 
 // Collapsible info grid + notes panel for the event detail page.
 // When collapsed, shows a condensed one-line summary of the first 4 items
@@ -180,7 +181,7 @@ export default function CollapsibleEventInfo({ eventId, items, notes }) {
                   }}
                 >
                   <ReactMarkdown
-                    remarkPlugins={[remarkGfm]}
+                    remarkPlugins={[remarkGfm, remarkBreaks]}
                     components={{
                       a: ({ href, children }) => (
                         <a
