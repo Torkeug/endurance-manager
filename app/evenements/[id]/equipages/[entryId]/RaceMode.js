@@ -303,6 +303,7 @@ export default function RaceMode({
   const [saving, setSaving] = useState(false);
   const [now, setNow] = useState(new Date());
   const [confirmModal, setConfirmModal] = useState(null);
+  const [undoCooldown, setUndoCooldown] = useState(false);
 
   // Dev-only state override
   const [devState, setDevState] = useState(null);
@@ -501,6 +502,7 @@ export default function RaceMode({
 
   const markPitStop = async (stint) => {
     if (!stint || archived || saving || !isInRace) return;
+    setUndoCooldown(false);
     setSaving(true);
     const actualEnd = new Date().toISOString();
 
@@ -550,6 +552,7 @@ export default function RaceMode({
       confirmLabel: "Annuler l'arrêt",
       onConfirm: async () => {
         setConfirmModal(null);
+        setUndoCooldown(true);
         setSaving(true);
         setStints((prev) =>
           prev.map((s) =>
@@ -871,7 +874,7 @@ export default function RaceMode({
         )}
 
         {/* Undo last pit — inside the card, above the pit button, only when relevant */}
-        {!archived && completedStints.length > 0 && (
+        {!archived && completedStints.length > 0 && !undoCooldown && (
           <div style={{ textAlign: "right", marginBottom: "0.5rem" }}>
             <button
               onClick={undoLastPit}

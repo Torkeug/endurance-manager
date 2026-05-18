@@ -1,12 +1,32 @@
 "use client";
 import { useState, useEffect } from "react";
 
+function linkify(text) {
+  const urlRegex = /(https?:\/\/[^\s]+)/g;
+  return text.split(urlRegex).map((part, i) =>
+    urlRegex.test(part) ? (
+      <a
+        key={i}
+        href={part}
+        target="_blank"
+        rel="noopener noreferrer"
+        style={{ color: "var(--accent)" }}
+      >
+        {part}
+      </a>
+    ) : (
+      part
+    ),
+  );
+}
+
 // Collapsible info grid + notes panel for the event detail page.
 // When collapsed, shows a condensed one-line summary of the first 4 items
 // (Circuit · Format · Durée · Départ IG) so key facts are always visible.
 // Collapse state is persisted per event in localStorage.
 export default function CollapsibleEventInfo({ eventId, items, notes }) {
   const [collapsed, setCollapsed] = useState(false);
+  const [notesExpanded, setNotesExpanded] = useState(false);
 
   // Read persisted state in useEffect — never in useState initializer
   // to avoid hydration mismatch (server has no localStorage).
@@ -122,25 +142,67 @@ export default function CollapsibleEventInfo({ eventId, items, notes }) {
           </div>
 
           {/* Notes card — only rendered when notes exist */}
-          {notes && (
-            <div className="card">
-              <div
-                style={{
-                  fontSize: "0.7rem",
-                  fontWeight: 700,
-                  letterSpacing: "0.1em",
-                  textTransform: "uppercase",
-                  color: "var(--text-dim)",
-                  marginBottom: "0.5rem",
-                }}
-              >
-                Notes
+          {notes && (() => {
+            const isLong = notes.length > 100 || notes.includes("\n");
+            return (
+              <div className="card">
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    marginBottom: "0.5rem",
+                  }}
+                >
+                  <div
+                    style={{
+                      fontSize: "0.7rem",
+                      fontWeight: 700,
+                      letterSpacing: "0.1em",
+                      textTransform: "uppercase",
+                      color: "var(--text-dim)",
+                    }}
+                  >
+                    Notes
+                  </div>
+                  {isLong && (
+                    <button
+                      onClick={() => setNotesExpanded((v) => !v)}
+                      style={{
+                        background: "none",
+                        border: "none",
+                        cursor: "pointer",
+                        fontSize: "0.75rem",
+                        color: "var(--accent)",
+                        padding: "0 0.25rem",
+                      }}
+                    >
+                      {notesExpanded ? "Voir moins" : "Voir plus"}
+                    </button>
+                  )}
+                </div>
+                <p
+                  style={{
+                    color: "var(--text)",
+                    fontSize: "0.95rem",
+                    margin: 0,
+                    whiteSpace: "pre-wrap",
+                    overflowWrap: "break-word",
+                    ...(isLong && !notesExpanded
+                      ? {
+                          display: "-webkit-box",
+                          WebkitLineClamp: 2,
+                          WebkitBoxOrient: "vertical",
+                          overflow: "hidden",
+                        }
+                      : {}),
+                  }}
+                >
+                  {linkify(notes)}
+                </p>
               </div>
-              <p style={{ color: "var(--text)", fontSize: "0.95rem" }}>
-                {notes}
-              </p>
-            </div>
-          )}
+            );
+          })()}
         </>
       )}
     </div>

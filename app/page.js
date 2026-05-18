@@ -59,6 +59,8 @@ export default async function HomePage() {
   const engineer = isEngineer(currentDriver);
 
   // ── Data fetching ──────────────────────────────────────────────────────────
+  const syncCutoff = new Date(Date.now() - 100 * 24 * 60 * 60 * 1000).toISOString();
+
   const [
     { data: events },
     { data: mySignups },
@@ -67,6 +69,7 @@ export default async function HomePage() {
     { count: totalDrivers },
     { count: testDrivers },
     { count: overdueMembers },
+    { count: syncRequired },
     { data: teamEntries },
     { data: championships },
     // Active strategies — used to scope the "no stints" incomplete teams check
@@ -141,6 +144,16 @@ export default async function HomePage() {
           .eq("membership_ok", false)
           .eq("approved", true)
           .eq("test_driver", false)
+      : { count: 0 },
+
+    admin
+      ? supabase
+          .from("drivers")
+          .select("*", { count: "exact", head: true })
+          .eq("approved", true)
+          .eq("active", true)
+          .eq("test_driver", false)
+          .or(`last_driver_sync_at.is.null,last_driver_sync_at.lt.${syncCutoff}`)
       : { count: 0 },
 
     admin
@@ -1002,6 +1015,11 @@ export default async function HomePage() {
                   : "Cotisation expirée",
               value: overdueMembers || 0,
               color: overdueMembers > 0 ? "var(--danger)" : "var(--text-dim)",
+            },
+            {
+              label: (syncRequired || 0) > 1 ? "Syncs iRacing" : "Sync iRacing",
+              value: syncRequired || 0,
+              color: (syncRequired || 0) > 0 ? "#f59e0b" : "var(--text-dim)",
             },
           ].map(({ label, value, color }) => (
             <div
