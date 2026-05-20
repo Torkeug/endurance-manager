@@ -79,7 +79,7 @@ export default function GuideClient({ guide }: { guide: GuideSection[] }) {
         >
           <div style={{ padding: "4rem 4%" }}>
             <h1 className="text-4xl font-bold mb-4 uppercase tracking-wider" style={{ color: "var(--text)", letterSpacing: "0.05em" }}>
-              Guide d'utilisation — Pilotes
+              Guide d&apos;utilisation — Pilotes
             </h1>
             <p className="text-lg font-medium mb-16 pb-8" style={{ color: "var(--text-dim)", borderBottom: "1px solid var(--border)" }}>
               Maîtrise chaque section du Kronos Endurance Planner.

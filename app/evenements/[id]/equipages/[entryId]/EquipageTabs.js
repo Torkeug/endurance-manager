@@ -44,6 +44,19 @@ export default function EquipageTabs({
   // Avoids a redundant fetch since StintGrid already fetches all strategies.
   const [activeStrategy, setActiveStrategy] = useState(null);
 
+  // In event but not yet in this team → only Pilotes tab visible so they can self-assign
+  const limitedToAssignment = isInEvent && !isInTeam && !fullAccess;
+
+  // Default to relais — most-used view during race preparation
+  const initialTab = limitedToAssignment ? "pilotes" : "relais";
+  const [activeTab, setActiveTab] = useState(initialTab);
+  // Tracks which tabs have been visited — mounted once, then kept alive via
+  // display:none instead of unmounting. Prevents expensive remount on every switch.
+  const [mountedTabs, setMountedTabs] = useState(new Set([initialTab]));
+
+  // When true: switches to relais tab and tells StintGrid to auto-open the recalc modal
+  const [recalcRequested, setRecalcRequested] = useState(false);
+
   // ── Access guard ─────────────────────────────────────────────────────────
   // Neither in event nor privileged role → hard block
   if (!isInEvent && !fullAccess) {
@@ -61,23 +74,10 @@ export default function EquipageTabs({
     );
   }
 
-  // In event but not yet in this team → only Pilotes tab visible so they can self-assign
-  const limitedToAssignment = isInEvent && !isInTeam && !fullAccess;
-
-  // Default to relais — most-used view during race preparation
-  const initialTab = limitedToAssignment ? "pilotes" : "relais";
-  const [activeTab, setActiveTab] = useState(initialTab);
-  // Tracks which tabs have been visited — mounted once, then kept alive via
-  // display:none instead of unmounting. Prevents expensive remount on every switch.
-  const [mountedTabs, setMountedTabs] = useState(new Set([initialTab]));
-
   const handleTabChange = (tabId) => {
     setActiveTab(tabId);
     setMountedTabs((prev) => new Set([...prev, tabId]));
   };
-
-  // When true: switches to relais tab and tells StintGrid to auto-open the recalc modal
-  const [recalcRequested, setRecalcRequested] = useState(false);
 
   const visibleTabs = limitedToAssignment
     ? TABS.filter((t) => t.id === "pilotes")

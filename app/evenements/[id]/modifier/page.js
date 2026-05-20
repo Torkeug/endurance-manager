@@ -1112,7 +1112,7 @@ export default function ModifierEvenement({ params }) {
                       marginBottom: "1.5rem",
                     }}
                   >
-                    ✅ Aucune préférence d'horaire ne sera perdue — tous les
+                    ✅ Aucune préférence d&apos;horaire ne sera perdue — tous les
                     créneaux existants correspondent aux nouveaux horaires.
                   </p>
                 ) : (
@@ -1131,7 +1131,7 @@ export default function ModifierEvenement({ params }) {
                         {previewLosses.length > 1 ? "s" : ""}
                       </strong>{" "}
                       {previewLosses.length > 1 ? "perdront" : "perdra"} leur
-                      préférence d'horaire car leur créneau n'existe plus dans
+                      préférence d&apos;horaire car leur créneau n&apos;existe plus dans
                       les nouveaux horaires :
                     </p>
                     <ul
@@ -1177,7 +1177,7 @@ export default function ModifierEvenement({ params }) {
                         {previewTeamLosses.length > 1 ? "s" : ""}
                       </strong>{" "}
                       {previewTeamLosses.length > 1 ? "perdront" : "perdra"}{" "}
-                      leur créneau de départ assigné car il n'existe plus dans
+                      leur créneau de départ assigné car il n&apos;existe plus dans
                       les nouveaux horaires :
                     </p>
                     <ul

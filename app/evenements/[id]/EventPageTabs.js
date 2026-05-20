@@ -103,6 +103,19 @@ export default function EventPageTabs({
   // Tracks which driver group is hovered — shared across all rows in the group
   const [hoveredGroup, setHoveredGroup] = useState(null);
 
+  const signupCount = event.signups?.length ?? 0;
+  const teamCount = event.team_entries?.length ?? 0;
+  const uniqueDriverCount = new Set(
+    (event.signups || []).map((s) => s.drivers?.id || s.driver_name_snapshot),
+  ).size;
+
+  const tabs = [
+    { id: "inscriptions", label: "Inscriptions", count: uniqueDriverCount },
+    { id: "equipages", label: "Équipages", count: teamCount },
+    { id: "horaires", label: "Horaires de départ" },
+    ...(!isExternal ? [{ id: "inventaire", label: "Inventaire" }] : []),
+  ];
+
   // Persist tab state per event — read in useEffect to avoid hydration mismatch.
   useEffect(() => {
     // Query param takes priority over persisted tab (e.g. ?tab=horaires from a redirect)
@@ -147,19 +160,6 @@ export default function EventPageTabs({
     const parts = [...classes, ...carNames];
     return parts.length > 0 ? parts.join(", ") : "—";
   };
-
-  const signupCount = event.signups?.length ?? 0;
-  const teamCount = event.team_entries?.length ?? 0;
-  const uniqueDriverCount = new Set(
-    (event.signups || []).map((s) => s.drivers?.id || s.driver_name_snapshot),
-  ).size;
-
-  const tabs = [
-    { id: "inscriptions", label: "Inscriptions", count: uniqueDriverCount },
-    { id: "equipages", label: "Équipages", count: teamCount },
-    { id: "horaires", label: "Horaires de départ" },
-    ...(!isExternal ? [{ id: "inventaire", label: "Inventaire" }] : []),
-  ];
 
   const tz = event.timezone || "Europe/Paris";
 

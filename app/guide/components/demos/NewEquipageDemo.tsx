@@ -205,7 +205,7 @@ export default function NewEquipageDemo() {
 
       {/* ── Actions ── */}
       <div style={{ display: "flex", gap: "0.75rem" }}>
-        <button className="btn btn-primary">✓ Ajouter l'équipage</button>
+        <button className="btn btn-primary">✓ Ajouter l&apos;équipage</button>
         <button className="btn btn-secondary">Annuler</button>
       </div>
     </div>

@@ -122,7 +122,7 @@ export default function InscriptionFormDemo() {
       {/* Équipe */}
       <div className="card">
         <div style={sectionTitle}>Équipe</div>
-        <p style={subText}>Optionnel — sélectionnez l'équipe que vous souhaitez rejoindre.</p>
+        <p style={subText}>Optionnel — sélectionnez l&apos;équipe que vous souhaitez rejoindre.</p>
         <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
           <RadioCard label="Pas de préférence" />
           <RadioCard label="Kronos Alpha" sub="Audi R8 LMS GT3 Evo 2 · GT3" mono="Vague A · Départ à 14:00" selected />
@@ -208,7 +208,7 @@ export default function InscriptionFormDemo() {
       {/* Actions */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "0.75rem" }}>
         <div style={{ display: "flex", gap: "0.75rem" }}>
-          <button className="btn btn-primary">✓ S'inscrire</button>
+          <button className="btn btn-primary">✓ S&apos;inscrire</button>
           <button className="btn btn-secondary">Annuler</button>
         </div>
         <button className="btn btn-danger" style={{ fontSize: "0.88rem" }}>Se désinscrire</button>
