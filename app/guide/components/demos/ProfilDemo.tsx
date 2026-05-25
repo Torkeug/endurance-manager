@@ -77,6 +77,7 @@ export default function ProfilDemo() {
           </div>
         </div>
         <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
+          <button className="btn btn-secondary" style={{ fontSize: "0.82rem", opacity: 0.85 }}>✓ Garage61 lié</button>
           <button className="btn btn-secondary" style={{ fontSize: "0.82rem", opacity: 0.85 }}>✓ iRacing lié</button>
           <button className="btn btn-secondary" style={{ fontSize: "0.82rem", opacity: 0.85 }}>🔄 Mettre à jour</button>
           <button className="btn btn-secondary" style={{ fontSize: "0.82rem", opacity: 0.85 }}>📦 Inventaire</button>

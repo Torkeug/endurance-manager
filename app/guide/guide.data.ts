@@ -116,6 +116,22 @@ export const guide: GuideSection[] = [
         variant: "tip",
         content: "Le bouton « Inventaire » (visible par le pilote et les admins) affiche les voitures et circuits iRacing possédés. La synchro se relance depuis ce même profil — elle met à jour l'inventaire et l'iRating.",
       },
+      {
+        type: "header",
+        content: "Connexions tierces",
+      },
+      {
+        type: "list",
+        items: [
+          "🔗 Lier Garage61 — Connecte ton compte Garage61 via OAuth. Une fois lié, tes chronos enregistrés sur Garage61 peuvent être importés directement dans l'onglet Performances de ton équipage.",
+          "🔗 Lier iRacing — Connecte ton compte iRacing pour synchroniser l'inventaire et l'iRating.",
+        ],
+      },
+      {
+        type: "callout",
+        variant: "note",
+        content: "En liant ton compte Garage61, tu autorises les membres de ton équipe à importer tes chronos pour toi (utile si un ingénieur renseigne les données de performance).",
+      },
     ],
   },
 
@@ -672,6 +688,29 @@ export const guide: GuideSection[] = [
         type: "callout",
         variant: "note",
         content: "Données nuit optionnelles : si tu n'as pas de chrono nuit spécifique, le système estime via les offsets d'équipage. La ligne nuit n'apparaît que si des données nuit existent pour ce pilote.",
+      },
+      {
+        type: "header",
+        content: "Importer depuis Garage61",
+      },
+      {
+        type: "text",
+        content: "Si le circuit de l'événement est configuré avec un identifiant iRacing et que ton compte Garage61 est lié, un bouton 📥 Garage61 apparaît à côté de « Modifier ». Il ouvre un panneau d'import avec tous tes chronos enregistrés sur ce circuit.",
+      },
+      {
+        type: "list",
+        items: [
+          "Filtres disponibles — Condition (sec/pluie), session (P/Q/R), jour/nuit (si fourni par Garage61), même voiture que l'équipage, tours propres uniquement, plage de dates.",
+          "Compteur filtré/total — Toujours visible pour savoir combien de chronos sont masqués.",
+          "Colonnes — Condition, tour propre (✓/✗), chrono, conso, date, voiture, session.",
+          "Boutons d'import — → ☀️ → 💧 → 🌙☀️ → 🌙💧 appliquent le chrono ET la conso correspondante dans le formulaire.",
+          "Le panneau reste ouvert après chaque import pour permettre de renseigner plusieurs conditions d'affilée. Un ✓ sur le bouton confirme l'import pour chaque champ.",
+        ],
+      },
+      {
+        type: "callout",
+        variant: "tip",
+        content: "Le compte Garage61 doit être lié depuis ton profil pilote avant de pouvoir utiliser cette fonctionnalité.",
       },
     ],
   },

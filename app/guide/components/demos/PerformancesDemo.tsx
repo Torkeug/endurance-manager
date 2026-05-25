@@ -42,6 +42,7 @@ export default function PerformancesDemo() {
             <th style={TH}>Conso 💧</th>
             <th style={TH}>Réglages ☀️</th>
             <th style={TH}>Réglages 💧</th>
+            <th style={TH}></th>
           </tr>
         </thead>
         <tbody>
@@ -59,6 +60,12 @@ export default function PerformancesDemo() {
               <td style={{ ...TD, color: "var(--text-dim)", fontSize: "0.82rem" }}>{d.setDry}</td>
               <td style={{ ...TD, color: d.setWet ? "var(--text-dim)" : "var(--text-dim)", fontSize: "0.82rem" }}>
                 {d.setWet ?? "—"}
+              </td>
+              <td style={TD}>
+                <div style={{ display: "flex", flexDirection: "column", gap: "0.3rem" }}>
+                  <button className="btn btn-secondary btn-sm" style={{ fontSize: "0.75rem" }}>Modifier</button>
+                  <button className="btn btn-secondary btn-sm" style={{ fontSize: "0.72rem" }}>📥 Garage61</button>
+                </div>
               </td>
             </tr>
           ))}
