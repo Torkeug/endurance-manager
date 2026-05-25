@@ -63,6 +63,7 @@ export async function GET(request) {
 
   return NextResponse.json({
     lap: {
+      id: bestLap.id,
       lapTime: bestLap.lapTime,
       car: bestLap.car?.name ?? null,
       sessionType: bestLap.sessionType,
