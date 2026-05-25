@@ -10,6 +10,7 @@ Built with Next.js 16 + React 19, backed by Supabase.
 - **Supabase** — auth, database, real-time
 - **Recharts** — performance charts
 - **Luxon** — timezone-aware time formatting
+- **Resend** — transactional emails (registration, approval, stale-sync warnings)
 
 ## Getting started
 
@@ -27,12 +28,11 @@ NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
 SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
 NEXT_PUBLIC_APP_URL=http://localhost:3000
-IRACING_CLIENT_ID=your-iracing-client-id
-IRACING_CLIENT_SECRET=your-iracing-client-secret
 GARAGE61_CLIENT_SECRET=your-garage61-client-secret
+RESEND_API_KEY=your-resend-api-key
 ```
 
-`SUPABASE_SERVICE_ROLE_KEY`, `IRACING_CLIENT_SECRET`, and `GARAGE61_CLIENT_SECRET` are used server-side only (never exposed to the client). `NEXT_PUBLIC_APP_URL` must match the registered OAuth redirect URIs.
+`SUPABASE_SERVICE_ROLE_KEY`, `GARAGE61_CLIENT_SECRET`, and `RESEND_API_KEY` are used server-side only (never exposed to the client). `NEXT_PUBLIC_APP_URL` must match the registered OAuth redirect URIs. iRacing OAuth uses a hardcoded public client ID and PKCE — no server-side secret required.
 
 ### Install and run
 
@@ -56,17 +56,25 @@ app/
   inventaire/       # Global inventory matrix (cars + tracks)
   guide/            # End-user guide (pilot-facing docs)
   admin/            # Admin panel
+  register/         # Self-registration form (creates Supabase Auth account + driver record)
+  pending/          # Shown after registration — driver waits for admin approval
+  refused/          # Shown when an account is rejected by an admin
   auth/
     garage61/       # Garage61 OAuth init (PKCE)
     iracing/        # iRacing OAuth init (PKCE)
+    reset/          # Password reset request form
     callback/
       garage61/     # Garage61 OAuth callback — exchanges code, stores tokens + slug
-      iracing/      # iRacing OAuth callback — stores tokens, syncs inventory + iRating
+      iracing/      # iRacing OAuth callback — exchanges code, stores tokens, syncs inventory + iRating
   api/
-    garage61-sync/      # Imports lap data from Garage61 into team entry performance table
-    garage61-practice/  # Aggregates per-circuit practice stats for a driver from Garage61
-    garage61-laps/      # Fetches best lap at a specific circuit for a driver from Garage61
-    iracing-sync/       # Syncs iRacing inventory and iRating history
+    garage61-sync/          # Imports lap data from Garage61 into team entry performance table
+    garage61-practice/      # Aggregates per-circuit practice stats for a driver from Garage61
+    garage61-laps/          # Fetches best lap at a specific circuit for a driver from Garage61
+    register-driver/        # Server-side driver record insert during registration (bypasses RLS — user has no session yet)
+    notify-admins/          # Emails all admins when a new driver registers
+    notify-admins-approval/ # Emails other admins when a pending driver is approved (avoids acting on stale lists)
+    notify-driver-approved/ # Emails a driver to confirm their account has been approved
+    notify-stale-sync/      # Emails a driver whose iRacing data hasn't been synced in over 100 days
 lib/
   supabase.js           # Legacy anon client
   supabase-server.js    # Server-side client (service role)
@@ -93,7 +101,11 @@ supabase/
 
 ## Auth
 
-Supabase Auth (email/password). The middleware protects all routes — unauthenticated users are redirected to `/login`. New accounts land on `/pending` until approved by an admin.
+Supabase Auth (email/password). The middleware protects all routes — unauthenticated users are redirected to `/login`.
+
+**Registration flow:** drivers self-register at `/register`, which creates a Supabase Auth account and inserts a driver record via the `/api/register-driver` server route (necessary because the user has no active session yet, so RLS blocks a direct client insert). After registration, the driver lands on `/pending`. Admins receive an email notification via Resend. Once an admin approves the driver, both the driver and all other admins receive confirmation emails. Rejected accounts are redirected to `/refused`.
+
+**Password reset:** `/auth/reset` → Supabase sends a reset link → `/update-password` sets the new password.
 
 ## Third-party integrations
 
