@@ -7,6 +7,7 @@ import CircuitsManager from "./CircuitsManager";
 import EventTypesManager from "./EventTypesManager";
 import DriversManager from "./DriversManager";
 import SettingsManager from "./SettingsManager";
+import Garage61Manager from "./Garage61Manager";
 
 const TABS = [
   { id: "pilotes", label: "Pilotes" },
@@ -15,6 +16,7 @@ const TABS = [
   { id: "classes", label: "Classes" },
   { id: "circuits", label: "Circuits" },
   { id: "types", label: "Types d'événement" },
+  { id: "garage61", label: "Garage61" },
   { id: "parametres", label: "Paramètres" },
 ];
 
@@ -129,6 +131,9 @@ export default function AdminTabs({
           cars={cars}
           carClasses={carClasses}
         />
+      )}
+      {activeTab === "garage61" && (
+        <Garage61Manager currentDriver={currentDriver} />
       )}
       {activeTab === "parametres" && (
         <SettingsManager

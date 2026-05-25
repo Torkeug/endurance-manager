@@ -12,14 +12,15 @@ export async function GET(request) {
   const state = searchParams.get("state");
   const error = searchParams.get("error");
 
+  // Parse returnTo from state early so errors can redirect back to the right page.
+  const [verifier = "", returnTo = "/pilotes"] = (state || "").split("|");
+
   if (error) {
-    return NextResponse.redirect(`${origin}/pilotes?error=garage61_denied`);
+    return NextResponse.redirect(`${origin}${returnTo}?error=garage61_denied`);
   }
   if (!code || !state) {
-    return NextResponse.redirect(`${origin}/pilotes?error=garage61_no_code`);
+    return NextResponse.redirect(`${origin}${returnTo}?error=garage61_no_code`);
   }
-
-  const [verifier, returnTo = "/pilotes"] = state.split("|");
 
   try {
     const authClient = await createClient();
@@ -48,7 +49,7 @@ export async function GET(request) {
 
     if (!tokenRes.ok) {
       console.error("Garage61 token exchange error:", await tokenRes.text());
-      return NextResponse.redirect(`${origin}/pilotes?error=garage61_token`);
+      return NextResponse.redirect(`${origin}${returnTo}?error=garage61_token`);
     }
 
     const tokenData = await tokenRes.json();
@@ -56,7 +57,7 @@ export async function GET(request) {
 
     if (!access_token) {
       console.error("Garage61 token response missing access_token:", tokenData);
-      return NextResponse.redirect(`${origin}/pilotes?error=garage61_token`);
+      return NextResponse.redirect(`${origin}${returnTo}?error=garage61_token`);
     }
 
     // Find the driver record for the current user
@@ -68,7 +69,7 @@ export async function GET(request) {
 
     if (!driver) {
       return NextResponse.redirect(
-        `${origin}/pilotes?error=garage61_no_driver`,
+        `${origin}${returnTo}?error=garage61_no_driver`,
       );
     }
 
@@ -98,12 +99,12 @@ export async function GET(request) {
 
     if (updateErr) {
       console.error("Garage61 token save error:", updateErr.message);
-      return NextResponse.redirect(`${origin}/pilotes?error=garage61_save`);
+      return NextResponse.redirect(`${origin}${returnTo}?error=garage61_save`);
     }
 
     return NextResponse.redirect(`${origin}${returnTo}?garage61_linked=true`);
   } catch (err) {
     console.error("Garage61 OAuth error:", err);
-    return NextResponse.redirect(`${origin}/pilotes?error=garage61_error`);
+    return NextResponse.redirect(`${origin}${returnTo}?error=garage61_error`);
   }
 }

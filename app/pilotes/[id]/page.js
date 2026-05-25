@@ -346,6 +346,10 @@ export default async function DriverDetail({ params, searchParams }) {
             "Erreur d'authentification Garage61. Veuillez réessayer."}
           {syncError === "garage61_save" &&
             "Impossible d'enregistrer les tokens Garage61. Veuillez réessayer."}
+          {syncError === "garage61_no_driver" &&
+            "Compte Garage61 : profil pilote introuvable. Contactez un administrateur."}
+          {syncError === "garage61_error" &&
+            "Une erreur inattendue est survenue lors de la liaison Garage61. Veuillez réessayer."}
           {![
             "iracing_sync_failed",
             "iracing_token",
@@ -355,6 +359,8 @@ export default async function DriverDetail({ params, searchParams }) {
             "garage61_denied",
             "garage61_token",
             "garage61_save",
+            "garage61_no_driver",
+            "garage61_error",
           ].includes(syncError) &&
             "Une erreur d'authentification est survenue. Veuillez réessayer."}
         </div>

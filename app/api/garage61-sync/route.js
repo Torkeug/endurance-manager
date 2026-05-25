@@ -31,23 +31,33 @@ export async function GET(request) {
   const refreshToken = requestingDriver.garage61_refresh_token;
   const driverId = requestingDriver.id;
 
-  // For other drivers: resolve their garage61_slug — the requesting user's token
-  // is used to fetch team laps, then filtered by the target driver's slug.
-  // This works even if the target driver's own token has expired or been revoked.
-  let targetSlug = null; // null means "self" — use drivers=me
+  // For other drivers: use their own token (drivers=me) if they have one linked —
+  // this returns all their personal laps, not just team sessions.
+  // Fall back to team-filtered laps if they haven't linked their account.
+  let targetToken = null;      // non-null → use target's own token with drivers=me
+  let targetRefreshToken = null;
+  let targetDriverDbId = null;
+  let targetSlug = null;       // non-null → team approach, filter by slug
+
   if (targetDriverId && targetDriverId !== requestingDriver.id) {
     const { data: targetDriver } = await supabase
       .from("drivers")
-      .select("id, garage61_slug")
+      .select("id, garage61_slug, garage61_access_token, garage61_refresh_token")
       .eq("id", targetDriverId)
       .single();
     if (!targetDriver) {
       return NextResponse.json({ error: "target_driver_not_found" }, { status: 404 });
     }
-    if (!targetDriver.garage61_slug) {
+    if (!targetDriver.garage61_slug && !targetDriver.garage61_access_token) {
       return NextResponse.json({ error: "not_linked" }, { status: 400 });
     }
-    targetSlug = targetDriver.garage61_slug;
+    if (targetDriver.garage61_access_token) {
+      targetToken = targetDriver.garage61_access_token;
+      targetRefreshToken = targetDriver.garage61_refresh_token;
+      targetDriverDbId = targetDriver.id;
+    } else {
+      targetSlug = targetDriver.garage61_slug;
+    }
   }
 
   // ── Resolve iRacing track ID → Garage61 track ID ────────────────────────
@@ -71,10 +81,10 @@ export async function GET(request) {
   // ── Fetch laps ────────────────────────────────────────────────────────────
   let lapsItems;
 
-  if (!targetSlug) {
-    // Own data — drivers=me returns only the requesting user's laps directly
+  if (!targetSlug && !targetToken) {
+    // Own laps — use requesting user's token with drivers=me
     const lapsResult = await g61Fetch(
-      `${GARAGE61_API}/laps?drivers=me&tracks=${g61Track.id}&group=none&limit=200`,
+      `${GARAGE61_API}/laps?drivers=me&tracks=${g61Track.id}&group=none&limit=500`,
       token, driverId, refreshToken,
     );
     if (!lapsResult.ok) {
@@ -82,9 +92,19 @@ export async function GET(request) {
       return NextResponse.json({ error: "garage61_laps_failed" }, { status: 502 });
     }
     lapsItems = lapsResult.data?.items || [];
+  } else if (targetToken) {
+    // Other driver with linked account — use their own token with drivers=me
+    const lapsResult = await g61Fetch(
+      `${GARAGE61_API}/laps?drivers=me&tracks=${g61Track.id}&group=none&limit=500`,
+      targetToken, targetDriverDbId, targetRefreshToken,
+    );
+    if (!lapsResult.ok) {
+      if (lapsResult.status === 401) return NextResponse.json({ error: "token_expired" }, { status: 401 });
+      return NextResponse.json({ error: "garage61_laps_failed" }, { status: 502 });
+    }
+    lapsItems = lapsResult.data?.items || [];
   } else {
-    // Other driver — fetch team laps and filter by their slug.
-    // drivers= filter only accepts "me"; slug filtering must be done server-side.
+    // Other driver without linked account — fall back to team laps filtered by slug
     const meResult = await g61Fetch(
       `${GARAGE61_API}/me`, token, driverId, refreshToken,
       { next: { revalidate: 3600 } },
@@ -99,7 +119,7 @@ export async function GET(request) {
     const teamResults = await Promise.all(
       teams.map((t) =>
         g61Fetch(
-          `${GARAGE61_API}/laps?teams=${encodeURIComponent(t.slug)}&tracks=${encodeURIComponent(g61Track.id)}&group=none&limit=200`,
+          `${GARAGE61_API}/laps?teams=${encodeURIComponent(t.slug)}&tracks=${encodeURIComponent(g61Track.id)}&group=none&limit=500`,
           token, driverId, refreshToken,
         )
       )

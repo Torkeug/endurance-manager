@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "../../../lib/auth";
+import { supabaseServer } from "../../../lib/supabase-server";
 
 export const dynamic = "force-dynamic";
 
@@ -75,7 +76,8 @@ export async function GET(request) {
       if (driverByEmail) {
         // Link auth user to existing driver record by email —
         // handles the case where an admin created the driver before the user registered.
-        await supabase
+        // Must use service role: RLS blocks updates on rows where auth_user_id is still null.
+        await supabaseServer
           .from("drivers")
           .update({ auth_user_id: user.id })
           .eq("id", driverByEmail.id);
