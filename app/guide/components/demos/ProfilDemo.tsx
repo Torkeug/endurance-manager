@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import React, { useState } from "react";
 
 const TABS = [
   { id: "engagements",  label: "Engagements" },
@@ -272,8 +272,8 @@ export default function ProfilDemo() {
                       <td colSpan={6} style={{ padding: "0.4rem 0.75rem", background: "var(--surface-2)", fontSize: "0.68rem", fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--text-dim)", borderBottom: "1px solid var(--border)" }}>Road</td>
                     </tr>
                     {G61_CIRCUITS.map((c, i) => (
-                      <>
-                        <tr key={c.name} onClick={() => setExpandedCircuit(expandedCircuit === c.name ? null : c.name)} style={{ background: i % 2 === 0 ? "transparent" : "rgba(255,255,255,0.02)", cursor: "pointer" }}>
+                      <React.Fragment key={c.name}>
+                        <tr onClick={() => setExpandedCircuit(expandedCircuit === c.name ? null : c.name)} style={{ background: i % 2 === 0 ? "transparent" : "rgba(255,255,255,0.02)", cursor: "pointer" }}>
                           <td style={{ padding: "0.4rem 0.75rem", borderBottom: "1px solid var(--border)", fontSize: "0.82rem", fontWeight: 600 }}>
                             <span style={{ fontSize: "0.6rem", color: "var(--text-dim)", marginRight: "0.4rem", display: "inline-block", transform: expandedCircuit === c.name ? "rotate(90deg)" : "none" }}>▶</span>
                             {c.name}
@@ -292,7 +292,7 @@ export default function ProfilDemo() {
                           </td>
                         </tr>
                         {expandedCircuit === c.name && (
-                          <tr key={`${c.name}-detail`}>
+                          <tr>
                             <td colSpan={6} style={{ padding: "0.5rem 1.5rem 0.6rem", background: "var(--surface-2)", borderBottom: "1px solid var(--border)" }}>
                               <div style={{ display: "flex", gap: "1.25rem", alignItems: "center", flexWrap: "wrap" }}>
                                 <div>
@@ -307,7 +307,7 @@ export default function ProfilDemo() {
                             </td>
                           </tr>
                         )}
-                      </>
+                      </React.Fragment>
                     ))}
                   </tbody>
                 </table>
