@@ -352,8 +352,8 @@ export default function Garage61StatsTab({ slug }) {
                                   {clean && <span style={{ fontSize: "0.72rem", color: "#2eb460" }}>✓ propre</span>}
                                 </div>
                                 {date && <span style={{ fontSize: "0.72rem", color: "var(--text-dim)" }}>{new Date(date).toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit", year: "2-digit" })}</span>}
-                                <a href={`https://garage61.net/app/laps/${c.trackId}/${lapCache[c.trackId].lap.id}`} target="_blank" rel="noopener noreferrer" className="btn btn-secondary btn-sm" style={{ fontSize: "0.72rem", whiteSpace: "nowrap", marginLeft: "auto" }}>
-                                  ↗ Ce tour
+                                <a href={`https://garage61.net/app/laps/${c.trackId}/0;d=1`} target="_blank" rel="noopener noreferrer" className="btn btn-secondary btn-sm" style={{ fontSize: "0.72rem", whiteSpace: "nowrap", marginLeft: "auto" }}>
+                                  ↗ Meilleur tour
                                 </a>
                               </div>
                             );
