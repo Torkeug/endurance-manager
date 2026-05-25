@@ -35,8 +35,8 @@ async function tryRefreshToken(driverId, storedRefreshToken) {
   }
 }
 
-async function g61Fetch(url, token, driverId, refreshToken) {
-  const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
+async function g61Fetch(url, token, driverId, refreshToken, fetchOptions = {}) {
+  const res = await fetch(url, { ...fetchOptions, headers: { Authorization: `Bearer ${token}` } });
   if (res.status === 401 && refreshToken) {
     const newToken = await tryRefreshToken(driverId, refreshToken);
     if (!newToken) return { ok: false, status: 401, data: null };
@@ -87,7 +87,7 @@ export async function GET(request) {
 
   // Fetch track catalogue and team statistics in parallel across all teams
   const [tracksResult, ...statsResults] = await Promise.all([
-    g61Fetch(`${GARAGE61_API}/tracks?limit=2000`, token, driverId, refreshToken),
+    g61Fetch(`${GARAGE61_API}/tracks?limit=2000`, token, driverId, refreshToken, { next: { revalidate: 3600 } }),
     ...teams.map((t) =>
       g61Fetch(`${GARAGE61_API}/teams/${t.slug}/statistics`, token, driverId, refreshToken)
     ),

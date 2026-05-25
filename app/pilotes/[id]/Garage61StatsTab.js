@@ -34,6 +34,25 @@ export default function Garage61StatsTab({ slug }) {
   const [sessionFilter, setSessionFilter] = useState(null); // null = all
   const [selectedCats, setSelectedCats] = useState([]); // populated when data loads
 
+  // Restore sort from localStorage on mount
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem("kronos_g61_sort");
+      if (saved && SORT_OPTIONS.some((o) => o.key === saved)) setSortKey(saved);
+    } catch {}
+  }, []);
+
+  // Persist sort
+  useEffect(() => {
+    try { localStorage.setItem("kronos_g61_sort", sortKey); } catch {}
+  }, [sortKey]);
+
+  // Persist category filter (only after data is loaded)
+  useEffect(() => {
+    if (state !== "done") return;
+    try { localStorage.setItem("kronos_g61_cats", JSON.stringify(selectedCats)); } catch {}
+  }, [selectedCats, state]);
+
   useEffect(() => {
     if (!slug) return;
     setState("loading");
@@ -48,7 +67,14 @@ export default function Garage61StatsTab({ slug }) {
         } else {
           const loaded = data.circuits || [];
           setCircuits(loaded);
-          setSelectedCats(CATEGORY_ORDER.filter((cat) => loaded.some((c) => c.category === cat)));
+          const presentCats = CATEGORY_ORDER.filter((cat) => loaded.some((c) => c.category === cat));
+          try {
+            const saved = JSON.parse(localStorage.getItem("kronos_g61_cats") || "null");
+            const restored = Array.isArray(saved) ? presentCats.filter((c) => saved.includes(c)) : null;
+            setSelectedCats(restored?.length > 0 ? restored : presentCats);
+          } catch {
+            setSelectedCats(presentCats);
+          }
           setState("done");
         }
       })
