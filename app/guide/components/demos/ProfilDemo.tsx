@@ -66,8 +66,8 @@ export default function ProfilDemo() {
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
-      {/* Header */}
-      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", flexWrap: "wrap", gap: "1rem" }}>
+      {/* Section 1: Name + back button */}
+      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: "1.5rem" }}>
         <div>
           <h2 style={{ fontFamily: "var(--font-rajdhani), sans-serif", fontSize: "1.75rem", fontWeight: 700, margin: 0, lineHeight: 1 }}>
             Théo Bernard
@@ -76,36 +76,43 @@ export default function ProfilDemo() {
             5 120 iR
           </div>
         </div>
-        <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap", alignItems: "center" }}>
-          <button className="btn btn-secondary" style={{ fontSize: "0.82rem", opacity: 0.85 }}>✓ Garage61 lié</button>
-          <button className="btn btn-secondary" style={{ fontSize: "0.82rem", opacity: 0.85 }}>✓ iRacing lié</button>
-          <button className="btn btn-secondary" style={{ fontSize: "0.82rem", opacity: 0.85 }}>🔄 Mettre à jour</button>
-          <button className="btn btn-secondary" style={{ fontSize: "0.82rem", opacity: 0.85 }}>📦 Inventaire</button>
-        </div>
+        <button className="btn btn-secondary" style={{ fontSize: "0.82rem", opacity: 0.85 }}>← Pilotes</button>
       </div>
-      <div style={{ fontSize: "0.72rem", color: "var(--text-dim)", marginTop: "-0.5rem" }}>
-        <div>iRating synchronisé le 12/05/2026 14:30</div>
-        <div>Inventaire synchronisé le 02/04/2026 09:15</div>
+
+      {/* Section 2: Integration buttons (left) + Inventaire (right) */}
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "0.5rem", flexWrap: "wrap", gap: "0.5rem" }}>
+        <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
+          <button className="btn btn-secondary btn-sm" style={{ fontSize: "0.82rem", color: "#2eb460", border: "1px solid #2eb460", opacity: 0.9 }}>✓ Garage61 lié</button>
+          <button className="btn btn-secondary btn-sm" style={{ fontSize: "0.82rem", color: "#2eb460", border: "1px solid #2eb460", opacity: 0.9 }}>✓ iRacing lié</button>
+          <button className="btn btn-secondary btn-sm" style={{ fontSize: "0.82rem", opacity: 0.85 }}>🔄 Mettre à jour</button>
+        </div>
+        <button className="btn btn-secondary btn-sm" style={{ fontSize: "0.82rem", opacity: 0.85 }}>📦 Inventaire</button>
+      </div>
+
+      {/* Timestamps */}
+      <div style={{ fontSize: "0.8rem", color: "var(--text-dim)", marginBottom: "1.5rem", display: "flex", flexDirection: "column", gap: "0.2rem" }}>
+        <span>iRating synchronisé le 12/05/2026 14:30</span>
+        <span>Inventaire synchronisé le 02/04/2026 09:15</span>
       </div>
 
       {/* Info card */}
-      <div className="card">
-        <div style={{ display: "flex", alignItems: "center", gap: "2rem", flexWrap: "wrap", justifyContent: "space-between" }}>
-          <div style={{ display: "flex", gap: "2rem", flexWrap: "wrap" }}>
+      <div className="card" style={{ marginBottom: "2rem" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", gap: "1.5rem", flexWrap: "wrap" }}>
+          <div style={{ display: "flex", gap: "1.5rem", flexWrap: "wrap" }}>
             {[
               { label: "iRacing ID", value: "458921" },
               { label: "Email",      value: "theo.bernard@kronos.team" },
               { label: "Discord",    value: "TheoB#4812" },
             ].map((f) => (
               <div key={f.label}>
-                <div style={{ fontSize: "0.62rem", fontWeight: 700, letterSpacing: "0.07em", textTransform: "uppercase", color: "var(--text-dim)", marginBottom: "0.15rem" }}>{f.label}</div>
-                <div style={{ fontFamily: "var(--font-mono), monospace", fontSize: "0.82rem" }}>{f.value}</div>
+                <div style={{ fontSize: "0.7rem", fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--text-dim)", marginBottom: "0.2rem" }}>{f.label}</div>
+                <div style={{ fontFamily: "var(--font-mono), monospace", fontSize: "0.85rem" }}>{f.value}</div>
               </div>
             ))}
           </div>
-          <div style={{ display: "flex", gap: "0.5rem" }}>
-            <button className="btn btn-secondary" style={{ fontSize: "0.78rem", opacity: 0.85 }}>Changer mot de passe</button>
-            <button className="btn btn-secondary" style={{ fontSize: "0.78rem", opacity: 0.85 }}>Modifier</button>
+          <div style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap", justifyContent: "flex-end" }}>
+            <button className="btn btn-secondary btn-sm" style={{ opacity: 0.85 }}>Changer mot de passe</button>
+            <button className="btn btn-secondary btn-sm" style={{ opacity: 0.85 }}>Modifier</button>
           </div>
         </div>
       </div>
