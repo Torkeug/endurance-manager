@@ -119,22 +119,16 @@ export async function GET(request) {
     if (teams.length === 0) return NextResponse.json({ laps: [], total: 0 });
 
     lapsItems = [];
-    const PAGE = 1000;
 
     for (const t of teams) {
-      let offset = 0;
-      let totalPages = 1;
-      while (offset < totalPages * PAGE) {
-        const result = await g61Fetch(
-          `${GARAGE61_API}/laps?teams=${encodeURIComponent(t.slug)}&tracks=${encodeURIComponent(g61Track.id)}&group=none&limit=${PAGE}&offset=${offset}`,
-          token, driverId, refreshToken,
-        );
-        if (!result.ok) break;
-        const items = result.data?.items || [];
-        lapsItems.push(...items.filter((l) => l.driver?.slug === targetSlug));
-        totalPages = Math.ceil((result.data?.total ?? 0) / PAGE);
-        offset += PAGE;
-      }
+      // age=90 limits to the last 90 days — enough history for reference lap times
+      // and keeps the dataset small enough to fit in a single API call.
+      const result = await g61Fetch(
+        `${GARAGE61_API}/laps?teams=${encodeURIComponent(t.slug)}&tracks=${encodeURIComponent(g61Track.id)}&group=none&limit=1000&age=90`,
+        token, driverId, refreshToken,
+      );
+      if (!result.ok) break;
+      lapsItems.push(...(result.data?.items || []).filter((l) => l.driver?.slug === targetSlug));
     }
   }
 
