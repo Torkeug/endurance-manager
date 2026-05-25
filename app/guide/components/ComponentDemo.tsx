@@ -12,6 +12,7 @@ import AvailabilityDemo from "./demos/AvailabilityDemo";
 import StintGridDemo from "./demos/StintGridDemo";
 import PlanningDemo from "./demos/PlanningDemo";
 import PerformancesDemo from "./demos/PerformancesDemo";
+import Garage61ImportDemo from "./demos/Garage61ImportDemo";
 import CourseDemo from "./demos/CourseDemo";
 import StartTimesDemo from "./demos/StartTimesDemo";
 import InventoryDemo from "./demos/InventoryDemo";
@@ -38,6 +39,7 @@ export default function ComponentDemo({ type, config }: ComponentDemoProps) {
     case "stint-grid":         return <StintGridDemo />;
     case "planning":           return <PlanningDemo />;
     case "performances":       return <PerformancesDemo />;
+    case "garage61-import":    return <Garage61ImportDemo />;
     case "course":             return <CourseDemo />;
     case "horaires":           return <StartTimesDemo />;
     case "inventory":          return <InventoryDemo />;

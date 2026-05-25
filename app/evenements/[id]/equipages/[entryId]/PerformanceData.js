@@ -260,7 +260,6 @@ function DriverRow({
   const [g61Filter, setG61Filter] = useState("all"); // "all" | "dry" | "wet"
   const [g61Track, setG61Track] = useState(null);
   const [g61SessionFilter, setG61SessionFilter] = useState("all"); // "all" | "1" | "2" | "3"
-  const [g61DaytimeFilter, setG61DaytimeFilter] = useState("all"); // "all" | "day" | "night"
   const [g61SameCarOnly, setG61SameCarOnly] = useState(false);
   const [g61DateFrom, setG61DateFrom] = useState("");
   const [g61DateTo, setG61DateTo] = useState("");
@@ -632,8 +631,6 @@ function DriverRow({
     if (g61Filter === "dry" && lapConditionLabel(lap) !== "☀️") return false;
     if (g61Filter === "wet" && lapConditionLabel(lap) !== "💧") return false;
     if (g61SessionFilter !== "all" && String(lap.sessionType) !== g61SessionFilter) return false;
-    if (g61DaytimeFilter === "day" && lap.isDaylight === false) return false;
-    if (g61DaytimeFilter === "night" && lap.isDaylight !== false) return false;
     if (g61SameCarOnly && entryCarName && lap.car) {
       const a = lap.car.toLowerCase();
       const b = entryCarName.toLowerCase();
@@ -1002,14 +999,6 @@ function DriverRow({
                         <button key={v} type="button" onClick={() => setG61SessionFilter(v)} className="btn btn-sm" style={fBtnStyle(g61SessionFilter === v)}>{label}</button>
                       ))}
                     </div>
-                    {/* Night/Day — only when Garage61 provides isDaylight data */}
-                    {g61Laps.some((l) => l.isDaylight !== null) && (
-                      <div style={{ display: "flex", gap: "0.25rem" }}>
-                        {[["all", "Tous"], ["day", "☀️ Jour"], ["night", "🌙 Nuit"]].map(([v, label]) => (
-                          <button key={v} type="button" onClick={() => setG61DaytimeFilter(v)} className="btn btn-sm" style={fBtnStyle(g61DaytimeFilter === v)}>{label}</button>
-                        ))}
-                      </div>
-                    )}
                     <span style={{ fontSize: "0.72rem", color: "var(--text-dim)", marginLeft: "auto" }}>
                       {filteredLaps.length}/{g61Laps.length} chrono{g61Laps.length !== 1 ? "s" : ""}
                     </span>

@@ -164,7 +164,6 @@ export async function GET(request) {
     fuelUsed: lap.fuelUsed ?? null,
     fuelLevel: lap.fuelLevel ?? null,
     trackTemp: lap.trackTemp ?? null,
-    isDaylight: lap.isDaylight ?? null,
   }));
 
   return NextResponse.json({
