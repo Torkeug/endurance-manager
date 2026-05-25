@@ -352,6 +352,9 @@ export default function Garage61StatsTab({ slug }) {
                                   {clean && <span style={{ fontSize: "0.72rem", color: "#2eb460" }}>✓ propre</span>}
                                 </div>
                                 {date && <span style={{ fontSize: "0.72rem", color: "var(--text-dim)" }}>{new Date(date).toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit", year: "2-digit" })}</span>}
+                                <a href={`https://garage61.net/app/laps/${c.trackId}/0;g=2;d=1`} target="_blank" rel="noopener noreferrer" className="btn btn-secondary btn-sm" style={{ fontSize: "0.72rem", whiteSpace: "nowrap", marginLeft: "auto" }}>
+                                  ↗ Voir sur Garage61
+                                </a>
                               </div>
                             );
                           })()}
