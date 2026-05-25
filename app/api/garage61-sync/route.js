@@ -104,7 +104,9 @@ export async function GET(request) {
     }
     lapsItems = lapsResult.data?.items || [];
   } else {
-    // Other driver without linked account — fall back to team laps filtered by slug
+    // Other driver without linked account — fetch team laps and filter by slug.
+    // The teams= parameter returns ALL laps from team members (personal + races),
+    // not restricted to specific sessions. We paginate until total is exhausted.
     const meResult = await g61Fetch(
       `${GARAGE61_API}/me`, token, driverId, refreshToken,
       { next: { revalidate: 3600 } },
@@ -116,18 +118,24 @@ export async function GET(request) {
     const teams = meResult.data?.teams || [];
     if (teams.length === 0) return NextResponse.json({ laps: [], total: 0 });
 
-    const teamResults = await Promise.all(
-      teams.map((t) =>
-        g61Fetch(
-          `${GARAGE61_API}/laps?teams=${encodeURIComponent(t.slug)}&tracks=${encodeURIComponent(g61Track.id)}&group=none&limit=500`,
-          token, driverId, refreshToken,
-        )
-      )
-    );
+    lapsItems = [];
+    const PAGE = 1000;
 
-    lapsItems = teamResults
-      .filter((r) => r.ok)
-      .flatMap((r) => (r.data?.items || []).filter((l) => l.driver?.slug === targetSlug));
+    for (const t of teams) {
+      let offset = 0;
+      let totalPages = 1;
+      while (offset < totalPages * PAGE) {
+        const result = await g61Fetch(
+          `${GARAGE61_API}/laps?teams=${encodeURIComponent(t.slug)}&tracks=${encodeURIComponent(g61Track.id)}&group=none&limit=${PAGE}&offset=${offset}`,
+          token, driverId, refreshToken,
+        );
+        if (!result.ok) break;
+        const items = result.data?.items || [];
+        lapsItems.push(...items.filter((l) => l.driver?.slug === targetSlug));
+        totalPages = Math.ceil((result.data?.total ?? 0) / PAGE);
+        offset += PAGE;
+      }
+    }
   }
 
   const laps = lapsItems.map((lap) => ({
