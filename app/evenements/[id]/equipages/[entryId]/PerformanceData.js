@@ -241,6 +241,7 @@ function DriverRow({
   iracingTrackId,
   currentDriverId,
   entryCarName,
+  g61Linked,
 }) {
   const driver = signup.drivers;
   const [editing, setEditing] = useState(false);
@@ -529,7 +530,7 @@ function DriverRow({
                 >
                   Modifier
                 </button>
-                {iracingTrackId && (
+                {iracingTrackId && g61Linked && (
                   <button
                     onClick={openG61}
                     className="btn btn-secondary btn-sm"
@@ -1106,6 +1107,7 @@ export default function PerformanceData({
   iracingTrackId = null,
   currentDriverId = null,
   entryCarName = null,
+  g61Linked = false,
 }) {
   const [perfData, setPerfData] = useState({});
   const [loading, setLoading] = useState(true);
@@ -1323,6 +1325,14 @@ export default function PerformanceData({
         </div>
       )}
 
+      {/* Garage61 not linked notice — only when the track has a Garage61 ID */}
+      {iracingTrackId && !g61Linked && !archived && (
+        <div style={{ fontSize: "0.8rem", color: "var(--text-dim)", marginBottom: "0.75rem" }}>
+          <a href={`/pilotes/${currentDriverId}`} style={{ color: "var(--accent)" }}>Liez votre compte Garage61</a>
+          {" "}sur votre profil pour importer des chronos depuis vos sessions d&apos;entraînement.
+        </div>
+      )}
+
       {/* Performance table */}
       <div className="table-wrap">
         <table style={{ width: "100%", borderCollapse: "collapse" }}>
@@ -1353,6 +1363,7 @@ export default function PerformanceData({
                 iracingTrackId={iracingTrackId}
                 currentDriverId={currentDriverId}
                 entryCarName={entryCarName}
+                g61Linked={g61Linked}
               />
             ))}
           </tbody>

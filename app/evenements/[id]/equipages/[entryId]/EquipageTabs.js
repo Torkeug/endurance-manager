@@ -288,6 +288,7 @@ export default function EquipageTabs({
               iracingTrackId={teamEntry.events?.circuits?.iracing_track_id ?? null}
               currentDriverId={currentDriver?.id ?? null}
               entryCarName={entryCarName}
+              g61Linked={!!currentDriver?.garage61_access_token}
             />
           </>
         </div>
