@@ -48,24 +48,39 @@ npm run lint      # ESLint
 
 ```
 app/
-  evenements/       # Event pages (list, detail, signup, team entries)
-  pilotes/          # Driver profiles + stats
-    [id]/
-      inventaire/   # Per-driver iRacing inventory
-  championnats/     # Championship management
-  inventaire/       # Global inventory matrix (cars + tracks)
-  guide/            # End-user guide (pilot-facing docs)
-  admin/            # Admin panel
-  register/         # Self-registration form (creates Supabase Auth account + driver record)
-  pending/          # Shown after registration — driver waits for admin approval
-  refused/          # Shown when an account is rejected by an admin
+  evenements/           # Event list
+    [id]/               # Event detail
+      inscription/      # Driver signup form
+      equipages/        # Team entries (race mode, stint planning, performances)
+      modifier/         # Edit event (admin)
+    nouveau/            # Create event (admin)
+  pilotes/              # Driver list
+    [id]/               # Driver profile (stats, inventory, Garage61, connections)
+      inventaire/       # Per-driver iRacing inventory
+      modifier/         # Edit driver profile (admin)
+    nouveau/            # Create driver profile (admin)
+  championnats/         # Championship list
+    [id]/               # Championship detail (rounds, standings)
+      modifier/         # Edit championship (admin)
+      nouveau-round/    # Add round (admin)
+    nouveau/            # Create championship (admin)
+  inventaire/           # Global inventory matrix (cars + tracks)
+  guide/                # End-user guide (pilot-facing docs)
+  admin/                # Admin panel
+  login/                # Login page
+  register/             # Self-registration form (creates Supabase Auth account + driver record)
+  pending/              # Shown after registration — driver waits for admin approval
+  refused/              # Shown when an account is rejected by an admin
+  reset-password/       # Forgot-password form — sends reset email via Supabase
+  update-password/      # Set new password after clicking the reset link
+  change-password/      # Change password for logged-in users (requires current password)
   auth/
-    garage61/       # Garage61 OAuth init (PKCE)
-    iracing/        # iRacing OAuth init (PKCE)
-    reset/          # Password reset request form
+    garage61/           # Garage61 OAuth init (PKCE)
+    iracing/            # iRacing OAuth init (PKCE)
+    reset/              # PKCE token handler for password-reset emails — redirects to /update-password
     callback/
-      garage61/     # Garage61 OAuth callback — exchanges code, stores tokens + slug
-      iracing/      # iRacing OAuth callback — exchanges code, stores tokens, syncs inventory + iRating
+      garage61/         # Garage61 OAuth callback — exchanges code, stores tokens + slug
+      iracing/          # iRacing OAuth callback — exchanges code, stores tokens, syncs inventory + iRating
   api/
     garage61-sync/          # Imports lap data from Garage61 into team entry performance table
     garage61-practice/      # Aggregates per-circuit practice stats for a driver from Garage61
@@ -105,7 +120,7 @@ Supabase Auth (email/password). The middleware protects all routes — unauthent
 
 **Registration flow:** drivers self-register at `/register`, which creates a Supabase Auth account and inserts a driver record via the `/api/register-driver` server route (necessary because the user has no active session yet, so RLS blocks a direct client insert). After registration, the driver lands on `/pending`. Admins receive an email notification via Resend. Once an admin approves the driver, both the driver and all other admins receive confirmation emails. Rejected accounts are redirected to `/refused`.
 
-**Password reset:** `/auth/reset` → Supabase sends a reset link → `/update-password` sets the new password.
+**Password reset:** `/reset-password` (enter email) → Supabase sends a reset link → `/auth/reset` handles the PKCE token → `/update-password` sets the new password. Logged-in users can change their password at `/change-password` (requires confirming the current password).
 
 ## Third-party integrations
 
