@@ -119,16 +119,32 @@ export async function GET(request) {
     if (teams.length === 0) return NextResponse.json({ laps: [], total: 0 });
 
     lapsItems = [];
+    const PAGE = 1000;
 
     for (const t of teams) {
-      // age=90 limits to the last 90 days — enough history for reference lap times
-      // and keeps the dataset small enough to fit in a single API call.
-      const result = await g61Fetch(
-        `${GARAGE61_API}/laps?teams=${encodeURIComponent(t.slug)}&tracks=${encodeURIComponent(g61Track.id)}&group=none&limit=1000&age=90`,
-        token, driverId, refreshToken,
-      );
-      if (!result.ok) break;
-      lapsItems.push(...(result.data?.items || []).filter((l) => l.driver?.slug === targetSlug));
+      const url = (offset) =>
+        `${GARAGE61_API}/laps?teams=${encodeURIComponent(t.slug)}&tracks=${encodeURIComponent(g61Track.id)}&group=none&limit=${PAGE}&offset=${offset}`;
+
+      // First page — establishes the total so we know how many more to fetch
+      const first = await g61Fetch(url(0), token, driverId, refreshToken);
+      if (!first.ok) continue;
+      const total = first.data?.total ?? 0;
+      const extraPages = Math.max(0, Math.ceil(total / PAGE) - 1);
+
+      // Remaining pages in parallel
+      const rest = extraPages > 0
+        ? await Promise.all(
+            Array.from({ length: extraPages }, (_, i) =>
+              g61Fetch(url((i + 1) * PAGE), token, driverId, refreshToken)
+            )
+          )
+        : [];
+
+      const allItems = [
+        ...(first.data?.items || []),
+        ...rest.flatMap((r) => r.ok ? (r.data?.items || []) : []),
+      ];
+      lapsItems.push(...allItems.filter((l) => l.driver?.slug === targetSlug));
     }
   }
 
