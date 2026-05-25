@@ -125,8 +125,13 @@ export async function GET(request) {
       const url = (offset) =>
         `${GARAGE61_API}/laps?teams=${encodeURIComponent(t.slug)}&tracks=${encodeURIComponent(g61Track.id)}&group=none&limit=${PAGE}&offset=${offset}`;
 
+      // Team laps pages are team-global (not user-specific) so cache them for
+      // 15 min — subsequent lookups for other drivers on the same team+track
+      // reuse the cached pages and make zero additional API calls.
+      const cacheOpts = { next: { revalidate: 900 } };
+
       // First page — establishes the total so we know how many more to fetch
-      const first = await g61Fetch(url(0), token, driverId, refreshToken);
+      const first = await g61Fetch(url(0), token, driverId, refreshToken, cacheOpts);
       if (!first.ok) continue;
       const total = first.data?.total ?? 0;
       const extraPages = Math.max(0, Math.ceil(total / PAGE) - 1);
@@ -135,7 +140,7 @@ export async function GET(request) {
       const rest = extraPages > 0
         ? await Promise.all(
             Array.from({ length: extraPages }, (_, i) =>
-              g61Fetch(url((i + 1) * PAGE), token, driverId, refreshToken)
+              g61Fetch(url((i + 1) * PAGE), token, driverId, refreshToken, cacheOpts)
             )
           )
         : [];
