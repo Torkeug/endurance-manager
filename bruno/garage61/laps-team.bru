@@ -1,0 +1,29 @@
+meta {
+  name: GET /laps (team, one track)
+  type: http
+  seq: 6
+}
+
+get {
+  url: {{base_url}}/laps
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{access_token}}
+}
+
+query {
+  teams: kronos-simsports-premium
+  tracks: 95
+  group: driver
+  limit: 100
+}
+
+# teams param uses the team slug (found in /me response under teams[].slug)
+# Kronos slugs:
+#   kronos-simsports-premium  (Premium)
+#   rfro-simsport             (Base)
+# group: driver → best lap per driver (good for comparison view)
+# group: none   → every individual lap

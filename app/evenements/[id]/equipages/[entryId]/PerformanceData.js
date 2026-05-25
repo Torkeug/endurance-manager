@@ -220,6 +220,15 @@ function ResolvedCell({ resolved, formatter, baseColor = "var(--text)" }) {
 
 // ── Row component ──────────────────────────────────────────
 
+// ── Garage61 helpers ──────────────────────────────────────────────────────────
+
+const SESSION_LABELS = { 1: "P", 2: "Q", 3: "R" };
+
+function lapConditionLabel(lap) {
+  return lap.trackWetness === 0 && lap.precipitation < 0.01 ? "☀️" : "💧";
+}
+
+
 function DriverRow({
   signup,
   initialData,
@@ -229,6 +238,9 @@ function DriverRow({
   dayWetAdd,
   nightDryAdd,
   nightWetAdd,
+  iracingTrackId,
+  currentDriverId,
+  entryCarName,
 }) {
   const driver = signup.drivers;
   const [editing, setEditing] = useState(false);
@@ -238,6 +250,21 @@ function DriverRow({
   const [lapWetError, setLapWetError] = useState(false);
   const [lapNightDryError, setLapNightDryError] = useState(false);
   const [lapNightWetError, setLapNightWetError] = useState(false);
+
+  // Garage61 import state
+  const [g61Panel, setG61Panel] = useState(false);
+  const [g61Laps, setG61Laps] = useState(null); // null = not yet fetched
+  const [g61Loading, setG61Loading] = useState(false);
+  const [g61Error, setG61Error] = useState(null);
+  const [g61Filter, setG61Filter] = useState("all"); // "all" | "dry" | "wet"
+  const [g61Track, setG61Track] = useState(null);
+  const [g61SessionFilter, setG61SessionFilter] = useState("all"); // "all" | "1" | "2" | "3"
+  const [g61DaytimeFilter, setG61DaytimeFilter] = useState("all"); // "all" | "day" | "night"
+  const [g61SameCarOnly, setG61SameCarOnly] = useState(false);
+  const [g61CleanOnly, setG61CleanOnly] = useState(false);
+  const [g61DateFrom, setG61DateFrom] = useState("");
+  const [g61DateTo, setG61DateTo] = useState("");
+  const [g61Imported, setG61Imported] = useState({}); // lapField → lapId of last import
 
   const toForm = (data) => ({
     lap_time_dry: secToDisplay(data?.lap_time_dry),
@@ -350,6 +377,57 @@ function DriverRow({
     setLapWetError(false);
     setLapNightDryError(false);
     setLapNightWetError(false);
+    setG61Panel(false);
+  };
+
+  // ── Garage61 import handlers ───────────────────────────────────────────────
+
+  const fetchG61Laps = async () => {
+    if (g61Laps !== null) { setG61Panel(true); return; } // use cache
+    setG61Loading(true);
+    setG61Error(null);
+    try {
+      const params = new URLSearchParams({ iracing_track_id: iracingTrackId });
+      if (driver.id !== currentDriverId) params.set("driver_id", driver.id);
+      const res = await fetch(`/api/garage61-sync?${params}`);
+      const data = await res.json();
+      if (!res.ok) {
+        setG61Error(data.error ?? "Erreur inconnue");
+      } else {
+        setG61Track(data.track);
+        setG61Laps(data.laps ?? []);
+        setG61Panel(true);
+      }
+    } catch {
+      setG61Error("Erreur réseau");
+    } finally {
+      setG61Loading(false);
+    }
+  };
+
+  const openG61 = () => { setEditing(true); fetchG61Laps(); };
+
+  // Fill a lap time (and matching fuel) field from a Garage61 lap and close the panel
+  const applyG61Lap = (lap, lapField) => {
+    const fuelFieldMap = {
+      lap_time_dry: "fuel_dry",
+      lap_time_wet: "fuel_wet",
+      lap_time_night_dry: "fuel_night_dry",
+      lap_time_night_wet: "fuel_night_wet",
+    };
+    const fuelField = fuelFieldMap[lapField];
+    setForm((prev) => ({
+      ...prev,
+      [lapField]: secToDisplay(lap.lapTime),
+      ...(fuelField && lap.fuelUsed != null
+        ? { [fuelField]: String(parseFloat(lap.fuelUsed.toFixed(3))) }
+        : {}),
+    }));
+    if (lapField === "lap_time_dry") setLapDryError(false);
+    if (lapField === "lap_time_wet") setLapWetError(false);
+    if (lapField === "lap_time_night_dry") setLapNightDryError(false);
+    if (lapField === "lap_time_night_wet") setLapNightWetError(false);
+    setG61Imported((prev) => ({ ...prev, [lapField]: lap.id }));
   };
 
   if (!editing) {
@@ -441,15 +519,27 @@ function DriverRow({
           >
             {initialData?.setup_notes_wet || "—"}
           </td>
-          {/* Edit button spans day + night rows */}
+          {/* Edit + Garage61 import — spans day + night rows */}
           <td style={{ ...tdStyle, borderBottom: "none" }} rowSpan={2}>
             {!archived && (
-              <button
-                onClick={() => setEditing(true)}
-                className="btn btn-secondary btn-sm"
-              >
-                Modifier
-              </button>
+              <div style={{ display: "flex", flexDirection: "column", gap: "0.4rem" }}>
+                <button
+                  onClick={() => setEditing(true)}
+                  className="btn btn-secondary btn-sm"
+                >
+                  Modifier
+                </button>
+                {iracingTrackId && (
+                  <button
+                    onClick={openG61}
+                    className="btn btn-secondary btn-sm"
+                    style={{ fontSize: "0.72rem" }}
+                    disabled={g61Loading}
+                  >
+                    {g61Loading ? "…" : "📥 Garage61"}
+                  </button>
+                )}
+              </div>
             )}
           </td>
         </tr>
@@ -517,6 +607,32 @@ function DriverRow({
       </>
     );
   }
+
+  // ── Garage61 filter helpers (computed once, used in edit mode panel) ────────
+  const filteredLaps = (g61Laps ?? []).filter((lap) => {
+    if (g61Filter === "dry" && lapConditionLabel(lap) !== "☀️") return false;
+    if (g61Filter === "wet" && lapConditionLabel(lap) !== "💧") return false;
+    if (g61SessionFilter !== "all" && String(lap.sessionType) !== g61SessionFilter) return false;
+    if (g61DaytimeFilter === "day" && lap.isDaylight === false) return false;
+    if (g61DaytimeFilter === "night" && lap.isDaylight !== false) return false;
+    if (g61CleanOnly && !lap.clean) return false;
+    if (g61SameCarOnly && entryCarName && lap.car) {
+      const a = lap.car.toLowerCase();
+      const b = entryCarName.toLowerCase();
+      if (!a.includes(b) && !b.includes(a)) return false;
+    }
+    if (g61DateFrom && lap.startTime.slice(0, 10) < g61DateFrom) return false;
+    if (g61DateTo && lap.startTime.slice(0, 10) > g61DateTo) return false;
+    return true;
+  }).sort((a, b) => a.lapTime - b.lapTime);
+
+  const fBtnStyle = (active) => ({
+    fontSize: "0.7rem",
+    padding: "0.15rem 0.5rem",
+    background: active ? "var(--accent)" : "var(--surface-2)",
+    color: active ? "#000" : "var(--text-dim)",
+    border: "1px solid var(--border)",
+  });
 
   // ── Edit mode ──────────────────────────────────────────────
   return (
@@ -823,6 +939,147 @@ function DriverRow({
           </div>
         </div>
 
+        {/* ── Garage61 import panel ── */}
+        {iracingTrackId && (
+          <div style={{ borderTop: "1px solid var(--border)", paddingTop: "1rem", marginBottom: "1.25rem" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", marginBottom: "0.75rem", flexWrap: "wrap" }}>
+              <span style={{ fontSize: "0.72rem", fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--text-dim)" }}>
+                📥 Importer depuis Garage61
+              </span>
+              <button type="button" onClick={fetchG61Laps} className="btn btn-secondary btn-sm" disabled={g61Loading}>
+                {g61Loading ? "Chargement…" : g61Laps !== null ? "🔄 Actualiser" : "Charger les chronos"}
+              </button>
+              {g61Track && (
+                <span style={{ fontSize: "0.75rem", color: "var(--text-dim)" }}>
+                  {g61Track.name}{g61Track.variant ? ` — ${g61Track.variant}` : ""}
+                </span>
+              )}
+            </div>
+
+            {g61Error && (
+              <div style={{ fontSize: "0.8rem", color: "var(--danger)", marginBottom: "0.75rem" }}>
+                {g61Error === "not_linked" && "Compte Garage61 non lié — rendez-vous sur le profil pilote pour le connecter."}
+                {g61Error === "track_not_found" && "Circuit introuvable sur Garage61."}
+                {g61Error === "token_expired" && "Session Garage61 expirée — re-liez le compte sur le profil pilote."}
+                {!["not_linked", "track_not_found", "token_expired"].includes(g61Error) && `Erreur : ${g61Error}`}
+              </div>
+            )}
+
+            {g61Panel && g61Laps !== null && (
+              <>
+                {/* ── Filter rows ── */}
+                <div style={{ display: "flex", flexDirection: "column", gap: "0.4rem", marginBottom: "0.6rem" }}>
+                  <div style={{ display: "flex", gap: "0.75rem", alignItems: "center", flexWrap: "wrap" }}>
+                    {/* Condition */}
+                    <div style={{ display: "flex", gap: "0.25rem" }}>
+                      {[["all", "Tous"], ["dry", "☀️ Sec"], ["wet", "💧 Pluie"]].map(([v, label]) => (
+                        <button key={v} type="button" onClick={() => setG61Filter(v)} className="btn btn-sm" style={fBtnStyle(g61Filter === v)}>{label}</button>
+                      ))}
+                    </div>
+                    {/* Session */}
+                    <div style={{ display: "flex", gap: "0.25rem" }}>
+                      {[["all", "Tous"], ["1", "P"], ["2", "Q"], ["3", "R"]].map(([v, label]) => (
+                        <button key={v} type="button" onClick={() => setG61SessionFilter(v)} className="btn btn-sm" style={fBtnStyle(g61SessionFilter === v)}>{label}</button>
+                      ))}
+                    </div>
+                    {/* Night/Day — only when Garage61 provides isDaylight data */}
+                    {g61Laps.some((l) => l.isDaylight !== null) && (
+                      <div style={{ display: "flex", gap: "0.25rem" }}>
+                        {[["all", "Tous"], ["day", "☀️ Jour"], ["night", "🌙 Nuit"]].map(([v, label]) => (
+                          <button key={v} type="button" onClick={() => setG61DaytimeFilter(v)} className="btn btn-sm" style={fBtnStyle(g61DaytimeFilter === v)}>{label}</button>
+                        ))}
+                      </div>
+                    )}
+                    <span style={{ fontSize: "0.72rem", color: "var(--text-dim)", marginLeft: "auto" }}>
+                      {filteredLaps.length}/{g61Laps.length} chrono{g61Laps.length !== 1 ? "s" : ""}
+                    </span>
+                  </div>
+                  <div style={{ display: "flex", gap: "1rem", alignItems: "center", flexWrap: "wrap" }}>
+                    {entryCarName && (
+                      <label style={{ display: "flex", alignItems: "center", gap: "0.3rem", fontSize: "0.72rem", color: "var(--text-dim)", cursor: "pointer" }}>
+                        <input type="checkbox" checked={g61SameCarOnly} onChange={(e) => setG61SameCarOnly(e.target.checked)} />
+                        Même voiture
+                      </label>
+                    )}
+                    <label style={{ display: "flex", alignItems: "center", gap: "0.3rem", fontSize: "0.72rem", color: "var(--text-dim)", cursor: "pointer" }}>
+                      <input type="checkbox" checked={g61CleanOnly} onChange={(e) => setG61CleanOnly(e.target.checked)} />
+                      Tours propres
+                    </label>
+                    <div style={{ display: "flex", alignItems: "center", gap: "0.4rem", fontSize: "0.72rem", color: "var(--text-dim)" }}>
+                      <span>De</span>
+                      <input type="date" value={g61DateFrom} onChange={(e) => setG61DateFrom(e.target.value)} style={{ fontSize: "0.72rem", padding: "0.1rem 0.3rem", background: "var(--surface-2)", border: "1px solid var(--border)", borderRadius: "3px", color: "var(--text)" }} />
+                      <span>à</span>
+                      <input type="date" value={g61DateTo} onChange={(e) => setG61DateTo(e.target.value)} style={{ fontSize: "0.72rem", padding: "0.1rem 0.3rem", background: "var(--surface-2)", border: "1px solid var(--border)", borderRadius: "3px", color: "var(--text)" }} />
+                    </div>
+                  </div>
+                </div>
+
+                {g61Laps.length === 0 ? (
+                  <div style={{ fontSize: "0.8rem", color: "var(--text-dim)" }}>Aucun chrono enregistré sur ce circuit.</div>
+                ) : filteredLaps.length === 0 ? (
+                  <div style={{ fontSize: "0.8rem", color: "var(--text-dim)" }}>Aucun résultat pour ces filtres.</div>
+                ) : (
+                  <div style={{ maxHeight: "220px", overflowY: "auto", border: "1px solid var(--border)", borderRadius: "4px" }}>
+                    <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.78rem" }}>
+                      <thead>
+                        <tr>
+                          {["", "Propre", "Chrono", "Conso", "Date", "Voiture", "Session", ""].map((h, i) => (
+                            <th key={i} style={{ ...thStyle, fontSize: "0.65rem", padding: "0.35rem 0.6rem" }}>{h}</th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {filteredLaps.map((lap) => (
+                          <tr key={lap.id} style={{ borderBottom: "1px solid var(--border)" }}>
+                            <td style={{ padding: "0.3rem 0.6rem" }}>{lapConditionLabel(lap)}</td>
+                            <td style={{ padding: "0.3rem 0.6rem" }}>
+                              {lap.clean
+                                ? <span style={{ color: "var(--success, #4caf50)" }}>✓</span>
+                                : <span style={{ color: "var(--text-dim)" }}>✗</span>}
+                            </td>
+                            <td style={{ padding: "0.3rem 0.6rem", fontFamily: "var(--font-mono), monospace" }}>
+                              {secToDisplay(lap.lapTime)}
+                            </td>
+                            <td style={{ padding: "0.3rem 0.6rem", fontFamily: "var(--font-mono), monospace", color: "var(--text-dim)" }}>
+                              {lap.fuelUsed != null ? `${parseFloat(lap.fuelUsed.toFixed(3))}L` : "—"}
+                            </td>
+                            <td style={{ padding: "0.3rem 0.6rem", color: "var(--text-dim)", whiteSpace: "nowrap" }}>
+                              {new Date(lap.startTime).toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit", year: "2-digit" })}
+                            </td>
+                            <td style={{ padding: "0.3rem 0.6rem", color: "var(--text-dim)", maxWidth: "140px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                              {lap.car ?? "—"}
+                            </td>
+                            <td style={{ padding: "0.3rem 0.6rem", color: "var(--text-dim)" }}>
+                              {SESSION_LABELS[lap.sessionType] ?? "?"}
+                            </td>
+                            <td style={{ padding: "0.3rem 0.6rem" }}>
+                              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.2rem" }}>
+                                {[
+                                  ["lap_time_dry", "☀️"],
+                                  ["lap_time_wet", "💧"],
+                                  ["lap_time_night_dry", "🌙☀️"],
+                                  ["lap_time_night_wet", "🌙💧"],
+                                ].map(([field, icon]) => {
+                                  const done = g61Imported[field] === lap.id;
+                                  return (
+                                    <button key={field} type="button" onClick={() => applyG61Lap(lap, field)} className="btn btn-sm" style={{ fontSize: "0.62rem", padding: "0.15rem 0.35rem", ...(done ? { color: "var(--accent)", fontWeight: 700 } : {}) }}>
+                                      {done ? `✓ ${icon}` : `→ ${icon}`}
+                                    </button>
+                                  );
+                                })}
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+        )}
+
         <div style={{ display: "flex", gap: "0.75rem" }}>
           <button
             onClick={handleSave}
@@ -846,6 +1103,9 @@ export default function PerformanceData({
   teamEntryId,
   assignedDrivers,
   archived = false,
+  iracingTrackId = null,
+  currentDriverId = null,
+  entryCarName = null,
 }) {
   const [perfData, setPerfData] = useState({});
   const [loading, setLoading] = useState(true);
@@ -1090,6 +1350,9 @@ export default function PerformanceData({
                 dayWetAdd={dayWetAdd}
                 nightDryAdd={nightDryAdd}
                 nightWetAdd={nightWetAdd}
+                iracingTrackId={iracingTrackId}
+                currentDriverId={currentDriverId}
+                entryCarName={entryCarName}
               />
             ))}
           </tbody>

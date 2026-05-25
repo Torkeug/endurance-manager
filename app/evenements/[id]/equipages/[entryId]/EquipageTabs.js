@@ -1,6 +1,5 @@
 "use client";
-import { useState, useEffect } from "react";
-import { supabaseBrowser as supabase } from "../../../../../lib/supabase-browser";
+import { useState } from "react";
 import DriversAssignment from "./DriversAssignment";
 import AvailabilityGrid from "./AvailabilityGrid";
 import PerformanceData from "./PerformanceData";
@@ -286,6 +285,9 @@ export default function EquipageTabs({
               teamEntryId={entryId}
               assignedDrivers={assignedDrivers}
               archived={archived || isEngineer}
+              iracingTrackId={teamEntry.events?.circuits?.iracing_track_id ?? null}
+              currentDriverId={currentDriver?.id ?? null}
+              entryCarName={entryCarName}
             />
           </>
         </div>

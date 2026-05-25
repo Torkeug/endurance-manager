@@ -1,0 +1,27 @@
+meta {
+  name: GET /laps (wetness filter)
+  type: http
+  seq: 5
+}
+
+get {
+  url: {{base_url}}/laps
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{access_token}}
+}
+
+query {
+  drivers: me
+  tracks: 95
+  group: none
+  limit: 50
+  minConditionsTrackWetness: 1
+}
+
+# trackWetness scale from lap responses: 0 = dry
+# minConditionsTrackWetness: 1 filters for wet/damp laps only
+# Remove the filter entirely (or set to 0) to get all conditions

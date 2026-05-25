@@ -1,0 +1,15 @@
+meta {
+  name: GET /cars
+  type: http
+  seq: 3
+}
+
+get {
+  url: {{base_url}}/cars
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{access_token}}
+}

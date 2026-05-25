@@ -1,0 +1,18 @@
+meta {
+  name: GET /me/statistics
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{base_url}}/me/statistics
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{access_token}}
+}
+
+# Returns per-day breakdown of laps driven per track/car/session type.
+# Useful for discovering which track IDs the driver has laps on.

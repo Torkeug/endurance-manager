@@ -1,0 +1,29 @@
+meta {
+  name: GET /laps (me, one track)
+  type: http
+  seq: 4
+}
+
+get {
+  url: {{base_url}}/laps
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{access_token}}
+}
+
+query {
+  drivers: me
+  tracks: 95
+  group: none
+  limit: 50
+}
+
+# Track IDs (Garage61 integer id, not iRacing platform_id):
+# 95  → Circuit des 24 Heures du Mans (24H)        iRacing: 268
+# 446 → Circuit de Spa-Francorchamps Endurance      iRacing: 525
+# 35  → Sebring International Raceway               iRacing: 95
+# 105 → Daytona Road Course                         iRacing: 192
+# trackWetness: 0 = dry, >0 = wet

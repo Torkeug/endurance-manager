@@ -23,7 +23,7 @@ export default async function EquipageDetail({ params }) {
       *,
       cars (id, name, tank_size_litres, class, refuel_litres_per_second, car_classes(refuel_litres_per_second)),
       events (name, duration_minutes, ig_start_time, ig_sunrise, ig_sunset, timezone, archived, championship_id, green_flag_offset_minutes,
-      circuits (name, pit_lane_time_seconds)),
+      circuits (name, pit_lane_time_seconds, iracing_track_id)),
       event_start_times (irl_start, label)
     `,
     )
@@ -170,7 +170,6 @@ export default async function EquipageDetail({ params }) {
 
   const isInTeam = assignedDrivers.some((s) => s.drivers?.id === driverId);
 
-  const canEditTeam = isEngineer || entry.created_by === driverId; // adjust if needed
 
   return (
     <div className="page">

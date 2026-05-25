@@ -11,6 +11,7 @@ export default async function DriverDetail({ params, searchParams }) {
   const {
     iracing_linked,
     iracing_synced,
+    garage61_linked,
     error: syncError,
   } = await searchParams;
   const { driver: currentDriver } = await getSessionAndDriver();
@@ -293,7 +294,13 @@ export default async function DriverDetail({ params, searchParams }) {
           ✓ Synchronisation réussie — inventaire mis à jour.
         </div>
       )}
-      {/* iRacing sync/OAuth error */}
+      {/* Garage61 first-link success */}
+      {garage61_linked === "true" && (
+        <div className="alert alert-success" style={{ marginBottom: "1rem" }}>
+          ✓ Compte Garage61 lié avec succès.
+        </div>
+      )}
+      {/* iRacing / Garage61 OAuth errors — both use the same ?error= param */}
       {syncError && (
         <div className="alert alert-error" style={{ marginBottom: "1rem" }}>
           {syncError === "iracing_sync_failed" &&
@@ -305,14 +312,23 @@ export default async function DriverDetail({ params, searchParams }) {
           {syncError === "iracing_already_linked" &&
             "Ce compte iRacing est déjà lié à un autre pilote."}
           {syncError === "iracing_denied" && "Autorisation iRacing refusée."}
+          {syncError === "garage61_denied" &&
+            "Autorisation Garage61 refusée."}
+          {syncError === "garage61_token" &&
+            "Erreur d'authentification Garage61. Veuillez réessayer."}
+          {syncError === "garage61_save" &&
+            "Impossible d'enregistrer les tokens Garage61. Veuillez réessayer."}
           {![
             "iracing_sync_failed",
             "iracing_token",
             "iracing_profile",
             "iracing_already_linked",
             "iracing_denied",
+            "garage61_denied",
+            "garage61_token",
+            "garage61_save",
           ].includes(syncError) &&
-            "Une erreur iRacing est survenue. Veuillez réessayer."}
+            "Une erreur d'authentification est survenue. Veuillez réessayer."}
         </div>
       )}
 
@@ -329,8 +345,31 @@ export default async function DriverDetail({ params, searchParams }) {
           flexWrap: "wrap",
         }}
       >
-        {/* Left: iRacing Lié + Mettre à jour buttons */}
+        {/* Left: iRacing + Garage61 connection buttons */}
         <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
+          {/* Garage61 — only shown to the driver themselves */}
+          {currentDriver?.id === id &&
+            (driver.garage61_access_token ? (
+              <span
+                className="btn btn-sm"
+                style={{
+                  background: "var(--surface-2)",
+                  color: "#2eb460",
+                  border: "1px solid #2eb460",
+                  cursor: "default",
+                }}
+              >
+                ✓ Garage61 lié
+              </span>
+            ) : (
+              <a
+                href={`/auth/garage61?returnTo=/pilotes/${id}`}
+                className="btn btn-primary btn-sm"
+              >
+                🔗 Lier Garage61
+              </a>
+            ))}
+
           {currentDriver?.id === id &&
             (driver.iracing_id ? (
               <>
