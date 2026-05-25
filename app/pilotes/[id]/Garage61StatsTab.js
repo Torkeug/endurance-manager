@@ -26,6 +26,13 @@ function formatTime(seconds) {
   return `${m}min`;
 }
 
+function formatLapTime(seconds) {
+  if (!seconds) return "—";
+  const m = Math.floor(seconds / 60);
+  const s = (seconds % 60).toFixed(3);
+  return `${m}:${String(s).padStart(6, "0")}`;
+}
+
 export default function Garage61StatsTab({ slug }) {
   const [state, setState] = useState("idle");
   const [circuits, setCircuits] = useState([]);
@@ -33,6 +40,8 @@ export default function Garage61StatsTab({ slug }) {
   const [sortKey, setSortKey] = useState("laps");
   const [sessionFilter, setSessionFilter] = useState(null); // null = all
   const [selectedCats, setSelectedCats] = useState([]); // populated when data loads
+  const [expandedTrack, setExpandedTrack] = useState(null);
+  const [lapCache, setLapCache] = useState({}); // trackId → { status, lap }
 
   // Restore sort from localStorage on mount
   useEffect(() => {
@@ -182,6 +191,17 @@ export default function Garage61StatsTab({ slug }) {
     verticalAlign: "middle",
   };
 
+  function handleRowClick(trackId) {
+    setExpandedTrack((prev) => (prev === trackId ? null : trackId));
+    if (!lapCache[trackId]) {
+      setLapCache((prev) => ({ ...prev, [trackId]: { status: "loading", lap: null } }));
+      fetch(`/api/garage61-laps?driver_slug=${encodeURIComponent(slug)}&track_id=${trackId}`)
+        .then((r) => r.json())
+        .then((data) => setLapCache((prev) => ({ ...prev, [trackId]: { status: "done", lap: data.lap ?? null } })))
+        .catch(() => setLapCache((prev) => ({ ...prev, [trackId]: { status: "error", lap: null } })));
+    }
+  }
+
   const thSort = (key, align = "left") => ({
     ...TH,
     textAlign: align,
@@ -262,40 +282,83 @@ export default function Garage61StatsTab({ slug }) {
                   </tr>
                 )}
                 {group.rows.map((c, i) => (
-                  <tr key={c.trackId} style={{ background: i % 2 === 0 ? "transparent" : "rgba(255,255,255,0.02)" }}>
-                    <td style={{ ...TD, fontWeight: 600 }}>
-                      {c.name}
-                      {c.variant && (
-                        <span style={{ fontWeight: 400, color: "var(--text-dim)", marginLeft: "0.4rem", fontSize: "0.78rem" }}>
-                          {c.variant}
-                        </span>
-                      )}
-                    </td>
-                    <td style={{ ...TD, textAlign: "right", fontFamily: "var(--font-mono), monospace" }}>
-                      {c.totalLaps}
-                    </td>
-                    <td style={{ ...TD, textAlign: "right", fontFamily: "var(--font-mono), monospace", color: c.cleanPct >= 70 ? "#2eb460" : c.cleanPct >= 40 ? "var(--text)" : "var(--danger)" }}>
-                      {c.cleanPct}%
-                      <span style={{ color: "var(--text-dim)", fontSize: "0.72rem", marginLeft: "0.3rem" }}>({c.cleanLaps})</span>
-                    </td>
-                    <td style={{ ...TD, textAlign: "right", fontFamily: "var(--font-mono), monospace", color: "var(--text-dim)" }}>
-                      {formatTime(c.timeOnTrack)}
-                    </td>
-                    <td style={TD}>
-                      <div style={{ display: "flex", gap: "0.25rem", flexWrap: "wrap" }}>
-                        {c.sessionTypes.map((s) => (
-                          <span key={s} style={{ padding: "0.1rem 0.35rem", background: "var(--surface-2)", border: "1px solid var(--border)", borderRadius: "3px", fontSize: "0.68rem", fontWeight: 700, color: s === 3 ? "var(--accent)" : "var(--text-dim)" }}>
-                            {SESSION_LABELS[s] ?? s}
+                  <React.Fragment key={c.trackId}>
+                    <tr
+                      onClick={() => handleRowClick(c.trackId)}
+                      style={{ background: i % 2 === 0 ? "transparent" : "rgba(255,255,255,0.02)", cursor: "pointer" }}
+                    >
+                      <td style={{ ...TD, fontWeight: 600 }}>
+                        <span style={{ display: "inline-block", fontSize: "0.6rem", color: "var(--text-dim)", marginRight: "0.4rem", transition: "transform 0.15s", transform: expandedTrack === c.trackId ? "rotate(90deg)" : "rotate(0deg)" }}>▶</span>
+                        {c.name}
+                        {c.variant && (
+                          <span style={{ fontWeight: 400, color: "var(--text-dim)", marginLeft: "0.4rem", fontSize: "0.78rem" }}>
+                            {c.variant}
                           </span>
-                        ))}
-                      </div>
-                    </td>
-                    <td style={{ ...TD, textAlign: "right" }}>
-                      <a href={`https://garage61.net/app/laps/${c.trackId}/0;g=2;d=1`} target="_blank" rel="noopener noreferrer" className="btn btn-secondary btn-sm" style={{ fontSize: "0.72rem", whiteSpace: "nowrap" }}>
-                        ↗ Garage61
-                      </a>
-                    </td>
-                  </tr>
+                        )}
+                      </td>
+                      <td style={{ ...TD, textAlign: "right", fontFamily: "var(--font-mono), monospace" }}>
+                        {c.totalLaps}
+                      </td>
+                      <td style={{ ...TD, textAlign: "right", fontFamily: "var(--font-mono), monospace", color: c.cleanPct >= 70 ? "#2eb460" : c.cleanPct >= 40 ? "var(--text)" : "var(--danger)" }}>
+                        {c.cleanPct}%
+                        <span style={{ color: "var(--text-dim)", fontSize: "0.72rem", marginLeft: "0.3rem" }}>({c.cleanLaps})</span>
+                      </td>
+                      <td style={{ ...TD, textAlign: "right", fontFamily: "var(--font-mono), monospace", color: "var(--text-dim)" }}>
+                        {formatTime(c.timeOnTrack)}
+                      </td>
+                      <td style={TD}>
+                        <div style={{ display: "flex", gap: "0.25rem", flexWrap: "wrap" }}>
+                          {c.sessionTypes.map((s) => (
+                            <span key={s} style={{ padding: "0.1rem 0.35rem", background: "var(--surface-2)", border: "1px solid var(--border)", borderRadius: "3px", fontSize: "0.68rem", fontWeight: 700, color: s === 3 ? "var(--accent)" : "var(--text-dim)" }}>
+                              {SESSION_LABELS[s] ?? s}
+                            </span>
+                          ))}
+                        </div>
+                      </td>
+                      <td style={{ ...TD, textAlign: "right" }}>
+                        <a href={`https://garage61.net/app/laps/${c.trackId}/0;g=2;d=1`} target="_blank" rel="noopener noreferrer" className="btn btn-secondary btn-sm" style={{ fontSize: "0.72rem", whiteSpace: "nowrap" }} onClick={(e) => e.stopPropagation()}>
+                          ↗ Garage61
+                        </a>
+                      </td>
+                    </tr>
+                    {expandedTrack === c.trackId && (
+                      <tr>
+                        <td colSpan={6} style={{ padding: "0.5rem 1.5rem 0.6rem", background: "var(--surface-2)", borderBottom: "1px solid var(--border)" }}>
+                          {lapCache[c.trackId]?.status === "loading" && (
+                            <span style={{ color: "var(--text-dim)", fontSize: "0.78rem" }}>Chargement…</span>
+                          )}
+                          {lapCache[c.trackId]?.status === "error" && (
+                            <span style={{ color: "var(--danger)", fontSize: "0.78rem" }}>Erreur de chargement</span>
+                          )}
+                          {lapCache[c.trackId]?.status === "done" && !lapCache[c.trackId].lap && (
+                            <span style={{ color: "var(--text-dim)", fontSize: "0.78rem" }}>Aucun tour enregistré sur Garage61</span>
+                          )}
+                          {lapCache[c.trackId]?.status === "done" && lapCache[c.trackId].lap && (() => {
+                            const { lapTime, car, sessionType, clean, wet, date } = lapCache[c.trackId].lap;
+                            return (
+                              <div style={{ display: "flex", gap: "1.25rem", alignItems: "center", flexWrap: "wrap" }}>
+                                <div>
+                                  <span style={{ fontSize: "0.65rem", color: "var(--text-dim)", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", marginRight: "0.5rem" }}>Meilleur tour</span>
+                                  <span style={{ fontFamily: "var(--font-mono), monospace", fontWeight: 700, fontSize: "0.95rem", color: "var(--accent)" }}>{formatLapTime(lapTime)}</span>
+                                </div>
+                                {car && <span style={{ fontSize: "0.78rem", color: "var(--text-dim)" }}>{car}</span>}
+                                <div style={{ display: "flex", gap: "0.35rem", alignItems: "center" }}>
+                                  {sessionType && (
+                                    <span style={{ padding: "0.1rem 0.35rem", background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "3px", fontSize: "0.68rem", fontWeight: 700, color: sessionType === 3 ? "var(--accent)" : "var(--text-dim)" }}>
+                                      {SESSION_LABELS[sessionType] ?? sessionType}
+                                    </span>
+                                  )}
+                                  {wet && <span style={{ fontSize: "0.72rem", color: "#4a9fd4" }}>💧</span>}
+                                  {clean && <span style={{ fontSize: "0.72rem", color: "#2eb460" }}>✓ propre</span>}
+                                </div>
+                                {date && <span style={{ fontSize: "0.72rem", color: "var(--text-dim)" }}>{new Date(date).toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit", year: "2-digit" })}</span>}
+                              </div>
+                            );
+                          })()}
+                        </td>
+                      </tr>
+                    )}
+                  </React.Fragment>
                 ))}
               </React.Fragment>
             ))}

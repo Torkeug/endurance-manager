@@ -1,50 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "../../../lib/auth";
 import { supabaseServer as supabase } from "../../../lib/supabase-server";
-
-const GARAGE61_API = "https://garage61.net/api/v1";
-const CLIENT_ID = "01KSEXK2MP3Q4T2219885XN17V";
-const GARAGE61_TOKEN_URL = "https://garage61.net/api/oauth/token";
-
-async function tryRefreshToken(driverId, storedRefreshToken) {
-  if (!storedRefreshToken) return null;
-  try {
-    const res = await fetch(GARAGE61_TOKEN_URL, {
-      method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      body: new URLSearchParams({
-        grant_type: "refresh_token",
-        refresh_token: storedRefreshToken,
-        client_id: CLIENT_ID,
-        client_secret: process.env.GARAGE61_CLIENT_SECRET,
-      }),
-    });
-    if (!res.ok) return null;
-    const { access_token, refresh_token: newRefreshToken } = await res.json();
-    if (!access_token) return null;
-    await supabase
-      .from("drivers")
-      .update({
-        garage61_access_token: access_token,
-        garage61_refresh_token: newRefreshToken ?? storedRefreshToken,
-      })
-      .eq("id", driverId);
-    return access_token;
-  } catch {
-    return null;
-  }
-}
-
-async function g61Fetch(url, token, driverId, refreshToken, fetchOptions = {}) {
-  const res = await fetch(url, { ...fetchOptions, headers: { Authorization: `Bearer ${token}` } });
-  if (res.status === 401 && refreshToken) {
-    const newToken = await tryRefreshToken(driverId, refreshToken);
-    if (!newToken) return { ok: false, status: 401, data: null };
-    const retry = await fetch(url, { headers: { Authorization: `Bearer ${newToken}` } });
-    return { ok: retry.ok, status: retry.status, data: retry.ok ? await retry.json() : null };
-  }
-  return { ok: res.ok, status: res.status, data: res.ok ? await res.json() : null };
-}
+import { GARAGE61_API, g61Fetch } from "../../../lib/garage61";
 
 export async function GET(request) {
   const { searchParams } = new URL(request.url);
@@ -59,7 +16,7 @@ export async function GET(request) {
   const { data: { user } } = await authClient.auth.getUser();
   if (!user) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
 
-  // Get requesting user's driver + token (they provide the token for team calls)
+  // Get requesting user's driver + token
   const { data: requestingDriver } = await supabase
     .from("drivers")
     .select("id, garage61_access_token, garage61_refresh_token")
@@ -74,8 +31,8 @@ export async function GET(request) {
   const refreshToken = requestingDriver.garage61_refresh_token;
   const driverId = requestingDriver.id;
 
-  // Get team slugs from /me
-  const meResult = await g61Fetch(`${GARAGE61_API}/me`, token, driverId, refreshToken);
+  // Get team slugs from /me — cache 1h (team membership rarely changes)
+  const meResult = await g61Fetch(`${GARAGE61_API}/me`, token, driverId, refreshToken, { next: { revalidate: 3600 } });
   if (!meResult.ok) {
     if (meResult.status === 401) return NextResponse.json({ error: "token_expired" }, { status: 401 });
     return NextResponse.json({ error: "garage61_me_failed" }, { status: 502 });
@@ -85,11 +42,11 @@ export async function GET(request) {
     return NextResponse.json({ circuits: [] });
   }
 
-  // Fetch track catalogue and team statistics in parallel across all teams
+  // Fetch track catalogue (1h cache) and team statistics (15 min cache) in parallel
   const [tracksResult, ...statsResults] = await Promise.all([
     g61Fetch(`${GARAGE61_API}/tracks?limit=2000`, token, driverId, refreshToken, { next: { revalidate: 3600 } }),
     ...teams.map((t) =>
-      g61Fetch(`${GARAGE61_API}/teams/${t.slug}/statistics`, token, driverId, refreshToken)
+      g61Fetch(`${GARAGE61_API}/teams/${t.slug}/statistics`, token, driverId, refreshToken, { next: { revalidate: 900 } })
     ),
   ]);
 
