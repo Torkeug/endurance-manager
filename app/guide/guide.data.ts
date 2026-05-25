@@ -93,11 +93,14 @@ export const guide: GuideSection[] = [
         content: "Statistiques",
       },
       {
+        type: "text",
+        content: "Quand le pilote a lié son compte Garage61, l'onglet Statistiques propose deux sous-onglets :",
+      },
+      {
         type: "list",
         items: [
-          "iRating actuel — Mis à jour automatiquement lors de syncs iRacing.",
-          "Historique iRating — Graphique par catégorie (Sports Car, Formula, etc.).",
-          "Stats de pilote — Résumé (relais, heures, podiums, victoires), conditions (nuit, pluie), tableau de chronos et conso par circuit.",
+          "Endurance Manager — Stats issues des courses gérées dans l'app : iRating, historique par catégorie, relais, conditions, chronos et consommations par circuit.",
+          "Garage61 — Vue de toutes les sessions d'entraînement enregistrées sur Garage61. Circuits groupés par catégorie (Road, Oval, Dirt Road, Dirt Oval), triables par tours / % propres / temps piste / nom. Clique sur un circuit pour voir le meilleur tour enregistré (chrono, voiture, type de session, date) avec un lien direct vers Garage61.",
         ],
       },
       {
@@ -107,7 +110,7 @@ export const guide: GuideSection[] = [
       {
         type: "list",
         items: [
-          "Infos de base — Nom, email, iRacing ID (lien cliquable), Discord, Twitch, Instagram.",
+          "Infos de base — Nom, email, iRacing ID (lien cliquable), Discord, Twitch, Instagram, Garage61 (lien vers le profil public).",
           "Badge ⚠️ — Synchronisation iRacing en retard (>100 jours).",
         ],
       },
@@ -123,14 +126,14 @@ export const guide: GuideSection[] = [
       {
         type: "list",
         items: [
-          "🔗 Lier Garage61 — Connecte ton compte Garage61 via OAuth. Une fois lié, tes chronos enregistrés sur Garage61 peuvent être importés directement dans l'onglet Performances de ton équipage.",
+          "🔗 Lier Garage61 — Connecte ton compte Garage61 via OAuth. Une fois lié : le profil affiche un lien vers ton profil Garage61, l'onglet Statistiques débloque le sous-onglet Garage61 (entraînements), et tes chronos peuvent être importés dans l'onglet Performances de ton équipage.",
           "🔗 Lier iRacing — Connecte ton compte iRacing pour synchroniser l'inventaire et l'iRating.",
         ],
       },
       {
         type: "callout",
         variant: "note",
-        content: "En liant ton compte Garage61, tu autorises les membres de ton équipe à importer tes chronos pour toi (utile si un ingénieur renseigne les données de performance).",
+        content: "En liant ton compte Garage61, tu autorises les membres de ton équipe à consulter tes stats d'entraînement et à importer tes chronos (utile si un ingénieur renseigne les données de performance).",
       },
     ],
   },

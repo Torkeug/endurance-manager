@@ -1,6 +1,6 @@
 # Kronos Endurance Planner
 
-Web app for managing iRacing endurance events — team entries, driver signups, stint planning, availability grids, and race mode.
+Web app for managing iRacing endurance events — team entries, driver signups, stint planning, availability grids, race mode, and practice tracking.
 
 Built with Next.js 16 + React 19, backed by Supabase.
 
@@ -8,7 +8,6 @@ Built with Next.js 16 + React 19, backed by Supabase.
 
 - **Next.js 16** (App Router, server components)
 - **Supabase** — auth, database, real-time
-- **Tailwind CSS v4**
 - **Recharts** — performance charts
 - **Luxon** — timezone-aware time formatting
 
@@ -28,10 +27,12 @@ NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
 SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
 NEXT_PUBLIC_APP_URL=http://localhost:3000
+IRACING_CLIENT_ID=your-iracing-client-id
+IRACING_CLIENT_SECRET=your-iracing-client-secret
 GARAGE61_CLIENT_SECRET=your-garage61-client-secret
 ```
 
-`SUPABASE_SERVICE_ROLE_KEY` and `GARAGE61_CLIENT_SECRET` are used server-side only (never exposed to the client). `NEXT_PUBLIC_APP_URL` must match the registered OAuth redirect URI.
+`SUPABASE_SERVICE_ROLE_KEY`, `IRACING_CLIENT_SECRET`, and `GARAGE61_CLIENT_SECRET` are used server-side only (never exposed to the client). `NEXT_PUBLIC_APP_URL` must match the registered OAuth redirect URIs.
 
 ### Install and run
 
@@ -48,24 +49,30 @@ npm run lint      # ESLint
 ```
 app/
   evenements/       # Event pages (list, detail, signup, team entries)
-  pilotes/          # Driver profiles
+  pilotes/          # Driver profiles + stats
+    [id]/
+      inventaire/   # Per-driver iRacing inventory
   championnats/     # Championship management
-  inventaire/       # Global inventory
+  inventaire/       # Global inventory matrix (cars + tracks)
   guide/            # End-user guide (pilot-facing docs)
   admin/            # Admin panel
   auth/
     garage61/       # Garage61 OAuth init (PKCE)
     iracing/        # iRacing OAuth init (PKCE)
     callback/
-      garage61/     # Garage61 OAuth callback — exchanges code, stores tokens
-      iracing/      # iRacing OAuth callback
+      garage61/     # Garage61 OAuth callback — exchanges code, stores tokens + slug
+      iracing/      # iRacing OAuth callback — stores tokens, syncs inventory + iRating
   api/
-    garage61-sync/  # Fetches driver laps from Garage61 by iRacing track ID
+    garage61-sync/      # Imports lap data from Garage61 into team entry performance table
+    garage61-practice/  # Aggregates per-circuit practice stats for a driver from Garage61
+    garage61-laps/      # Fetches best lap at a specific circuit for a driver from Garage61
+    iracing-sync/       # Syncs iRacing inventory and iRating history
 lib/
   supabase.js           # Legacy anon client
   supabase-server.js    # Server-side client (service role)
   supabase-browser.js   # Browser client (@supabase/ssr)
   auth.js               # Session helpers, role checks
+  garage61.js           # Shared Garage61 API fetch + token refresh helpers
   db-utils.js           # Shared DB query helpers
   timezone.js           # Luxon timezone formatting
   car-types.js          # Car class / type definitions
@@ -76,13 +83,13 @@ supabase/
 
 ## Roles
 
-| Role | Access |
-|------|--------|
+| Role          | Access                            |
+| ------------- | --------------------------------- |
 | `super_admin` | Full access including admin panel |
-| `admin` | Full event and driver management |
-| `engineer` | Read access + relais tab |
-| `driver` | Own signups, assigned team entry |
-| `external` | Own entry only (limited view) |
+| `admin`       | Full event and driver management  |
+| `engineer`    | Read access + relais tab          |
+| `driver`      | Own signups, assigned team entry  |
+| `external`    | Own entry only (limited view)     |
 
 ## Auth
 
@@ -91,19 +98,21 @@ Supabase Auth (email/password). The middleware protects all routes — unauthent
 ## Third-party integrations
 
 ### iRacing
-OAuth PKCE flow linked from the driver profile page. Stores `iracing_access_token` / `iracing_refresh_token` on the `drivers` table.
+
+OAuth PKCE flow linked from the driver profile page. On callback, stores `iracing_access_token` / `iracing_refresh_token` on the `drivers` table and immediately syncs the driver's iRacing inventory (owned cars + tracks) and iRating history.
 
 ### Garage61
-OAuth PKCE flow linked from the driver profile page (`/pilotes/[id]`). Stores `garage61_access_token` / `garage61_refresh_token` on the `drivers` table.
 
-Once linked, the **Performances** tab on a team entry shows a **📥 Garage61** button (when the circuit has an `iracing_track_id` set). This opens an import panel that fetches the driver's laps from Garage61 for that circuit and lets you apply a lap time and fuel consumption directly into the performance form. Filters: condition, session type, day/night, same car, clean laps only, date range.
+OAuth PKCE flow linked from the driver profile page (`/pilotes/[id]`). On callback, stores `garage61_access_token` / `garage61_refresh_token` / `garage61_slug` on the `drivers` table.
 
-Any team member can import data for any driver — consent is implicit when the driver links their account.
+Once linked, Garage61 data is available in two places:
 
-**Required DB migration** (run once in Supabase dashboard):
-```sql
--- supabase/migrations/20260525_add_garage61_tokens.sql
-ALTER TABLE drivers
-  ADD COLUMN IF NOT EXISTS garage61_access_token TEXT,
-  ADD COLUMN IF NOT EXISTS garage61_refresh_token TEXT;
-```
+**Performance import (team entry → Performances tab)**
+A `📥 Garage61` button appears next to each driver's row when the circuit has an `iracing_track_id` set. It opens an import panel that fetches the driver's laps from Garage61 for that circuit and lets you apply a lap time and fuel consumption directly into the performance form. Filters: condition, session type, day/night, same car, clean laps only, date range.
+
+**Practice stats (driver profile → Statistiques → Garage61)**
+A `Garage61` subtab in the Statistics section of the driver profile shows an aggregated view of the driver's practice sessions across all circuits recorded on Garage61. Features: sort by laps / clean % / time on track / name; multi-select category filter (Road, Oval, Dirt Road, Dirt Oval) always grouped by category; expand any circuit row to see the best lap (time, car, session type, clean/wet, date) with a direct link to Garage61.
+
+Both features use the requesting user's Garage61 token to fetch team-level data — any linked team member can view data for any other driver in the team without requiring that driver to be online.
+
+API responses are cached server-side: track catalogue 1 h, team statistics and laps 15 min, `/me` 1 h.

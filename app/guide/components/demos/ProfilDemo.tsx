@@ -6,6 +6,12 @@ const TABS = [
   { id: "statistiques", label: "Statistiques" },
 ];
 
+const G61_CIRCUITS = [
+  { name: "Circuit des 24 Heures du Mans", variant: "24 Heures du Mans", laps: 360, cleanPct: 82, cleanLaps: 295, time: "21h04", sessionTypes: [1, 3], category: "road", bestLap: "3:54.182", bestCar: "Ferrari 296 GT3", bestSession: "P" },
+  { name: "Circuit de Spa-Francorchamps",  variant: "Endurance",         laps: 214, cleanPct: 76, cleanLaps: 162, time: "8h22",  sessionTypes: [1],    category: "road", bestLap: "2:18.445", bestCar: "Audi R8 LMS",   bestSession: "P" },
+  { name: "Sebring International Raceway", variant: null,                 laps: 98,  cleanPct: 61, cleanLaps: 60,  time: "5h11",  sessionTypes: [1, 3], category: "road", bestLap: "1:54.837", bestCar: "Ferrari 296 GT3", bestSession: "R" },
+];
+
 const STATS = [
   { label: "Relais",        value: "18",      color: "var(--accent)" },
   { label: "Heures pilotées", value: "34h",   color: "var(--accent)" },
@@ -63,6 +69,8 @@ function SectionHeader({ title }: { title: string }) {
 
 export default function ProfilDemo() {
   const [activeTab, setActiveTab] = useState("engagements");
+  const [statsSubTab, setStatsSubTab] = useState("app");
+  const [expandedCircuit, setExpandedCircuit] = useState<string | null>(null);
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
@@ -163,72 +171,150 @@ export default function ProfilDemo() {
       {/* ── Statistiques tab ── */}
       {activeTab === "statistiques" && (
         <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
-          {/* Summary stat cards */}
-          <div>
-            <SectionHeader title="Résumé" />
-            <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
-              {STATS.map((s) => <StatCard key={s.label} {...s} />)}
-            </div>
+          {/* Subtab nav */}
+          <div style={{ display: "flex", gap: "0.25rem", borderBottom: "1px solid var(--border)", marginBottom: "0.25rem" }}>
+            {[{ id: "app", label: "Endurance Manager" }, { id: "garage61", label: "Garage61" }].map((st) => (
+              <button key={st.id} onClick={() => setStatsSubTab(st.id)} style={{ padding: "0.35rem 0.85rem", background: "transparent", border: "none", borderBottom: statsSubTab === st.id ? "2px solid var(--accent)" : "2px solid transparent", color: statsSubTab === st.id ? "var(--accent)" : "var(--text-dim)", fontFamily: "var(--font-rajdhani), sans-serif", fontSize: "0.82rem", fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase", cursor: "pointer", marginBottom: "-1px" }}>
+                {st.label}
+              </button>
+            ))}
           </div>
 
-          {/* Mini bars */}
-          <div>
-            <SectionHeader title="Conditions" />
-            {MINI_BARS.map((b) => <MiniBar key={b.label} {...b} />)}
-          </div>
-
-          {/* iRating sparkline */}
-          <div>
-            <SectionHeader title="Historique iRating — Sports Car" />
-            <div style={{ background: "var(--surface-2)", border: "1px solid var(--border)", borderRadius: "4px", padding: "0.75rem", position: "relative" }}>
-              <svg viewBox="0 0 100 100" preserveAspectRatio="none" style={{ width: "100%", height: "80px", display: "block" }}>
-                <polyline
-                  points={IRATING_PTS.join(" ")}
-                  fill="none"
-                  stroke="var(--accent)"
-                  strokeWidth="2"
-                  vectorEffect="non-scaling-stroke"
-                />
-                {/* fill area */}
-                <polygon
-                  points={`0,100 ${IRATING_PTS.join(" ")} 100,100`}
-                  fill="var(--accent)"
-                  opacity="0.08"
-                />
-              </svg>
-              <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.68rem", color: "var(--text-dim)", marginTop: "0.25rem" }}>
-                <span>jan. 2026</span>
-                <span style={{ fontFamily: "var(--font-mono), monospace", color: "var(--accent)", fontWeight: 700 }}>5 120 iR</span>
-                <span>avr. 2026</span>
+          {/* ── Endurance Manager subtab ── */}
+          {statsSubTab === "app" && <>
+            {/* Summary stat cards */}
+            <div>
+              <SectionHeader title="Résumé" />
+              <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
+                {STATS.map((s) => <StatCard key={s.label} {...s} />)}
               </div>
             </div>
-          </div>
 
-          {/* Lap time table */}
-          <div>
-            <SectionHeader title="Chronos par circuit" />
-            <div className="table-wrap" style={{ overflowX: "auto" }}>
-              <table style={{ borderCollapse: "collapse", width: "100%" }}>
-                <thead>
-                  <tr>
-                    {["Circuit", "Voiture", "Chrono", "Conso"].map((h) => (
-                      <th key={h} style={{ padding: "0.4rem 0.65rem", textAlign: "left", fontSize: "0.65rem", fontWeight: 700, letterSpacing: "0.07em", textTransform: "uppercase", color: "var(--text-dim)", borderBottom: "1px solid var(--border)", whiteSpace: "nowrap" }}>{h}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {LAP_TIMES.map((r) => (
-                    <tr key={r.circuit}>
-                      <td style={{ padding: "0.45rem 0.65rem", borderBottom: "1px solid var(--border)", fontSize: "0.82rem" }}>{r.circuit}</td>
-                      <td style={{ padding: "0.45rem 0.65rem", borderBottom: "1px solid var(--border)", fontSize: "0.8rem", color: "var(--text-dim)" }}>{r.car}</td>
-                      <td style={{ padding: "0.45rem 0.65rem", borderBottom: "1px solid var(--border)", fontFamily: "var(--font-mono), monospace", fontSize: "0.82rem", color: "var(--accent)" }}>{r.time}</td>
-                      <td style={{ padding: "0.45rem 0.65rem", borderBottom: "1px solid var(--border)", fontFamily: "var(--font-mono), monospace", fontSize: "0.8rem", color: "var(--text-dim)" }}>{r.fuel}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+            {/* Mini bars */}
+            <div>
+              <SectionHeader title="Conditions" />
+              {MINI_BARS.map((b) => <MiniBar key={b.label} {...b} />)}
             </div>
-          </div>
+
+            {/* iRating sparkline */}
+            <div>
+              <SectionHeader title="Historique iRating — Sports Car" />
+              <div style={{ background: "var(--surface-2)", border: "1px solid var(--border)", borderRadius: "4px", padding: "0.75rem" }}>
+                <svg viewBox="0 0 100 100" preserveAspectRatio="none" style={{ width: "100%", height: "80px", display: "block" }}>
+                  <polyline points={IRATING_PTS.join(" ")} fill="none" stroke="var(--accent)" strokeWidth="2" vectorEffect="non-scaling-stroke" />
+                  <polygon points={`0,100 ${IRATING_PTS.join(" ")} 100,100`} fill="var(--accent)" opacity="0.08" />
+                </svg>
+                <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.68rem", color: "var(--text-dim)", marginTop: "0.25rem" }}>
+                  <span>jan. 2026</span>
+                  <span style={{ fontFamily: "var(--font-mono), monospace", color: "var(--accent)", fontWeight: 700 }}>5 120 iR</span>
+                  <span>avr. 2026</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Lap time table */}
+            <div>
+              <SectionHeader title="Chronos par circuit" />
+              <div style={{ overflowX: "auto" }}>
+                <table style={{ borderCollapse: "collapse", width: "100%" }}>
+                  <thead>
+                    <tr>
+                      {["Circuit", "Voiture", "Chrono", "Conso"].map((h) => (
+                        <th key={h} style={{ padding: "0.4rem 0.65rem", textAlign: "left", fontSize: "0.65rem", fontWeight: 700, letterSpacing: "0.07em", textTransform: "uppercase", color: "var(--text-dim)", borderBottom: "1px solid var(--border)", whiteSpace: "nowrap" }}>{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {LAP_TIMES.map((r) => (
+                      <tr key={r.circuit}>
+                        <td style={{ padding: "0.45rem 0.65rem", borderBottom: "1px solid var(--border)", fontSize: "0.82rem" }}>{r.circuit}</td>
+                        <td style={{ padding: "0.45rem 0.65rem", borderBottom: "1px solid var(--border)", fontSize: "0.8rem", color: "var(--text-dim)" }}>{r.car}</td>
+                        <td style={{ padding: "0.45rem 0.65rem", borderBottom: "1px solid var(--border)", fontFamily: "var(--font-mono), monospace", fontSize: "0.82rem", color: "var(--accent)" }}>{r.time}</td>
+                        <td style={{ padding: "0.45rem 0.65rem", borderBottom: "1px solid var(--border)", fontFamily: "var(--font-mono), monospace", fontSize: "0.8rem", color: "var(--text-dim)" }}>{r.fuel}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </>}
+
+          {/* ── Garage61 subtab ── */}
+          {statsSubTab === "garage61" && (
+            <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+              {/* Controls */}
+              <div style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap", alignItems: "center" }}>
+                <div style={{ display: "flex", gap: "0.35rem", alignItems: "center" }}>
+                  <span style={{ fontSize: "0.7rem", color: "var(--text-dim)", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase" }}>Tri</span>
+                  {["Tours", "% Propres", "Temps piste"].map((label, i) => (
+                    <span key={label} style={{ padding: "0.2rem 0.6rem", borderRadius: "999px", border: "1px solid", borderColor: i === 0 ? "var(--accent)" : "var(--border)", background: i === 0 ? "var(--accent-dim)" : "transparent", color: i === 0 ? "var(--accent)" : "var(--text-dim)", fontSize: "0.75rem", fontWeight: 600 }}>{label}</span>
+                  ))}
+                </div>
+                <div style={{ display: "flex", gap: "0.4rem", alignItems: "center" }}>
+                  <span style={{ fontSize: "0.7rem", color: "var(--text-dim)", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase" }}>Catégorie</span>
+                  <span style={{ padding: "0.3rem 0.75rem", borderRadius: "3px", border: "1px solid var(--accent)", background: "var(--accent-dim)", color: "var(--accent)", fontFamily: "var(--font-rajdhani), sans-serif", fontSize: "0.78rem", fontWeight: 700 }}>Road</span>
+                </div>
+              </div>
+
+              {/* Table */}
+              <div style={{ border: "1px solid var(--border)", borderRadius: "4px", overflow: "hidden" }}>
+                <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                  <thead>
+                    <tr>
+                      {["Circuit", "Tours", "Propres", "Temps piste", "Sessions", ""].map((h) => (
+                        <th key={h} style={{ background: "var(--surface-2)", color: "var(--text-dim)", fontSize: "0.65rem", fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase", padding: "0.5rem 0.75rem", borderBottom: "2px solid var(--border)", textAlign: h === "Tours" || h === "Propres" || h === "Temps piste" ? "right" : "left", whiteSpace: "nowrap" }}>{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {/* Category header */}
+                    <tr>
+                      <td colSpan={6} style={{ padding: "0.4rem 0.75rem", background: "var(--surface-2)", fontSize: "0.68rem", fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--text-dim)", borderBottom: "1px solid var(--border)" }}>Road</td>
+                    </tr>
+                    {G61_CIRCUITS.map((c, i) => (
+                      <>
+                        <tr key={c.name} onClick={() => setExpandedCircuit(expandedCircuit === c.name ? null : c.name)} style={{ background: i % 2 === 0 ? "transparent" : "rgba(255,255,255,0.02)", cursor: "pointer" }}>
+                          <td style={{ padding: "0.4rem 0.75rem", borderBottom: "1px solid var(--border)", fontSize: "0.82rem", fontWeight: 600 }}>
+                            <span style={{ fontSize: "0.6rem", color: "var(--text-dim)", marginRight: "0.4rem", display: "inline-block", transform: expandedCircuit === c.name ? "rotate(90deg)" : "none" }}>▶</span>
+                            {c.name}
+                            {c.variant && <span style={{ fontWeight: 400, color: "var(--text-dim)", marginLeft: "0.4rem", fontSize: "0.78rem" }}>{c.variant}</span>}
+                          </td>
+                          <td style={{ padding: "0.4rem 0.75rem", borderBottom: "1px solid var(--border)", textAlign: "right", fontFamily: "var(--font-mono), monospace", fontSize: "0.82rem" }}>{c.laps}</td>
+                          <td style={{ padding: "0.4rem 0.75rem", borderBottom: "1px solid var(--border)", textAlign: "right", fontFamily: "var(--font-mono), monospace", fontSize: "0.82rem", color: c.cleanPct >= 70 ? "#2eb460" : "var(--text)" }}>{c.cleanPct}% <span style={{ color: "var(--text-dim)", fontSize: "0.72rem" }}>({c.cleanLaps})</span></td>
+                          <td style={{ padding: "0.4rem 0.75rem", borderBottom: "1px solid var(--border)", textAlign: "right", fontFamily: "var(--font-mono), monospace", fontSize: "0.82rem", color: "var(--text-dim)" }}>{c.time}</td>
+                          <td style={{ padding: "0.4rem 0.75rem", borderBottom: "1px solid var(--border)" }}>
+                            <div style={{ display: "flex", gap: "0.25rem" }}>
+                              {c.sessionTypes.map((s) => <span key={s} style={{ padding: "0.1rem 0.35rem", background: "var(--surface-2)", border: "1px solid var(--border)", borderRadius: "3px", fontSize: "0.68rem", fontWeight: 700, color: s === 3 ? "var(--accent)" : "var(--text-dim)" }}>{s === 1 ? "P" : "R"}</span>)}
+                            </div>
+                          </td>
+                          <td style={{ padding: "0.4rem 0.75rem", borderBottom: "1px solid var(--border)", textAlign: "right" }}>
+                            <span className="btn btn-secondary btn-sm" style={{ fontSize: "0.72rem" }}>↗ Garage61</span>
+                          </td>
+                        </tr>
+                        {expandedCircuit === c.name && (
+                          <tr key={`${c.name}-detail`}>
+                            <td colSpan={6} style={{ padding: "0.5rem 1.5rem 0.6rem", background: "var(--surface-2)", borderBottom: "1px solid var(--border)" }}>
+                              <div style={{ display: "flex", gap: "1.25rem", alignItems: "center", flexWrap: "wrap" }}>
+                                <div>
+                                  <span style={{ fontSize: "0.65rem", color: "var(--text-dim)", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", marginRight: "0.5rem" }}>Meilleur tour</span>
+                                  <span style={{ fontFamily: "var(--font-mono), monospace", fontWeight: 700, fontSize: "0.95rem", color: "var(--accent)" }}>{c.bestLap}</span>
+                                </div>
+                                <span style={{ fontSize: "0.78rem", color: "var(--text-dim)" }}>{c.bestCar}</span>
+                                <span style={{ padding: "0.1rem 0.35rem", background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "3px", fontSize: "0.68rem", fontWeight: 700, color: "var(--text-dim)" }}>{c.bestSession}</span>
+                                <span style={{ fontSize: "0.72rem", color: "#2eb460" }}>✓ propre</span>
+                                <span className="btn btn-secondary btn-sm" style={{ fontSize: "0.72rem", marginLeft: "auto" }}>↗ Meilleur tour</span>
+                              </div>
+                            </td>
+                          </tr>
+                        )}
+                      </>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <div style={{ fontSize: "0.72rem", color: "var(--text-dim)" }}>Données agrégées depuis Garage61 · 672 tours au total</div>
+            </div>
+          )}
         </div>
       )}
     </div>
