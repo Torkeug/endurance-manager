@@ -48,48 +48,50 @@ npm run lint      # ESLint
 
 ```
 app/
-  evenements/           # Event list
-    [id]/               # Event detail
-      inscription/      # Driver signup form
-      equipages/        # Team entries (race mode, stint planning, performances)
-      modifier/         # Edit event (admin)
-    nouveau/            # Create event (admin)
-  pilotes/              # Driver list
-    [id]/               # Driver profile (stats, inventory, Garage61, connections)
-      inventaire/       # Per-driver iRacing inventory
-      modifier/         # Edit driver profile (admin)
-    nouveau/            # Create driver profile (admin)
-  championnats/         # Championship list
-    [id]/               # Championship detail (rounds, standings)
-      modifier/         # Edit championship (admin)
-      nouveau-round/    # Add round (admin)
-    nouveau/            # Create championship (admin)
-  inventaire/           # Global inventory matrix (cars + tracks)
-  guide/                # End-user guide (pilot-facing docs)
-  admin/                # Admin panel
-  login/                # Login page
-  register/             # Self-registration form (creates Supabase Auth account + driver record)
-  pending/              # Shown after registration — driver waits for admin approval
-  refused/              # Shown when an account is rejected by an admin
-  reset-password/       # Forgot-password form — sends reset email via Supabase
-  update-password/      # Set new password after clicking the reset link
-  change-password/      # Change password for logged-in users (requires current password)
-  auth/
-    garage61/           # Garage61 OAuth init (PKCE)
-    iracing/            # iRacing OAuth init (PKCE)
-    reset/              # PKCE token handler for password-reset emails — redirects to /update-password
-    callback/
-      garage61/         # Garage61 OAuth callback — exchanges code, stores tokens + slug
-      iracing/          # iRacing OAuth callback — exchanges code, stores tokens, syncs inventory + iRating
+  admin/                    # Admin panel — single-page tabbed interface
+                            # Tabs: Pilotes (pending approvals), Équipages, Voitures,
+                            #       Classes, Circuits, Types d'événement, Paramètres
   api/
-    garage61-sync/          # Imports lap data from Garage61 into team entry performance table
-    garage61-practice/      # Aggregates per-circuit practice stats for a driver from Garage61
     garage61-laps/          # Fetches best lap at a specific circuit for a driver from Garage61
-    register-driver/        # Server-side driver record insert during registration (bypasses RLS — user has no session yet)
+    garage61-practice/      # Aggregates per-circuit practice stats for a driver from Garage61
+    garage61-sync/          # Imports lap data from Garage61 into team entry performance table
     notify-admins/          # Emails all admins when a new driver registers
     notify-admins-approval/ # Emails other admins when a pending driver is approved (avoids acting on stale lists)
     notify-driver-approved/ # Emails a driver to confirm their account has been approved
     notify-stale-sync/      # Emails a driver whose iRacing data hasn't been synced in over 100 days
+    register-driver/        # Server-side driver record insert during registration (bypasses RLS — user has no session yet)
+  auth/
+    callback/
+      garage61/             # Garage61 OAuth callback — exchanges code, stores tokens + slug
+      iracing/              # iRacing OAuth callback — exchanges code, stores tokens, syncs inventory + iRating
+    garage61/               # Garage61 OAuth init (PKCE)
+    iracing/                # iRacing OAuth init (PKCE)
+    reset/                  # PKCE token handler for password-reset emails — redirects to /update-password
+  championnats/             # Championship list
+    [id]/                   # Championship detail (rounds, standings)
+      modifier/             # Edit championship (admin)
+      nouveau-round/        # Add round (admin)
+    nouveau/                # Create championship (admin)
+  change-password/          # Change password for logged-in users (requires current password)
+  evenements/               # Event list
+    [id]/                   # Event detail
+      equipages/            # Team entries (race mode, stint planning, performances)
+      inscription/          # Driver signup form
+      modifier/             # Edit event (admin)
+    nouveau/                # Create event (admin)
+  guide/                    # End-user guide (pilot-facing docs)
+  inventaire/               # Global inventory matrix (cars + tracks)
+  login/                    # Login page
+  pending/                  # Shown after registration — driver waits for admin approval
+  pilotes/                  # Driver list
+    [id]/                   # Driver profile (stats, inventory, Garage61, connections)
+      inventaire/           # Per-driver iRacing inventory
+      modifier/             # Edit driver profile (admin)
+    nouveau/                # Create driver profile (admin)
+  refused/                  # Shown when an account is rejected by an admin
+  register/                 # Self-registration form (creates Supabase Auth account + driver record)
+  reset-password/           # Forgot-password form — sends reset email via Supabase
+  update-password/          # Set new password after clicking the reset link
 lib/
   supabase.js           # Legacy anon client
   supabase-server.js    # Server-side client (service role)
