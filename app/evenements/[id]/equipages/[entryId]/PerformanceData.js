@@ -262,10 +262,27 @@ function DriverRow({
   const [g61SessionFilter, setG61SessionFilter] = useState("all"); // "all" | "1" | "2" | "3"
   const [g61DaytimeFilter, setG61DaytimeFilter] = useState("all"); // "all" | "day" | "night"
   const [g61SameCarOnly, setG61SameCarOnly] = useState(false);
-  const [g61CleanOnly, setG61CleanOnly] = useState(false);
   const [g61DateFrom, setG61DateFrom] = useState("");
   const [g61DateTo, setG61DateTo] = useState("");
+  const [g61DatePreset, setG61DatePreset] = useState("");
+  const [g61MinFuel, setG61MinFuel] = useState("");
+  const [g61MaxFuel, setG61MaxFuel] = useState("");
   const [g61Imported, setG61Imported] = useState({}); // lapField → lapId of last import
+
+  const applyPreset = (preset) => {
+    if (preset === "") {
+      setG61DateFrom("");
+      setG61DateTo("");
+    } else {
+      const today = new Date();
+      const days = preset === "7d" ? 7 : preset === "30d" ? 30 : 90;
+      const from = new Date(today);
+      from.setDate(from.getDate() - days);
+      setG61DateFrom(from.toISOString().slice(0, 10));
+      setG61DateTo(today.toISOString().slice(0, 10));
+    }
+    setG61DatePreset(preset);
+  };
 
   const toForm = (data) => ({
     lap_time_dry: secToDisplay(data?.lap_time_dry),
@@ -617,7 +634,6 @@ function DriverRow({
     if (g61SessionFilter !== "all" && String(lap.sessionType) !== g61SessionFilter) return false;
     if (g61DaytimeFilter === "day" && lap.isDaylight === false) return false;
     if (g61DaytimeFilter === "night" && lap.isDaylight !== false) return false;
-    if (g61CleanOnly && !lap.clean) return false;
     if (g61SameCarOnly && entryCarName && lap.car) {
       const a = lap.car.toLowerCase();
       const b = entryCarName.toLowerCase();
@@ -625,6 +641,8 @@ function DriverRow({
     }
     if (g61DateFrom && lap.startTime.slice(0, 10) < g61DateFrom) return false;
     if (g61DateTo && lap.startTime.slice(0, 10) > g61DateTo) return false;
+    if (g61MinFuel !== "" && lap.fuelLevel != null && lap.fuelLevel < parseFloat(g61MinFuel)) return false;
+    if (g61MaxFuel !== "" && lap.fuelLevel != null && lap.fuelLevel > parseFloat(g61MaxFuel)) return false;
     return true;
   }).sort((a, b) => a.lapTime - b.lapTime);
 
@@ -1003,15 +1021,22 @@ function DriverRow({
                         Même voiture
                       </label>
                     )}
-                    <label style={{ display: "flex", alignItems: "center", gap: "0.3rem", fontSize: "0.72rem", color: "var(--text-dim)", cursor: "pointer" }}>
-                      <input type="checkbox" checked={g61CleanOnly} onChange={(e) => setG61CleanOnly(e.target.checked)} />
-                      Tours propres
-                    </label>
-                    <div style={{ display: "flex", alignItems: "center", gap: "0.4rem", fontSize: "0.72rem", color: "var(--text-dim)" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: "0.4rem", fontSize: "0.72rem", color: "var(--text-dim)", flexWrap: "wrap" }}>
+                      <span>Réservoir</span>
+                      <input type="number" value={g61MinFuel} onChange={(e) => setG61MinFuel(e.target.value)} placeholder="min L" min="0" step="1" style={{ width: "58px", fontSize: "0.72rem", padding: "0.1rem 0.3rem", background: "var(--surface-2)", border: "1px solid var(--border)", borderRadius: "3px", color: "var(--text)" }} />
+                      <span>–</span>
+                      <input type="number" value={g61MaxFuel} onChange={(e) => setG61MaxFuel(e.target.value)} placeholder="max L" min="0" step="1" style={{ width: "58px", fontSize: "0.72rem", padding: "0.1rem 0.3rem", background: "var(--surface-2)", border: "1px solid var(--border)", borderRadius: "3px", color: "var(--text)" }} />
+                    </div>
+                    <div style={{ display: "flex", alignItems: "center", gap: "0.4rem", fontSize: "0.72rem", color: "var(--text-dim)", flexWrap: "wrap" }}>
+                      <div style={{ display: "flex", gap: "0.25rem" }}>
+                        {[["", "Tout"], ["7d", "7j"], ["30d", "30j"], ["90d", "3 mois"]].map(([v, label]) => (
+                          <button key={v} type="button" onClick={() => applyPreset(v)} className="btn btn-sm" style={fBtnStyle(g61DatePreset === v)}>{label}</button>
+                        ))}
+                      </div>
                       <span>De</span>
-                      <input type="date" value={g61DateFrom} onChange={(e) => setG61DateFrom(e.target.value)} style={{ fontSize: "0.72rem", padding: "0.1rem 0.3rem", background: "var(--surface-2)", border: "1px solid var(--border)", borderRadius: "3px", color: "var(--text)" }} />
+                      <input type="date" value={g61DateFrom} onChange={(e) => { setG61DateFrom(e.target.value); setG61DatePreset(""); }} style={{ fontSize: "0.72rem", padding: "0.1rem 0.3rem", background: "var(--surface-2)", border: "1px solid var(--border)", borderRadius: "3px", color: "var(--text)" }} />
                       <span>à</span>
-                      <input type="date" value={g61DateTo} onChange={(e) => setG61DateTo(e.target.value)} style={{ fontSize: "0.72rem", padding: "0.1rem 0.3rem", background: "var(--surface-2)", border: "1px solid var(--border)", borderRadius: "3px", color: "var(--text)" }} />
+                      <input type="date" value={g61DateTo} onChange={(e) => { setG61DateTo(e.target.value); setG61DatePreset(""); }} style={{ fontSize: "0.72rem", padding: "0.1rem 0.3rem", background: "var(--surface-2)", border: "1px solid var(--border)", borderRadius: "3px", color: "var(--text)" }} />
                     </div>
                   </div>
                 </div>
@@ -1025,7 +1050,7 @@ function DriverRow({
                     <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.78rem" }}>
                       <thead>
                         <tr>
-                          {["", "Propre", "Chrono", "Conso", "Date", "Voiture", "Session", ""].map((h, i) => (
+                          {["", "Chrono", "Conso", "Réservoir", "T. Piste", "Date", "Voiture", "Session", ""].map((h, i) => (
                             <th key={i} style={{ ...thStyle, fontSize: "0.65rem", padding: "0.35rem 0.6rem", position: "sticky", top: 0, zIndex: 1 }}>{h}</th>
                           ))}
                         </tr>
@@ -1034,16 +1059,17 @@ function DriverRow({
                         {filteredLaps.map((lap) => (
                           <tr key={lap.id} style={{ borderBottom: "1px solid var(--border)" }}>
                             <td style={{ padding: "0.3rem 0.6rem" }}>{lapConditionLabel(lap)}</td>
-                            <td style={{ padding: "0.3rem 0.6rem" }}>
-                              {lap.clean
-                                ? <span style={{ color: "var(--success, #4caf50)" }}>✓</span>
-                                : <span style={{ color: "var(--text-dim)" }}>✗</span>}
-                            </td>
                             <td style={{ padding: "0.3rem 0.6rem", fontFamily: "var(--font-mono), monospace" }}>
                               {secToDisplay(lap.lapTime)}
                             </td>
                             <td style={{ padding: "0.3rem 0.6rem", fontFamily: "var(--font-mono), monospace", color: "var(--text-dim)" }}>
                               {lap.fuelUsed != null ? `${parseFloat(lap.fuelUsed.toFixed(3))}L` : "—"}
+                            </td>
+                            <td style={{ padding: "0.3rem 0.6rem", fontFamily: "var(--font-mono), monospace", color: "var(--text-dim)" }}>
+                              {lap.fuelLevel != null ? `${parseFloat(lap.fuelLevel.toFixed(1))}L` : "—"}
+                            </td>
+                            <td style={{ padding: "0.3rem 0.6rem", fontFamily: "var(--font-mono), monospace", color: "var(--text-dim)" }}>
+                              {lap.trackTemp != null ? `${Math.round(lap.trackTemp)}°` : "—"}
                             </td>
                             <td style={{ padding: "0.3rem 0.6rem", color: "var(--text-dim)", whiteSpace: "nowrap" }}>
                               {new Date(lap.startTime).toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit", year: "2-digit" })}

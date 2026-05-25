@@ -161,8 +161,9 @@ export async function GET(request) {
     sessionType: lap.sessionType,
     trackWetness: lap.trackWetness ?? 0,
     precipitation: lap.precipitation ?? 0,
-    clean: lap.clean ?? false,
     fuelUsed: lap.fuelUsed ?? null,
+    fuelLevel: lap.fuelLevel ?? null,
+    trackTemp: lap.trackTemp ?? null,
     isDaylight: lap.isDaylight ?? null,
   }));
 

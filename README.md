@@ -137,7 +137,7 @@ OAuth PKCE flow linked from the driver profile page (`/pilotes/[id]`). On callba
 Once linked, Garage61 data is available in two places:
 
 **Performance import (team entry → Performances tab)**
-A `📥 Garage61` button appears next to each driver's row when the circuit has an `iracing_track_id` set. It opens an import panel that fetches the driver's laps from Garage61 for that circuit and lets you apply a lap time and fuel consumption directly into the performance form. Filters: condition, session type, day/night, same car, clean laps only, date range.
+A `📥 Garage61` button appears next to each driver's row when the circuit has an `iracing_track_id` set. It opens an import panel that fetches the driver's laps from Garage61 for that circuit and lets you apply a lap time and fuel consumption directly into the performance form. Filters: condition (dry/wet), session type (P/Q/R), day/night, same car, fuel level range (min/max L), date range with presets (7j / 30j / 3 mois). Columns: condition, lap time, fuel used, fuel level, track temp, date, car, session.
 
 **Practice stats (driver profile → Statistiques → Garage61)**
 A `Garage61` subtab in the Statistics section of the driver profile shows an aggregated view of the driver's practice sessions across all circuits recorded on Garage61. Features: sort by laps / clean % / time on track / name; multi-select category filter (Road, Oval, Dirt Road, Dirt Oval) always grouped by category; expand any circuit row to see the best lap (time, car, session type, clean/wet, date) with a direct link to Garage61.

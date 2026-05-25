@@ -703,9 +703,9 @@ export const guide: GuideSection[] = [
       {
         type: "list",
         items: [
-          "Filtres disponibles — Condition (sec/pluie), session (P/Q/R), jour/nuit (si fourni par Garage61), même voiture que l'équipage, tours propres uniquement, plage de dates.",
+          "Filtres disponibles — Condition (sec/pluie), session (P/Q/R), jour/nuit (si fourni par Garage61), même voiture que l'équipage, plage de réservoir (min/max en litres — utile pour isoler un rythme représentatif d'un relais), plage de dates avec raccourcis 7j / 30j / 3 mois.",
           "Compteur filtré/total — Toujours visible pour savoir combien de chronos sont masqués.",
-          "Colonnes — Condition, tour propre (✓/✗), chrono, conso, date, voiture, session.",
+          "Colonnes — Condition, chrono, conso, réservoir (carburant en réserve au moment du tour — plus bas = plus léger), température de piste, date, voiture, session.",
           "Boutons d'import — → ☀️ → 💧 → 🌙☀️ → 🌙💧 appliquent le chrono ET la conso correspondante dans le formulaire.",
           "Le panneau reste ouvert après chaque import pour permettre de renseigner plusieurs conditions d'affilée. Un ✓ sur le bouton confirme l'import pour chaque champ.",
         ],
