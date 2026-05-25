@@ -1024,7 +1024,7 @@ function DriverRow({
                       <thead>
                         <tr>
                           {["", "Propre", "Chrono", "Conso", "Date", "Voiture", "Session", ""].map((h, i) => (
-                            <th key={i} style={{ ...thStyle, fontSize: "0.65rem", padding: "0.35rem 0.6rem" }}>{h}</th>
+                            <th key={i} style={{ ...thStyle, fontSize: "0.65rem", padding: "0.35rem 0.6rem", position: "sticky", top: 0, zIndex: 1 }}>{h}</th>
                           ))}
                         </tr>
                       </thead>
