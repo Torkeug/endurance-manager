@@ -530,7 +530,8 @@ function DriverRow({
                 >
                   Modifier
                 </button>
-                {iracingTrackId && g61Linked && (
+                {iracingTrackId && g61Linked &&
+                  (driver.id === currentDriverId || !!driver.garage61_slug) && (
                   <button
                     onClick={openG61}
                     className="btn btn-secondary btn-sm"
@@ -959,7 +960,7 @@ function DriverRow({
 
             {g61Error && (
               <div style={{ fontSize: "0.8rem", color: "var(--danger)", marginBottom: "0.75rem" }}>
-                {g61Error === "not_linked" && "Compte Garage61 non lié — rendez-vous sur le profil pilote pour le connecter."}
+                {g61Error === "not_linked" && "Compte Garage61 non lié — le pilote doit connecter son compte sur son profil."}
                 {g61Error === "track_not_found" && "Circuit introuvable sur Garage61."}
                 {g61Error === "token_expired" && "Session Garage61 expirée — re-liez le compte sur le profil pilote."}
                 {!["not_linked", "track_not_found", "token_expired"].includes(g61Error) && `Erreur : ${g61Error}`}
