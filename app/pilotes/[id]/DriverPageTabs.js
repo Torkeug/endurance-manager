@@ -55,8 +55,7 @@ export default function DriverPageTabs({ engagementsContent, statsContent }) {
       </div>
 
       {/* ── Tab panels ───────────────────────────────────────────────── */}
-      {activeTab === "engagements" && engagementsContent}
-      {activeTab === "statistiques" && statsContent}
+      {{ engagements: engagementsContent, statistiques: statsContent }[activeTab]}
     </div>
   );
 }

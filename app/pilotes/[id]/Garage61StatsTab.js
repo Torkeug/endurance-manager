@@ -1,0 +1,285 @@
+"use client";
+import React, { useEffect, useState } from "react";
+
+const SESSION_LABELS = { 1: "P", 2: "Q", 3: "R" };
+
+const CATEGORY_LABELS = {
+  road:      "Road",
+  oval:      "Oval",
+  dirt_oval: "Dirt Oval",
+  dirt_road: "Dirt Road",
+};
+const CATEGORY_ORDER = ["road", "oval", "dirt_road", "dirt_oval"];
+
+const SORT_OPTIONS = [
+  { key: "laps",    label: "Tours",       fn: (a, b) => b.totalLaps - a.totalLaps },
+  { key: "clean",   label: "% Propres",   fn: (a, b) => b.cleanPct - a.cleanPct },
+  { key: "time",    label: "Temps piste", fn: (a, b) => b.timeOnTrack - a.timeOnTrack },
+  { key: "name",    label: "Circuit",     fn: (a, b) => a.name.localeCompare(b.name) },
+];
+
+function formatTime(seconds) {
+  if (!seconds) return "—";
+  const h = Math.floor(seconds / 3600);
+  const m = Math.floor((seconds % 3600) / 60);
+  if (h > 0) return `${h}h${String(m).padStart(2, "0")}`;
+  return `${m}min`;
+}
+
+export default function Garage61StatsTab({ slug }) {
+  const [state, setState] = useState("idle");
+  const [circuits, setCircuits] = useState([]);
+  const [error, setError] = useState(null);
+  const [sortKey, setSortKey] = useState("laps");
+  const [sessionFilter, setSessionFilter] = useState(null); // null = all
+  const [selectedCats, setSelectedCats] = useState([]); // populated when data loads
+
+  useEffect(() => {
+    if (!slug) return;
+    setState("loading");
+    fetch(`/api/garage61-practice?driver_slug=${encodeURIComponent(slug)}`)
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.error === "not_linked") {
+          setState("not_linked");
+        } else if (data.error) {
+          setError(data.error);
+          setState("error");
+        } else {
+          const loaded = data.circuits || [];
+          setCircuits(loaded);
+          setSelectedCats(CATEGORY_ORDER.filter((cat) => loaded.some((c) => c.category === cat)));
+          setState("done");
+        }
+      })
+      .catch(() => { setError("network_error"); setState("error"); });
+  }, [slug]);
+
+  if (state === "idle" || state === "loading") {
+    return (
+      <div style={{ color: "var(--text-dim)", fontSize: "0.85rem", padding: "1rem 0" }}>
+        Chargement des données Garage61…
+      </div>
+    );
+  }
+
+  if (state === "not_linked") {
+    return (
+      <div className="card" style={{ color: "var(--text-dim)", fontSize: "0.85rem" }}>
+        Aucun compte Garage61 lié à votre profil. Liez votre compte pour voir les statistiques de préparation.
+      </div>
+    );
+  }
+
+  if (state === "error") {
+    return (
+      <div className="card" style={{ color: "var(--danger)", fontSize: "0.85rem" }}>
+        Impossible de charger les données Garage61 ({error}).
+      </div>
+    );
+  }
+
+  if (circuits.length === 0) {
+    return (
+      <div className="card">
+        <div className="empty">Aucune donnée de préparation disponible pour ce pilote sur Garage61.</div>
+      </div>
+    );
+  }
+
+  // Collect all session types present across all circuits for the filter pills
+  const allSessionTypes = [...new Set(circuits.flatMap((c) => c.sessionTypes))].sort();
+  const hasCategories = circuits.some((c) => c.category);
+
+  const sortFn = SORT_OPTIONS.find((o) => o.key === sortKey)?.fn ?? SORT_OPTIONS[0].fn;
+  const filtered = circuits
+    .filter((c) => sessionFilter === null || c.sessionTypes.includes(sessionFilter))
+    .filter((c) => !hasCategories || selectedCats.length === 0 || selectedCats.includes(c.category))
+    .sort(sortFn);
+
+  // Always group by category when categories are present
+  const groups = hasCategories
+    ? CATEGORY_ORDER
+        .filter((cat) => selectedCats.includes(cat))
+        .map((cat) => ({
+          label: CATEGORY_LABELS[cat] ?? cat,
+          rows: filtered.filter((c) => c.category === cat),
+        }))
+        .filter((g) => g.rows.length > 0)
+    : [{ label: null, rows: filtered }];
+
+  // Rounded pill — used for sort and session type
+  const pillStyle = (active) => ({
+    padding: "0.2rem 0.6rem",
+    borderRadius: "999px",
+    border: "1px solid",
+    borderColor: active ? "var(--accent)" : "var(--border)",
+    background: active ? "var(--accent-dim)" : "transparent",
+    color: active ? "var(--accent)" : "var(--text-dim)",
+    fontSize: "0.75rem",
+    fontWeight: 600,
+    cursor: "pointer",
+  });
+
+  // Matrix-style pill — used for category filter (matches InventoryMatrix)
+  const catPillStyle = (active) => ({
+    padding: "0.3rem 0.75rem",
+    borderRadius: "3px",
+    border: `1px solid ${active ? "var(--accent)" : "var(--border)"}`,
+    background: active ? "var(--accent-dim)" : "var(--surface-2)",
+    color: active ? "var(--accent)" : "var(--text-dim)",
+    fontFamily: "var(--font-rajdhani), sans-serif",
+    fontSize: "0.78rem",
+    fontWeight: 700,
+    cursor: "pointer",
+    whiteSpace: "nowrap",
+  });
+
+  const TH = {
+    background: "var(--surface-2)",
+    color: "var(--text-dim)",
+    fontSize: "0.65rem",
+    fontWeight: 700,
+    letterSpacing: "0.06em",
+    textTransform: "uppercase",
+    padding: "0.5rem 0.75rem",
+    borderBottom: "2px solid var(--border)",
+    whiteSpace: "nowrap",
+    textAlign: "left",
+    cursor: "pointer",
+    userSelect: "none",
+  };
+  const TD = {
+    padding: "0.4rem 0.75rem",
+    borderBottom: "1px solid var(--border)",
+    fontSize: "0.82rem",
+    verticalAlign: "middle",
+  };
+
+  const thSort = (key, align = "left") => ({
+    ...TH,
+    textAlign: align,
+    color: sortKey === key ? "var(--accent)" : "var(--text-dim)",
+  });
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+      {/* Controls row */}
+      <div style={{ display: "flex", gap: "1rem", flexWrap: "wrap", alignItems: "center" }}>
+        {/* Sort */}
+        <div style={{ display: "flex", gap: "0.35rem", alignItems: "center", flexWrap: "wrap" }}>
+          <span style={{ fontSize: "0.7rem", color: "var(--text-dim)", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase" }}>Tri</span>
+          {SORT_OPTIONS.map((o) => (
+            <button key={o.key} style={pillStyle(sortKey === o.key)} onClick={() => setSortKey(o.key)}>
+              {o.label}
+            </button>
+          ))}
+        </div>
+
+        {/* Session type filter — only if multiple types present */}
+        {allSessionTypes.length > 1 && (
+          <div style={{ display: "flex", gap: "0.35rem", alignItems: "center", flexWrap: "wrap" }}>
+            <span style={{ fontSize: "0.7rem", color: "var(--text-dim)", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase" }}>Session</span>
+            <button style={pillStyle(sessionFilter === null)} onClick={() => setSessionFilter(null)}>Tous</button>
+            {allSessionTypes.map((s) => (
+              <button key={s} style={pillStyle(sessionFilter === s)} onClick={() => setSessionFilter(sessionFilter === s ? null : s)}>
+                {SESSION_LABELS[s] ?? s}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {/* Category filter — multi-select, all active by default */}
+        {hasCategories && (
+          <div style={{ display: "flex", gap: "0.4rem", flexWrap: "wrap", alignItems: "center" }}>
+            <span style={{ fontSize: "0.7rem", color: "var(--text-dim)", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase" }}>Catégorie</span>
+            {CATEGORY_ORDER
+              .filter((cat) => circuits.some((c) => c.category === cat))
+              .map((cat) => (
+                <button
+                  key={cat}
+                  style={catPillStyle(selectedCats.includes(cat))}
+                  onClick={() => setSelectedCats(
+                    selectedCats.includes(cat)
+                      ? selectedCats.filter((c) => c !== cat)
+                      : [...selectedCats, cat]
+                  )}
+                >
+                  {CATEGORY_LABELS[cat]}
+                </button>
+              ))}
+          </div>
+        )}
+      </div>
+
+      {/* Table */}
+      <div style={{ border: "1px solid var(--border)", borderRadius: "4px", overflow: "hidden", overflowX: "auto" }}>
+        <table style={{ width: "100%", borderCollapse: "collapse", minWidth: "420px" }}>
+          <thead>
+            <tr>
+              <th style={thSort("name")} onClick={() => setSortKey("name")}>Circuit</th>
+              <th style={{ ...thSort("laps", "right") }} onClick={() => setSortKey("laps")}>Tours</th>
+              <th style={{ ...thSort("clean", "right") }} onClick={() => setSortKey("clean")}>Propres</th>
+              <th style={{ ...thSort("time", "right") }} onClick={() => setSortKey("time")}>Temps piste</th>
+              <th style={TH}>Sessions</th>
+              <th style={TH}></th>
+            </tr>
+          </thead>
+          <tbody>
+            {groups.map((group) => (
+              <React.Fragment key={group.label ?? "all"}>
+                {group.label && (
+                  <tr>
+                    <td colSpan={6} style={{ padding: "0.4rem 0.75rem", background: "var(--surface-2)", fontSize: "0.68rem", fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--text-dim)", borderBottom: "1px solid var(--border)" }}>
+                      {group.label}
+                    </td>
+                  </tr>
+                )}
+                {group.rows.map((c, i) => (
+                  <tr key={c.trackId} style={{ background: i % 2 === 0 ? "transparent" : "rgba(255,255,255,0.02)" }}>
+                    <td style={{ ...TD, fontWeight: 600 }}>
+                      {c.name}
+                      {c.variant && (
+                        <span style={{ fontWeight: 400, color: "var(--text-dim)", marginLeft: "0.4rem", fontSize: "0.78rem" }}>
+                          {c.variant}
+                        </span>
+                      )}
+                    </td>
+                    <td style={{ ...TD, textAlign: "right", fontFamily: "var(--font-mono), monospace" }}>
+                      {c.totalLaps}
+                    </td>
+                    <td style={{ ...TD, textAlign: "right", fontFamily: "var(--font-mono), monospace", color: c.cleanPct >= 70 ? "#2eb460" : c.cleanPct >= 40 ? "var(--text)" : "var(--danger)" }}>
+                      {c.cleanPct}%
+                      <span style={{ color: "var(--text-dim)", fontSize: "0.72rem", marginLeft: "0.3rem" }}>({c.cleanLaps})</span>
+                    </td>
+                    <td style={{ ...TD, textAlign: "right", fontFamily: "var(--font-mono), monospace", color: "var(--text-dim)" }}>
+                      {formatTime(c.timeOnTrack)}
+                    </td>
+                    <td style={TD}>
+                      <div style={{ display: "flex", gap: "0.25rem", flexWrap: "wrap" }}>
+                        {c.sessionTypes.map((s) => (
+                          <span key={s} style={{ padding: "0.1rem 0.35rem", background: "var(--surface-2)", border: "1px solid var(--border)", borderRadius: "3px", fontSize: "0.68rem", fontWeight: 700, color: s === 3 ? "var(--accent)" : "var(--text-dim)" }}>
+                            {SESSION_LABELS[s] ?? s}
+                          </span>
+                        ))}
+                      </div>
+                    </td>
+                    <td style={{ ...TD, textAlign: "right" }}>
+                      <a href={`https://garage61.net/app/laps/${c.trackId}/0;g=2;d=1`} target="_blank" rel="noopener noreferrer" className="btn btn-secondary btn-sm" style={{ fontSize: "0.72rem", whiteSpace: "nowrap" }}>
+                        ↗ Garage61
+                      </a>
+                    </td>
+                  </tr>
+                ))}
+              </React.Fragment>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      <div style={{ fontSize: "0.72rem", color: "var(--text-dim)" }}>
+        Données agrégées depuis Garage61 · {filtered.reduce((s, c) => s + c.totalLaps, 0)}{sessionFilter !== null ? ` / ${circuits.reduce((s, c) => s + c.totalLaps, 0)}` : ""} tours au total
+      </div>
+    </div>
+  );
+}

@@ -26,6 +26,27 @@ export default async function DriverDetail({ params, searchParams }) {
 
   if (error || !driver) notFound();
 
+  // Backfill garage61_slug for drivers who linked before slug-saving was added
+  if (driver.garage61_access_token && !driver.garage61_slug) {
+    try {
+      const meRes = await fetch("https://garage61.net/api/v1/me", {
+        headers: { Authorization: `Bearer ${driver.garage61_access_token}` },
+      });
+      if (meRes.ok) {
+        const meData = await meRes.json();
+        if (meData.slug) {
+          await supabase
+            .from("drivers")
+            .update({ garage61_slug: meData.slug })
+            .eq("id", driver.id);
+          driver.garage61_slug = meData.slug;
+        }
+      }
+    } catch {
+      // non-critical — slug will be populated on next visit or re-link
+    }
+  }
+
   // Fetch all signups for this driver with full context
   const { data: signups } = await supabase
     .from("signups")
@@ -187,6 +208,13 @@ export default async function DriverDetail({ params, searchParams }) {
       value: driver.instagram,
       link: driver.instagram
         ? `https://instagram.com/${driver.instagram}`
+        : null,
+    },
+    {
+      label: "Garage61",
+      value: driver.garage61_slug,
+      link: driver.garage61_slug
+        ? `https://garage61.net/app/drivers/${driver.garage61_slug}`
         : null,
     },
     // Always show Email even if empty — it's the primary contact field.
@@ -497,15 +525,21 @@ export default async function DriverDetail({ params, searchParams }) {
                             ? "#405DE6"
                             : label === "Twitch"
                               ? "#9147ff"
-                              : label === "iRacing ID"
-                                ? "var(--text-dim)"
-                                : "var(--accent)",
+                              : label === "Garage61"
+                                ? "#e85d26"
+                                : label === "iRacing ID"
+                                  ? "var(--text-dim)"
+                                  : "var(--accent)",
                         textDecoration:
-                          label === "iRacing ID" ? "underline" : "none",
+                          label === "iRacing ID" || label === "Garage61"
+                            ? "underline"
+                            : "none",
                       }}
                     >
                       {value}
-                      {label === "iRacing ID" ? " ↗" : ""}
+                      {label === "iRacing ID" || label === "Garage61"
+                        ? " ↗"
+                        : ""}
                     </a>
                   ) : (
                     <span className="mono" style={{ fontSize: "0.85rem" }}>
@@ -552,6 +586,7 @@ export default async function DriverDetail({ params, searchParams }) {
       <DriverPageTabs
         engagementsContent={
           <EngagementsTab
+            key="engagements"
             sortedSignups={sortedSignups}
             availMap={availMap}
             stintsMap={stintsMap}
@@ -560,6 +595,7 @@ export default async function DriverDetail({ params, searchParams }) {
         }
         statsContent={
           <DriverStats
+            key="statistiques"
             stints={stints || []}
             driverPerfData={driverPerfData || []}
             teamPerfData={teamPerfData || []}
@@ -567,6 +603,7 @@ export default async function DriverDetail({ params, searchParams }) {
             signups={signups || []}
             iratingHistory={iratingHistoryAll || []}
             currentIrating={driver.irating}
+            garage61Slug={driver.garage61_slug ?? null}
           />
         }
       />

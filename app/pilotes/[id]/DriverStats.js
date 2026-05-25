@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import Garage61StatsTab from "./Garage61StatsTab";
 import {
   LineChart,
   Line,
@@ -231,8 +232,10 @@ export default function DriverStats({
   signups,
   iratingHistory = [],
   currentIrating = null,
+  garage61Slug = null,
 }) {
   const [showAllTeammates, setShowAllTeammates] = useState(false);
+  const [statsSubTab, setStatsSubTab] = useState("app");
 
   // ── iRating chart data — grouped by category ──────────────────────────────
   const historyByCategory = {};
@@ -459,8 +462,37 @@ export default function DriverStats({
   };
 
   // ── Render ─────────────────────────────────────────────────────────────────
+  const subTabStyle = (id) => ({
+    padding: "0.35rem 0.85rem",
+    background: "transparent",
+    border: "none",
+    borderBottom: statsSubTab === id ? "2px solid var(--accent)" : "2px solid transparent",
+    color: statsSubTab === id ? "var(--accent)" : "var(--text-dim)",
+    fontFamily: "var(--font-rajdhani), sans-serif",
+    fontSize: "0.82rem",
+    fontWeight: 700,
+    letterSpacing: "0.06em",
+    textTransform: "uppercase",
+    cursor: "pointer",
+    marginBottom: "-1px",
+    whiteSpace: "nowrap",
+  });
+
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
+      {/* ── Subtab nav — only when Garage61 is linked ─────────────────── */}
+      {garage61Slug && (
+        <div style={{ display: "flex", gap: "0.25rem", borderBottom: "1px solid var(--border)", marginBottom: "0.25rem" }}>
+          <button style={subTabStyle("app")} onClick={() => setStatsSubTab("app")}>Endurance Manager</button>
+          <button style={subTabStyle("garage61")} onClick={() => setStatsSubTab("garage61")}>Garage61</button>
+        </div>
+      )}
+
+      {statsSubTab === "garage61" && garage61Slug && (
+        <Garage61StatsTab slug={garage61Slug} />
+      )}
+
+      {(statsSubTab === "app" || !garage61Slug) && <>
       {/* ── iRating history ───────────────────────────────────────────── */}
       {availableCategories.length > 0 && (
         <div className="card">
@@ -1141,6 +1173,7 @@ export default function DriverStats({
           </div>
         </div>
       )}
-    </div>
+    </>}
+  </div>
   );
 }

@@ -72,12 +72,27 @@ export async function GET(request) {
       );
     }
 
-    // Persist tokens — service role bypasses RLS
+    // Fetch Garage61 profile to get the driver's slug
+    let garage61Slug = null;
+    try {
+      const meRes = await fetch("https://garage61.net/api/v1/me", {
+        headers: { Authorization: `Bearer ${access_token}` },
+      });
+      if (meRes.ok) {
+        const meData = await meRes.json();
+        garage61Slug = meData.slug ?? null;
+      }
+    } catch (e) {
+      console.error("Garage61 /me fetch error:", e);
+    }
+
+    // Persist tokens + slug — service role bypasses RLS
     const { error: updateErr } = await supabase
       .from("drivers")
       .update({
         garage61_access_token: access_token,
         garage61_refresh_token: refresh_token ?? null,
+        ...(garage61Slug ? { garage61_slug: garage61Slug } : {}),
       })
       .eq("id", driver.id);
 
