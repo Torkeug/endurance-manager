@@ -1187,7 +1187,7 @@ export default function StintGrid({
   const [availabilities, setAvailabilities] = useState({});
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(null);
-  const [autoGenDone, setAutoGenDone] = useState(false);
+  const autoGenDone = useRef(false);
   const [conflictStints, setConflictStints] = useState([]);
   const [showRecalcModal, setShowRecalcModal] = useState(false);
   const [recalcDiffs, setRecalcDiffs] = useState([]);
@@ -1236,6 +1236,8 @@ export default function StintGrid({
   // Guard against concurrent default-strategy creation — the async insert can race
   // with a re-render that re-fires the effect before the first insert completes.
   const creatingDefaultStrategy = useRef(false);
+  // Guard against double-click on "+ Nouvelle stratégie"
+  const creatingStrategy = useRef(false);
 
   // Realtime subscription — silently patches irl_end_actual into local stints
   // so the active-stint highlight updates when a pit stop is stamped in RaceMode
@@ -1350,13 +1352,16 @@ export default function StintGrid({
             })
             .select()
             .single();
-          creatingDefaultStrategy.current = false;
-          if (newStrat) {
-            strats = [newStrat];
-          } else {
+          if (!newStrat) {
+            // Insert failed — reset guard so a future effect run can retry
+            creatingDefaultStrategy.current = false;
             setLoading(false);
             return;
           }
+          // Guard stays true — prevents any concurrent effect re-run from
+          // inserting a second default strategy if DB hasn't returned the new
+          // row yet when the next fetch completes.
+          strats = [newStrat];
         }
 
         // Determine active strategy — preserve existing tab selection if still valid
@@ -1404,11 +1409,11 @@ export default function StintGrid({
         // Auto-generate stints for first strategy only when none exist
         if (
           loadedStints.length === 0 &&
-          !autoGenDone &&
+          !autoGenDone.current &&
           !archived &&
           strats.length === 1
         ) {
-          setAutoGenDone(true);
+          autoGenDone.current = true;
           const count = estimateStintCount(teamEntry, perfMap, assignedDrivers);
           const rows = Array.from({ length: count }, (_, i) => ({
             team_entry_id: teamEntryId,
@@ -1682,7 +1687,8 @@ export default function StintGrid({
   // ── Strategy CRUD handlers ──────────────────────────────────────────────────
 
   const handleCreateStrategy = async () => {
-    if (strategies.length >= 5 || archived) return;
+    if (strategies.length >= 5 || archived || creatingStrategy.current) return;
+    creatingStrategy.current = true;
     const nextSort =
       strategies.length > 0
         ? Math.max(...strategies.map((s) => s.sort_order)) + 1
@@ -1731,6 +1737,7 @@ export default function StintGrid({
     setStrategies((prev) => [...prev, newStrat]);
     setSelectedStrategyId(newStrat.id);
     setStints(clonedStints);
+    creatingStrategy.current = false;
   };
 
   const handleUpdateStrategy = async (id, fields) => {
