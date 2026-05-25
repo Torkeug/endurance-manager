@@ -76,31 +76,37 @@ export default function ProfilDemo() {
             5 120 iR
           </div>
         </div>
-        <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
+        <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap", alignItems: "center" }}>
           <button className="btn btn-secondary" style={{ fontSize: "0.82rem", opacity: 0.85 }}>✓ Garage61 lié</button>
           <button className="btn btn-secondary" style={{ fontSize: "0.82rem", opacity: 0.85 }}>✓ iRacing lié</button>
           <button className="btn btn-secondary" style={{ fontSize: "0.82rem", opacity: 0.85 }}>🔄 Mettre à jour</button>
           <button className="btn btn-secondary" style={{ fontSize: "0.82rem", opacity: 0.85 }}>📦 Inventaire</button>
         </div>
       </div>
+      <div style={{ fontSize: "0.72rem", color: "var(--text-dim)", marginTop: "-0.5rem" }}>
+        <div>iRating synchronisé le 12/05/2026 14:30</div>
+        <div>Inventaire synchronisé le 02/04/2026 09:15</div>
+      </div>
 
       {/* Info card */}
       <div className="card">
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.75rem" }}>
-          {[
-            { label: "iRacing ID", value: "458921" },
-            { label: "Email",      value: "theo.bernard@kronos.team" },
-            { label: "Discord",    value: "TheoB#4812" },
-            { label: "Twitch",     value: "—" },
-          ].map((f) => (
-            <div key={f.label}>
-              <div style={{ fontSize: "0.62rem", fontWeight: 700, letterSpacing: "0.07em", textTransform: "uppercase", color: "var(--text-dim)", marginBottom: "0.15rem" }}>{f.label}</div>
-              <div style={{ fontFamily: "var(--font-mono), monospace", fontSize: "0.82rem" }}>{f.value}</div>
-            </div>
-          ))}
-        </div>
-        <div style={{ display: "flex", justifyContent: "flex-end", marginTop: "0.75rem" }}>
-          <button className="btn btn-secondary" style={{ fontSize: "0.78rem", opacity: 0.85 }}>Modifier</button>
+        <div style={{ display: "flex", alignItems: "center", gap: "2rem", flexWrap: "wrap", justifyContent: "space-between" }}>
+          <div style={{ display: "flex", gap: "2rem", flexWrap: "wrap" }}>
+            {[
+              { label: "iRacing ID", value: "458921" },
+              { label: "Email",      value: "theo.bernard@kronos.team" },
+              { label: "Discord",    value: "TheoB#4812" },
+            ].map((f) => (
+              <div key={f.label}>
+                <div style={{ fontSize: "0.62rem", fontWeight: 700, letterSpacing: "0.07em", textTransform: "uppercase", color: "var(--text-dim)", marginBottom: "0.15rem" }}>{f.label}</div>
+                <div style={{ fontFamily: "var(--font-mono), monospace", fontSize: "0.82rem" }}>{f.value}</div>
+              </div>
+            ))}
+          </div>
+          <div style={{ display: "flex", gap: "0.5rem" }}>
+            <button className="btn btn-secondary" style={{ fontSize: "0.78rem", opacity: 0.85 }}>Changer mot de passe</button>
+            <button className="btn btn-secondary" style={{ fontSize: "0.78rem", opacity: 0.85 }}>Modifier</button>
+          </div>
         </div>
       </div>
 
