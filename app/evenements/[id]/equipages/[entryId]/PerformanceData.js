@@ -260,12 +260,14 @@ function DriverRow({
   const [g61Filter, setG61Filter] = useState("all"); // "all" | "dry" | "wet"
   const [g61Track, setG61Track] = useState(null);
   const [g61SessionFilter, setG61SessionFilter] = useState("all"); // "all" | "1" | "2" | "3"
-  const [g61SameCarOnly, setG61SameCarOnly] = useState(false);
+  const [g61SameCarOnly, setG61SameCarOnly] = useState(true);
   const [g61DateFrom, setG61DateFrom] = useState("");
   const [g61DateTo, setG61DateTo] = useState("");
   const [g61DatePreset, setG61DatePreset] = useState("");
   const [g61MinFuel, setG61MinFuel] = useState("");
   const [g61MaxFuel, setG61MaxFuel] = useState("");
+  const [g61MinTemp, setG61MinTemp] = useState("");
+  const [g61MaxTemp, setG61MaxTemp] = useState("");
   const [g61Imported, setG61Imported] = useState({}); // lapField → lapId of last import
 
   const applyPreset = (preset) => {
@@ -640,6 +642,8 @@ function DriverRow({
     if (g61DateTo && lap.startTime.slice(0, 10) > g61DateTo) return false;
     if (g61MinFuel !== "" && lap.fuelLevel != null && lap.fuelLevel < parseFloat(g61MinFuel)) return false;
     if (g61MaxFuel !== "" && lap.fuelLevel != null && lap.fuelLevel > parseFloat(g61MaxFuel)) return false;
+    if (g61MinTemp !== "" && lap.trackTemp != null && lap.trackTemp < parseFloat(g61MinTemp)) return false;
+    if (g61MaxTemp !== "" && lap.trackTemp != null && lap.trackTemp > parseFloat(g61MaxTemp)) return false;
     return true;
   }).sort((a, b) => a.lapTime - b.lapTime);
 
@@ -1015,6 +1019,12 @@ function DriverRow({
                       <input type="number" value={g61MinFuel} onChange={(e) => setG61MinFuel(e.target.value)} placeholder="min L" min="0" step="1" style={{ width: "58px", fontSize: "0.72rem", padding: "0.1rem 0.3rem", background: "var(--surface-2)", border: "1px solid var(--border)", borderRadius: "3px", color: "var(--text)" }} />
                       <span>–</span>
                       <input type="number" value={g61MaxFuel} onChange={(e) => setG61MaxFuel(e.target.value)} placeholder="max L" min="0" step="1" style={{ width: "58px", fontSize: "0.72rem", padding: "0.1rem 0.3rem", background: "var(--surface-2)", border: "1px solid var(--border)", borderRadius: "3px", color: "var(--text)" }} />
+                    </div>
+                    <div style={{ display: "flex", alignItems: "center", gap: "0.4rem", fontSize: "0.72rem", color: "var(--text-dim)", flexWrap: "wrap" }}>
+                      <span>T. piste</span>
+                      <input type="number" value={g61MinTemp} onChange={(e) => setG61MinTemp(e.target.value)} placeholder="min °C" min="0" step="1" style={{ width: "58px", fontSize: "0.72rem", padding: "0.1rem 0.3rem", background: "var(--surface-2)", border: "1px solid var(--border)", borderRadius: "3px", color: "var(--text)" }} />
+                      <span>–</span>
+                      <input type="number" value={g61MaxTemp} onChange={(e) => setG61MaxTemp(e.target.value)} placeholder="max °C" min="0" step="1" style={{ width: "58px", fontSize: "0.72rem", padding: "0.1rem 0.3rem", background: "var(--surface-2)", border: "1px solid var(--border)", borderRadius: "3px", color: "var(--text)" }} />
                     </div>
                     <div style={{ display: "flex", alignItems: "center", gap: "0.4rem", fontSize: "0.72rem", color: "var(--text-dim)", flexWrap: "wrap" }}>
                       <div style={{ display: "flex", gap: "0.25rem" }}>

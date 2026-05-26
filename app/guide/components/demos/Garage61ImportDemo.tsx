@@ -85,13 +85,19 @@ export default function Garage61ImportDemo() {
         {/* Filter row 2 — same car / fuel range / date presets + range */}
         <div style={{ display: "flex", gap: "1rem", alignItems: "center", flexWrap: "wrap" }}>
           <label style={{ display: "flex", alignItems: "center", gap: "0.3rem", fontSize: "0.72rem", color: "var(--text-dim)", cursor: "default" }}>
-            <input type="checkbox" readOnly /> Même voiture
+            <input type="checkbox" readOnly defaultChecked /> Même voiture
           </label>
           <div style={{ display: "flex", alignItems: "center", gap: "0.4rem", fontSize: "0.72rem", color: "var(--text-dim)" }}>
             <span>Réservoir</span>
             <input readOnly placeholder="min L" style={{ ...inputStyle, width: "58px" }} />
             <span>–</span>
             <input readOnly placeholder="max L" style={{ ...inputStyle, width: "58px" }} />
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: "0.4rem", fontSize: "0.72rem", color: "var(--text-dim)" }}>
+            <span>T. piste</span>
+            <input readOnly placeholder="min °C" style={{ ...inputStyle, width: "58px" }} />
+            <span>–</span>
+            <input readOnly placeholder="max °C" style={{ ...inputStyle, width: "58px" }} />
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: "0.4rem", fontSize: "0.72rem", color: "var(--text-dim)", flexWrap: "wrap" }}>
             <div style={{ display: "flex", gap: "0.25rem" }}>

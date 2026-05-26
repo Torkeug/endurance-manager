@@ -708,7 +708,7 @@ export const guide: GuideSection[] = [
       {
         type: "list",
         items: [
-          "Filtres disponibles — Condition (sec/pluie), session (P/Q/R), même voiture que l'équipage, plage de réservoir (min/max en litres — utile pour isoler un rythme représentatif d'un relais), plage de dates avec raccourcis 7j / 30j / 3 mois.",
+          "Filtres disponibles — Condition (sec/pluie), session (P/Q/R), même voiture que l'équipage (activé par défaut), plage de réservoir (min/max en litres — utile pour isoler un rythme représentatif d'un relais), plage de température de piste (min/max °C), plage de dates avec raccourcis 7j / 30j / 3 mois.",
           "Compteur filtré/total — Toujours visible pour savoir combien de chronos sont masqués.",
           "Colonnes — Condition, chrono, conso, réservoir (carburant en réserve au moment du tour — plus bas = plus léger), température de piste, date, voiture, session.",
           "Boutons d'import — → ☀️ → 💧 → 🌙☀️ → 🌙💧 appliquent le chrono ET la conso correspondante dans le formulaire.",
