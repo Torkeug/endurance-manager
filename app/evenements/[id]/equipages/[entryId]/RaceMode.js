@@ -415,15 +415,17 @@ export default function RaceMode({
     const expectedTrackId = currentTeamEntry?.events?.circuits?.iracing_track_id;
     if (expectedTrackId && event.track_id && event.track_id !== expectedTrackId) return;
 
+    const plannedStart = currentTeamEntry?.event_start_times?.irl_start;
+    const eventTime = new Date(event.recorded_at);
+
     if (event.event_type === "race_start") {
-      // Time window guard — only accept within ±2h of planned race start
-      const plannedStart = currentTeamEntry?.event_start_times?.irl_start;
+      // Time window guard — only accept within ±15 min of planned race start
       if (plannedStart) {
-        const diffMs = Math.abs(new Date(event.recorded_at) - new Date(plannedStart));
+        const diffMs = Math.abs(eventTime - new Date(plannedStart));
         if (diffMs > 15 * 60 * 1000) return;
       }
-      // Stamp irl_start on the first unstamped stint
-      const first = currentStints.find((s) => !s.irl_start);
+      // Stamp irl_start on stint 1 (stints are ordered by stint_number)
+      const first = currentStints[0];
       if (!first) return;
       const t = event.recorded_at;
       setStints((prev) => prev.map((s) => s.id === first.id ? { ...s, irl_start: t } : s));
@@ -431,14 +433,18 @@ export default function RaceMode({
       return;
     }
 
-    // Pit guards — only act once the race is underway (prevents pre-race pit stops stamping)
-    const raceUnderway = currentStints.some((s) => s.irl_start);
-    if (!raceUnderway) return;
+    // Pit guards — recorded_at must be after the planned race start
+    if (plannedStart && eventTime < new Date(plannedStart)) return;
 
     if (event.event_type === "pit_entry") {
-      // Stamp irl_end_actual on the active stint for this driver
+      // Stamp irl_end_actual on the active stint for this driver:
+      // last stint for this driver that has started (irl_start ≤ event time) and not yet ended
       const active = currentStints.findLast(
-        (s) => s.driver_id === event.driver_id && s.irl_start && !s.irl_end_actual,
+        (s) =>
+          s.driver_id === event.driver_id &&
+          s.irl_start &&
+          new Date(s.irl_start) <= eventTime &&
+          !s.irl_end_actual,
       );
       if (!active) return;
       const t = event.recorded_at;
@@ -448,8 +454,12 @@ export default function RaceMode({
     }
 
     if (event.event_type === "pit_exit") {
-      // Stamp irl_start on the next unstamped stint + driver mismatch banner
-      const nextStint = currentStints.find((s) => !s.irl_start);
+      // Next stint = the one immediately after the last completed (irl_end_actual) stint
+      const lastCompleted = currentStints.findLast((s) => s.irl_end_actual);
+      const nextIdx = lastCompleted
+        ? currentStints.findIndex((s) => s.id === lastCompleted.id) + 1
+        : null;
+      const nextStint = nextIdx != null ? (currentStints[nextIdx] ?? null) : null;
       if (!nextStint) return;
       const t = event.recorded_at;
       setStints((prev) => prev.map((s) => s.id === nextStint.id ? { ...s, irl_start: t } : s));
