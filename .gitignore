@@ -46,3 +46,14 @@ kronos-endurance.7z
 
 # local history
 .history/
+
+# IDE / tooling
+.claude/
+.vscode/
+
+# iRacing bridge build artefacts
+iracing-bridge/dist/
+iracing-bridge/build/
+iracing-bridge/__pycache__/
+iracing-bridge/*.spec
+iracing-bridge/KronosBridge.ico
