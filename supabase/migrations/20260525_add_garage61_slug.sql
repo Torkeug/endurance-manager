@@ -1,2 +1,0 @@
-ALTER TABLE drivers
-  ADD COLUMN IF NOT EXISTS garage61_slug TEXT;

@@ -57,3 +57,9 @@ iracing-bridge/build/
 iracing-bridge/__pycache__/
 iracing-bridge/*.spec
 iracing-bridge/KronosBridge.ico
+
+.vercel
+.env*
+
+# supabase local dev artefacts
+supabase/.temp/
