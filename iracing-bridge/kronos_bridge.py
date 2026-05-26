@@ -302,7 +302,8 @@ class KronosBridge:
             if resp.ok:
                 mins = int(payload.lap_time // 60)
                 secs = payload.lap_time % 60
-                self._last_lap_info = f"Last lap: {mins}:{secs:06.3f}  fuel: {payload.fuel_used:.2f}L"
+                fuel = payload.fuel_used
+                self._last_lap_info = f"Last lap: {mins}:{secs:06.3f}  fuel: {fuel:.2f}L"
                 self.status_text = self._last_lap_info
                 self.state = State.CONNECTED
                 print(f"[bridge] uploaded — {self._last_lap_info}")
