@@ -331,6 +331,9 @@ class KronosBridge:
     # ------------------------------------------------------------------
 
     def _check_events(self) -> None:
+        # Only relevant during a race session — ignore practice, qualifying, etc.
+        if self._session_type != 3:
+            return
         try:
             on_pit_road = bool(self._v("OnPitRoad"))
 

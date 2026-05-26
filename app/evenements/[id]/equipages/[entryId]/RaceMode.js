@@ -411,7 +411,17 @@ export default function RaceMode({
     // Only handle events from drivers on this team entry
     if (event.driver_id && !driverIds.has(event.driver_id)) return;
 
+    // Track guard — ignore events from a different circuit (soft: skip if not configured)
+    const expectedTrackId = currentTeamEntry?.events?.circuits?.iracing_track_id;
+    if (expectedTrackId && event.track_id && event.track_id !== expectedTrackId) return;
+
     if (event.event_type === "race_start") {
+      // Time window guard — only accept within ±2h of planned race start
+      const plannedStart = currentTeamEntry?.event_start_times?.irl_start;
+      if (plannedStart) {
+        const diffMs = Math.abs(new Date(event.recorded_at) - new Date(plannedStart));
+        if (diffMs > 2 * 60 * 60 * 1000) return;
+      }
       // Stamp irl_start on the first unstamped stint
       const first = currentStints.find((s) => !s.irl_start);
       if (!first) return;
@@ -420,6 +430,10 @@ export default function RaceMode({
       await supabase.from("stints").update({ irl_start: t }).eq("id", first.id);
       return;
     }
+
+    // Pit guards — only act once the race is underway (prevents pre-race pit stops stamping)
+    const raceUnderway = currentStints.some((s) => s.irl_start);
+    if (!raceUnderway) return;
 
     if (event.event_type === "pit_entry") {
       // Stamp irl_end_actual on the active stint for this driver
