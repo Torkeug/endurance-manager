@@ -259,7 +259,7 @@ function DriverRow({
   const [g61Error, setG61Error] = useState(null);
   const [g61Filter, setG61Filter] = useState("all"); // "all" | "dry" | "wet"
   const [g61Track, setG61Track] = useState(null);
-  const [g61SessionFilter, setG61SessionFilter] = useState("all"); // "all" | "1" | "2" | "3"
+  const [g61SessionFilter, setG61SessionFilter] = useState([]); // [] = all; else ["1"], ["3"], ["1","3"], etc.
   const [g61SameCarOnly, setG61SameCarOnly] = useState(true);
   const [g61DateFrom, setG61DateFrom] = useState("");
   const [g61DateTo, setG61DateTo] = useState("");
@@ -632,7 +632,7 @@ function DriverRow({
   const filteredLaps = (g61Laps ?? []).filter((lap) => {
     if (g61Filter === "dry" && lapConditionLabel(lap) !== "☀️") return false;
     if (g61Filter === "wet" && lapConditionLabel(lap) !== "💧") return false;
-    if (g61SessionFilter !== "all" && String(lap.sessionType) !== g61SessionFilter) return false;
+    if (g61SessionFilter.length > 0 && !g61SessionFilter.includes(String(lap.sessionType))) return false;
     if (g61SameCarOnly && entryCarName && lap.car) {
       const a = lap.car.toLowerCase();
       const b = entryCarName.toLowerCase();
@@ -1008,7 +1008,15 @@ function DriverRow({
                     {/* Session */}
                     <div style={{ display: "flex", gap: "0.25rem" }}>
                       {[["all", "Tous"], ["1", "P"], ["2", "Q"], ["3", "R"]].map(([v, label]) => (
-                        <button key={v} type="button" onClick={() => setG61SessionFilter(v)} className="btn btn-sm" style={fBtnStyle(g61SessionFilter === v)}>{label}</button>
+                        <button key={v} type="button" className="btn btn-sm"
+                          style={fBtnStyle(v === "all" ? g61SessionFilter.length === 0 : g61SessionFilter.includes(v))}
+                          onClick={() => {
+                            if (v === "all") { setG61SessionFilter([]); return; }
+                            setG61SessionFilter((prev) =>
+                              prev.includes(v) ? prev.filter((x) => x !== v) : [...prev, v]
+                            );
+                          }}
+                        >{label}</button>
                       ))}
                     </div>
                     <span style={{ fontSize: "0.72rem", color: "var(--text-dim)", marginLeft: "auto" }}>
@@ -1054,12 +1062,29 @@ function DriverRow({
                   <div style={{ fontSize: "0.8rem", color: "var(--text-dim)" }}>Aucun résultat pour ces filtres.</div>
                 ) : (
                   <>
-                    <div style={{ fontSize: "0.72rem", color: "var(--text-dim)", marginBottom: "0.4rem" }}>
-                      Moyenne ({filteredLaps.length} tour{filteredLaps.length !== 1 ? "s" : ""}) :{" "}
-                      <span className="mono" style={{ color: "var(--text)" }}>{secToDisplay(avgLapTime)}</span>
-                      {avgFuelUsed != null && (
-                        <> · <span className="mono" style={{ color: "var(--accent)" }}>{parseFloat(avgFuelUsed.toFixed(3))}L</span></>
-                      )}
+                    <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", flexWrap: "wrap", marginBottom: "0.4rem", fontSize: "0.72rem", color: "var(--text-dim)" }}>
+                      <span>
+                        Moyenne ({filteredLaps.length} tour{filteredLaps.length !== 1 ? "s" : ""}) :{" "}
+                        <span className="mono" style={{ color: "var(--text)" }}>{secToDisplay(avgLapTime)}</span>
+                        {avgFuelUsed != null && (
+                          <> · <span className="mono" style={{ color: "var(--accent)" }}>{parseFloat(avgFuelUsed.toFixed(3))}L</span></>
+                        )}
+                      </span>
+                      <div style={{ display: "flex", gap: "0.2rem" }}>
+                        {[
+                          ["lap_time_dry", "☀️"],
+                          ["lap_time_wet", "💧"],
+                          ["lap_time_night_dry", "🌙☀️"],
+                          ["lap_time_night_wet", "🌙💧"],
+                        ].map(([field, icon]) => {
+                          const done = g61Imported[field] === "avg";
+                          return (
+                            <button key={field} type="button" onClick={() => applyG61Lap({ lapTime: avgLapTime, fuelUsed: avgFuelUsed, id: "avg" }, field)} className="btn btn-sm" style={{ fontSize: "0.62rem", padding: "0.15rem 0.35rem", ...(done ? { color: "var(--accent)", fontWeight: 700 } : {}) }}>
+                              {done ? `✓ ${icon}` : `→ ${icon}`}
+                            </button>
+                          );
+                        })}
+                      </div>
                     </div>
                   <div style={{ maxHeight: "220px", overflowY: "auto", border: "1px solid var(--border)", borderRadius: "4px" }}>
                     <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.78rem" }}>
