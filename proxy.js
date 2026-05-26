@@ -16,6 +16,8 @@ const PUBLIC_ROUTES = [
   "/api/register-driver",
   "/api/notify-admins",
   "/api/notify-driver-approved",
+  "/api/iracing/lap",
+  "/api/cron/cleanup-iracing-laps",
 ];
 
 export async function proxy(request) {
