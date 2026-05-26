@@ -33,6 +33,8 @@ export async function POST(request) {
     solar_altitude,
     session_time_of_day,
     is_night,
+    on_pit_road,
+    under_caution,
     recorded_at,
   } = body;
 
@@ -65,6 +67,8 @@ export async function POST(request) {
     solar_altitude,
     session_time_of_day,
     is_night,
+    on_pit_road: on_pit_road ?? false,
+    under_caution: under_caution ?? false,
     recorded_at,
   });
 

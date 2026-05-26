@@ -93,6 +93,10 @@ class LapPayload:
     session_time_of_day: float  # SessionTimeOfDay, seconds since midnight (in-game)
     is_night: bool           # derived: solar_altitude <= 0
 
+    # Lap quality flags — used to filter out non-representative laps
+    on_pit_road: bool        # OnPitRoad was true at any point during the lap
+    under_caution: bool      # SessionFlags caution bits set at any point (0x0000C000)
+
     # IRL timestamp for stint matching
     recorded_at: str         # UTC ISO-8601
 
@@ -121,6 +125,8 @@ class KronosBridge:
         # Lap tracking
         self._last_lap = -1
         self._fuel_at_lap_start: Optional[float] = None
+        self._pit_road_lap: bool = False
+        self._caution_lap: bool = False
 
         # In-memory retry queue
         self._retry_queue: queue.Queue[LapPayload] = queue.Queue(maxsize=RETRY_QUEUE_MAX)
@@ -171,6 +177,8 @@ class KronosBridge:
             self._last_session_num = -1
             self._last_lap = -1
             self._fuel_at_lap_start = None
+            self._pit_road_lap = False
+            self._caution_lap = False
             self.state = State.WAITING
             self.status_text = "Waiting for iRacing..."
             print("[bridge] iRacing disconnected")
@@ -228,6 +236,8 @@ class KronosBridge:
 
         self._last_lap = -1
         self._fuel_at_lap_start = None
+        self._pit_road_lap = False
+        self._caution_lap = False
         print(
             f"[bridge] session ready — cust_id={self._cust_id} "
             f"track={self._track_id} car_id={self._car_id} "
@@ -243,6 +253,12 @@ class KronosBridge:
             current_lap = int(self._v("Lap") or 0)
             fuel_level = float(self._v("FuelLevel") or 0.0)
 
+            # Accumulate lap quality flags every poll
+            if self._v("OnPitRoad"):
+                self._pit_road_lap = True
+            if int(self._v("SessionFlags") or 0) & 0x0000C000:
+                self._caution_lap = True
+
             if self._last_lap == -1:
                 self._last_lap = current_lap
                 self._fuel_at_lap_start = fuel_level
@@ -251,7 +267,12 @@ class KronosBridge:
             if current_lap == self._last_lap:
                 return
 
-            # Lap just completed
+            # Lap just completed — capture flags then reset for next lap
+            on_pit_road = self._pit_road_lap
+            under_caution = self._caution_lap
+            self._pit_road_lap = False
+            self._caution_lap = False
+
             fuel_used = max(0.0, (self._fuel_at_lap_start or fuel_level) - fuel_level)
             lap_time = float(self._v("LapLastLapTime") or 0.0)
 
@@ -280,6 +301,8 @@ class KronosBridge:
                 solar_altitude=round(solar_altitude, 4),
                 session_time_of_day=float(self._v("SessionTimeOfDay") or 0.0),
                 is_night=solar_altitude <= 0,
+                on_pit_road=on_pit_road,
+                under_caution=under_caution,
                 recorded_at=datetime.now(timezone.utc).isoformat(),
             )
             self._upload(payload)

@@ -304,6 +304,8 @@ export default function RaceMode({
   const [now, setNow] = useState(new Date());
   const [confirmModal, setConfirmModal] = useState(null);
   const [undoCooldown, setUndoCooldown] = useState(false);
+  // { value: number (L/lap avg), count: number } | null — live fuel from bridge
+  const [liveFuelPerLap, setLiveFuelPerLap] = useState(null);
 
   // Dev-only state override
   const [devState, setDevState] = useState(null);
@@ -369,6 +371,25 @@ export default function RaceMode({
     return () => supabase.removeChannel(channel);
   }, [teamEntryId, activeStrategy?.id, fetchData]);
 
+  // ── Live fuel fetch — queries iracing_laps for clean laps this stint ───────
+  // Takes explicit args so it can be defined before activeStint is derived.
+  const fetchLiveFuel = useCallback(async (driverId, stintStart) => {
+    if (!driverId || !stintStart) { setLiveFuelPerLap(null); return; }
+    const { data } = await supabase
+      .from("iracing_laps")
+      .select("fuel_used")
+      .eq("driver_id", driverId)
+      .eq("on_pit_road", false)
+      .eq("under_caution", false)
+      .gte("recorded_at", stintStart)
+      .not("fuel_used", "is", null)
+      .order("recorded_at", { ascending: false })
+      .limit(5);
+    if (!data || data.length < 3) { setLiveFuelPerLap(null); return; }
+    const avg = data.reduce((s, r) => s + r.fuel_used, 0) / data.length;
+    setLiveFuelPerLap({ value: avg, count: data.length });
+  }, []);
+
   // ── Derived: timing ────────────────────────────────────────────────────────
   // Apply strategy start offset — mirrors calculateAllStints logic in StintGrid
   const raceStart = teamEntry?.event_start_times?.irl_start
@@ -433,6 +454,47 @@ export default function RaceMode({
   const hasOverdue = !!overdueStint;
 
   const nextStint = activeIndex >= 0 ? (stints[activeIndex + 1] ?? null) : null;
+
+  // ── Live fuel effects — placed after activeStint derivation ───────────────
+  // Re-fetch whenever the active driver or stint start changes.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    fetchLiveFuel(activeStint?.driver_id, activeStint?.irl_start);
+  }, [fetchLiveFuel, activeStint?.driver_id, activeStint?.irl_start]);
+
+  // Realtime subscription — fires on every new iracing_laps INSERT for this driver.
+  useEffect(() => {
+    if (!activeStint?.driver_id || !activeStint?.irl_start) return;
+    const driverId = activeStint.driver_id;
+    const stintStart = activeStint.irl_start;
+    const channel = supabase
+      .channel(`iracing-laps-live-${driverId}`)
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "iracing_laps", filter: `driver_id=eq.${driverId}` },
+        () => fetchLiveFuel(driverId, stintStart),
+      )
+      .subscribe();
+    return () => supabase.removeChannel(channel);
+  }, [fetchLiveFuel, activeStint?.driver_id, activeStint?.irl_start]);
+
+  // ── Derived: live fuel deviation for active stint card ────────────────────
+  const activeIgTime = activeStint?.irl_start
+    ? getIGTime(activeStint.irl_start, raceStart?.toISOString(), teamEntry?.events?.ig_start_time)
+    : null;
+  const activeIsNight = getPhase(activeIgTime, teamEntry?.events?.ig_sunrise, teamEntry?.events?.ig_sunset) === "🌑";
+  const activePlannedFuelPerLap = activeStint
+    ? (selectFuelPerLap(driverPerf[activeStint.driver_id], activeStint.rain, activeIsNight)?.value ?? null)
+    : null;
+  const liveFuelDelta =
+    liveFuelPerLap != null && activePlannedFuelPerLap != null
+      ? liveFuelPerLap.value - activePlannedFuelPerLap
+      : null;
+  const liveLapsDelta =
+    liveFuelPerLap != null && activePlannedFuelPerLap != null && tankSize != null
+      ? Math.floor(tankSize / liveFuelPerLap.value) - Math.floor(tankSize / activePlannedFuelPerLap)
+      : null;
+
   const completedStints = stints.filter(
     (s) =>
       s.irl_end_actual ||
@@ -866,6 +928,38 @@ export default function RaceMode({
                     >
                       ~{fuelToAdd.toFixed(1)}L
                     </div>
+                  </div>
+                )}
+                {/* Live fuel deviation from bridge */}
+                {liveFuelPerLap != null && activePlannedFuelPerLap != null && (
+                  <div>
+                    <div style={labelStyle}>Conso actuelle</div>
+                    <div className="mono" style={{ fontSize: "0.95rem" }}>
+                      {liveFuelPerLap.value.toFixed(2)} L/tr
+                      {liveFuelDelta !== null && (
+                        <span
+                          style={{
+                            marginLeft: "0.4rem",
+                            fontSize: "0.78rem",
+                            color: liveFuelDelta > 0 ? "var(--danger)" : "#2eb460",
+                          }}
+                        >
+                          {liveFuelDelta > 0 ? "+" : ""}
+                          {liveFuelDelta.toFixed(2)}
+                        </span>
+                      )}
+                    </div>
+                    {liveLapsDelta !== null && liveLapsDelta !== 0 && (
+                      <div
+                        style={{
+                          fontSize: "0.72rem",
+                          color: liveLapsDelta < 0 ? "var(--danger)" : "#2eb460",
+                          marginTop: "0.1rem",
+                        }}
+                      >
+                        {liveLapsDelta > 0 ? `+${liveLapsDelta}` : liveLapsDelta} tours
+                      </div>
+                    )}
                   </div>
                 )}
               </>
