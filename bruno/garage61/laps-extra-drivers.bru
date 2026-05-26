@@ -1,0 +1,29 @@
+meta {
+  name: GET /laps (extraDrivers by slug)
+  type: http
+  seq: 11
+}
+
+get {
+  url: {{base_url}}/laps
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{access_token}}
+}
+
+query {
+  drivers: me
+  extraDrivers: alexandre-moret
+  tracks: 95
+  group: none
+  limit: 50
+}
+
+docs {
+  Test whether extraDrivers={slug} returns laps for a specific driver
+  using the requesting user's token (no need for the target's token).
+  If it works, we can replace the team-loop approach in garage61-sync.
+}

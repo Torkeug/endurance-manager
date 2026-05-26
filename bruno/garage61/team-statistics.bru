@@ -1,0 +1,21 @@
+meta {
+  name: GET /teams/{slug}/statistics
+  type: http
+  seq: 8
+}
+
+get {
+  url: {{base_url}}/teams/kronos-simsports-premium/statistics
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{access_token}}
+}
+
+docs {
+  Returns drivingStatistics[] where row.user = driver slug.
+  Check whether row also has row.name / row.displayName / row.userName.
+  If yes: can use for auto-match without needing laps endpoint.
+}

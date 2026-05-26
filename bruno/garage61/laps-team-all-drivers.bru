@@ -1,0 +1,27 @@
+meta {
+  name: GET /laps (team, all tracks, group=driver)
+  type: http
+  seq: 7
+}
+
+get {
+  url: {{base_url}}/laps
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{access_token}}
+}
+
+query {
+  teams: kronos-simsports-premium
+  group: driver
+  limit: 200
+}
+
+docs {
+  Test: does group=driver work without a tracks filter?
+  Expected: list of drivers with their best lap (any track)
+  If 400/422 → tracks param is required → must use /teams/{slug}/statistics instead
+}
