@@ -27,14 +27,14 @@ export async function GET(request) {
     return NextResponse.json({ error: "not_linked" }, { status: 400 });
   }
 
-  const token = requestingDriver.garage61_access_token;
-  const refreshToken = requestingDriver.garage61_refresh_token;
+  let token = requestingDriver.garage61_access_token;
+  let refreshToken = requestingDriver.garage61_refresh_token;
   const driverId = requestingDriver.id;
 
   // For other drivers: use their own token (drivers=me) if they have one linked —
   // this returns all their personal laps, not just team sessions.
   // Fall back to team-filtered laps if they haven't linked their account.
-  let targetToken = null;      // non-null → use target's own token with drivers=me
+  let targetToken = null;       // non-null → use target's own token with drivers=me
   let targetRefreshToken = null;
   let targetDriverDbId = null;
   let targetSlug = null;       // non-null → team approach, filter by slug
@@ -70,6 +70,7 @@ export async function GET(request) {
     if (tracksResult.status === 401) return NextResponse.json({ error: "token_expired" }, { status: 401 });
     return NextResponse.json({ error: "garage61_tracks_failed" }, { status: 502 });
   }
+  if (tracksResult.freshToken) token = tracksResult.freshToken;
 
   const g61Track = (tracksResult.data?.items || []).find(
     (t) => t.platform === "iracing" && String(t.platform_id) === String(iracingTrackId),
@@ -115,6 +116,7 @@ export async function GET(request) {
       if (meResult.status === 401) return NextResponse.json({ error: "token_expired" }, { status: 401 });
       return NextResponse.json({ error: "garage61_me_failed" }, { status: 502 });
     }
+    if (meResult.freshToken) token = meResult.freshToken;
     const teams = meResult.data?.teams || [];
     if (teams.length === 0) return NextResponse.json({ laps: [], total: 0 });
 

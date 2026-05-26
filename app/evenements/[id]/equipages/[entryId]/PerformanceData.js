@@ -647,6 +647,14 @@ function DriverRow({
     return true;
   }).sort((a, b) => a.lapTime - b.lapTime);
 
+  const avgLapTime = filteredLaps.length > 0
+    ? filteredLaps.reduce((s, l) => s + l.lapTime, 0) / filteredLaps.length
+    : null;
+  const fuelLaps = filteredLaps.filter((l) => l.fuelUsed != null);
+  const avgFuelUsed = fuelLaps.length > 0
+    ? fuelLaps.reduce((s, l) => s + l.fuelUsed, 0) / fuelLaps.length
+    : null;
+
   const fBtnStyle = (active) => ({
     fontSize: "0.7rem",
     padding: "0.15rem 0.5rem",
@@ -1045,8 +1053,17 @@ function DriverRow({
                 ) : filteredLaps.length === 0 ? (
                   <div style={{ fontSize: "0.8rem", color: "var(--text-dim)" }}>Aucun résultat pour ces filtres.</div>
                 ) : (
+                  <>
+                    <div style={{ fontSize: "0.72rem", color: "var(--text-dim)", marginBottom: "0.4rem" }}>
+                      Moyenne ({filteredLaps.length} tour{filteredLaps.length !== 1 ? "s" : ""}) :{" "}
+                      <span className="mono" style={{ color: "var(--text)" }}>{secToDisplay(avgLapTime)}</span>
+                      {avgFuelUsed != null && (
+                        <> · <span className="mono" style={{ color: "var(--accent)" }}>{parseFloat(avgFuelUsed.toFixed(3))}L</span></>
+                      )}
+                    </div>
                   <div style={{ maxHeight: "220px", overflowY: "auto", border: "1px solid var(--border)", borderRadius: "4px" }}>
                     <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.78rem" }}>
+
                       <thead>
                         <tr>
                           {["", "Chrono", "Conso", "Réservoir", "T. Piste", "Date", "Voiture", "Session", ""].map((h, i) => (
@@ -1101,6 +1118,7 @@ function DriverRow({
                       </tbody>
                     </table>
                   </div>
+                  </>
                 )}
               </>
             )}
