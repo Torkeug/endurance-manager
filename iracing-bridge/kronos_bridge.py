@@ -25,6 +25,7 @@ from PIL import Image, ImageDraw
 # ---------------------------------------------------------------------------
 
 KRONOS_API_URL = "https://planner.kronos-simsports.com/api/iracing/lap"
+KRONOS_EVENT_URL = "https://planner.kronos-simsports.com/api/iracing/event"
 KRONOS_API_KEY = "BGmzJnh1hdh-YssdLqDfa69forQLLma8rWoagkQ5FGs"
 POLL_HZ = 10          # 10Hz is enough — we only need lap crossings
 RETRY_INTERVAL = 30   # seconds between retry attempts
@@ -128,6 +129,12 @@ class KronosBridge:
         self._pit_road_lap: bool = False
         self._caution_lap: bool = False
 
+        # Event tracking
+        self._prev_on_pit_road: bool = False
+        self._race_started: bool = False
+        self._prev_track_wetness: int = -1          # -1 = not yet initialised
+        self._prev_weather_declared_wet: bool = False
+
         # In-memory retry queue
         self._retry_queue: queue.Queue[LapPayload] = queue.Queue(maxsize=RETRY_QUEUE_MAX)
 
@@ -179,6 +186,10 @@ class KronosBridge:
             self._fuel_at_lap_start = None
             self._pit_road_lap = False
             self._caution_lap = False
+            self._prev_on_pit_road = False
+            self._race_started = False
+            self._prev_track_wetness = -1
+            self._prev_weather_declared_wet = False
             self.state = State.WAITING
             self.status_text = "Waiting for iRacing..."
             print("[bridge] iRacing disconnected")
@@ -202,6 +213,7 @@ class KronosBridge:
             self._last_session_num = sess_num
             self._read_session()
         self._check_lap_crossing()
+        self._check_events()
 
     # ------------------------------------------------------------------
     # Session info — read from YAML on connect or session change
@@ -238,6 +250,10 @@ class KronosBridge:
         self._fuel_at_lap_start = None
         self._pit_road_lap = False
         self._caution_lap = False
+        self._prev_on_pit_road = False
+        self._race_started = False
+        self._prev_track_wetness = -1
+        self._prev_weather_declared_wet = False
         print(
             f"[bridge] session ready — cust_id={self._cust_id} "
             f"track={self._track_id} car_id={self._car_id} "
@@ -309,6 +325,69 @@ class KronosBridge:
 
         except (KeyError, TypeError, ValueError) as exc:
             print(f"[bridge] frame read error: {exc}")
+
+    # ------------------------------------------------------------------
+    # Event detection
+    # ------------------------------------------------------------------
+
+    def _check_events(self) -> None:
+        try:
+            on_pit_road = bool(self._v("OnPitRoad"))
+
+            # Pit entry: false → true
+            if on_pit_road and not self._prev_on_pit_road:
+                self._post_event("pit_entry", {})
+            # Pit exit: true → false
+            elif not on_pit_road and self._prev_on_pit_road:
+                self._post_event("pit_exit", {})
+            self._prev_on_pit_road = on_pit_road
+
+            # Race start: green flag fires once per session
+            if not self._race_started:
+                flags = int(self._v("SessionFlags") or 0)
+                if flags & 0x00000004:  # irsdk_green
+                    self._race_started = True
+                    self._post_event("race_start", {})
+
+            # Conditions change: effective wet state flips
+            wetness = int(self._v("TrackWetness") or 0)
+            weather_wet = bool(self._v("WeatherDeclaredWet"))
+            if self._prev_track_wetness >= 0:  # skip first poll (no previous state)
+                prev_wet = (self._prev_track_wetness >= 3) or self._prev_weather_declared_wet
+                curr_wet = (wetness >= 3) or weather_wet
+                if curr_wet != prev_wet:
+                    self._post_event("conditions_change", {
+                        "is_wet": curr_wet,
+                        "track_wetness_raw": wetness,
+                        "weather_declared_wet": weather_wet,
+                    })
+            self._prev_track_wetness = wetness
+            self._prev_weather_declared_wet = weather_wet
+
+        except (KeyError, TypeError, ValueError) as exc:
+            print(f"[bridge] event check error: {exc}")
+
+    def _post_event(self, event_type: str, payload: dict) -> None:
+        data = {
+            "event_type": event_type,
+            "iracing_cust_id": self._cust_id,
+            "track_id": self._track_id,
+            "payload": payload,
+            "recorded_at": datetime.now(timezone.utc).isoformat(),
+        }
+        try:
+            resp = requests.post(
+                KRONOS_EVENT_URL,
+                json=data,
+                headers={"Authorization": f"Bearer {KRONOS_API_KEY}"},
+                timeout=5,
+            )
+            if resp.ok:
+                print(f"[bridge] event posted: {event_type}")
+            else:
+                print(f"[bridge] event post failed ({resp.status_code}): {event_type}")
+        except requests.exceptions.RequestException as exc:
+            print(f"[bridge] event post error ({event_type}): {exc}")
 
     # ------------------------------------------------------------------
     # Upload + retry

@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { supabaseBrowser as supabase } from "../../../../../lib/supabase-browser";
 
 // markerFromTier — superscript character for a given fallback tier.
@@ -306,9 +306,19 @@ export default function RaceMode({
   const [undoCooldown, setUndoCooldown] = useState(false);
   // { value: number (L/lap avg), count: number } | null — live fuel from bridge
   const [liveFuelPerLap, setLiveFuelPerLap] = useState(null);
+  // Bridge event banners — conditions_change and driver_mismatch
+  // [{ id, type, data }] where type: 'conditions_wet'|'conditions_dry'|'driver_mismatch'
+  const [eventBanners, setEventBanners] = useState([]);
 
   // Dev-only state override
   const [devState, setDevState] = useState(null);
+
+  // Refs for latest stints + driverMap inside event handler (avoids stale closures)
+  const stintsRef = useRef(stints);
+  useEffect(() => { stintsRef.current = stints; }, [stints]);
+  const driverMapRef = useRef({});
+  const teamEntryRef = useRef(teamEntry);
+  useEffect(() => { teamEntryRef.current = teamEntry; }, [teamEntry]);
 
   // ── Clock tick ─────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -390,6 +400,119 @@ export default function RaceMode({
     setLiveFuelPerLap({ value: avg, count: data.length });
   }, []);
 
+  // ── Bridge event handler ───────────────────────────────────────────────────
+  // Uses refs for stints/driverMap so the subscription never needs to re-subscribe.
+  const handleIracingEvent = useCallback(async (event) => {
+    const currentStints = stintsRef.current;
+    const currentDriverMap = driverMapRef.current;
+    const currentTeamEntry = teamEntryRef.current;
+    const driverIds = new Set(Object.keys(currentDriverMap));
+
+    // Only handle events from drivers on this team entry
+    if (event.driver_id && !driverIds.has(event.driver_id)) return;
+
+    if (event.event_type === "race_start") {
+      // Stamp irl_start on the first unstamped stint
+      const first = currentStints.find((s) => !s.irl_start);
+      if (!first) return;
+      const t = event.recorded_at;
+      setStints((prev) => prev.map((s) => s.id === first.id ? { ...s, irl_start: t } : s));
+      await supabase.from("stints").update({ irl_start: t }).eq("id", first.id);
+      return;
+    }
+
+    if (event.event_type === "pit_entry") {
+      // Stamp irl_end_actual on the active stint for this driver
+      const active = currentStints.findLast(
+        (s) => s.driver_id === event.driver_id && s.irl_start && !s.irl_end_actual,
+      );
+      if (!active) return;
+      const t = event.recorded_at;
+      setStints((prev) => prev.map((s) => s.id === active.id ? { ...s, irl_end_actual: t } : s));
+      await supabase.from("stints").update({ irl_end_actual: t }).eq("id", active.id);
+      return;
+    }
+
+    if (event.event_type === "pit_exit") {
+      // Stamp irl_start on the next unstamped stint + driver mismatch banner
+      const nextStint = currentStints.find((s) => !s.irl_start);
+      if (!nextStint) return;
+      const t = event.recorded_at;
+      setStints((prev) => prev.map((s) => s.id === nextStint.id ? { ...s, irl_start: t } : s));
+      await supabase.from("stints").update({ irl_start: t }).eq("id", nextStint.id);
+
+      // Check if the driver who exited is the one planned for this stint
+      if (nextStint.driver_id && event.driver_id && nextStint.driver_id !== event.driver_id) {
+        const actualName = currentDriverMap[event.driver_id] || "Pilote inconnu";
+        const plannedName = currentDriverMap[nextStint.driver_id] || "Pilote inconnu";
+        setEventBanners((prev) => [
+          ...prev,
+          {
+            id: `mismatch-${Date.now()}`,
+            type: "driver_mismatch",
+            data: {
+              actualName,
+              actualDriverId: event.driver_id,
+              plannedName,
+              stintId: nextStint.id,
+              stintNumber: nextStint.stint_number,
+            },
+          },
+        ]);
+      }
+      return;
+    }
+
+    if (event.event_type === "conditions_change") {
+      const isWet = event.payload?.is_wet ?? false;
+      // Only banner if the next planned stint doesn't already match detected conditions
+      const nextStint = currentStints.find((s) => !s.irl_start);
+      if (nextStint && Boolean(nextStint.rain) === isWet) return;
+      // Deduplicate — don't stack same-direction banners
+      setEventBanners((prev) => {
+        const type = isWet ? "conditions_wet" : "conditions_dry";
+        if (prev.some((b) => b.type === type)) return prev;
+        return [...prev, { id: `cond-${Date.now()}`, type, data: { isWet, teamEntry: currentTeamEntry } }];
+      });
+    }
+  }, []);
+
+  // Subscription to iracing_events — one channel, no driver filter (RLS scopes it)
+  useEffect(() => {
+    if (!activeStrategy?.id) return;
+    const channel = supabase
+      .channel(`iracing-events-${teamEntryId}`)
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "iracing_events" },
+        (payload) => handleIracingEvent(payload.new),
+      )
+      .subscribe();
+    return () => supabase.removeChannel(channel);
+  }, [teamEntryId, activeStrategy?.id, handleIracingEvent]);
+
+  // ── Banner helpers ─────────────────────────────────────────────────────────
+  const dismissBanner = useCallback((id) => {
+    setEventBanners((prev) => prev.filter((b) => b.id !== id));
+  }, []);
+
+  const applyConditionsBanner = useCallback(async (banner) => {
+    const isWet = banner.data.isWet;
+    // Apply to the next unstamped stint only — conditions may not persist for all remaining
+    const next = stintsRef.current.find((s) => !s.irl_start);
+    if (!next) { dismissBanner(banner.id); return; }
+    setStints((prev) => prev.map((s) => s.id === next.id ? { ...s, rain: isWet } : s));
+    await supabase.from("stints").update({ rain: isWet }).eq("id", next.id);
+    dismissBanner(banner.id);
+  }, [dismissBanner]);
+
+  const applyDriverMismatch = useCallback(async (banner) => {
+    const { actualDriverId, stintId } = banner.data;
+    setStints((prev) => prev.map((s) => s.id === stintId ? { ...s, driver_id: actualDriverId } : s));
+    await supabase.from("stints").update({ driver_id: actualDriverId }).eq("id", stintId);
+    dismissBanner(banner.id);
+  }, [dismissBanner]);
+
   // ── Derived: timing ────────────────────────────────────────────────────────
   // Apply strategy start offset — mirrors calculateAllStints logic in StintGrid
   const raceStart = teamEntry?.event_start_times?.irl_start
@@ -416,6 +539,7 @@ export default function RaceMode({
   assignedDrivers.forEach((d) => {
     if (d.drivers?.id) driverMap[d.drivers.id] = d.drivers.name;
   });
+  driverMapRef.current = driverMap;
 
   // ── Derived: active stint (IRL-time based) ─────────────────────────────────
   // lastStampedIndex — used to exclude already-stamped stints from active detection.
@@ -769,6 +893,104 @@ export default function RaceMode({
           );
         })}
       </div>
+      {/* ── Bridge event banners ──────────────────────────────────────── */}
+      {eventBanners.length > 0 && (
+        <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+          {eventBanners.map((banner) => {
+            const isConditions =
+              banner.type === "conditions_wet" || banner.type === "conditions_dry";
+            const isWetBanner = banner.type === "conditions_wet";
+            const bannerColor = banner.type === "driver_mismatch"
+              ? "#f59e0b"
+              : isWetBanner
+                ? "#4a9fd4"
+                : "#f59e0b";
+            return (
+              <div
+                key={banner.id}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  gap: "0.75rem",
+                  padding: "0.6rem 0.9rem",
+                  background: `rgba(${isWetBanner ? "74,159,212" : "245,158,11"},0.08)`,
+                  border: `1px solid ${bannerColor}`,
+                  borderRadius: "4px",
+                  flexWrap: "wrap",
+                }}
+              >
+                <span style={{ fontSize: "0.85rem", color: "var(--text)", flex: 1 }}>
+                  {banner.type === "conditions_wet" && (
+                    <>🌧 Piste mouillée — appliquer aux relais restants&nbsp;?</>
+                  )}
+                  {banner.type === "conditions_dry" && (
+                    <>☀️ Piste qui sèche — appliquer aux relais restants&nbsp;?</>
+                  )}
+                  {banner.type === "driver_mismatch" && (
+                    <>
+                      ⚠️{" "}
+                      <strong>{banner.data.actualName}</strong> en piste —{" "}
+                      <strong>{banner.data.plannedName}</strong> prévu pour le relais{" "}
+                      {banner.data.stintNumber}
+                    </>
+                  )}
+                </span>
+                <div style={{ display: "flex", gap: "0.5rem", flexShrink: 0 }}>
+                  {isConditions && (
+                    <button
+                      onClick={() => applyConditionsBanner(banner)}
+                      style={{
+                        padding: "0.25rem 0.65rem",
+                        fontSize: "0.78rem",
+                        fontWeight: 700,
+                        borderRadius: "3px",
+                        border: `1px solid ${bannerColor}`,
+                        background: `rgba(${isWetBanner ? "74,159,212" : "245,158,11"},0.15)`,
+                        color: bannerColor,
+                        cursor: "pointer",
+                      }}
+                    >
+                      Appliquer
+                    </button>
+                  )}
+                  {banner.type === "driver_mismatch" && (
+                    <button
+                      onClick={() => applyDriverMismatch(banner)}
+                      style={{
+                        padding: "0.25rem 0.65rem",
+                        fontSize: "0.78rem",
+                        fontWeight: 700,
+                        borderRadius: "3px",
+                        border: "1px solid #f59e0b",
+                        background: "rgba(245,158,11,0.15)",
+                        color: "#f59e0b",
+                        cursor: "pointer",
+                      }}
+                    >
+                      Changer
+                    </button>
+                  )}
+                  <button
+                    onClick={() => dismissBanner(banner.id)}
+                    style={{
+                      padding: "0.25rem 0.65rem",
+                      fontSize: "0.78rem",
+                      borderRadius: "3px",
+                      border: "1px solid var(--border)",
+                      background: "transparent",
+                      color: "var(--text-dim)",
+                      cursor: "pointer",
+                    }}
+                  >
+                    Ignorer
+                  </button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
       {/* ── Main active stint card ─────────────────────────────────────── */}
       <div
         className="card"

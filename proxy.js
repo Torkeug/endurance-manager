@@ -17,6 +17,7 @@ const PUBLIC_ROUTES = [
   "/api/notify-admins",
   "/api/notify-driver-approved",
   "/api/iracing/lap",
+  "/api/iracing/event",
   "/api/cron/cleanup-iracing-laps",
 ];
 
