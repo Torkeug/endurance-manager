@@ -420,7 +420,7 @@ export default function RaceMode({
       const plannedStart = currentTeamEntry?.event_start_times?.irl_start;
       if (plannedStart) {
         const diffMs = Math.abs(new Date(event.recorded_at) - new Date(plannedStart));
-        if (diffMs > 2 * 60 * 60 * 1000) return;
+        if (diffMs > 15 * 60 * 1000) return;
       }
       // Stamp irl_start on the first unstamped stint
       const first = currentStints.find((s) => !s.irl_start);
