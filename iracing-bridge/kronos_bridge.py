@@ -377,10 +377,10 @@ def run_tray(bridge: KronosBridge) -> None:
         "Kronos Bridge",
     )
 
-    def get_status_text(item) -> str:
+    def get_status_text(_item) -> str:
         return bridge.status_text
 
-    def quit_action(icon, item) -> None:
+    def quit_action(icon, _item) -> None:
         bridge.stop()
         icon.stop()
 
@@ -408,6 +408,6 @@ def run_tray(bridge: KronosBridge) -> None:
 # ---------------------------------------------------------------------------
 
 if __name__ == "__main__":
-    bridge = KronosBridge(api_url=KRONOS_API_URL)
-    bridge.start()
-    run_tray(bridge)  # blocks until user quits from tray
+    _bridge = KronosBridge(api_url=KRONOS_API_URL)
+    _bridge.start()
+    run_tray(_bridge)  # blocks until user quits from tray
