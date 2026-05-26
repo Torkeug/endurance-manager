@@ -268,6 +268,8 @@ function DriverRow({
   const [g61MaxFuel, setG61MaxFuel] = useState("");
   const [g61MinTemp, setG61MinTemp] = useState("");
   const [g61MaxTemp, setG61MaxTemp] = useState("");
+  const [g61MinWetness, setG61MinWetness] = useState("");
+  const [g61MaxWetness, setG61MaxWetness] = useState("");
   const [g61Imported, setG61Imported] = useState({}); // lapField → lapId of last import
 
   const applyPreset = (preset) => {
@@ -644,6 +646,8 @@ function DriverRow({
     if (g61MaxFuel !== "" && lap.fuelLevel != null && lap.fuelLevel > parseFloat(g61MaxFuel)) return false;
     if (g61MinTemp !== "" && lap.trackTemp != null && lap.trackTemp < parseFloat(g61MinTemp)) return false;
     if (g61MaxTemp !== "" && lap.trackTemp != null && lap.trackTemp > parseFloat(g61MaxTemp)) return false;
+    if (g61MinWetness !== "" && lap.trackWetness < parseFloat(g61MinWetness)) return false;
+    if (g61MaxWetness !== "" && lap.trackWetness > parseFloat(g61MaxWetness)) return false;
     return true;
   }).sort((a, b) => a.lapTime - b.lapTime);
 
@@ -653,6 +657,17 @@ function DriverRow({
   const fuelLaps = filteredLaps.filter((l) => l.fuelUsed != null);
   const avgFuelUsed = fuelLaps.length > 0
     ? fuelLaps.reduce((s, l) => s + l.fuelUsed, 0) / fuelLaps.length
+    : null;
+  const fuelLevelLaps = filteredLaps.filter((l) => l.fuelLevel != null);
+  const avgFuelLevel = fuelLevelLaps.length > 0
+    ? fuelLevelLaps.reduce((s, l) => s + l.fuelLevel, 0) / fuelLevelLaps.length
+    : null;
+  const trackTempLaps = filteredLaps.filter((l) => l.trackTemp != null);
+  const avgTrackTemp = trackTempLaps.length > 0
+    ? trackTempLaps.reduce((s, l) => s + l.trackTemp, 0) / trackTempLaps.length
+    : null;
+  const avgTrackWetness = filteredLaps.length > 0
+    ? filteredLaps.reduce((s, l) => s + (l.trackWetness ?? 0), 0) / filteredLaps.length
     : null;
 
   const fBtnStyle = (active) => ({
@@ -1023,36 +1038,54 @@ function DriverRow({
                       {filteredLaps.length}/{g61Laps.length} chrono{g61Laps.length !== 1 ? "s" : ""}
                     </span>
                   </div>
-                  <div style={{ display: "flex", gap: "1rem", alignItems: "center", flexWrap: "wrap" }}>
-                    {entryCarName && (
-                      <label style={{ display: "flex", alignItems: "center", gap: "0.3rem", fontSize: "0.72rem", color: "var(--text-dim)", cursor: "pointer" }}>
-                        <input type="checkbox" checked={g61SameCarOnly} onChange={(e) => setG61SameCarOnly(e.target.checked)} />
-                        Même voiture
-                      </label>
-                    )}
-                    <div style={{ display: "flex", alignItems: "center", gap: "0.4rem", fontSize: "0.72rem", color: "var(--text-dim)", flexWrap: "wrap" }}>
-                      <span>Réservoir</span>
-                      <input type="number" value={g61MinFuel} onChange={(e) => setG61MinFuel(e.target.value)} placeholder="min L" min="0" step="1" style={{ width: "58px", fontSize: "0.72rem", padding: "0.1rem 0.3rem", background: "var(--surface-2)", border: "1px solid var(--border)", borderRadius: "3px", color: "var(--text)" }} />
-                      <span>–</span>
-                      <input type="number" value={g61MaxFuel} onChange={(e) => setG61MaxFuel(e.target.value)} placeholder="max L" min="0" step="1" style={{ width: "58px", fontSize: "0.72rem", padding: "0.1rem 0.3rem", background: "var(--surface-2)", border: "1px solid var(--border)", borderRadius: "3px", color: "var(--text)" }} />
-                    </div>
-                    <div style={{ display: "flex", alignItems: "center", gap: "0.4rem", fontSize: "0.72rem", color: "var(--text-dim)", flexWrap: "wrap" }}>
-                      <span>T. piste</span>
-                      <input type="number" value={g61MinTemp} onChange={(e) => setG61MinTemp(e.target.value)} placeholder="min °C" min="0" step="1" style={{ width: "58px", fontSize: "0.72rem", padding: "0.1rem 0.3rem", background: "var(--surface-2)", border: "1px solid var(--border)", borderRadius: "3px", color: "var(--text)" }} />
-                      <span>–</span>
-                      <input type="number" value={g61MaxTemp} onChange={(e) => setG61MaxTemp(e.target.value)} placeholder="max °C" min="0" step="1" style={{ width: "58px", fontSize: "0.72rem", padding: "0.1rem 0.3rem", background: "var(--surface-2)", border: "1px solid var(--border)", borderRadius: "3px", color: "var(--text)" }} />
-                    </div>
-                    <div style={{ display: "flex", alignItems: "center", gap: "0.4rem", fontSize: "0.72rem", color: "var(--text-dim)", flexWrap: "wrap" }}>
-                      <div style={{ display: "flex", gap: "0.25rem" }}>
-                        {[["", "Tout"], ["7d", "7j"], ["30d", "30j"], ["90d", "3 mois"]].map(([v, label]) => (
-                          <button key={v} type="button" onClick={() => applyPreset(v)} className="btn btn-sm" style={fBtnStyle(g61DatePreset === v)}>{label}</button>
-                        ))}
-                      </div>
-                      <span>De</span>
-                      <input type="date" value={g61DateFrom} onChange={(e) => { setG61DateFrom(e.target.value); setG61DatePreset(""); }} style={{ fontSize: "0.72rem", padding: "0.1rem 0.3rem", background: "var(--surface-2)", border: "1px solid var(--border)", borderRadius: "3px", color: "var(--text)" }} />
-                      <span>à</span>
-                      <input type="date" value={g61DateTo} onChange={(e) => { setG61DateTo(e.target.value); setG61DatePreset(""); }} style={{ fontSize: "0.72rem", padding: "0.1rem 0.3rem", background: "var(--surface-2)", border: "1px solid var(--border)", borderRadius: "3px", color: "var(--text)" }} />
-                    </div>
+                  <div style={{ display: "flex", gap: "0.4rem", alignItems: "center", flexWrap: "wrap" }}>
+                    {(() => {
+                      const grpStyle = { display: "flex", alignItems: "center", gap: "0.35rem", fontSize: "0.72rem", background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "5px", padding: "0.2rem 0.5rem" };
+                      const inStyle = (w) => ({ width: w, fontSize: "0.72rem", padding: "0.1rem 0.25rem", background: "var(--surface-2)", border: "1px solid var(--border)", borderRadius: "3px", color: "var(--text)" });
+                      const lbl = { fontWeight: 600, color: "var(--text-dim)", marginRight: "0.1rem" };
+                      const sep = <span style={{ color: "var(--text-dim)" }}>–</span>;
+                      return (
+                        <>
+                          {entryCarName && (
+                            <div style={grpStyle}>
+                              <label style={{ display: "flex", alignItems: "center", gap: "0.3rem", color: "var(--text-dim)", cursor: "pointer" }}>
+                                <input type="checkbox" checked={g61SameCarOnly} onChange={(e) => setG61SameCarOnly(e.target.checked)} />
+                                Même voiture
+                              </label>
+                            </div>
+                          )}
+                          <div style={grpStyle}>
+                            <span style={lbl}>Réservoir</span>
+                            <input type="number" value={g61MinFuel} onChange={(e) => setG61MinFuel(e.target.value)} placeholder="min L" min="0" step="1" style={inStyle("74px")} />
+                            {sep}
+                            <input type="number" value={g61MaxFuel} onChange={(e) => setG61MaxFuel(e.target.value)} placeholder="max L" min="0" step="1" style={inStyle("74px")} />
+                          </div>
+                          <div style={grpStyle}>
+                            <span style={lbl}>T. piste</span>
+                            <input type="number" value={g61MinTemp} onChange={(e) => setG61MinTemp(e.target.value)} placeholder="min °C" min="0" step="1" style={inStyle("78px")} />
+                            {sep}
+                            <input type="number" value={g61MaxTemp} onChange={(e) => setG61MaxTemp(e.target.value)} placeholder="max °C" min="0" step="1" style={inStyle("78px")} />
+                          </div>
+                          <div style={grpStyle}>
+                            <span style={lbl}>Humidité piste</span>
+                            <input type="number" value={g61MinWetness} onChange={(e) => setG61MinWetness(e.target.value)} placeholder="min" min="0" step="1" style={inStyle("62px")} />
+                            {sep}
+                            <input type="number" value={g61MaxWetness} onChange={(e) => setG61MaxWetness(e.target.value)} placeholder="max" min="0" step="1" style={inStyle("62px")} />
+                          </div>
+                          <div style={grpStyle}>
+                            <div style={{ display: "flex", gap: "0.25rem" }}>
+                              {[["", "Tout"], ["7d", "7j"], ["30d", "30j"], ["90d", "3 mois"]].map(([v, label]) => (
+                                <button key={v} type="button" onClick={() => applyPreset(v)} className="btn btn-sm" style={fBtnStyle(g61DatePreset === v)}>{label}</button>
+                              ))}
+                            </div>
+                            <span style={{ color: "var(--text-dim)" }}>De</span>
+                            <input type="date" value={g61DateFrom} onChange={(e) => { setG61DateFrom(e.target.value); setG61DatePreset(""); }} style={{ fontSize: "0.72rem", padding: "0.1rem 0.3rem", background: "var(--surface-2)", border: "1px solid var(--border)", borderRadius: "3px", color: "var(--text)" }} />
+                            <span style={{ color: "var(--text-dim)" }}>à</span>
+                            <input type="date" value={g61DateTo} onChange={(e) => { setG61DateTo(e.target.value); setG61DatePreset(""); }} style={{ fontSize: "0.72rem", padding: "0.1rem 0.3rem", background: "var(--surface-2)", border: "1px solid var(--border)", borderRadius: "3px", color: "var(--text)" }} />
+                          </div>
+                        </>
+                      );
+                    })()}
                   </div>
                 </div>
 
@@ -1062,15 +1095,34 @@ function DriverRow({
                   <div style={{ fontSize: "0.8rem", color: "var(--text-dim)" }}>Aucun résultat pour ces filtres.</div>
                 ) : (
                   <>
-                    <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", flexWrap: "wrap", marginBottom: "0.4rem", fontSize: "0.72rem", color: "var(--text-dim)" }}>
-                      <span>
-                        Moyenne ({filteredLaps.length} tour{filteredLaps.length !== 1 ? "s" : ""}) :{" "}
-                        <span className="mono" style={{ color: "var(--text)" }}>{secToDisplay(avgLapTime)}</span>
-                        {avgFuelUsed != null && (
-                          <> · <span className="mono" style={{ color: "var(--accent)" }}>{parseFloat(avgFuelUsed.toFixed(3))}L</span></>
-                        )}
+                    <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", flexWrap: "wrap", marginBottom: "0.5rem", padding: "0.4rem 0.75rem", background: "var(--surface)", border: "1px solid var(--border)", borderLeft: "3px solid var(--accent)", borderRadius: "4px" }}>
+                      <span style={{ fontSize: "0.7rem", fontWeight: 700, color: "var(--text-dim)", textTransform: "uppercase", letterSpacing: "0.06em", whiteSpace: "nowrap" }}>
+                        Moy. {filteredLaps.length} tour{filteredLaps.length !== 1 ? "s" : ""}
                       </span>
-                      <div style={{ display: "flex", gap: "0.2rem" }}>
+                      <div style={{ display: "flex", gap: "0.6rem", alignItems: "center", flexWrap: "wrap", fontSize: "0.78rem" }}>
+                        <span className="mono" style={{ color: "var(--text)", fontWeight: 600 }}>{secToDisplay(avgLapTime)}</span>
+                        {avgFuelUsed != null && (
+                          <span style={{ color: "var(--text-dim)" }}>
+                            Conso <span className="mono" style={{ color: "var(--accent)" }}>{parseFloat(avgFuelUsed.toFixed(3))} L</span>
+                          </span>
+                        )}
+                        {avgFuelLevel != null && (
+                          <span style={{ color: "var(--text-dim)" }}>
+                            Réservoir <span className="mono" style={{ color: "var(--text)" }}>{parseFloat(avgFuelLevel.toFixed(1))} L</span>
+                          </span>
+                        )}
+                        {avgTrackTemp != null && (
+                          <span style={{ color: "var(--text-dim)" }}>
+                            T. piste <span className="mono" style={{ color: "var(--text)" }}>{Math.round(avgTrackTemp)}°</span>
+                          </span>
+                        )}
+                        {avgTrackWetness != null && (
+                          <span style={{ color: "var(--text-dim)" }}>
+                            Humidité <span className="mono" style={{ color: "var(--text)" }}>{parseFloat(avgTrackWetness.toFixed(1))}</span>
+                          </span>
+                        )}
+                      </div>
+                      <div style={{ display: "flex", gap: "0.2rem", marginLeft: "auto" }}>
                         {[
                           ["lap_time_dry", "☀️"],
                           ["lap_time_wet", "💧"],
@@ -1091,7 +1143,7 @@ function DriverRow({
 
                       <thead>
                         <tr>
-                          {["", "Chrono", "Conso", "Réservoir", "T. Piste", "Date", "Voiture", "Session", ""].map((h, i) => (
+                          {["", "Chrono", "Conso", "Réservoir", "T. Piste", "Humidité piste", "Date", "Voiture", "Session", ""].map((h, i) => (
                             <th key={i} style={{ ...thStyle, fontSize: "0.65rem", padding: "0.35rem 0.6rem", position: "sticky", top: 0, zIndex: 1 }}>{h}</th>
                           ))}
                         </tr>
@@ -1111,6 +1163,9 @@ function DriverRow({
                             </td>
                             <td style={{ padding: "0.3rem 0.6rem", fontFamily: "var(--font-mono), monospace", color: "var(--text-dim)" }}>
                               {lap.trackTemp != null ? `${Math.round(lap.trackTemp)}°` : "—"}
+                            </td>
+                            <td style={{ padding: "0.3rem 0.6rem", fontFamily: "var(--font-mono), monospace", color: "var(--text-dim)" }}>
+                              {lap.trackWetness ?? 0}
                             </td>
                             <td style={{ padding: "0.3rem 0.6rem", color: "var(--text-dim)", whiteSpace: "nowrap" }}>
                               {new Date(lap.startTime).toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit", year: "2-digit" })}
