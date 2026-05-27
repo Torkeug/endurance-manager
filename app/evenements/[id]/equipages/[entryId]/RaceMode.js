@@ -223,7 +223,7 @@ function calcActualFuel(stint, driverPerf, teamEntry, offsetRaceStart = null) {
   const nightDryAdd = teamEntry?.night_dry_add_seconds || 0;
   const nightWetAdd = teamEntry?.night_wet_add_seconds || 0;
 
-  const igTime = getIGTime(stint.irl_start, raceStart, igStartTime);
+  const igTime = getIGTime(effectiveStart, raceStart, igStartTime);
   const phase = getPhase(igTime, igSunrise, igSunset);
   const isNight = phase === "🌑";
 
@@ -484,6 +484,7 @@ export default function RaceMode({
       const nextStint = currentStints[activeIdx + 1] ?? null;
       if (!nextStint) return;
       const t = event.recorded_at;
+      prevNextStintIrlStartRef.current = { id: nextStint.id, value: nextStint.irl_start_actual ?? null };
       setStints((prev) => prev.map((s) => s.id === nextStint.id ? { ...s, irl_start_actual: t } : s));
       await supabase.from("stints").update({ irl_start_actual: t }).eq("id", nextStint.id);
 
@@ -1281,7 +1282,7 @@ export default function RaceMode({
         )}
 
         {/* Undo last pit — inside the card, above the pit button, only when relevant */}
-        {!archived && completedStints.length > 0 && !undoCooldown && (
+        {!archived && stints.some((s) => s.irl_end_actual) && !undoCooldown && (
           <div style={{ textAlign: "right", marginBottom: "0.5rem" }}>
             <button
               onClick={undoLastPit}

@@ -1943,6 +1943,7 @@ export default function StintGrid({
           rain: false,
           tyre_change: false,
           irl_end_actual: null,
+          irl_start_actual: null,
         };
         // Optimistic update
         setStints((prev) =>
@@ -2052,6 +2053,7 @@ export default function StintGrid({
       rain: false,
       tyre_change: false,
       irl_end_actual: null,
+      irl_start_actual: null,
     };
 
     // Optimistic update
