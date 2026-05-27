@@ -209,7 +209,8 @@ function selectLapTime(
 function calcActualFuel(stint, driverPerf, teamEntry, offsetRaceStart = null) {
   // Accept time-elapsed stints (no irl_end_actual) using planned end as fallback
   const effectiveEnd = stint.irl_end_actual || stint.irl_end_planned;
-  if (!effectiveEnd || !stint.irl_start) return null;
+  const effectiveStart = stint.irl_start_actual ?? stint.irl_start;
+  if (!effectiveEnd || !effectiveStart) return null;
 
   const perf = driverPerf[stint.driver_id];
   // Use offset-adjusted start as IG time baseline — mirrors the fix in StintGrid.
@@ -240,7 +241,7 @@ function calcActualFuel(stint, driverPerf, teamEntry, offsetRaceStart = null) {
   const fuelPerLapVal = resolvedFuel?.value ?? null;
 
   const actualDurationSec =
-    (new Date(effectiveEnd) - new Date(stint.irl_start)) / 1000;
+    (new Date(effectiveEnd) - new Date(effectiveStart)) / 1000;
   const actualLaps =
     lapTimeSec && actualDurationSec > 0
       ? Math.round(actualDurationSec / lapTimeSec)
@@ -320,6 +321,10 @@ export default function RaceMode({
   const teamEntryRef = useRef(teamEntry);
   useEffect(() => { teamEntryRef.current = teamEntry; }, [teamEntry]);
 
+  // Stores the previous irl_start_actual of the next stint before markPitStop overwrites it,
+  // so undoLastPit can restore the original value rather than leaving a stale stamp.
+  const prevNextStintIrlStartRef = useRef(null); // { id, value } | null
+
   // ── Clock tick ─────────────────────────────────────────────────────────────
   useEffect(() => {
     const interval = setInterval(() => setNow(new Date()), 1000);
@@ -383,11 +388,12 @@ export default function RaceMode({
 
   // ── Live fuel fetch — queries iracing_laps for clean laps this stint ───────
   // Takes explicit args so it can be defined before activeStint is derived.
+  // Returns { value (avg L/lap), count, currentFuelLevel (latest fuel_level) } or null.
   const fetchLiveFuel = useCallback(async (driverId, stintStart) => {
     if (!driverId || !stintStart) { setLiveFuelPerLap(null); return; }
     const { data } = await supabase
       .from("iracing_laps")
-      .select("fuel_used")
+      .select("fuel_used, fuel_level")
       .eq("driver_id", driverId)
       .eq("on_pit_road", false)
       .eq("under_caution", false)
@@ -397,7 +403,9 @@ export default function RaceMode({
       .limit(5);
     if (!data || data.length < 3) { setLiveFuelPerLap(null); return; }
     const avg = data.reduce((s, r) => s + r.fuel_used, 0) / data.length;
-    setLiveFuelPerLap({ value: avg, count: data.length });
+    // data is ordered descending — first row is the most recent lap
+    const currentFuelLevel = data[0].fuel_level ?? null;
+    setLiveFuelPerLap({ value: avg, count: data.length, currentFuelLevel });
   }, []);
 
   // ── Bridge event handler ───────────────────────────────────────────────────
@@ -428,8 +436,8 @@ export default function RaceMode({
       const first = currentStints[0];
       if (!first) return;
       const t = event.recorded_at;
-      setStints((prev) => prev.map((s) => s.id === first.id ? { ...s, irl_start: t } : s));
-      await supabase.from("stints").update({ irl_start: t }).eq("id", first.id);
+      setStints((prev) => prev.map((s) => s.id === first.id ? { ...s, irl_start_actual: t } : s));
+      await supabase.from("stints").update({ irl_start_actual: t }).eq("id", first.id);
       return;
     }
 
@@ -437,13 +445,14 @@ export default function RaceMode({
     if (plannedStart && eventTime < new Date(plannedStart)) return;
 
     if (event.event_type === "pit_entry") {
+      if (!event.driver_id) return;
       // Stamp irl_end_actual on the active stint for this driver:
       // last stint for this driver that has started (irl_start ≤ event time) and not yet ended
       const active = currentStints.findLast(
         (s) =>
           s.driver_id === event.driver_id &&
-          s.irl_start &&
-          new Date(s.irl_start) <= eventTime &&
+          (s.irl_start_actual ?? s.irl_start) &&
+          new Date(s.irl_start_actual ?? s.irl_start) <= eventTime &&
           !s.irl_end_actual,
       );
       if (!active) return;
@@ -454,16 +463,29 @@ export default function RaceMode({
     }
 
     if (event.event_type === "pit_exit") {
-      // Next stint = the one immediately after the last completed (irl_end_actual) stint
-      const lastCompleted = currentStints.findLast((s) => s.irl_end_actual);
-      const nextIdx = lastCompleted
-        ? currentStints.findIndex((s) => s.id === lastCompleted.id) + 1
-        : null;
-      const nextStint = nextIdx != null ? (currentStints[nextIdx] ?? null) : null;
+      if (!event.driver_id) return;
+      // Find the currently active stint using the same logic as RaceMode's activeStint —
+      // lastStampedIndex guard + time-based findLast. This correctly handles stints that
+      // completed by time without irl_end_actual (missed pit_entry events).
+      const nowMs = eventTime.getTime();
+      const lastStampedIdx = currentStints.reduce(
+        (max, s, i) => (s.irl_end_actual ? i : max),
+        -1,
+      );
+      const active = currentStints.findLast(
+        (s, i) =>
+          i > lastStampedIdx &&
+          (s.irl_start_actual ?? s.irl_start) &&
+          new Date(s.irl_start_actual ?? s.irl_start).getTime() <= nowMs &&
+          !s.irl_end_actual,
+      );
+      if (!active) return;
+      const activeIdx = currentStints.findIndex((s) => s.id === active.id);
+      const nextStint = currentStints[activeIdx + 1] ?? null;
       if (!nextStint) return;
       const t = event.recorded_at;
-      setStints((prev) => prev.map((s) => s.id === nextStint.id ? { ...s, irl_start: t } : s));
-      await supabase.from("stints").update({ irl_start: t }).eq("id", nextStint.id);
+      setStints((prev) => prev.map((s) => s.id === nextStint.id ? { ...s, irl_start_actual: t } : s));
+      await supabase.from("stints").update({ irl_start_actual: t }).eq("id", nextStint.id);
 
       // Check if the driver who exited is the one planned for this stint
       if (nextStint.driver_id && event.driver_id && nextStint.driver_id !== event.driver_id) {
@@ -489,8 +511,11 @@ export default function RaceMode({
 
     if (event.event_type === "conditions_change") {
       const isWet = event.payload?.is_wet ?? false;
-      // Only banner if the next planned stint doesn't already match detected conditions
-      const nextStint = currentStints.find((s) => !s.irl_start);
+      // Only banner if the next unfinished stint doesn't already match detected conditions
+      const nowMs = Date.now();
+      const nextStint = currentStints.find(
+        (s) => !s.irl_end_actual && (!s.irl_end_planned || new Date(s.irl_end_planned).getTime() > nowMs),
+      );
       if (nextStint && Boolean(nextStint.rain) === isWet) return;
       // Deduplicate — don't stack same-direction banners
       setEventBanners((prev) => {
@@ -522,8 +547,11 @@ export default function RaceMode({
 
   const applyConditionsBanner = useCallback(async (banner) => {
     const isWet = banner.data.isWet;
-    // Apply to the next unstamped stint only — conditions may not persist for all remaining
-    const next = stintsRef.current.find((s) => !s.irl_start);
+    // Apply to the next unfinished stint only — conditions may not persist for all remaining
+    const nowMs = Date.now();
+    const next = stintsRef.current.find(
+      (s) => !s.irl_end_actual && (!s.irl_end_planned || new Date(s.irl_end_planned).getTime() > nowMs),
+    );
     if (!next) { dismissBanner(banner.id); return; }
     setStints((prev) => prev.map((s) => s.id === next.id ? { ...s, rain: isWet } : s));
     await supabase.from("stints").update({ rain: isWet }).eq("id", next.id);
@@ -580,8 +608,8 @@ export default function RaceMode({
     ? (stints.findLast(
         (s, i) =>
           i > lastStampedIndex &&
-          s.irl_start &&
-          new Date(s.irl_start) <= now &&
+          (s.irl_start_actual ?? s.irl_start) &&
+          new Date(s.irl_start_actual ?? s.irl_start) <= now &&
           !s.irl_end_actual,
       ) ?? null)
     : null;
@@ -607,14 +635,14 @@ export default function RaceMode({
   // Re-fetch whenever the active driver or stint start changes.
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
-    fetchLiveFuel(activeStint?.driver_id, activeStint?.irl_start);
-  }, [fetchLiveFuel, activeStint?.driver_id, activeStint?.irl_start]);
+    fetchLiveFuel(activeStint?.driver_id, activeStint?.irl_start_actual ?? activeStint?.irl_start);
+  }, [fetchLiveFuel, activeStint?.driver_id, activeStint?.irl_start_actual, activeStint?.irl_start]);
 
   // Realtime subscription — fires on every new iracing_laps INSERT for this driver.
   useEffect(() => {
-    if (!activeStint?.driver_id || !activeStint?.irl_start) return;
+    if (!activeStint?.driver_id || !(activeStint?.irl_start_actual ?? activeStint?.irl_start)) return;
     const driverId = activeStint.driver_id;
-    const stintStart = activeStint.irl_start;
+    const stintStart = activeStint.irl_start_actual ?? activeStint.irl_start;
     const channel = supabase
       .channel(`iracing-laps-live-${driverId}`)
       .on(
@@ -624,22 +652,35 @@ export default function RaceMode({
       )
       .subscribe();
     return () => supabase.removeChannel(channel);
-  }, [fetchLiveFuel, activeStint?.driver_id, activeStint?.irl_start]);
+  }, [fetchLiveFuel, activeStint?.driver_id, activeStint?.irl_start_actual, activeStint?.irl_start]);
 
   // ── Derived: live fuel deviation for active stint card ────────────────────
-  const activeIgTime = activeStint?.irl_start
-    ? getIGTime(activeStint.irl_start, raceStart?.toISOString(), teamEntry?.events?.ig_start_time)
+  const activeStintStart = activeStint
+    ? (activeStint.irl_start_actual ?? activeStint.irl_start)
+    : null;
+  const activeIgTime = activeStintStart
+    ? getIGTime(activeStintStart, raceStart?.toISOString(), teamEntry?.events?.ig_start_time)
     : null;
   const activeIsNight = getPhase(activeIgTime, teamEntry?.events?.ig_sunrise, teamEntry?.events?.ig_sunset) === "🌑";
   const activePlannedFuelPerLap = activeStint
     ? (selectFuelPerLap(driverPerf[activeStint.driver_id], activeStint.rain, activeIsNight)?.value ?? null)
+    : null;
+  const activeLapTimeSec = activeStint
+    ? (selectLapTime(
+        driverPerf[activeStint.driver_id],
+        activeStint.rain,
+        activeIsNight,
+        teamEntry?.day_wet_add_seconds || 0,
+        teamEntry?.night_dry_add_seconds || 0,
+        teamEntry?.night_wet_add_seconds || 0,
+      )?.value ?? null)
     : null;
   const liveFuelDelta =
     liveFuelPerLap != null && activePlannedFuelPerLap != null
       ? liveFuelPerLap.value - activePlannedFuelPerLap
       : null;
   const liveLapsDelta =
-    liveFuelPerLap != null && activePlannedFuelPerLap != null && tankSize != null
+    liveFuelPerLap != null && activePlannedFuelPerLap != null && tankSize != null && tankSize > 0
       ? Math.floor(tankSize / liveFuelPerLap.value) - Math.floor(tankSize / activePlannedFuelPerLap)
       : null;
 
@@ -691,6 +732,22 @@ export default function RaceMode({
       ? Math.max(0, tankSize - activeStint.fuel_remaining_calc)
       : null;
 
+  // Live-adjusted fuel to add — uses current fuel level from irsdk + live consumption rate
+  // to estimate how much fuel will actually remain at end of stint.
+  const liveAdjustedFuelToAdd = (() => {
+    if (
+      liveFuelPerLap?.currentFuelLevel == null ||
+      liveFuelPerLap?.value == null ||
+      activeLapTimeSec == null ||
+      stintRemainingSec == null ||
+      stintRemainingSec <= 0 ||
+      tankSize == null
+    ) return null;
+    const remainingLaps = stintRemainingSec / activeLapTimeSec;
+    const fuelAtEnd = liveFuelPerLap.currentFuelLevel - liveFuelPerLap.value * remainingLaps;
+    return Math.max(0, tankSize - Math.max(0, fuelAtEnd));
+  })();
+
   // ── Derived: fuel stats for completed stints ──────────────────────────────
   const completedWithFuel = completedStints.map((s) => ({
     ...s,
@@ -728,11 +785,16 @@ export default function RaceMode({
       ? new Date(new Date(actualEnd).getTime() + pitStopSec * 1000).toISOString()
       : null;
 
+    // Save previous irl_start_actual of next stint so undoLastPit can restore it
+    if (nextStint) {
+      prevNextStintIrlStartRef.current = { id: nextStint.id, value: nextStint.irl_start_actual ?? null };
+    }
+
     // Optimistic update — instant UI response before DB confirms
     setStints((prev) =>
       prev.map((s) => {
         if (s.id === stint.id) return { ...s, irl_end_actual: actualEnd };
-        if (nextStint && s.id === nextStint.id) return { ...s, irl_start: nextIrlStart };
+        if (nextStint && s.id === nextStint.id) return { ...s, irl_start_actual: nextIrlStart };
         return s;
       }),
     );
@@ -745,7 +807,7 @@ export default function RaceMode({
     if (nextStint && nextIrlStart) {
       await supabase
         .from("stints")
-        .update({ irl_start: nextIrlStart })
+        .update({ irl_start_actual: nextIrlStart })
         .eq("id", nextStint.id);
     }
 
@@ -764,15 +826,19 @@ export default function RaceMode({
         setConfirmModal(null);
         setUndoCooldown(true);
         setSaving(true);
-        setStints((prev) =>
-          prev.map((s) =>
-            s.id === last.id ? { ...s, irl_end_actual: null } : s,
-          ),
+        const prev = prevNextStintIrlStartRef.current;
+        prevNextStintIrlStartRef.current = null;
+        setStints((s) =>
+          s.map((stint) => {
+            if (stint.id === last.id) return { ...stint, irl_end_actual: null };
+            if (prev && stint.id === prev.id) return { ...stint, irl_start_actual: prev.value };
+            return stint;
+          }),
         );
-        await supabase
-          .from("stints")
-          .update({ irl_end_actual: null })
-          .eq("id", last.id);
+        await supabase.from("stints").update({ irl_end_actual: null }).eq("id", last.id);
+        if (prev) {
+          await supabase.from("stints").update({ irl_start_actual: prev.value }).eq("id", prev.id);
+        }
         setSaving(false);
       },
     });
@@ -946,10 +1012,10 @@ export default function RaceMode({
               >
                 <span style={{ fontSize: "0.85rem", color: "var(--text)", flex: 1 }}>
                   {banner.type === "conditions_wet" && (
-                    <>🌧 Piste mouillée — appliquer aux relais restants&nbsp;?</>
+                    <>🌧 Piste mouillée — appliquer au prochain relais&nbsp;?</>
                   )}
                   {banner.type === "conditions_dry" && (
-                    <>☀️ Piste qui sèche — appliquer aux relais restants&nbsp;?</>
+                    <>☀️ Piste qui sèche — appliquer au prochain relais&nbsp;?</>
                   )}
                   {banner.type === "driver_mismatch" && (
                     <>
@@ -1131,9 +1197,7 @@ export default function RaceMode({
                 <div>
                   <div style={labelStyle}>Départ relais</div>
                   <div className="mono" style={{ fontSize: "0.95rem" }}>
-                    {activeStint?.irl_start
-                      ? formatTime(activeStint.irl_start)
-                      : "—"}
+                    {activeStintStart ? formatTime(activeStintStart) : "—"}
                   </div>
                 </div>
                 <div>
@@ -1172,7 +1236,10 @@ export default function RaceMode({
                       className="mono"
                       style={{ fontSize: "0.95rem", color: "var(--accent)" }}
                     >
-                      ~{fuelToAdd.toFixed(1)}L
+                      {liveAdjustedFuelToAdd !== null
+                        ? <>{liveAdjustedFuelToAdd.toFixed(1)}L <span style={{ fontSize: "0.75rem", color: "var(--text-dim)" }}>/ {fuelToAdd.toFixed(1)}L prévu</span></>
+                        : <>~{fuelToAdd.toFixed(1)}L</>
+                      }
                     </div>
                   </div>
                 )}
@@ -1331,16 +1398,16 @@ export default function RaceMode({
                 <span style={{ color: "var(--text-dim)" }}>À définir</span>
               )}
           </div>
-          {nextStint.irl_start && (
+          {(nextStint.irl_start_actual ?? nextStint.irl_start) && (
             <div
               className="mono"
               style={{
                 fontSize: "0.82rem",
-                color: "var(--accent)",
+                color: nextStint.irl_start_actual ? "#2eb460" : "var(--accent)",
                 marginTop: "0.25rem",
               }}
             >
-              Départ prévu : {formatTime(nextStint.irl_start)}
+              Départ {nextStint.irl_start_actual ? "réel" : "prévu"} : {formatTime(nextStint.irl_start_actual ?? nextStint.irl_start)}
             </div>
           )}
           {(nextStint.rain || nextStint.tyre_change) && (
@@ -1490,14 +1557,17 @@ export default function RaceMode({
               .filter((s) => s._fuel)
               .map((s) => {
                 const f = s._fuel;
+                const isEstimated = !s.irl_end_actual;
                 const driftColor =
-                  f.drift === null
+                  isEstimated
                     ? "var(--text-dim)"
-                    : Math.abs(f.drift) < 0.5
-                      ? "#2eb460"
-                      : f.drift > 0
-                        ? "var(--danger)"
-                        : "#2eb460";
+                    : f.drift === null
+                      ? "var(--text-dim)"
+                      : Math.abs(f.drift) < 0.5
+                        ? "#2eb460"
+                        : f.drift > 0
+                          ? "var(--danger)"
+                          : "#2eb460";
                 return (
                   <div
                     key={s.id}
@@ -1512,6 +1582,7 @@ export default function RaceMode({
                       gap: "0.5rem",
                       width: "100%",
                       boxSizing: "border-box",
+                      opacity: isEstimated ? 0.6 : 1,
                     }}
                   >
                     {/* Stint # + driver */}
@@ -1569,9 +1640,11 @@ export default function RaceMode({
                         textAlign: "right",
                       }}
                     >
-                      {f.drift !== null
-                        ? `${f.drift > 0 ? "+" : ""}${f.drift.toFixed(1)}L`
-                        : "—"}
+                      {isEstimated
+                        ? <span style={{ fontSize: "0.68rem", fontWeight: 400, fontStyle: "italic" }}>estimé</span>
+                        : f.drift !== null
+                          ? `${f.drift > 0 ? "+" : ""}${f.drift.toFixed(1)}L`
+                          : "—"}
                     </span>
 
                     {/* Tier marker / warning — always occupies the last column */}

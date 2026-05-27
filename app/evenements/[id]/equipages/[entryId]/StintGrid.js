@@ -609,7 +609,8 @@ function extractAndMergeActualPerf(completedCalcStints, driverPerf) {
   const actuals = {};
 
   for (const stint of completedCalcStints) {
-    if (!stint.driver_id || !stint.irl_start) continue;
+    const effectiveStart = stint.irl_start_actual ?? stint.irl_start;
+    if (!stint.driver_id || !effectiveStart) continue;
 
     // Use actual end if stamped, otherwise the calculated planned end
     const actualEnd = stint.irl_end_actual
@@ -617,7 +618,7 @@ function extractAndMergeActualPerf(completedCalcStints, driverPerf) {
       : stint._irlEnd;
     if (!actualEnd) continue;
 
-    const actualDurationSec = (actualEnd - new Date(stint.irl_start)) / 1000;
+    const actualDurationSec = (actualEnd - new Date(effectiveStart)) / 1000;
     // Prefer laps_planned (confirmed by user); fall back to calculated laps
     const laps = stint.laps_planned || stint._laps;
     if (!laps || laps === 0) continue;
@@ -1258,13 +1259,24 @@ export default function StintGrid({
           // Guard — ignore patches before initial load completes to avoid
           // merging into an empty stints array
           if (!hasLoadedOnce.current) return;
-          // Only patch irl_end_actual — ignore all other field changes to avoid
+          // Only patch actual-stamp fields — ignore all other field changes to avoid
           // conflicting with the persist effect which writes irl_start/irl_end_planned
-          if (payload.new?.irl_end_actual !== undefined) {
+          if (
+            payload.new?.irl_end_actual !== undefined ||
+            payload.new?.irl_start_actual !== undefined
+          ) {
             setStints((prev) =>
               prev.map((s) =>
                 s.id === payload.new.id
-                  ? { ...s, irl_end_actual: payload.new.irl_end_actual }
+                  ? {
+                      ...s,
+                      ...(payload.new.irl_end_actual !== undefined
+                        ? { irl_end_actual: payload.new.irl_end_actual }
+                        : {}),
+                      ...(payload.new.irl_start_actual !== undefined
+                        ? { irl_start_actual: payload.new.irl_start_actual }
+                        : {}),
+                    }
                   : s,
               ),
             );
@@ -2947,10 +2959,13 @@ export default function StintGrid({
               // Row background — compose gradient border strip on top of the normal row bg.
               // The strip covers only the leftmost 6px; the rest shows the row bg normally.
               // Active stint: irl_start is in the past and irl_end_planned is in the future
+              const effectiveIrlStart = stint.irl_start_actual
+                ? new Date(stint.irl_start_actual)
+                : stint._irlStart;
               const isActiveStint =
-                stint._irlStart &&
+                effectiveIrlStart &&
                 stint._irlEnd &&
-                stint._irlStart <= now &&
+                effectiveIrlStart <= now &&
                 stint._irlEnd > now &&
                 !stint.irl_end_actual;
 
@@ -3187,8 +3202,15 @@ export default function StintGrid({
 
                   {/* IRL start */}
                   <td style={{ ...TD, ...GS, textAlign: "center" }}>
-                    <span className="mono" style={{ fontSize: "0.75rem" }}>
-                      {stint._irlStart ? formatDatetime(stint._irlStart) : "—"}
+                    <span
+                      className="mono"
+                      style={{ fontSize: "0.75rem", color: stint.irl_start_actual ? "#2eb460" : undefined }}
+                    >
+                      {stint.irl_start_actual
+                        ? formatDatetime(new Date(stint.irl_start_actual))
+                        : stint._irlStart
+                          ? formatDatetime(stint._irlStart)
+                          : "—"}
                     </span>
                   </td>
 
@@ -3246,14 +3268,14 @@ export default function StintGrid({
                   <td style={{ ...TD, ...GS, textAlign: "center" }}>
                     {/* Actual end stamped via Race Mode — show real elapsed time.
                         Takes priority over all calculated/manual values. */}
-                    {stint.irl_end_actual && stint._irlStart ? (
+                    {stint.irl_end_actual && (stint.irl_start_actual || stint._irlStart) ? (
                       <div>
                         <span
                           className="mono"
                           style={{ fontSize: "0.75rem", color: "#2eb460" }}
                         >
                           {formatDuration(
-                            (new Date(stint.irl_end_actual) - stint._irlStart) /
+                            (new Date(stint.irl_end_actual) - new Date(stint.irl_start_actual ?? stint._irlStart)) /
                               1000,
                           )}
                         </span>
