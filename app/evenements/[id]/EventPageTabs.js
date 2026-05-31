@@ -341,14 +341,14 @@ export default function EventPageTabs({
                     // ── Shared row renderer ─────────────────────────────────
                     // displayedStartTimes: when provided, overrides the Créneaux cell
                     // to show only those specific slots (used in starttime split mode).
-                    const renderRow = (s, { key, showDriver, borderTop, displayedStartTimes }) => {
+                    const renderRow = (s, { key, reactKey, showDriver, borderTop, displayedStartTimes }) => {
                       const driverName =
                         (event.archived ? s.driver_name_snapshot : null) ||
                         s.drivers?.name ||
                         "—";
                       return (
                         <tr
-                          key={s.id}
+                          key={reactKey ?? key}
                           onMouseEnter={() => setHoveredGroup(key)}
                           onMouseLeave={() => setHoveredGroup(null)}
                           style={{
@@ -520,6 +520,7 @@ export default function EventPageTabs({
                       return group.map((s, rowIdx) =>
                         renderRow(s, {
                           key,
+                          reactKey: s.id,
                           showDriver: rowIdx === 0,
                           borderTop: rowIdx === 0 ? groupBorder : "none",
                         }),
