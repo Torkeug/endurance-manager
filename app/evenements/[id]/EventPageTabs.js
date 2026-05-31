@@ -34,21 +34,12 @@ function getCrewColor(name) {
   return CREW_PALETTE[hashString(name) % CREW_PALETTE.length];
 }
 
-// Separate palette for duplicate-row stripes: 8 hues evenly spread around
-// the color wheel, alternating warm/cool so adjacent hash values stay distinct.
-const STRIPE_PALETTE = [
-  "#ef4444", // red
-  "#3b82f6", // blue
-  "#f97316", // orange
-  "#14b8a6", // teal
-  "#eab308", // yellow
-  "#8b5cf6", // violet
-  "#ec4899", // pink
-  "#22c55e", // green
-];
-
+// Golden-angle hue stepping: each driver gets a unique HSL color.
+// Multiplying by 137.508° (the golden angle) guarantees maximum hue separation
+// between any two drivers regardless of how many there are — no palette limit.
 function getStripeColor(key) {
-  return STRIPE_PALETTE[hashString(String(key)) % STRIPE_PALETTE.length];
+  const hue = (hashString(String(key)) * 137.508) % 360;
+  return `hsl(${hue.toFixed(1)}, 75%, 58%)`;
 }
 
 // Convert a hex color to its relative luminance (0 = black, 1 = white).
