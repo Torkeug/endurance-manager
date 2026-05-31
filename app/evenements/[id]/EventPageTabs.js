@@ -103,6 +103,19 @@ export default function EventPageTabs({
   // Tracks which driver group is hovered — shared across all rows in the group
   const [hoveredGroup, setHoveredGroup] = useState(null);
 
+  // Inscriptions table sort
+  const [sortField, setSortField] = useState("name");
+  const [sortDir, setSortDir] = useState("asc");
+
+  const toggleSort = (field) => {
+    if (sortField === field) {
+      setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+    } else {
+      setSortField(field);
+      setSortDir(field === "irating" ? "desc" : "asc");
+    }
+  };
+
   const signupCount = event.signups?.length ?? 0;
   const teamCount = event.team_entries?.length ?? 0;
   const uniqueDriverCount = new Set(
@@ -278,8 +291,24 @@ export default function EventPageTabs({
               <table>
                 <thead>
                   <tr>
-                    <th>Pilote</th>
-                    <th>iRating</th>
+                    <th
+                      onClick={() => toggleSort("name")}
+                      style={{ cursor: "pointer", userSelect: "none", whiteSpace: "nowrap" }}
+                    >
+                      Pilote{" "}
+                      <span style={{ opacity: sortField === "name" ? 1 : 0.3, fontSize: "0.75em" }}>
+                        {sortField === "name" && sortDir === "desc" ? "▼" : "▲"}
+                      </span>
+                    </th>
+                    <th
+                      onClick={() => toggleSort("irating")}
+                      style={{ cursor: "pointer", userSelect: "none", whiteSpace: "nowrap" }}
+                    >
+                      iRating{" "}
+                      <span style={{ opacity: sortField === "irating" ? 1 : 0.3, fontSize: "0.75em" }}>
+                        {sortField === "irating" && sortDir === "asc" ? "▲" : "▼"}
+                      </span>
+                    </th>
                     <th>Équipe</th>
                     <th>Préférences</th>
                     <th>Créneaux</th>
@@ -308,12 +337,17 @@ export default function EventPageTabs({
                       seen.get(key).push(s);
                     }
 
-                    // Sort groups by driver name
-                    grouped.sort((a, b) =>
-                      (a.signups[0]?.drivers?.name || "").localeCompare(
+                    grouped.sort((a, b) => {
+                      if (sortField === "irating") {
+                        const aR = a.signups[0]?.drivers?.irating ?? -1;
+                        const bR = b.signups[0]?.drivers?.irating ?? -1;
+                        return sortDir === "asc" ? aR - bR : bR - aR;
+                      }
+                      const cmp = (a.signups[0]?.drivers?.name || "").localeCompare(
                         b.signups[0]?.drivers?.name || "",
-                      ),
-                    );
+                      );
+                      return sortDir === "asc" ? cmp : -cmp;
+                    });
 
                     return grouped.flatMap(
                       ({ key, signups: group }, groupIdx) => {
