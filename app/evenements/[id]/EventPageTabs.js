@@ -407,27 +407,32 @@ export default function EventPageTabs({
                           </td>
                           <td style={{ fontSize: "0.85rem", borderTop }}>
                             {(() => {
-                              const slots = displayedStartTimes !== undefined
-                                ? displayedStartTimes
-                                : (s.preferred_start_time_ids || [])
-                                    .map((stId) =>
-                                      (event.event_start_times || []).find((st) => st.id === stId),
-                                    )
-                                    .filter(Boolean)
-                                    .sort((a, b) => new Date(a.irl_start) - new Date(b.irl_start));
+                              const slots = (s.preferred_start_time_ids || [])
+                                .map((stId) =>
+                                  (event.event_start_times || []).find((st) => st.id === stId),
+                                )
+                                .filter(Boolean)
+                                .sort((a, b) => new Date(a.irl_start) - new Date(b.irl_start));
                               if (slots.length === 0)
                                 return <span style={{ color: "var(--text-dim)" }}>—</span>;
-                              return slots.map((st) => (
-                                <div key={st.id}>
-                                  <div style={{ fontWeight: 600 }}>{st.label}</div>
-                                  <div
-                                    className="mono"
-                                    style={{ fontSize: "0.78rem", color: "var(--accent)" }}
-                                  >
-                                    Départ à {formatTimeInZone(st.irl_start, tz)}
+                              // In starttime split mode, dim slots that aren't this row's owner.
+                              const activeId = displayedStartTimes !== undefined
+                                ? displayedStartTimes[0]?.id
+                                : null;
+                              return slots.map((st) => {
+                                const isActive = activeId === null || st.id === activeId;
+                                return (
+                                  <div key={st.id} style={{ opacity: isActive ? 1 : 0.3 }}>
+                                    <div style={{ fontWeight: 600 }}>{st.label}</div>
+                                    <div
+                                      className="mono"
+                                      style={{ fontSize: "0.78rem", color: "var(--accent)" }}
+                                    >
+                                      Départ à {formatTimeInZone(st.irl_start, tz)}
+                                    </div>
                                   </div>
-                                </div>
-                              ));
+                                );
+                              });
                             })()}
                           </td>
                           <td style={{ borderTop }}>
