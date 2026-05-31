@@ -309,9 +309,25 @@ export default function EventPageTabs({
                         {sortField === "irating" && sortDir === "asc" ? "▲" : "▼"}
                       </span>
                     </th>
-                    <th>Équipe</th>
+                    <th
+                      onClick={() => toggleSort("team")}
+                      style={{ cursor: "pointer", userSelect: "none", whiteSpace: "nowrap" }}
+                    >
+                      Équipe{" "}
+                      <span style={{ opacity: sortField === "team" ? 1 : 0.3, fontSize: "0.75em" }}>
+                        {sortField === "team" && sortDir === "desc" ? "▼" : "▲"}
+                      </span>
+                    </th>
                     <th>Préférences</th>
-                    <th>Créneaux</th>
+                    <th
+                      onClick={() => toggleSort("starttime")}
+                      style={{ cursor: "pointer", userSelect: "none", whiteSpace: "nowrap" }}
+                    >
+                      Créneaux{" "}
+                      <span style={{ opacity: sortField === "starttime" ? 1 : 0.3, fontSize: "0.75em" }}>
+                        {sortField === "starttime" && sortDir === "desc" ? "▼" : "▲"}
+                      </span>
+                    </th>
                     <th>Tags</th>
                     <th></th>
                   </tr>
@@ -342,6 +358,35 @@ export default function EventPageTabs({
                         const aR = a.signups[0]?.drivers?.irating ?? -1;
                         const bR = b.signups[0]?.drivers?.irating ?? -1;
                         return sortDir === "asc" ? aR - bR : bR - aR;
+                      }
+                      if (sortField === "team") {
+                        const aT = a.signups[0]?.team_entries?.crew_name || "";
+                        const bT = b.signups[0]?.team_entries?.crew_name || "";
+                        const cmp = aT.localeCompare(bT);
+                        return sortDir === "asc" ? cmp : -cmp;
+                      }
+                      if (sortField === "starttime") {
+                        // Use the earliest preferred start time across all signups for the driver.
+                        // Drivers with no preference sort to the bottom regardless of direction.
+                        const earliest = (signups) => {
+                          let min = Infinity;
+                          for (const s of signups) {
+                            for (const stId of (s.preferred_start_time_ids || [])) {
+                              const st = (event.event_start_times || []).find((x) => x.id === stId);
+                              if (st) {
+                                const t = new Date(st.irl_start).getTime();
+                                if (t < min) min = t;
+                              }
+                            }
+                          }
+                          return min;
+                        };
+                        const aT = earliest(a.signups);
+                        const bT = earliest(b.signups);
+                        if (aT === Infinity && bT === Infinity) return 0;
+                        if (aT === Infinity) return 1;
+                        if (bT === Infinity) return -1;
+                        return sortDir === "asc" ? aT - bT : bT - aT;
                       }
                       const cmp = (a.signups[0]?.drivers?.name || "").localeCompare(
                         b.signups[0]?.drivers?.name || "",
