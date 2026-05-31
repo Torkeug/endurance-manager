@@ -348,6 +348,9 @@ export default function EventPageTabs({
                       const isDuplicate = duplicateCount > 1;
                       const showStripe = isDuplicate && (duplicateStyle === "stripe" || duplicateStyle === "both");
                       const showBadge  = isDuplicate && (duplicateStyle === "badge"  || duplicateStyle === "both");
+                      const stripeColor = showStripe
+                        ? getCrewColor(String(s.drivers?.id || s.driver_name_snapshot || s.id)).border
+                        : undefined;
                       const driverName =
                         (event.archived ? s.driver_name_snapshot : null) ||
                         s.drivers?.name ||
@@ -362,7 +365,7 @@ export default function EventPageTabs({
                               hoveredGroup === key
                                 ? "var(--surface-2)"
                                 : "transparent",
-                            boxShadow: showStripe ? "inset 3px 0 0 var(--accent)" : undefined,
+                            boxShadow: stripeColor ? `inset 3px 0 0 ${stripeColor}` : undefined,
                           }}
                         >
                           <td style={{ fontWeight: 600, borderTop }}>
