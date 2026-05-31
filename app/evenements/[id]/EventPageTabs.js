@@ -341,7 +341,7 @@ export default function EventPageTabs({
                     // ── Shared row renderer ─────────────────────────────────
                     // displayedStartTimes: when provided, overrides the Créneaux cell
                     // to show only those specific slots (used in starttime split mode).
-                    const renderRow = (s, { key, reactKey, showDriver, borderTop, displayedStartTimes, duplicateCount }) => {
+                    const renderRow = (s, { key, reactKey, showDriver, borderTop, displayedStartTimes, duplicateCount, allDriverTeams }) => {
                       const driverName =
                         (event.archived ? s.driver_name_snapshot : null) ||
                         s.drivers?.name ||
@@ -390,10 +390,20 @@ export default function EventPageTabs({
                             {showDriver ? (s.drivers?.irating ?? "—") : ""}
                           </td>
                           <td style={{ borderTop }}>
-                            <CrewPill
-                              name={s.team_entries?.crew_name}
-                              color={crewColorsMap[s.team_entries?.crew_name]}
-                            />
+                            {allDriverTeams ? (
+                              <div style={{ display: "flex", flexDirection: "column", gap: "0.3rem" }}>
+                                {allDriverTeams.map(({ name, color, isActive }) => (
+                                  <span key={name} style={{ opacity: isActive ? 1 : 0.3 }}>
+                                    <CrewPill name={name} color={color} />
+                                  </span>
+                                ))}
+                              </div>
+                            ) : (
+                              <CrewPill
+                                name={s.team_entries?.crew_name}
+                                color={crewColorsMap[s.team_entries?.crew_name]}
+                              />
+                            )}
                           </td>
                           <td
                             style={{
@@ -467,10 +477,11 @@ export default function EventPageTabs({
 
                     // ── Split mode: team ────────────────────────────────────
                     if (sortField === "team") {
-                      const driverCount = new Map();
+                      const driverSignups = new Map();
                       for (const s of filtered) {
                         const dId = s.drivers?.id || s.driver_name_snapshot || s.id;
-                        driverCount.set(dId, (driverCount.get(dId) || 0) + 1);
+                        if (!driverSignups.has(dId)) driverSignups.set(dId, []);
+                        driverSignups.get(dId).push(s);
                       }
                       const rows = [...filtered].sort((a, b) => {
                         const cmp = (a.team_entries?.crew_name || "").localeCompare(
@@ -480,11 +491,23 @@ export default function EventPageTabs({
                       });
                       return rows.map((s) => {
                         const dId = s.drivers?.id || s.driver_name_snapshot || s.id;
+                        const siblings = driverSignups.get(dId) || [s];
+                        const allDriverTeams = siblings.length > 1
+                          ? siblings
+                              .map((ds) => ({
+                                name: ds.team_entries?.crew_name,
+                                color: crewColorsMap[ds.team_entries?.crew_name],
+                                isActive: ds.id === s.id,
+                              }))
+                              .filter((t) => t.name)
+                              .sort((a, b) => (a.name || "").localeCompare(b.name || ""))
+                          : undefined;
                         return renderRow(s, {
                           key: s.id,
                           showDriver: true,
                           borderTop: undefined,
-                          duplicateCount: driverCount.get(dId) || 1,
+                          duplicateCount: siblings.length,
+                          allDriverTeams,
                         });
                       });
                     }
