@@ -341,7 +341,7 @@ export default function EventPageTabs({
                     // ── Shared row renderer ─────────────────────────────────
                     // displayedStartTimes: when provided, overrides the Créneaux cell
                     // to show only those specific slots (used in starttime split mode).
-                    const renderRow = (s, { key, reactKey, showDriver, borderTop, displayedStartTimes }) => {
+                    const renderRow = (s, { key, reactKey, showDriver, borderTop, displayedStartTimes, duplicateCount }) => {
                       const driverName =
                         (event.archived ? s.driver_name_snapshot : null) ||
                         s.drivers?.name ||
@@ -362,8 +362,7 @@ export default function EventPageTabs({
                             {showDriver ? (
                               <span style={{ display: "flex", alignItems: "center", gap: "0.4rem", flexWrap: "wrap" }}>
                                 {driverName}
-                                {displayedStartTimes !== undefined &&
-                                  (s.preferred_start_time_ids || []).length > 1 && (
+                                {duplicateCount > 1 && (
                                     <span style={{
                                       fontSize: "0.65rem",
                                       fontWeight: 700,
@@ -374,7 +373,7 @@ export default function EventPageTabs({
                                       color: "var(--text-dim)",
                                       whiteSpace: "nowrap",
                                     }}>
-                                      ×{(s.preferred_start_time_ids || []).length}
+                                      ×{duplicateCount}
                                     </span>
                                   )}
                               </span>
@@ -463,15 +462,26 @@ export default function EventPageTabs({
 
                     // ── Split mode: team ────────────────────────────────────
                     if (sortField === "team") {
+                      const driverCount = new Map();
+                      for (const s of filtered) {
+                        const dId = s.drivers?.id || s.driver_name_snapshot || s.id;
+                        driverCount.set(dId, (driverCount.get(dId) || 0) + 1);
+                      }
                       const rows = [...filtered].sort((a, b) => {
                         const cmp = (a.team_entries?.crew_name || "").localeCompare(
                           b.team_entries?.crew_name || "",
                         );
                         return sortDir === "asc" ? cmp : -cmp;
                       });
-                      return rows.map((s) =>
-                        renderRow(s, { key: s.id, showDriver: true, borderTop: undefined }),
-                      );
+                      return rows.map((s) => {
+                        const dId = s.drivers?.id || s.driver_name_snapshot || s.id;
+                        return renderRow(s, {
+                          key: s.id,
+                          showDriver: true,
+                          borderTop: undefined,
+                          duplicateCount: driverCount.get(dId) || 1,
+                        });
+                      });
                     }
 
                     // ── Split mode: starttime ───────────────────────────────
@@ -503,6 +513,7 @@ export default function EventPageTabs({
                           showDriver: true,
                           borderTop: undefined,
                           displayedStartTimes: st ? [st] : [],
+                          duplicateCount: (s.preferred_start_time_ids || []).length,
                         }),
                       );
                     }
