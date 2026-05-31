@@ -334,13 +334,158 @@ export default function EventPageTabs({
                 </thead>
                 <tbody>
                   {(() => {
-                    // Group signups by driver — drivers with multiple signups
-                    // (one per team entry) are merged into a single row.
                     const filtered = (event.signups || []).filter(
                       (s) => !isExternal || s.drivers?.id === currentDriver?.id,
                     );
 
-                    // Build ordered map: driverId → [signups]
+                    // ── Shared row renderer ─────────────────────────────────
+                    const renderRow = (s, { key, showDriver, borderTop }) => {
+                      const driverName =
+                        (event.archived ? s.driver_name_snapshot : null) ||
+                        s.drivers?.name ||
+                        "—";
+                      return (
+                        <tr
+                          key={s.id}
+                          onMouseEnter={() => setHoveredGroup(key)}
+                          onMouseLeave={() => setHoveredGroup(null)}
+                          style={{
+                            background:
+                              hoveredGroup === key
+                                ? "var(--surface-2)"
+                                : "transparent",
+                          }}
+                        >
+                          <td style={{ fontWeight: 600, borderTop }}>
+                            {showDriver ? driverName : ""}
+                          </td>
+                          <td
+                            className="mono"
+                            style={{
+                              color: "var(--accent)",
+                              fontSize: "0.85rem",
+                              borderTop,
+                            }}
+                          >
+                            {showDriver ? (s.drivers?.irating ?? "—") : ""}
+                          </td>
+                          <td style={{ borderTop }}>
+                            <CrewPill
+                              name={s.team_entries?.crew_name}
+                              color={crewColorsMap[s.team_entries?.crew_name]}
+                            />
+                          </td>
+                          <td
+                            style={{
+                              color: "var(--text-dim)",
+                              fontSize: "0.85rem",
+                              maxWidth: "200px",
+                              borderTop,
+                            }}
+                          >
+                            {formatPreferences(s)}
+                          </td>
+                          <td style={{ fontSize: "0.85rem", borderTop }}>
+                            {(s.preferred_start_time_ids || []).length > 0 ? (
+                              (s.preferred_start_time_ids || [])
+                                .map((stId) =>
+                                  (event.event_start_times || []).find(
+                                    (st) => st.id === stId,
+                                  ),
+                                )
+                                .filter(Boolean)
+                                .sort((a, b) => new Date(a.irl_start) - new Date(b.irl_start))
+                                .map((st) => (
+                                  <div key={st.id}>
+                                    <div style={{ fontWeight: 600 }}>
+                                      {st.label}
+                                    </div>
+                                    <div
+                                      className="mono"
+                                      style={{
+                                        fontSize: "0.78rem",
+                                        color: "var(--accent)",
+                                      }}
+                                    >
+                                      Départ à{" "}
+                                      {formatTimeInZone(st.irl_start, tz)}
+                                    </div>
+                                  </div>
+                                ))
+                            ) : (
+                              <span style={{ color: "var(--text-dim)" }}>—</span>
+                            )}
+                          </td>
+                          <td style={{ borderTop }}>
+                            {(s.tags || []).length > 0 ? (
+                              <div style={{ display: "flex", flexWrap: "wrap", gap: "0.25rem" }}>
+                                {[...(s.tags || [])].sort().map((tag) => (
+                                  <span key={tag} style={{ fontSize: "0.72rem", fontWeight: 600, padding: "0.1rem 0.45rem", borderRadius: "3px", background: "var(--surface-2)", border: "1px solid var(--border)", color: "var(--text-dim)", whiteSpace: "nowrap" }}>
+                                    {tag}
+                                  </span>
+                                ))}
+                              </div>
+                            ) : (
+                              <span style={{ color: "var(--text-dim)" }}>—</span>
+                            )}
+                          </td>
+                          <td style={{ borderTop }}>
+                            {showDriver &&
+                              !event.archived &&
+                              (admin || currentDriver?.id === s.drivers?.id) &&
+                              s.drivers?.id && (
+                                <Link
+                                  href={`/evenements/${event.id}/inscription?driver=${s.drivers.id}`}
+                                  className="btn btn-secondary btn-sm"
+                                >
+                                  {isExternal === true ? "Voir" : "Gérer"}
+                                </Link>
+                              )}
+                          </td>
+                        </tr>
+                      );
+                    };
+
+                    // ── Split mode: team / starttime ────────────────────────
+                    // Each signup row is independent so rows can interleave
+                    // across drivers when sorted by team or start time.
+                    if (sortField === "team" || sortField === "starttime") {
+                      const earliestOf = (s) => {
+                        let min = Infinity;
+                        for (const stId of s.preferred_start_time_ids || []) {
+                          const st = (event.event_start_times || []).find(
+                            (x) => x.id === stId,
+                          );
+                          if (st) {
+                            const t = new Date(st.irl_start).getTime();
+                            if (t < min) min = t;
+                          }
+                        }
+                        return min;
+                      };
+
+                      const rows = [...filtered].sort((a, b) => {
+                        if (sortField === "team") {
+                          const cmp = (a.team_entries?.crew_name || "").localeCompare(
+                            b.team_entries?.crew_name || "",
+                          );
+                          return sortDir === "asc" ? cmp : -cmp;
+                        }
+                        const aT = earliestOf(a);
+                        const bT = earliestOf(b);
+                        if (aT === Infinity && bT === Infinity) return 0;
+                        if (aT === Infinity) return 1;
+                        if (bT === Infinity) return -1;
+                        return sortDir === "asc" ? aT - bT : bT - aT;
+                      });
+
+                      return rows.map((s) =>
+                        renderRow(s, { key: s.id, showDriver: true, borderTop: undefined }),
+                      );
+                    }
+
+                    // ── Grouped mode: name / irating ────────────────────────
+                    // Drivers with multiple signups are merged into one block.
                     const grouped = [];
                     const seen = new Map();
                     for (const s of filtered) {
@@ -359,195 +504,23 @@ export default function EventPageTabs({
                         const bR = b.signups[0]?.drivers?.irating ?? -1;
                         return sortDir === "asc" ? aR - bR : bR - aR;
                       }
-                      if (sortField === "team") {
-                        const aT = a.signups[0]?.team_entries?.crew_name || "";
-                        const bT = b.signups[0]?.team_entries?.crew_name || "";
-                        const cmp = aT.localeCompare(bT);
-                        return sortDir === "asc" ? cmp : -cmp;
-                      }
-                      if (sortField === "starttime") {
-                        // Use the earliest preferred start time across all signups for the driver.
-                        // Drivers with no preference sort to the bottom regardless of direction.
-                        const earliest = (signups) => {
-                          let min = Infinity;
-                          for (const s of signups) {
-                            for (const stId of (s.preferred_start_time_ids || [])) {
-                              const st = (event.event_start_times || []).find((x) => x.id === stId);
-                              if (st) {
-                                const t = new Date(st.irl_start).getTime();
-                                if (t < min) min = t;
-                              }
-                            }
-                          }
-                          return min;
-                        };
-                        const aT = earliest(a.signups);
-                        const bT = earliest(b.signups);
-                        if (aT === Infinity && bT === Infinity) return 0;
-                        if (aT === Infinity) return 1;
-                        if (bT === Infinity) return -1;
-                        return sortDir === "asc" ? aT - bT : bT - aT;
-                      }
                       const cmp = (a.signups[0]?.drivers?.name || "").localeCompare(
                         b.signups[0]?.drivers?.name || "",
                       );
                       return sortDir === "asc" ? cmp : -cmp;
                     });
 
-                    return grouped.flatMap(
-                      ({ key, signups: group }, groupIdx) => {
-                        const sortedGroup = sortField === "team"
-                          ? [...group].sort((a, b) => {
-                              const aT = a.team_entries?.crew_name || "";
-                              const bT = b.team_entries?.crew_name || "";
-                              const cmp = aT.localeCompare(bT);
-                              return sortDir === "asc" ? cmp : -cmp;
-                            })
-                          : group;
-                        const first = sortedGroup[0];
-                        const driverName =
-                          (event.archived
-                            ? first.driver_name_snapshot
-                            : null) ||
-                          first.drivers?.name ||
-                          "—";
-                        // Stronger top border separates driver groups visually
-                        const groupBorder =
-                          groupIdx > 0 ? "2px solid var(--border)" : undefined;
-
-                        return sortedGroup.map((s, rowIdx) => {
-                          const isFirstRow = rowIdx === 0;
-                          // Within a group, suppress the border between rows so they read as one block.
-                          // The group separator (groupBorder) is applied on the first row's cells only.
-                          const cellBorderTop = isFirstRow
-                            ? groupBorder
-                            : "none";
-
-                          return (
-                            <tr
-                              key={s.id}
-                              onMouseEnter={() => setHoveredGroup(key)}
-                              onMouseLeave={() => setHoveredGroup(null)}
-                              style={{
-                                background:
-                                  hoveredGroup === key
-                                    ? "var(--surface-2)"
-                                    : "transparent",
-                              }}
-                            >
-                              {/* Pilote — content only in first row, empty cell otherwise */}
-                              <td
-                                style={{
-                                  fontWeight: 600,
-                                  borderTop: cellBorderTop,
-                                }}
-                              >
-                                {isFirstRow ? driverName : ""}
-                              </td>
-                              {/* iRating — content only in first row */}
-                              <td
-                                className="mono"
-                                style={{
-                                  color: "var(--accent)",
-                                  fontSize: "0.85rem",
-                                  borderTop: cellBorderTop,
-                                }}
-                              >
-                                {isFirstRow
-                                  ? (first.drivers?.irating ?? "—")
-                                  : ""}
-                              </td>
-                              {/* Per-signup columns — rendered on every row */}
-                              <td style={{ borderTop: cellBorderTop }}>
-                                <CrewPill
-                                  name={s.team_entries?.crew_name}
-                                  color={
-                                    crewColorsMap[s.team_entries?.crew_name]
-                                  }
-                                />
-                              </td>
-                              <td
-                                style={{
-                                  color: "var(--text-dim)",
-                                  fontSize: "0.85rem",
-                                  maxWidth: "200px",
-                                  borderTop: cellBorderTop,
-                                }}
-                              >
-                                {formatPreferences(s)}
-                              </td>
-                              <td
-                                style={{
-                                  fontSize: "0.85rem",
-                                  borderTop: cellBorderTop,
-                                }}
-                              >
-                                {(s.preferred_start_time_ids || []).length >
-                                0 ? (
-                                  (s.preferred_start_time_ids || [])
-                                    .map((stId) =>
-                                      (event.event_start_times || []).find(
-                                        (st) => st.id === stId,
-                                      ),
-                                    )
-                                    .filter(Boolean)
-                                    .sort((a, b) => new Date(a.irl_start) - new Date(b.irl_start))
-                                    .map((st) => (
-                                      <div key={st.id}>
-                                        <div style={{ fontWeight: 600 }}>
-                                          {st.label}
-                                        </div>
-                                        <div
-                                          className="mono"
-                                          style={{
-                                            fontSize: "0.78rem",
-                                            color: "var(--accent)",
-                                          }}
-                                        >
-                                          Départ à{" "}
-                                          {formatTimeInZone(st.irl_start, tz)}
-                                        </div>
-                                      </div>
-                                    ))
-                                ) : (
-                                  <span style={{ color: "var(--text-dim)" }}>
-                                    —
-                                  </span>
-                                )}
-                              </td>
-                              <td style={{ borderTop: cellBorderTop }}>
-                                {(s.tags || []).length > 0 ? (
-                                  <div style={{ display: "flex", flexWrap: "wrap", gap: "0.25rem" }}>
-                                    {[...(s.tags || [])].sort().map((tag) => (
-                                      <span key={tag} style={{ fontSize: "0.72rem", fontWeight: 600, padding: "0.1rem 0.45rem", borderRadius: "3px", background: "var(--surface-2)", border: "1px solid var(--border)", color: "var(--text-dim)", whiteSpace: "nowrap" }}>
-                                        {tag}
-                                      </span>
-                                    ))}
-                                  </div>
-                                ) : (
-                                  <span style={{ color: "var(--text-dim)" }}>—</span>
-                                )}
-                              </td>
-                              {/* Gérer — content only in first row */}
-                              <td style={{ borderTop: cellBorderTop }}>
-                                {isFirstRow &&
-                                  !event.archived &&
-                                  (admin ||
-                                    currentDriver?.id === first.drivers?.id) &&
-                                  first.drivers?.id && (
-                                    <Link
-                                      href={`/evenements/${event.id}/inscription?driver=${first.drivers.id}`}
-                                      className="btn btn-secondary btn-sm"
-                                    >
-                                      {isExternal === true ? "Voir" : "Gérer"}
-                                    </Link>
-                                  )}
-                              </td>
-                            </tr>
-                          );
-                        });
-                      },
-                    );
+                    return grouped.flatMap(({ key, signups: group }, groupIdx) => {
+                      const groupBorder =
+                        groupIdx > 0 ? "2px solid var(--border)" : undefined;
+                      return group.map((s, rowIdx) =>
+                        renderRow(s, {
+                          key,
+                          showDriver: rowIdx === 0,
+                          borderTop: rowIdx === 0 ? groupBorder : "none",
+                        }),
+                      );
+                    });
                   })()}
                 </tbody>
               </table>
