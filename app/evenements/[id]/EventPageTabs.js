@@ -382,9 +382,9 @@ export default function EventPageTabs({
                                     fontWeight: 700,
                                     padding: "0.1rem 0.4rem",
                                     borderRadius: "3px",
-                                    background: "var(--surface-2)",
-                                    border: "1px solid var(--border)",
-                                    color: "var(--text-dim)",
+                                    background: stripeColor ? `${stripeColor}22` : "var(--surface-2)",
+                                    border: `1px solid ${stripeColor ?? "var(--border)"}`,
+                                    color: stripeColor ?? "var(--text-dim)",
                                     whiteSpace: "nowrap",
                                   }}>
                                     {badgeLabel ?? `×${duplicateCount}`}
