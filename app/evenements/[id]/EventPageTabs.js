@@ -107,6 +107,9 @@ export default function EventPageTabs({
   const [sortField, setSortField] = useState("name");
   const [sortDir, setSortDir] = useState("asc");
 
+  // Dev-only: preview duplicate row visual style
+  const [duplicateStyle, setDuplicateStyle] = useState("none");
+
   const toggleSort = (field) => {
     if (sortField === field) {
       setSortDir((d) => (d === "asc" ? "desc" : "asc"));
@@ -341,7 +344,10 @@ export default function EventPageTabs({
                     // ── Shared row renderer ─────────────────────────────────
                     // displayedStartTimes: when provided, overrides the Créneaux cell
                     // to show only those specific slots (used in starttime split mode).
-                    const renderRow = (s, { key, reactKey, showDriver, borderTop, displayedStartTimes, duplicateCount, allDriverTeams }) => {
+                    const renderRow = (s, { key, reactKey, showDriver, borderTop, displayedStartTimes, duplicateCount, allDriverTeams, badgeLabel }) => {
+                      const isDuplicate = duplicateCount > 1;
+                      const showStripe = isDuplicate && (duplicateStyle === "stripe" || duplicateStyle === "both");
+                      const showBadge  = isDuplicate && (duplicateStyle === "badge"  || duplicateStyle === "both");
                       const driverName =
                         (event.archived ? s.driver_name_snapshot : null) ||
                         s.drivers?.name ||
@@ -356,26 +362,27 @@ export default function EventPageTabs({
                               hoveredGroup === key
                                 ? "var(--surface-2)"
                                 : "transparent",
+                            boxShadow: showStripe ? "inset 3px 0 0 var(--accent)" : undefined,
                           }}
                         >
                           <td style={{ fontWeight: 600, borderTop }}>
                             {showDriver ? (
                               <span style={{ display: "flex", alignItems: "center", gap: "0.4rem", flexWrap: "wrap" }}>
                                 {driverName}
-                                {duplicateCount > 1 && (
-                                    <span style={{
-                                      fontSize: "0.65rem",
-                                      fontWeight: 700,
-                                      padding: "0.1rem 0.4rem",
-                                      borderRadius: "3px",
-                                      background: "var(--surface-2)",
-                                      border: "1px solid var(--border)",
-                                      color: "var(--text-dim)",
-                                      whiteSpace: "nowrap",
-                                    }}>
-                                      ×{duplicateCount}
-                                    </span>
-                                  )}
+                                {showBadge && (
+                                  <span style={{
+                                    fontSize: "0.65rem",
+                                    fontWeight: 700,
+                                    padding: "0.1rem 0.4rem",
+                                    borderRadius: "3px",
+                                    background: "var(--surface-2)",
+                                    border: "1px solid var(--border)",
+                                    color: "var(--text-dim)",
+                                    whiteSpace: "nowrap",
+                                  }}>
+                                    {badgeLabel ?? `×${duplicateCount}`}
+                                  </span>
+                                )}
                               </span>
                             ) : ""}
                           </td>
@@ -508,6 +515,7 @@ export default function EventPageTabs({
                           borderTop: undefined,
                           duplicateCount: siblings.length,
                           allDriverTeams,
+                          badgeLabel: `${siblings.length} équipages`,
                         });
                       });
                     }
@@ -542,6 +550,7 @@ export default function EventPageTabs({
                           borderTop: undefined,
                           displayedStartTimes: st ? [st] : [],
                           duplicateCount: (s.preferred_start_time_ids || []).length,
+                          badgeLabel: `${(s.preferred_start_time_ids || []).length} créneaux`,
                         }),
                       );
                     }
@@ -589,6 +598,37 @@ export default function EventPageTabs({
               </table>
             </div>
           )}
+        </div>
+      )}
+
+      {/* ── Dev: duplicate style toggle ───────────────────────────────── */}
+      {process.env.NODE_ENV === "development" && activeTab === "inscriptions" && (
+        <div style={{
+          position: "fixed", bottom: "1.5rem", right: "1.5rem", zIndex: 9999,
+          background: "var(--surface-1)", border: "1px solid var(--border)",
+          borderRadius: "6px", padding: "0.75rem 1rem",
+          display: "flex", flexDirection: "column", gap: "0.4rem",
+          boxShadow: "0 4px 16px rgba(0,0,0,0.4)", minWidth: "170px",
+        }}>
+          <div style={{ fontSize: "0.6rem", fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--accent)", marginBottom: "0.2rem" }}>
+            DEV · Duplicate rows
+          </div>
+          {[
+            { value: "none",   label: "Dimming only" },
+            { value: "stripe", label: "A – Stripe" },
+            { value: "badge",  label: "B – Badge" },
+            { value: "both",   label: "C – Stripe + Badge" },
+          ].map(({ value, label }) => (
+            <button key={value} onClick={() => setDuplicateStyle(value)} style={{
+              padding: "0.3rem 0.6rem", borderRadius: "3px", cursor: "pointer",
+              fontWeight: 600, fontSize: "0.78rem", textAlign: "left",
+              background: duplicateStyle === value ? "var(--accent)" : "var(--surface-2)",
+              color: duplicateStyle === value ? "#000" : "var(--text)",
+              border: duplicateStyle === value ? "1px solid var(--accent)" : "1px solid var(--border)",
+            }}>
+              {label}
+            </button>
+          ))}
         </div>
       )}
 
