@@ -339,7 +339,9 @@ export default function EventPageTabs({
                     );
 
                     // ── Shared row renderer ─────────────────────────────────
-                    const renderRow = (s, { key, showDriver, borderTop }) => {
+                    // displayedStartTimes: when provided, overrides the Créneaux cell
+                    // to show only those specific slots (used in starttime split mode).
+                    const renderRow = (s, { key, showDriver, borderTop, displayedStartTimes }) => {
                       const driverName =
                         (event.archived ? s.driver_name_snapshot : null) ||
                         s.drivers?.name ||
@@ -386,35 +388,29 @@ export default function EventPageTabs({
                             {formatPreferences(s)}
                           </td>
                           <td style={{ fontSize: "0.85rem", borderTop }}>
-                            {(s.preferred_start_time_ids || []).length > 0 ? (
-                              (s.preferred_start_time_ids || [])
-                                .map((stId) =>
-                                  (event.event_start_times || []).find(
-                                    (st) => st.id === stId,
-                                  ),
-                                )
-                                .filter(Boolean)
-                                .sort((a, b) => new Date(a.irl_start) - new Date(b.irl_start))
-                                .map((st) => (
-                                  <div key={st.id}>
-                                    <div style={{ fontWeight: 600 }}>
-                                      {st.label}
-                                    </div>
-                                    <div
-                                      className="mono"
-                                      style={{
-                                        fontSize: "0.78rem",
-                                        color: "var(--accent)",
-                                      }}
-                                    >
-                                      Départ à{" "}
-                                      {formatTimeInZone(st.irl_start, tz)}
-                                    </div>
+                            {(() => {
+                              const slots = displayedStartTimes !== undefined
+                                ? displayedStartTimes
+                                : (s.preferred_start_time_ids || [])
+                                    .map((stId) =>
+                                      (event.event_start_times || []).find((st) => st.id === stId),
+                                    )
+                                    .filter(Boolean)
+                                    .sort((a, b) => new Date(a.irl_start) - new Date(b.irl_start));
+                              if (slots.length === 0)
+                                return <span style={{ color: "var(--text-dim)" }}>—</span>;
+                              return slots.map((st) => (
+                                <div key={st.id}>
+                                  <div style={{ fontWeight: 600 }}>{st.label}</div>
+                                  <div
+                                    className="mono"
+                                    style={{ fontSize: "0.78rem", color: "var(--accent)" }}
+                                  >
+                                    Départ à {formatTimeInZone(st.irl_start, tz)}
                                   </div>
-                                ))
-                            ) : (
-                              <span style={{ color: "var(--text-dim)" }}>—</span>
-                            )}
+                                </div>
+                              ));
+                            })()}
                           </td>
                           <td style={{ borderTop }}>
                             {(s.tags || []).length > 0 ? (
@@ -446,41 +442,49 @@ export default function EventPageTabs({
                       );
                     };
 
-                    // ── Split mode: team / starttime ────────────────────────
-                    // Each signup row is independent so rows can interleave
-                    // across drivers when sorted by team or start time.
-                    if (sortField === "team" || sortField === "starttime") {
-                      const earliestOf = (s) => {
-                        let min = Infinity;
-                        for (const stId of s.preferred_start_time_ids || []) {
-                          const st = (event.event_start_times || []).find(
-                            (x) => x.id === stId,
-                          );
-                          if (st) {
-                            const t = new Date(st.irl_start).getTime();
-                            if (t < min) min = t;
-                          }
-                        }
-                        return min;
-                      };
-
+                    // ── Split mode: team ────────────────────────────────────
+                    if (sortField === "team") {
                       const rows = [...filtered].sort((a, b) => {
-                        if (sortField === "team") {
-                          const cmp = (a.team_entries?.crew_name || "").localeCompare(
-                            b.team_entries?.crew_name || "",
-                          );
-                          return sortDir === "asc" ? cmp : -cmp;
-                        }
-                        const aT = earliestOf(a);
-                        const bT = earliestOf(b);
-                        if (aT === Infinity && bT === Infinity) return 0;
-                        if (aT === Infinity) return 1;
-                        if (bT === Infinity) return -1;
-                        return sortDir === "asc" ? aT - bT : bT - aT;
+                        const cmp = (a.team_entries?.crew_name || "").localeCompare(
+                          b.team_entries?.crew_name || "",
+                        );
+                        return sortDir === "asc" ? cmp : -cmp;
                       });
-
                       return rows.map((s) =>
                         renderRow(s, { key: s.id, showDriver: true, borderTop: undefined }),
+                      );
+                    }
+
+                    // ── Split mode: starttime ───────────────────────────────
+                    // Expand to one row per preferred start time so each row
+                    // sorts to its exact position — a driver with T1+T3 appears
+                    // at both slots rather than being anchored to the earliest.
+                    if (sortField === "starttime") {
+                      const expanded = filtered.flatMap((s) => {
+                        const slots = (s.preferred_start_time_ids || [])
+                          .map((stId) =>
+                            (event.event_start_times || []).find((x) => x.id === stId),
+                          )
+                          .filter(Boolean);
+                        if (slots.length === 0) return [{ s, st: null }];
+                        return slots.map((st) => ({ s, st }));
+                      });
+
+                      expanded.sort((a, b) => {
+                        if (!a.st && !b.st) return 0;
+                        if (!a.st) return 1;
+                        if (!b.st) return -1;
+                        const diff = new Date(a.st.irl_start) - new Date(b.st.irl_start);
+                        return sortDir === "asc" ? diff : -diff;
+                      });
+
+                      return expanded.map(({ s, st }) =>
+                        renderRow(s, {
+                          key: st ? `${s.id}-${st.id}` : s.id,
+                          showDriver: true,
+                          borderTop: undefined,
+                          displayedStartTimes: st ? [st] : [],
+                        }),
                       );
                     }
 
