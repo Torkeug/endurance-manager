@@ -359,7 +359,26 @@ export default function EventPageTabs({
                           }}
                         >
                           <td style={{ fontWeight: 600, borderTop }}>
-                            {showDriver ? driverName : ""}
+                            {showDriver ? (
+                              <span style={{ display: "flex", alignItems: "center", gap: "0.4rem", flexWrap: "wrap" }}>
+                                {driverName}
+                                {displayedStartTimes !== undefined &&
+                                  (s.preferred_start_time_ids || []).length > 1 && (
+                                    <span style={{
+                                      fontSize: "0.65rem",
+                                      fontWeight: 700,
+                                      padding: "0.1rem 0.4rem",
+                                      borderRadius: "3px",
+                                      background: "var(--surface-2)",
+                                      border: "1px solid var(--border)",
+                                      color: "var(--text-dim)",
+                                      whiteSpace: "nowrap",
+                                    }}>
+                                      ×{(s.preferred_start_time_ids || []).length}
+                                    </span>
+                                  )}
+                              </span>
+                            ) : ""}
                           </td>
                           <td
                             className="mono"
