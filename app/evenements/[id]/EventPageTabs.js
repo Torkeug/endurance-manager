@@ -34,6 +34,23 @@ function getCrewColor(name) {
   return CREW_PALETTE[hashString(name) % CREW_PALETTE.length];
 }
 
+// Separate palette for duplicate-row stripes: 8 hues evenly spread around
+// the color wheel, alternating warm/cool so adjacent hash values stay distinct.
+const STRIPE_PALETTE = [
+  "#ef4444", // red
+  "#3b82f6", // blue
+  "#f97316", // orange
+  "#14b8a6", // teal
+  "#eab308", // yellow
+  "#8b5cf6", // violet
+  "#ec4899", // pink
+  "#22c55e", // green
+];
+
+function getStripeColor(key) {
+  return STRIPE_PALETTE[hashString(String(key)) % STRIPE_PALETTE.length];
+}
+
 // Convert a hex color to its relative luminance (0 = black, 1 = white).
 // Used to decide whether the color is safe as text on both light and dark themes.
 function hexLuminance(hex) {
@@ -349,7 +366,7 @@ export default function EventPageTabs({
                       const showStripe = isDuplicate && (duplicateStyle === "stripe" || duplicateStyle === "both");
                       const showBadge  = isDuplicate && (duplicateStyle === "badge"  || duplicateStyle === "both");
                       const stripeColor = showStripe
-                        ? getCrewColor(String(s.drivers?.id || s.driver_name_snapshot || s.id)).border
+                        ? getStripeColor(s.drivers?.id || s.driver_name_snapshot || s.id)
                         : undefined;
                       const driverName =
                         (event.archived ? s.driver_name_snapshot : null) ||
