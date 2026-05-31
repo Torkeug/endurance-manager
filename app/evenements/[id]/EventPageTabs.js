@@ -115,8 +115,8 @@ export default function EventPageTabs({
   const [sortField, setSortField] = useState("name");
   const [sortDir, setSortDir] = useState("asc");
 
-  // Dev-only: preview duplicate row visual style
-  const [duplicateStyle, setDuplicateStyle] = useState("none");
+  // Duplicate row visual style — dev toggle overrides this for previewing
+  const [duplicateStyle, setDuplicateStyle] = useState("both");
 
   const toggleSort = (field) => {
     if (sortField === field) {
