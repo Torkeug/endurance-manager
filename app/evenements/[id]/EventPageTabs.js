@@ -115,8 +115,6 @@ export default function EventPageTabs({
   const [sortField, setSortField] = useState("name");
   const [sortDir, setSortDir] = useState("asc");
 
-  // Duplicate row visual style — dev toggle overrides this for previewing
-  const [duplicateStyle, setDuplicateStyle] = useState("both");
 
   const toggleSort = (field) => {
     if (sortField === field) {
@@ -354,9 +352,7 @@ export default function EventPageTabs({
                     // to show only those specific slots (used in starttime split mode).
                     const renderRow = (s, { key, reactKey, showDriver, borderTop, displayedStartTimes, duplicateCount, allDriverTeams, badgeLabel }) => {
                       const isDuplicate = duplicateCount > 1;
-                      const showStripe = isDuplicate && (duplicateStyle === "stripe" || duplicateStyle === "both");
-                      const showBadge  = isDuplicate && (duplicateStyle === "badge"  || duplicateStyle === "both");
-                      const stripeColor = showStripe
+                      const stripeColor = isDuplicate
                         ? getStripeColor(s.drivers?.id || s.driver_name_snapshot || s.id)
                         : undefined;
                       const driverName =
@@ -380,7 +376,7 @@ export default function EventPageTabs({
                             {showDriver ? (
                               <span style={{ display: "flex", alignItems: "center", gap: "0.4rem", flexWrap: "wrap" }}>
                                 {driverName}
-                                {showBadge && (
+                                {isDuplicate && (
                                   <span style={{
                                     fontSize: "0.65rem",
                                     fontWeight: 700,
@@ -612,36 +608,6 @@ export default function EventPageTabs({
         </div>
       )}
 
-      {/* ── Dev: duplicate style toggle ───────────────────────────────── */}
-      {process.env.NODE_ENV === "development" && activeTab === "inscriptions" && (
-        <div style={{
-          position: "fixed", bottom: "1.5rem", right: "1.5rem", zIndex: 9999,
-          background: "var(--surface-1)", border: "1px solid var(--border)",
-          borderRadius: "6px", padding: "0.75rem 1rem",
-          display: "flex", flexDirection: "column", gap: "0.4rem",
-          boxShadow: "0 4px 16px rgba(0,0,0,0.4)", minWidth: "170px",
-        }}>
-          <div style={{ fontSize: "0.6rem", fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--accent)", marginBottom: "0.2rem" }}>
-            DEV · Duplicate rows
-          </div>
-          {[
-            { value: "none",   label: "Dimming only" },
-            { value: "stripe", label: "A – Stripe" },
-            { value: "badge",  label: "B – Badge" },
-            { value: "both",   label: "C – Stripe + Badge" },
-          ].map(({ value, label }) => (
-            <button key={value} onClick={() => setDuplicateStyle(value)} style={{
-              padding: "0.3rem 0.6rem", borderRadius: "3px", cursor: "pointer",
-              fontWeight: 600, fontSize: "0.78rem", textAlign: "left",
-              background: duplicateStyle === value ? "var(--accent)" : "var(--surface-2)",
-              color: duplicateStyle === value ? "#000" : "var(--text)",
-              border: duplicateStyle === value ? "1px solid var(--accent)" : "1px solid var(--border)",
-            }}>
-              {label}
-            </button>
-          ))}
-        </div>
-      )}
 
       {/* ── Tab: Équipages ─────────────────────────────────────────────── */}
       {activeTab === "equipages" && (
