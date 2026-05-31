@@ -396,7 +396,15 @@ export default function EventPageTabs({
 
                     return grouped.flatMap(
                       ({ key, signups: group }, groupIdx) => {
-                        const first = group[0];
+                        const sortedGroup = sortField === "team"
+                          ? [...group].sort((a, b) => {
+                              const aT = a.team_entries?.crew_name || "";
+                              const bT = b.team_entries?.crew_name || "";
+                              const cmp = aT.localeCompare(bT);
+                              return sortDir === "asc" ? cmp : -cmp;
+                            })
+                          : group;
+                        const first = sortedGroup[0];
                         const driverName =
                           (event.archived
                             ? first.driver_name_snapshot
@@ -407,7 +415,7 @@ export default function EventPageTabs({
                         const groupBorder =
                           groupIdx > 0 ? "2px solid var(--border)" : undefined;
 
-                        return group.map((s, rowIdx) => {
+                        return sortedGroup.map((s, rowIdx) => {
                           const isFirstRow = rowIdx === 0;
                           // Within a group, suppress the border between rows so they read as one block.
                           // The group separator (groupBorder) is applied on the first row's cells only.
