@@ -483,6 +483,7 @@ export default function EventPageTabs({
                                       ),
                                     )
                                     .filter(Boolean)
+                                    .sort((a, b) => new Date(a.irl_start) - new Date(b.irl_start))
                                     .map((st) => (
                                       <div key={st.id}>
                                         <div style={{ fontWeight: 600 }}>
