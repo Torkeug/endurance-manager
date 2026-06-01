@@ -405,18 +405,17 @@ export default function EventPageTabs({
                         {(() => {
                           const isActive = filterCategories.includes(cat);
                           return (
-                            <button onClick={() => toggleCategoryGroup(cat, cars)} style={{
-                              fontSize: "0.6rem", fontWeight: 700, textTransform: "uppercase",
-                              letterSpacing: "0.08em", color: catColor,
-                              paddingRight: "0.3rem", whiteSpace: "nowrap",
-                              background: "transparent", border: "none", cursor: "pointer",
-                              textDecoration: "underline",
-                              textDecorationStyle: isActive ? "solid" : "dashed",
-                              textDecorationColor: catColor,
-                              textUnderlineOffset: "3px",
-                            }}>
-                              {cat}
-                            </button>
+                            <label style={{ display: "flex", alignItems: "center", gap: "0.25rem", cursor: "pointer", paddingRight: "0.3rem", whiteSpace: "nowrap" }}>
+                              <input
+                                type="checkbox"
+                                checked={isActive}
+                                onChange={() => toggleCategoryGroup(cat, cars)}
+                                style={{ accentColor: catColor, width: "10px", height: "10px", cursor: "pointer" }}
+                              />
+                              <span style={{ fontSize: "0.6rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", color: catColor }}>
+                                {cat}
+                              </span>
+                            </label>
                           );
                         })()}
                         {cars.map(({ id, name }) => (
