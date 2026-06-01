@@ -870,7 +870,7 @@ export const guide: GuideSection[] = [
     blocks: [
       {
         type: "callout",
-        variant: "warning",
+        variant: "warn",
         content: "Cette section est réservée aux pilotes avec le rôle Admin. Les onglets décrits ici ne sont pas visibles par les pilotes standard.",
       },
       {
