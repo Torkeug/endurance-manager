@@ -136,12 +136,15 @@ export default function InscriptionsDemo() {
         <table style={{ borderCollapse: "collapse", width: "100%", minWidth: "640px" }}>
           <thead>
             <tr>
-              {([["name","Pilote"],["irating","iRating"],["team","Équipe"],["starttime","Créneaux"]] as [SortField,string][]).map(([f, label]) => (
+              {([["name","Pilote"],["irating","iRating"],["team","Équipe"]] as [SortField,string][]).map(([f, label]) => (
                 <th key={f} style={TH_BASE} onClick={() => toggleSort(f)}>
                   {label} <SortArrow field={f} />
                 </th>
               ))}
               <th style={TH_BASE}>Préférences</th>
+              <th style={{ ...TH_BASE, cursor: "pointer" }} onClick={() => toggleSort("starttime")}>
+                Créneaux <SortArrow field="starttime" />
+              </th>
               <th style={TH_BASE}>Tags</th>
             </tr>
           </thead>
@@ -196,11 +199,11 @@ export default function InscriptionsDemo() {
                     {showDriverInfo ? r.irating : ""}
                   </td>
                   <td style={TD}><CrewPill name={r.crew} /></td>
+                  <td style={{ ...TD, color: "var(--text-dim)" }}>{r.prefs}</td>
                   <td style={{ ...TD, fontFamily: "var(--font-mono),monospace", color: "var(--accent)", fontSize: "0.82rem" }}>
                     <div style={{ fontWeight: 600, fontSize: "0.82rem" }}>{r.slot}</div>
                     <div style={{ fontSize: "0.75rem" }}>Départ à {r.time}</div>
                   </td>
-                  <td style={{ ...TD, color: "var(--text-dim)" }}>{r.prefs}</td>
                   <td style={TD}>
                     {r.tags.length > 0 ? (
                       <div style={{ display: "flex", flexWrap: "wrap", gap: "0.25rem" }}>
