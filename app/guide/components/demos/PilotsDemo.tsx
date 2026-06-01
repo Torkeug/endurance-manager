@@ -34,6 +34,7 @@ export default function PilotsDemo() {
             <th style={TH}>iRating</th>
             <th style={TH}>Préférences</th>
             <th style={TH}>Tags</th>
+            <th style={TH}></th>
           </tr>
         </thead>
         <tbody>
@@ -54,6 +55,9 @@ export default function PilotsDemo() {
                     ))}
                   </div>
                 ) : <span style={{ color: "var(--text-dim)" }}>—</span>}
+              </td>
+              <td style={TD}>
+                <button className="btn btn-secondary btn-sm">Voir</button>
               </td>
             </tr>
           ))}

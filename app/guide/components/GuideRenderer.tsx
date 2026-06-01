@@ -9,6 +9,19 @@ import ComponentDemo from "./ComponentDemo";
 const NAV_TAB_ORDER = ["Accueil", "Pilotes", "Événements", "Inventaire"];
 
 function renderBlock(block: any, i: number) {
+  if (block.type === "divider") {
+    return (
+      <div key={i} style={{ margin: "2.5rem 0 1.5rem", display: "flex", alignItems: "center", gap: "0.75rem" }}>
+        <div style={{ flex: 1, height: "1px", background: "var(--border)" }} />
+        {block.content && (
+          <span style={{ fontSize: "0.65rem", fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", color: "var(--text-dim)", whiteSpace: "nowrap" }}>
+            {block.content}
+          </span>
+        )}
+        {block.content && <div style={{ flex: 1, height: "1px", background: "var(--border)" }} />}
+      </div>
+    );
+  }
   if (block.type === "header") {
     return (
       <h4 key={i} style={{ fontSize: "0.8rem", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "var(--text-dim)", marginTop: "0.5rem" }}>

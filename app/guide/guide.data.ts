@@ -88,6 +88,7 @@ export const guide: GuideSection[] = [
         type: "text",
         content: "Historique de toutes les inscriptions du pilote, groupées par événement — équipage assigné, relais attribués, taux de remplissage des disponibilités.",
       },
+      { type: "divider", content: "" },
       {
         type: "header",
         content: "Statistiques — Endurance Manager",
@@ -101,6 +102,7 @@ export const guide: GuideSection[] = [
         type: "text",
         content: "Stats issues des courses gérées dans l'app : iRating, historique par catégorie, relais, conditions, chronos et consommations par circuit.",
       },
+      { type: "divider", content: "" },
       {
         type: "header",
         content: "Statistiques — Garage61",
