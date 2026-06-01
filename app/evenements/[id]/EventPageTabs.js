@@ -396,7 +396,7 @@ export default function EventPageTabs({
                     {[...carsByCategory.sorted, ...(carsByCategory.uncategorized.length > 0 ? [["—", carsByCategory.uncategorized]] : [])].map(([cat, cars]) => {
                       const hue = (hashString(cat) * 137.508) % 360;
                       const catColor = `hsl(${hue.toFixed(1)}, 75%, 58%)`;
-                      const catBg    = `hsla(${hue.toFixed(1)}, 60%, 50%, 0.1)`;
+                      const catBg    = `hsla(${hue.toFixed(1)}, 60%, 50%, 0.18)`;
                       return (
                       <div key={cat} style={{
                         display: "flex", alignItems: "center", gap: "0.25rem", flexWrap: "wrap",
