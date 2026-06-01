@@ -115,6 +115,17 @@ export default function EventPageTabs({
   const [sortField, setSortField] = useState("name");
   const [sortDir, setSortDir] = useState("asc");
 
+  // Inscriptions table filters
+  const [filterExcludeWithTeam, setFilterExcludeWithTeam] = useState(false);
+  const [filterIrMin, setFilterIrMin] = useState("");
+  const [filterIrMax, setFilterIrMax] = useState("");
+  const [filterCategories, setFilterCategories] = useState([]);
+  const [filterCars, setFilterCars] = useState([]);
+  const hasActiveFilters = filterExcludeWithTeam || filterIrMin !== "" || filterIrMax !== "" || filterCategories.length > 0 || filterCars.length > 0;
+  const resetFilters = () => { setFilterExcludeWithTeam(false); setFilterIrMin(""); setFilterIrMax(""); setFilterCategories([]); setFilterCars([]); };
+  const toggleCategory = (cat) => setFilterCategories((p) => p.includes(cat) ? p.filter((c) => c !== cat) : [...p, cat]);
+  const toggleCar = (id) => setFilterCars((p) => p.includes(id) ? p.filter((c) => c !== id) : [...p, id]);
+
 
   const toggleSort = (field) => {
     if (sortField === field) {
@@ -167,6 +178,30 @@ export default function EventPageTabs({
       }, {}),
     [allCars],
   );
+
+  // Unique categories and cars preferred across all signups — used to build filter pills.
+  const allCategories = useMemo(() => {
+    const cats = new Set();
+    for (const s of event.signups || []) {
+      for (const c of s.preferred_class || []) cats.add(c);
+    }
+    return [...cats].sort();
+  }, [event.signups]);
+
+  const allPreferredCars = useMemo(() => {
+    const seen = new Map();
+    for (const s of event.signups || []) {
+      const ids = s.preferred_car_ids || [];
+      const snapshots = (event.archived && s.preferred_car_names_snapshot) ? s.preferred_car_names_snapshot : null;
+      ids.forEach((id, i) => {
+        if (!seen.has(id)) {
+          const name = (snapshots && snapshots[i]) || carsMap[id];
+          if (name) seen.set(id, name);
+        }
+      });
+    }
+    return [...seen.entries()].map(([id, name]) => ({ id, name })).sort((a, b) => a.name.localeCompare(b.name));
+  }, [event.signups, event.archived, carsMap]);
 
   const formatPreferences = (signup) => {
     const classes = signup.preferred_class || [];
@@ -289,6 +324,84 @@ export default function EventPageTabs({
             )}
           </div>
 
+          {/* ── Filter bar ──────────────────────────────────────────── */}
+          {!isExternal && signupCount > 0 && (
+            <div style={{
+              display: "flex", flexWrap: "wrap", alignItems: "center", gap: "0.6rem",
+              marginBottom: "1rem", padding: "0.6rem 0.9rem",
+              background: "var(--surface-2)",
+              border: `1px solid ${hasActiveFilters ? "var(--accent)" : "var(--border)"}`,
+              borderRadius: "4px", fontSize: "0.82rem",
+            }}>
+              <label style={{ display: "flex", alignItems: "center", gap: "0.35rem", cursor: "pointer", color: "var(--text-dim)", whiteSpace: "nowrap" }}>
+                <input type="checkbox" checked={filterExcludeWithTeam} onChange={(e) => setFilterExcludeWithTeam(e.target.checked)} style={{ accentColor: "var(--accent)" }} />
+                Sans équipe
+              </label>
+
+              <span style={{ color: "var(--border)" }}>|</span>
+
+              <div style={{ display: "flex", alignItems: "center", gap: "0.35rem", color: "var(--text-dim)" }}>
+                <span>iRating</span>
+                {[
+                  { val: filterIrMin, set: setFilterIrMin, ph: "min" },
+                  { val: filterIrMax, set: setFilterIrMax, ph: "max" },
+                ].map(({ val, set, ph }, i) => (
+                  <>
+                    {i === 1 && <span>—</span>}
+                    <input key={ph} type="number" placeholder={ph} value={val} onChange={(e) => set(e.target.value)}
+                      style={{ width: "64px", padding: "0.15rem 0.35rem", background: "var(--surface-1)", border: "1px solid var(--border)", borderRadius: "3px", color: "var(--text)", fontSize: "0.82rem" }} />
+                  </>
+                ))}
+              </div>
+
+              {allCategories.length > 0 && (
+                <>
+                  <span style={{ color: "var(--border)" }}>|</span>
+                  <div style={{ display: "flex", gap: "0.25rem", flexWrap: "wrap" }}>
+                    {allCategories.map((cat) => (
+                      <button key={cat} onClick={() => toggleCategory(cat)} style={{
+                        padding: "0.15rem 0.5rem", borderRadius: "3px", cursor: "pointer",
+                        fontSize: "0.75rem", fontWeight: 600,
+                        background: filterCategories.includes(cat) ? "var(--accent)" : "var(--surface-1)",
+                        color: filterCategories.includes(cat) ? "#000" : "var(--text-dim)",
+                        border: `1px solid ${filterCategories.includes(cat) ? "var(--accent)" : "var(--border)"}`,
+                      }}>{cat}</button>
+                    ))}
+                  </div>
+                </>
+              )}
+
+              {allPreferredCars.length > 0 && (
+                <>
+                  <span style={{ color: "var(--border)" }}>|</span>
+                  <div style={{ display: "flex", gap: "0.25rem", flexWrap: "wrap" }}>
+                    {allPreferredCars.map(({ id, name }) => (
+                      <button key={id} onClick={() => toggleCar(id)} style={{
+                        padding: "0.15rem 0.5rem", borderRadius: "3px", cursor: "pointer",
+                        fontSize: "0.75rem", fontWeight: 600,
+                        background: filterCars.includes(id) ? "var(--accent)" : "var(--surface-1)",
+                        color: filterCars.includes(id) ? "#000" : "var(--text-dim)",
+                        border: `1px solid ${filterCars.includes(id) ? "var(--accent)" : "var(--border)"}`,
+                      }}>{name}</button>
+                    ))}
+                  </div>
+                </>
+              )}
+
+              {hasActiveFilters && (
+                <>
+                  <span style={{ color: "var(--border)" }}>|</span>
+                  <button onClick={resetFilters} style={{
+                    padding: "0.15rem 0.5rem", borderRadius: "3px", cursor: "pointer",
+                    fontSize: "0.75rem", fontWeight: 600,
+                    background: "transparent", color: "var(--danger)",
+                    border: "1px solid var(--danger)",
+                  }}>× Réinitialiser</button>
+                </>
+              )}
+            </div>
+          )}
+
           {signupCount === 0 ? (
             <div className="table-wrap">
               <div className="empty">
@@ -343,8 +456,21 @@ export default function EventPageTabs({
                 </thead>
                 <tbody>
                   {(() => {
-                    const filtered = (event.signups || []).filter(
-                      (s) => !isExternal || s.drivers?.id === currentDriver?.id,
+                    const filtered = (event.signups || []).filter((s) => {
+                      if (isExternal && s.drivers?.id !== currentDriver?.id) return false;
+                      if (filterExcludeWithTeam && s.team_entries?.crew_name) return false;
+                      const ir = s.drivers?.irating ?? null;
+                      if (filterIrMin !== "" && (ir === null || ir < Number(filterIrMin))) return false;
+                      if (filterIrMax !== "" && ir !== null && ir > Number(filterIrMax)) return false;
+                      if (filterCategories.length > 0 && !(s.preferred_class || []).some((c) => filterCategories.includes(c))) return false;
+                      if (filterCars.length > 0 && !(s.preferred_car_ids || []).some((id) => filterCars.includes(id))) return false;
+                      return true;
+                    });
+
+                    if (filtered.length === 0) return (
+                      <tr><td colSpan={7} style={{ padding: "2rem", textAlign: "center", color: "var(--text-dim)", fontStyle: "italic" }}>
+                        Aucun pilote ne correspond aux filtres actifs.
+                      </td></tr>
                     );
 
                     // ── Shared row renderer ─────────────────────────────────
