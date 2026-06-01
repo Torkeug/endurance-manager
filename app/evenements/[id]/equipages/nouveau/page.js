@@ -1092,7 +1092,7 @@ export default function NouvelEquipage({ params }) {
                 onChange={set("bop_power_percent")}
                 min="50"
                 max="150"
-                step="0.1"
+                step="0.01"
               />
             </div>
             <div className="form-group">
