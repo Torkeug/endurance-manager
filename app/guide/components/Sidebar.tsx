@@ -3,7 +3,7 @@ import { useRef } from "react";
 import useScrollSpy from "./useScrollSpy";
 import type { GuideSection } from "../guide.data";
 
-const NAV_TAB_ORDER = ["Accueil", "Pilotes", "Événements", "Inventaire"];
+const NAV_TAB_ORDER = ["Accueil", "Pilotes", "Événements", "Inventaire", "Admin"];
 
 export default function Sidebar({
   sections,

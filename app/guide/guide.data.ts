@@ -901,7 +901,7 @@ export const guide: GuideSection[] = [
       {
         type: "callout",
         variant: "tip",
-        content: "Le bouton « Sync iRacing (tous) » relance la synchronisation iRating et inventaire pour tous les pilotes approuvés en une seule action.",
+        content: "Le bouton « Sync iRacing (tous) » met à jour l'iRating de tous les pilotes approuvés en une seule action. L'inventaire (voitures et circuits possédés) n'est pas synchronisé ici — chaque pilote doit relancer sa propre synchronisation depuis son profil pour mettre à jour son inventaire.",
       },
     ],
   },
