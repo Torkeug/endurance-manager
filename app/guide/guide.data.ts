@@ -72,11 +72,6 @@ export const guide: GuideSection[] = [
     parent: "pilotes",
     blocks: [
       {
-        type: "component-demo",
-        componentType: "profil",
-        config: {},
-      },
-      {
         type: "text",
         content: "Page personnelle du pilote. Deux onglets :",
       },
@@ -85,23 +80,39 @@ export const guide: GuideSection[] = [
         content: "Engagements",
       },
       {
+        type: "component-demo",
+        componentType: "profil",
+        config: { activeTab: "engagements" },
+      },
+      {
         type: "text",
         content: "Historique de toutes les inscriptions du pilote, groupées par événement — équipage assigné, relais attribués, taux de remplissage des disponibilités.",
       },
       {
         type: "header",
-        content: "Statistiques",
+        content: "Statistiques — Endurance Manager",
+      },
+      {
+        type: "component-demo",
+        componentType: "profil",
+        config: { activeTab: "statistiques", statsSubTab: "app" },
       },
       {
         type: "text",
-        content: "Quand le pilote a lié son compte Garage61, l'onglet Statistiques propose deux sous-onglets :",
+        content: "Stats issues des courses gérées dans l'app : iRating, historique par catégorie, relais, conditions, chronos et consommations par circuit.",
       },
       {
-        type: "list",
-        items: [
-          "Endurance Manager — Stats issues des courses gérées dans l'app : iRating, historique par catégorie, relais, conditions, chronos et consommations par circuit.",
-          "Garage61 — Vue de toutes les sessions d'entraînement enregistrées sur Garage61. Circuits groupés par catégorie (Road, Oval, Dirt Road, Dirt Oval), triables par tours / % propres / temps piste / nom. Clique sur un circuit pour voir le meilleur tour enregistré (chrono, voiture, type de session, date) avec un lien direct vers Garage61.",
-        ],
+        type: "header",
+        content: "Statistiques — Garage61",
+      },
+      {
+        type: "component-demo",
+        componentType: "profil",
+        config: { activeTab: "statistiques", statsSubTab: "garage61" },
+      },
+      {
+        type: "text",
+        content: "Vue de toutes les sessions d'entraînement enregistrées sur Garage61. Circuits groupés par catégorie (Road, Oval, Dirt Road, Dirt Oval), triables par tours / % propres / temps piste / nom. Clique sur un circuit pour voir le meilleur tour enregistré (chrono, voiture, type de session, date) avec un lien direct vers Garage61.",
       },
       {
         type: "header",
