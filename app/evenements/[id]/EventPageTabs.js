@@ -125,17 +125,16 @@ export default function EventPageTabs({
   const resetFilters = () => { setFilterExcludeWithTeam(false); setFilterIrMin(""); setFilterIrMax(""); setFilterCars([]); setFilterCategories([]); };
   const toggleCar = (id) => setFilterCars((p) => p.includes(id) ? p.filter((c) => c !== id) : [...p, id]);
   const toggleCategoryGroup = (cat, cars) => {
+    const isActive = filterCategories.includes(cat);
+    // Always toggle the class filter
+    setFilterCategories((prev) =>
+      isActive ? prev.filter((c) => c !== cat) : [...prev, cat]
+    );
+    // Also batch-toggle car IDs so pills reflect the selection visually
     if (cars.length > 0) {
-      // Category has car pills — batch-toggle all car IDs
       const ids = cars.map((c) => c.id);
-      const allSelected = ids.every((id) => filterCars.includes(id));
       setFilterCars((prev) =>
-        allSelected ? prev.filter((id) => !ids.includes(id)) : [...new Set([...prev, ...ids])]
-      );
-    } else {
-      // No car pills — toggle as class filter
-      setFilterCategories((prev) =>
-        prev.includes(cat) ? prev.filter((c) => c !== cat) : [...prev, cat]
+        isActive ? prev.filter((id) => !ids.includes(id)) : [...new Set([...prev, ...ids])]
       );
     }
   };
@@ -404,9 +403,7 @@ export default function EventPageTabs({
                         background: catBg,
                       }}>
                         {(() => {
-                          const isActive = cars.length > 0
-                            ? cars.every(({ id }) => filterCars.includes(id))
-                            : filterCategories.includes(cat);
+                          const isActive = filterCategories.includes(cat);
                           return (
                             <button onClick={() => toggleCategoryGroup(cat, cars)} style={{
                               fontSize: "0.6rem", fontWeight: 700, textTransform: "uppercase",
@@ -504,9 +501,6 @@ export default function EventPageTabs({
                 </thead>
                 <tbody>
                   {(() => {
-                    // Classes implied by the currently selected car IDs
-                    const impliedClasses = new Set(filterCars.map((id) => carClassMap[id]).filter(Boolean));
-
                     const filtered = (event.signups || []).filter((s) => {
                       if (isExternal && s.drivers?.id !== currentDriver?.id) return false;
                       if (filterExcludeWithTeam && s.team_entries?.crew_name) return false;
@@ -514,10 +508,8 @@ export default function EventPageTabs({
                       if (filterIrMin !== "" && (ir === null || ir < Number(filterIrMin))) return false;
                       if (filterIrMax !== "" && ir !== null && ir > Number(filterIrMax)) return false;
                       if (filterCars.length > 0 || filterCategories.length > 0) {
-                        const preferredClass = s.preferred_class || [];
-                        const preferredCarIds = s.preferred_car_ids || [];
-                        const matchesCar = preferredCarIds.some((id) => filterCars.includes(id));
-                        const matchesClass = preferredClass.some((c) => impliedClasses.has(c) || filterCategories.includes(c));
+                        const matchesCar = (s.preferred_car_ids || []).some((id) => filterCars.includes(id));
+                        const matchesClass = (s.preferred_class || []).some((c) => filterCategories.includes(c));
                         if (!matchesCar && !matchesClass) return false;
                       }
                       return true;
