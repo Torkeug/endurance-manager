@@ -645,18 +645,45 @@ export default function EventPageTabs({
                       return sortDir === "asc" ? cmp : -cmp;
                     });
 
-                    return grouped.flatMap(({ key, signups: group }, groupIdx) => {
-                      const groupBorder =
-                        groupIdx > 0 ? "2px solid var(--border)" : undefined;
-                      return group.map((s, rowIdx) =>
-                        renderRow(s, {
+                    const result = [];
+                    let merguezShown = false;
+                    grouped.forEach(({ key, signups: group }, groupIdx) => {
+                      if (sortField === "irating" && !merguezShown) {
+                        const ir = group[0]?.drivers?.irating ?? null;
+                        const crossedBelow = sortDir === "desc" && ir !== null && ir < 3000;
+                        const crossedAbove = sortDir === "asc"  && ir !== null && ir >= 3000;
+                        if (crossedBelow || crossedAbove) {
+                          merguezShown = true;
+                          result.push(
+                            <tr key="header-merguez">
+                              <td colSpan={7} style={{
+                                padding: "0.6rem 0.75rem",
+                                background: "var(--surface-2)",
+                                borderTop: "2px solid var(--accent)",
+                                borderBottom: "2px solid var(--accent)",
+                                textAlign: "center",
+                                fontSize: "0.85rem",
+                                fontWeight: 700,
+                                letterSpacing: "0.04em",
+                                textTransform: "uppercase",
+                              }}>
+                                🌭 Merguez
+                              </td>
+                            </tr>
+                          );
+                        }
+                      }
+                      const groupBorder = groupIdx > 0 ? "2px solid var(--border)" : undefined;
+                      group.forEach((s, rowIdx) => {
+                        result.push(renderRow(s, {
                           key,
                           reactKey: s.id,
                           showDriver: rowIdx === 0,
                           borderTop: rowIdx === 0 ? groupBorder : "none",
-                        }),
-                      );
+                        }));
+                      });
                     });
+                    return result;
                   })()}
                 </tbody>
               </table>
