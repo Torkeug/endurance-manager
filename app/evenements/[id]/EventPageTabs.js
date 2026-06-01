@@ -120,15 +120,24 @@ export default function EventPageTabs({
   const [filterIrMin, setFilterIrMin] = useState("");
   const [filterIrMax, setFilterIrMax] = useState("");
   const [filterCars, setFilterCars] = useState([]);
-  const hasActiveFilters = filterExcludeWithTeam || filterIrMin !== "" || filterIrMax !== "" || filterCars.length > 0;
-  const resetFilters = () => { setFilterExcludeWithTeam(false); setFilterIrMin(""); setFilterIrMax(""); setFilterCars([]); };
+  const [filterCategories, setFilterCategories] = useState([]);
+  const hasActiveFilters = filterExcludeWithTeam || filterIrMin !== "" || filterIrMax !== "" || filterCars.length > 0 || filterCategories.length > 0;
+  const resetFilters = () => { setFilterExcludeWithTeam(false); setFilterIrMin(""); setFilterIrMax(""); setFilterCars([]); setFilterCategories([]); };
   const toggleCar = (id) => setFilterCars((p) => p.includes(id) ? p.filter((c) => c !== id) : [...p, id]);
-  const toggleCategoryGroup = (cars) => {
-    const ids = cars.map((c) => c.id);
-    const allSelected = ids.every((id) => filterCars.includes(id));
-    setFilterCars((prev) =>
-      allSelected ? prev.filter((id) => !ids.includes(id)) : [...new Set([...prev, ...ids])]
-    );
+  const toggleCategoryGroup = (cat, cars) => {
+    if (cars.length > 0) {
+      // Category has car pills — batch-toggle all car IDs
+      const ids = cars.map((c) => c.id);
+      const allSelected = ids.every((id) => filterCars.includes(id));
+      setFilterCars((prev) =>
+        allSelected ? prev.filter((id) => !ids.includes(id)) : [...new Set([...prev, ...ids])]
+      );
+    } else {
+      // No car pills — toggle as class filter
+      setFilterCategories((prev) =>
+        prev.includes(cat) ? prev.filter((c) => c !== cat) : [...prev, cat]
+      );
+    }
   };
 
 
@@ -395,15 +404,17 @@ export default function EventPageTabs({
                         background: catBg,
                       }}>
                         {(() => {
-                          const allSelected = cars.every(({ id }) => filterCars.includes(id));
+                          const isActive = cars.length > 0
+                            ? cars.every(({ id }) => filterCars.includes(id))
+                            : filterCategories.includes(cat);
                           return (
-                            <button onClick={() => toggleCategoryGroup(cars)} style={{
+                            <button onClick={() => toggleCategoryGroup(cat, cars)} style={{
                               fontSize: "0.6rem", fontWeight: 700, textTransform: "uppercase",
                               letterSpacing: "0.08em", color: catColor,
                               paddingRight: "0.3rem", whiteSpace: "nowrap",
                               background: "transparent", border: "none", cursor: "pointer",
-                              textDecoration: allSelected ? "underline" : "none",
-                              opacity: allSelected ? 1 : 0.75,
+                              textDecoration: isActive ? "underline" : "none",
+                              opacity: isActive ? 1 : 0.75,
                             }}>
                               {cat}
                             </button>
@@ -499,7 +510,11 @@ export default function EventPageTabs({
                       const ir = s.drivers?.irating ?? null;
                       if (filterIrMin !== "" && (ir === null || ir < Number(filterIrMin))) return false;
                       if (filterIrMax !== "" && ir !== null && ir > Number(filterIrMax)) return false;
-                      if (filterCars.length > 0 && !(s.preferred_car_ids || []).some((id) => filterCars.includes(id))) return false;
+                      if (filterCars.length > 0 || filterCategories.length > 0) {
+                        const matchesCar = filterCars.length > 0 && (s.preferred_car_ids || []).some((id) => filterCars.includes(id));
+                        const matchesCat = filterCategories.length > 0 && (s.preferred_class || []).some((c) => filterCategories.includes(c));
+                        if (!matchesCar && !matchesCat) return false;
+                      }
                       return true;
                     });
 
