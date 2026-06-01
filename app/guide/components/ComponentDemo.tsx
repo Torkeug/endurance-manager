@@ -31,7 +31,7 @@ export default function ComponentDemo({ type, config }: ComponentDemoProps) {
     case "accueil":            return <AccueilDemo />;
     case "evenements":         return <EvenementsDemo />;
     case "pilots":             return <PilotsDemo />;
-    case "profil":             return <ProfilDemo />;
+    case "profil":             return <ProfilDemo {...config} />;
     case "inscription-form":   return <InscriptionFormDemo />;
     case "inscriptions":       return <InscriptionsDemo />;
     case "equipages-list":     return <EquipagesDemo {...config} />;

@@ -1,5 +1,5 @@
 "use client";
-import React, { useState } from "react";
+import React from "react";
 
 const TABS = [
   { id: "engagements",  label: "Engagements" },
@@ -67,9 +67,7 @@ function SectionHeader({ title }: { title: string }) {
   );
 }
 
-export default function ProfilDemo() {
-  const [activeTab, setActiveTab] = useState("engagements");
-  const [statsSubTab, setStatsSubTab] = useState("app");
+export default function ProfilDemo({ activeTab = "engagements", statsSubTab = "app" }: { activeTab?: string; statsSubTab?: string }) {
   const [expandedCircuit, setExpandedCircuit] = useState<string | null>(null);
 
   return (
@@ -125,16 +123,13 @@ export default function ProfilDemo() {
         </div>
       </div>
 
-      {/* Tab bar */}
+      {/* Tab bar — display only, not interactive */}
       <div style={{ display: "flex", gap: "0.25rem", borderBottom: "1px solid var(--border)" }}>
         {TABS.map((t) => (
-          <button
+          <div
             key={t.id}
-            onClick={() => setActiveTab(t.id)}
             style={{
               padding: "0.6rem 1.25rem",
-              background: "transparent",
-              border: "none",
               borderBottom: activeTab === t.id ? "2px solid var(--accent)" : "2px solid transparent",
               color: activeTab === t.id ? "var(--accent)" : "var(--text-dim)",
               fontFamily: "var(--font-rajdhani), sans-serif",
@@ -142,12 +137,11 @@ export default function ProfilDemo() {
               fontWeight: 700,
               letterSpacing: "0.06em",
               textTransform: "uppercase",
-              cursor: "pointer",
               marginBottom: "-1px",
             }}
           >
             {t.label}
-          </button>
+          </div>
         ))}
       </div>
 
@@ -174,9 +168,9 @@ export default function ProfilDemo() {
           {/* Subtab nav */}
           <div style={{ display: "flex", gap: "0.25rem", borderBottom: "1px solid var(--border)", marginBottom: "0.25rem" }}>
             {[{ id: "app", label: "Endurance Manager" }, { id: "garage61", label: "Garage61" }].map((st) => (
-              <button key={st.id} onClick={() => setStatsSubTab(st.id)} style={{ padding: "0.35rem 0.85rem", background: "transparent", border: "none", borderBottom: statsSubTab === st.id ? "2px solid var(--accent)" : "2px solid transparent", color: statsSubTab === st.id ? "var(--accent)" : "var(--text-dim)", fontFamily: "var(--font-rajdhani), sans-serif", fontSize: "0.82rem", fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase", cursor: "pointer", marginBottom: "-1px" }}>
+              <div key={st.id} style={{ padding: "0.35rem 0.85rem", borderBottom: statsSubTab === st.id ? "2px solid var(--accent)" : "2px solid transparent", color: statsSubTab === st.id ? "var(--accent)" : "var(--text-dim)", fontFamily: "var(--font-rajdhani), sans-serif", fontSize: "0.82rem", fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase", marginBottom: "-1px" }}>
                 {st.label}
-              </button>
+              </div>
             ))}
           </div>
 
