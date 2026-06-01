@@ -144,6 +144,7 @@ export default async function HomePage() {
           .select("*", { count: "exact", head: true })
           .eq("membership_ok", false)
           .eq("approved", true)
+          .eq("active", true)
           .eq("test_driver", false)
       : { count: 0 },
 
