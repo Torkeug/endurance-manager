@@ -396,17 +396,15 @@ export default function EventPageTabs({
                     {[...carsByCategory.sorted, ...(carsByCategory.uncategorized.length > 0 ? [["—", carsByCategory.uncategorized]] : [])].map(([cat, cars]) => (
                       <div key={cat} style={{
                         display: "flex", alignItems: "center", gap: "0.25rem", flexWrap: "wrap",
-                        padding: "0.25rem 0.5rem",
-                        borderRadius: "4px",
-                        border: "1px solid var(--border)",
-                        background: "var(--surface-1)",
+                        padding: "0.25rem 0.5rem 0.25rem 0.4rem",
+                        borderRadius: "0 4px 4px 0",
+                        borderLeft: "2px solid var(--accent)",
+                        background: "var(--surface-2)",
                       }}>
                         <span style={{
                           fontSize: "0.6rem", fontWeight: 700, textTransform: "uppercase",
                           letterSpacing: "0.08em", color: "var(--accent)",
-                          paddingRight: "0.25rem",
-                          borderRight: "1px solid var(--border)",
-                          marginRight: "0.1rem",
+                          paddingRight: "0.3rem",
                           whiteSpace: "nowrap",
                         }}>
                           {cat}
