@@ -719,9 +719,9 @@ export default function DriversManager({ initialDrivers, currentDriver }) {
                   <th style={TH}>Rôle</th>
                   {/* Discord ID column — editable via pencil icon */}
                   <th style={TH}>Discord ID</th>
-                  <th style={{ ...TH, textAlign: "center" }}>
+                  <th style={TH_TIGHT}>
                     <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "0.4rem" }}>
-                      <span>Cotisation</span>
+                      <span>Cotis.</span>
                       <input
                         type="checkbox"
                         title="Tout cocher / décocher"
@@ -735,10 +735,10 @@ export default function DriversManager({ initialDrivers, currentDriver }) {
                       />
                     </div>
                   </th>
-                  <th style={{ ...TH, textAlign: "center" }}>Test</th>
-                  <th style={{ ...TH, textAlign: "center" }}>Actif</th>
+                  <th style={TH_TIGHT}>Test</th>
+                  <th style={TH_TIGHT}>Actif</th>
                   {/* iRacing sync — read-only timestamp, populated by sync-all or driver self-sync */}
-                  <th style={{ ...TH, textAlign: "center" }}>iRacing sync</th>
+                  <th style={TH_TIGHT}>iRacing sync</th>
                   <th style={TH}></th>
                 </tr>
               </thead>
@@ -958,7 +958,7 @@ export default function DriversManager({ initialDrivers, currentDriver }) {
                       </td>
 
                       {/* Membership checkbox */}
-                      <td style={{ ...TD, textAlign: "center" }}>
+                      <td style={TD_TIGHT}>
                         <input
                           type="checkbox"
                           checked={d.membership_ok || false}
@@ -976,7 +976,7 @@ export default function DriversManager({ initialDrivers, currentDriver }) {
                       </td>
 
                       {/* Test driver checkbox */}
-                      <td style={{ ...TD, textAlign: "center" }}>
+                      <td style={TD_TIGHT}>
                         <input
                           type="checkbox"
                           checked={d.test_driver || false}
@@ -994,7 +994,7 @@ export default function DriversManager({ initialDrivers, currentDriver }) {
                       </td>
 
                       {/* Active checkbox — unchecked = inactive, hidden from dropdowns and pilot list */}
-                      <td style={{ ...TD, textAlign: "center" }}>
+                      <td style={TD_TIGHT}>
                         <input
                           type="checkbox"
                           checked={d.active !== false}
@@ -1012,7 +1012,7 @@ export default function DriversManager({ initialDrivers, currentDriver }) {
                       </td>
 
                       {/* iRacing sync timestamp — read-only */}
-                      <td style={{ ...TD, textAlign: "center", width: "90px" }}>
+                      <td style={{ ...TD_TIGHT, width: "90px" }}>
                         {d.iracing_synced_at ? (
                           <span
                             className="mono"
@@ -1149,8 +1149,12 @@ const TH = {
   whiteSpace: "nowrap",
 };
 
+const TH_TIGHT = { ...TH, padding: "0.6rem 0.5rem", textAlign: "center" };
+
 const TD = {
   padding: "0.6rem 1rem",
   borderBottom: "1px solid var(--border)",
   verticalAlign: "middle",
 };
+
+const TD_TIGHT = { ...TD, padding: "0.6rem 0.5rem", textAlign: "center" };
