@@ -559,22 +559,22 @@ export default function EventPageTabs({
                           rows.push(
                             <tr key={`header-${stId ?? "none"}`}>
                               <td colSpan={7} style={{
-                                padding: "0.4rem 0.75rem",
+                                padding: "0.6rem 0.75rem",
                                 background: "var(--surface-2)",
-                                borderTop: rows.length > 0 ? "2px solid var(--border)" : undefined,
-                                borderBottom: "1px solid var(--border)",
+                                borderTop: rows.length > 0 ? "2px solid var(--accent)" : undefined,
+                                borderBottom: "2px solid var(--accent)",
                                 textAlign: "center",
                               }}>
                                 {st ? (
                                   <>
-                                    <span style={{ fontWeight: 600, fontSize: "0.85rem" }}>{st.label}</span>
-                                    {" "}
-                                    <span className="mono" style={{ color: "var(--accent)", fontSize: "0.82rem" }}>
+                                    <span style={{ fontWeight: 700, fontSize: "0.85rem", letterSpacing: "0.04em", textTransform: "uppercase" }}>{st.label}</span>
+                                    <span style={{ margin: "0 0.5rem", color: "var(--text-dim)" }}>·</span>
+                                    <span className="mono" style={{ color: "var(--accent)", fontSize: "0.85rem", fontWeight: 600 }}>
                                       Départ à {formatTimeInZone(st.irl_start, tz)}
                                     </span>
                                   </>
                                 ) : (
-                                  <span style={{ color: "var(--text-dim)", fontSize: "0.85rem" }}>Pas de créneau préféré</span>
+                                  <span style={{ color: "var(--text-dim)", fontSize: "0.85rem", fontStyle: "italic" }}>Pas de créneau préféré</span>
                                 )}
                               </td>
                             </tr>
