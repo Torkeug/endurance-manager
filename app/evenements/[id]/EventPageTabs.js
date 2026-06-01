@@ -503,7 +503,33 @@ export default function EventPageTabs({
                         );
                         return sortDir === "asc" ? cmp : -cmp;
                       });
-                      return rows.map((s) => {
+                      const result = [];
+                      let lastTeam = undefined;
+                      for (const s of rows) {
+                        const teamName = s.team_entries?.crew_name ?? null;
+                        if (teamName !== lastTeam) {
+                          lastTeam = teamName;
+                          const teamColor = teamName ? crewColorsMap[teamName] : undefined;
+                          result.push(
+                            <tr key={`header-team-${teamName ?? "none"}`}>
+                              <td colSpan={7} style={{
+                                padding: "0.6rem 0.75rem",
+                                background: "var(--surface-2)",
+                                borderTop: "2px solid var(--accent)",
+                                borderBottom: "2px solid var(--accent)",
+                                textAlign: "center",
+                              }}>
+                                {teamName ? (
+                                  <span style={{ fontWeight: 700, fontSize: "0.85rem", letterSpacing: "0.04em", textTransform: "uppercase", color: teamColor || "var(--text)" }}>
+                                    {teamName}
+                                  </span>
+                                ) : (
+                                  <span style={{ color: "var(--text-dim)", fontSize: "0.85rem", fontStyle: "italic" }}>Sans équipage</span>
+                                )}
+                              </td>
+                            </tr>
+                          );
+                        }
                         const dId = s.drivers?.id || s.driver_name_snapshot || s.id;
                         const siblings = driverSignups.get(dId) || [s];
                         const allDriverTeams = siblings.length > 1
@@ -516,15 +542,16 @@ export default function EventPageTabs({
                               .filter((t) => t.name)
                               .sort((a, b) => (a.name || "").localeCompare(b.name || ""))
                           : undefined;
-                        return renderRow(s, {
+                        result.push(renderRow(s, {
                           key: s.id,
                           showDriver: true,
                           borderTop: undefined,
                           duplicateCount: siblings.length,
                           allDriverTeams,
                           badgeLabel: `${siblings.length} équipages`,
-                        });
-                      });
+                        }));
+                      }
+                      return result;
                     }
 
                     // ── Split mode: starttime ───────────────────────────────
