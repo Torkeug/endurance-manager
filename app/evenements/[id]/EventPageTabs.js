@@ -561,7 +561,7 @@ export default function EventPageTabs({
                               <td colSpan={7} style={{
                                 padding: "0.6rem 0.75rem",
                                 background: "var(--surface-2)",
-                                borderTop: rows.length > 0 ? "2px solid var(--accent)" : undefined,
+                                borderTop: "2px solid var(--accent)",
                                 borderBottom: "2px solid var(--accent)",
                                 textAlign: "center",
                               }}>
