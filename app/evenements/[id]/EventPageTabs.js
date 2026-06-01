@@ -563,6 +563,7 @@ export default function EventPageTabs({
                                 background: "var(--surface-2)",
                                 borderTop: rows.length > 0 ? "2px solid var(--border)" : undefined,
                                 borderBottom: "1px solid var(--border)",
+                                textAlign: "center",
                               }}>
                                 {st ? (
                                   <>
