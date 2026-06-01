@@ -119,12 +119,17 @@ export default function EventPageTabs({
   const [filterExcludeWithTeam, setFilterExcludeWithTeam] = useState(false);
   const [filterIrMin, setFilterIrMin] = useState("");
   const [filterIrMax, setFilterIrMax] = useState("");
-  const [filterCategories, setFilterCategories] = useState([]);
   const [filterCars, setFilterCars] = useState([]);
-  const hasActiveFilters = filterExcludeWithTeam || filterIrMin !== "" || filterIrMax !== "" || filterCategories.length > 0 || filterCars.length > 0;
-  const resetFilters = () => { setFilterExcludeWithTeam(false); setFilterIrMin(""); setFilterIrMax(""); setFilterCategories([]); setFilterCars([]); };
-  const toggleCategory = (cat) => setFilterCategories((p) => p.includes(cat) ? p.filter((c) => c !== cat) : [...p, cat]);
+  const hasActiveFilters = filterExcludeWithTeam || filterIrMin !== "" || filterIrMax !== "" || filterCars.length > 0;
+  const resetFilters = () => { setFilterExcludeWithTeam(false); setFilterIrMin(""); setFilterIrMax(""); setFilterCars([]); };
   const toggleCar = (id) => setFilterCars((p) => p.includes(id) ? p.filter((c) => c !== id) : [...p, id]);
+  const toggleCategoryGroup = (cars) => {
+    const ids = cars.map((c) => c.id);
+    const allSelected = ids.every((id) => filterCars.includes(id));
+    setFilterCars((prev) =>
+      allSelected ? prev.filter((id) => !ids.includes(id)) : [...new Set([...prev, ...ids])]
+    );
+  };
 
 
   const toggleSort = (field) => {
@@ -388,16 +393,21 @@ export default function EventPageTabs({
                         borderRadius: "4px",
                         background: catBg,
                       }}>
-                        <button onClick={() => toggleCategory(cat)} style={{
-                          fontSize: "0.6rem", fontWeight: 700, textTransform: "uppercase",
-                          letterSpacing: "0.08em", color: catColor,
-                          paddingRight: "0.3rem", whiteSpace: "nowrap",
-                          background: "transparent", border: "none", cursor: "pointer",
-                          textDecoration: filterCategories.includes(cat) ? "underline" : "none",
-                          opacity: filterCategories.includes(cat) ? 1 : 0.75,
-                        }}>
-                          {cat}
-                        </button>
+                        {(() => {
+                          const allSelected = cars.every(({ id }) => filterCars.includes(id));
+                          return (
+                            <button onClick={() => toggleCategoryGroup(cars)} style={{
+                              fontSize: "0.6rem", fontWeight: 700, textTransform: "uppercase",
+                              letterSpacing: "0.08em", color: catColor,
+                              paddingRight: "0.3rem", whiteSpace: "nowrap",
+                              background: "transparent", border: "none", cursor: "pointer",
+                              textDecoration: allSelected ? "underline" : "none",
+                              opacity: allSelected ? 1 : 0.75,
+                            }}>
+                              {cat}
+                            </button>
+                          );
+                        })()}
                         {cars.map(({ id, name }) => (
                           <button key={id} onClick={() => toggleCar(id)} style={{
                             padding: "0.15rem 0.5rem", borderRadius: "3px", cursor: "pointer",
@@ -488,11 +498,6 @@ export default function EventPageTabs({
                       const ir = s.drivers?.irating ?? null;
                       if (filterIrMin !== "" && (ir === null || ir < Number(filterIrMin))) return false;
                       if (filterIrMax !== "" && ir !== null && ir > Number(filterIrMax)) return false;
-                      if (filterCategories.length > 0) {
-                        const explicit = (s.preferred_class || []).some((c) => filterCategories.includes(c));
-                        const viacar = (s.preferred_car_ids || []).some((id) => filterCategories.includes(carClassMap[id]));
-                        if (!explicit && !viacar) return false;
-                      }
                       if (filterCars.length > 0 && !(s.preferred_car_ids || []).some((id) => filterCars.includes(id))) return false;
                       return true;
                     });
