@@ -410,8 +410,10 @@ export default function EventPageTabs({
                               letterSpacing: "0.08em", color: catColor,
                               paddingRight: "0.3rem", whiteSpace: "nowrap",
                               background: "transparent", border: "none", cursor: "pointer",
-                              textDecoration: isActive ? "underline" : "none",
-                              opacity: isActive ? 1 : 0.75,
+                              textDecoration: "underline",
+                              textDecorationStyle: isActive ? "solid" : "dashed",
+                              textDecorationColor: catColor,
+                              textUnderlineOffset: "3px",
                             }}>
                               {cat}
                             </button>
