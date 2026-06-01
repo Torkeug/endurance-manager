@@ -860,5 +860,202 @@ export const guide: GuideSection[] = [
       },
     ],
   },
+
+  // ─── Admin ────────────────────────────────────────────────────────────────
+  {
+    id: "admin-intro",
+    navTab: "Admin",
+    label: "Admin",
+    title: "Espace admin",
+    blocks: [
+      {
+        type: "callout",
+        variant: "warning",
+        content: "Cette section est réservée aux pilotes avec le rôle Admin. Les onglets décrits ici ne sont pas visibles par les pilotes standard.",
+      },
+      {
+        type: "text",
+        content: "L'espace admin regroupe tous les outils de configuration et de gestion de l'équipe. Il est accessible depuis le menu principal par le bouton Admin.",
+      },
+    ],
+  },
+  {
+    id: "admin-pilotes",
+    navTab: "Admin",
+    label: "Admin",
+    title: "Pilotes",
+    parent: "admin-intro",
+    blocks: [
+      {
+        type: "text",
+        content: "Gestion des comptes pilotes et des demandes d'inscription. Trois sous-onglets :",
+      },
+      {
+        type: "list",
+        items: [
+          "En attente — Nouvelles demandes d'inscription. Approuve ou refuse chaque pilote. Un badge rouge sur l'onglet Pilotes signale le nombre de demandes en attente.",
+          "Approuvés — Liste de tous les pilotes actifs. Permet de modifier le Discord, changer le rôle (pilote / ingénieur / admin), activer ou désactiver le statut membre, marquer comme inactif ou compte test, et supprimer un pilote (avec avertissement si des inscriptions ou relais existent).",
+          "Refusés — Pilotes dont la demande a été refusée. Possibilité de les ré-approuver.",
+        ],
+      },
+      {
+        type: "callout",
+        variant: "tip",
+        content: "Le bouton « Sync iRacing (tous) » relance la synchronisation iRating et inventaire pour tous les pilotes approuvés en une seule action.",
+      },
+    ],
+  },
+  {
+    id: "admin-equipages",
+    navTab: "Admin",
+    label: "Admin",
+    title: "Équipages",
+    parent: "admin-intro",
+    blocks: [
+      {
+        type: "text",
+        content: "Gestion des noms d'équipages (crew names) utilisés lors de la création des équipes pour un événement.",
+      },
+      {
+        type: "list",
+        items: [
+          "Créer / modifier / supprimer — Ajoute un nom d'équipage avec une couleur optionnelle. La suppression est bloquée si des équipages actifs utilisent ce nom.",
+          "Couleur — Sélecteur de couleur avec presets et roue native. La couleur est utilisée pour les pills colorées dans toute l'app. La luminance est calculée automatiquement pour garantir la lisibilité sur fond clair et sombre.",
+          "Aperçu en direct — La pill colorée se met à jour en temps réel lors de la sélection de couleur.",
+        ],
+      },
+    ],
+  },
+  {
+    id: "admin-voitures",
+    navTab: "Admin",
+    label: "Admin",
+    title: "Voitures",
+    parent: "admin-intro",
+    blocks: [
+      {
+        type: "text",
+        content: "Gestion du catalogue de voitures utilisées dans les événements. Deux sous-onglets :",
+      },
+      {
+        type: "list",
+        items: [
+          "Kronos Endurance — Voitures actives dans l'app. Chaque voiture est liée au catalogue iRacing. Configure la taille du réservoir (L) et un taux de ravitaillement (L/s) optionnel qui remplace le taux de sa classe.",
+          "Catalogue iRacing — Vue complète des voitures iRacing. Permet d'assigner un libellé de type (car_type) pour regrouper les voitures dans l'inventaire.",
+        ],
+      },
+      {
+        type: "callout",
+        variant: "note",
+        content: "La suppression d'une voiture est bloquée si des pilotes l'ont en préférence ou si un équipage actif l'utilise.",
+      },
+    ],
+  },
+  {
+    id: "admin-classes",
+    navTab: "Admin",
+    label: "Admin",
+    title: "Classes",
+    parent: "admin-intro",
+    blocks: [
+      {
+        type: "text",
+        content: "Gestion des catégories de voitures (GT3, GTP, LMP2…). Chaque classe regroupe des voitures et définit un taux de ravitaillement par défaut.",
+      },
+      {
+        type: "list",
+        items: [
+          "Créer / modifier / supprimer — Nom de la classe + taux de ravitaillement (L/s) avec boutons +/−.",
+          "Assigner des voitures — Cocher les voitures appartenant à cette classe. Une voiture peut appartenir à une seule classe.",
+          "Override par voiture — Le taux de ravitaillement d'une voiture individuelle (défini dans l'onglet Voitures) prend le dessus sur celui de la classe.",
+        ],
+      },
+    ],
+  },
+  {
+    id: "admin-circuits",
+    navTab: "Admin",
+    label: "Admin",
+    title: "Circuits",
+    parent: "admin-intro",
+    blocks: [
+      {
+        type: "text",
+        content: "Gestion des circuits utilisés dans les événements. Chaque circuit peut être lié à un circuit iRacing du catalogue.",
+      },
+      {
+        type: "list",
+        items: [
+          "Créer / modifier / supprimer — Nom du circuit + durée du tour de pit lane (secondes, optionnel).",
+          "Lien iRacing — Associe le circuit à un circuit du catalogue iRacing pour la correspondance avec l'inventaire.",
+          "Groupement — Les circuits sont groupés par circuit iRacing de base, avec affichage repliable (état sauvegardé localement).",
+        ],
+      },
+    ],
+  },
+  {
+    id: "admin-types",
+    navTab: "Admin",
+    label: "Admin",
+    title: "Types d'événement",
+    parent: "admin-intro",
+    blocks: [
+      {
+        type: "text",
+        content: "Gestion des formats d'événement (ex : Endurance GT, LMP Cup…). Les types permettent de restreindre les voitures disponibles lors de la création d'un équipage.",
+      },
+      {
+        type: "list",
+        items: [
+          "Créer / modifier / supprimer — Nom du type d'événement.",
+          "Voitures autorisées — Cocher les voitures autorisées pour ce type. Si aucune voiture n'est cochée, toutes les voitures sont autorisées.",
+        ],
+      },
+    ],
+  },
+  {
+    id: "admin-garage61",
+    navTab: "Admin",
+    label: "Admin",
+    title: "Garage61",
+    parent: "admin-intro",
+    blocks: [
+      {
+        type: "text",
+        content: "Outil de correspondance entre les membres Garage61 de l'équipe et les pilotes de la base de données. Permet de lier automatiquement les comptes.",
+      },
+      {
+        type: "list",
+        items: [
+          "Détection — Lance la détection des membres Garage61 via un compte configuré. Les résultats sont mis en cache.",
+          "Correspondances exactes — Noms identiques entre Garage61 et la DB. Applique en masse d'un clic.",
+          "Ambiguïtés / Conflits — Correspondances incertaines ou multiples à résoudre manuellement.",
+          "Non trouvés — Pilotes DB sans correspondance Garage61 détectée.",
+        ],
+      },
+    ],
+  },
+  {
+    id: "admin-parametres",
+    navTab: "Admin",
+    label: "Admin",
+    title: "Paramètres",
+    parent: "admin-intro",
+    blocks: [
+      {
+        type: "text",
+        content: "Configuration générale de l'application.",
+      },
+      {
+        type: "list",
+        items: [
+          "Durées prédéfinies — Liste de durées (en minutes) proposées dans le sélecteur lors de la création d'un événement.",
+          "Durée par défaut — Durée pré-sélectionnée à l'ouverture du formulaire de création.",
+          "Créneaux spéciaux — Heures de départ fixes par jour de la semaine (vendredi, samedi, dimanche) pour les événements marqués « spéciaux ».",
+          "Tags d'inscription — Liste des tags disponibles lors de l'inscription d'un pilote à un événement (ex : chill, compet, solo, gros rouleur).",
+        ],
+      },
+    ],
+  },
 ];
 

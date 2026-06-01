@@ -6,7 +6,7 @@ import FeatureList from "./FeatureList";
 import States from "./States";
 import ComponentDemo from "./ComponentDemo";
 
-const NAV_TAB_ORDER = ["Accueil", "Pilotes", "Événements", "Inventaire"];
+const NAV_TAB_ORDER = ["Accueil", "Pilotes", "Événements", "Inventaire", "Admin"];
 
 function renderBlock(block: any, i: number) {
   if (block.type === "divider") {
