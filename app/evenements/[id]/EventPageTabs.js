@@ -504,6 +504,9 @@ export default function EventPageTabs({
                 </thead>
                 <tbody>
                   {(() => {
+                    // Classes implied by the currently selected car IDs
+                    const impliedClasses = new Set(filterCars.map((id) => carClassMap[id]).filter(Boolean));
+
                     const filtered = (event.signups || []).filter((s) => {
                       if (isExternal && s.drivers?.id !== currentDriver?.id) return false;
                       if (filterExcludeWithTeam && s.team_entries?.crew_name) return false;
@@ -511,9 +514,11 @@ export default function EventPageTabs({
                       if (filterIrMin !== "" && (ir === null || ir < Number(filterIrMin))) return false;
                       if (filterIrMax !== "" && ir !== null && ir > Number(filterIrMax)) return false;
                       if (filterCars.length > 0 || filterCategories.length > 0) {
-                        const matchesCar = filterCars.length > 0 && (s.preferred_car_ids || []).some((id) => filterCars.includes(id));
-                        const matchesCat = filterCategories.length > 0 && (s.preferred_class || []).some((c) => filterCategories.includes(c));
-                        if (!matchesCar && !matchesCat) return false;
+                        const preferredClass = s.preferred_class || [];
+                        const preferredCarIds = s.preferred_car_ids || [];
+                        const matchesCar = preferredCarIds.some((id) => filterCars.includes(id));
+                        const matchesClass = preferredClass.some((c) => impliedClasses.has(c) || filterCategories.includes(c));
+                        if (!matchesCar && !matchesClass) return false;
                       }
                       return true;
                     });
