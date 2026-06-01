@@ -372,22 +372,6 @@ export default function EventPageTabs({
                   style={{ width: "64px", padding: "0.15rem 0.35rem", background: "var(--surface-1)", border: "1px solid var(--border)", borderRadius: "3px", color: "var(--text)", fontSize: "0.82rem" }} />
               </div>
 
-              {allCategories.length > 0 && (
-                <>
-                  <span style={{ color: "var(--border)" }}>|</span>
-                  <div style={{ display: "flex", gap: "0.25rem", flexWrap: "wrap" }}>
-                    {allCategories.map((cat) => (
-                      <button key={cat} onClick={() => toggleCategory(cat)} style={{
-                        padding: "0.15rem 0.5rem", borderRadius: "3px", cursor: "pointer",
-                        fontSize: "0.75rem", fontWeight: 600,
-                        background: filterCategories.includes(cat) ? "var(--accent)" : "var(--surface-1)",
-                        color: filterCategories.includes(cat) ? "#000" : "var(--text-dim)",
-                        border: `1px solid ${filterCategories.includes(cat) ? "var(--accent)" : "var(--border)"}`,
-                      }}>{cat}</button>
-                    ))}
-                  </div>
-                </>
-              )}
 
               {allPreferredCars.length > 0 && (
                 <>
@@ -404,14 +388,16 @@ export default function EventPageTabs({
                         borderRadius: "4px",
                         background: catBg,
                       }}>
-                        <span style={{
+                        <button onClick={() => toggleCategory(cat)} style={{
                           fontSize: "0.6rem", fontWeight: 700, textTransform: "uppercase",
                           letterSpacing: "0.08em", color: catColor,
-                          paddingRight: "0.3rem",
-                          whiteSpace: "nowrap",
+                          paddingRight: "0.3rem", whiteSpace: "nowrap",
+                          background: "transparent", border: "none", cursor: "pointer",
+                          textDecoration: filterCategories.includes(cat) ? "underline" : "none",
+                          opacity: filterCategories.includes(cat) ? 1 : 0.75,
                         }}>
                           {cat}
-                        </span>
+                        </button>
                         {cars.map(({ id, name }) => (
                           <button key={id} onClick={() => toggleCar(id)} style={{
                             padding: "0.15rem 0.5rem", borderRadius: "3px", cursor: "pointer",
