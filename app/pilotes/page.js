@@ -13,6 +13,10 @@ export default async function PilotesPage() {
   if (process.env.NEXT_PUBLIC_SHOW_TEST_ACCOUNTS !== "true") {
     query = query.eq("is_test_account", false);
   }
+  // Non-admins only see active drivers
+  if (!admin) {
+    query = query.eq("active", true);
+  }
   // External drivers can only see their own row
   if (isExternal) {
     query = query.eq("id", currentDriver.id);
@@ -61,9 +65,26 @@ export default async function PilotesPage() {
             <tbody>
               {pilotes.map((p) => (
                 <tr key={p.id}>
-                  <td style={{ fontWeight: 600 }}>
+                  <td style={{ fontWeight: 600, opacity: p.active === false ? 0.5 : 1 }}>
                     <span style={{ display: "flex", alignItems: "center", gap: "0.4rem" }}>
                       {p.name}
+                      {/* Inactive badge — admins only, non-admins never see inactive rows */}
+                      {admin && p.active === false && (
+                        <span
+                          style={{
+                            fontSize: "0.68rem",
+                            fontWeight: 700,
+                            padding: "0.1rem 0.35rem",
+                            background: "rgba(107,114,128,0.1)",
+                            border: "1px solid #6b7280",
+                            borderRadius: "3px",
+                            color: "#6b7280",
+                            whiteSpace: "nowrap",
+                          }}
+                        >
+                          Inactif
+                        </span>
+                      )}
                       {/* Staleness badge — shown to admins and to the driver themselves */}
                       {(admin || currentDriver?.id === p.id) &&
                         (!p.last_driver_sync_at ||

@@ -462,6 +462,23 @@ export default function DriversManager({ initialDrivers, currentDriver }) {
     setSaving(null);
   };
 
+  const toggleActive = async (driverId, value) => {
+    setSaving(driverId);
+    const { error: err } = await supabase
+      .from("drivers")
+      .update({ active: value })
+      .eq("id", driverId);
+    if (err) {
+      setError(err.message);
+      setSaving(null);
+      return;
+    }
+    setDrivers((prev) =>
+      prev.map((d) => (d.id === driverId ? { ...d, active: value } : d)),
+    );
+    setSaving(null);
+  };
+
   // Open the Discord ID pencil editor for a given driver row
   const openDiscordEdit = (driverId, currentValue) => {
     setEditingDiscord(driverId);
@@ -719,6 +736,7 @@ export default function DriversManager({ initialDrivers, currentDriver }) {
                     </div>
                   </th>
                   <th style={{ ...TH, textAlign: "center" }}>Test</th>
+                  <th style={{ ...TH, textAlign: "center" }}>Actif</th>
                   {/* iRacing sync — read-only timestamp, populated by sync-all or driver self-sync */}
                   <th style={{ ...TH, textAlign: "center" }}>iRacing sync</th>
                   <th style={TH}></th>
@@ -964,6 +982,24 @@ export default function DriversManager({ initialDrivers, currentDriver }) {
                           checked={d.test_driver || false}
                           onChange={(e) =>
                             toggleTestDriver(d.id, e.target.checked)
+                          }
+                          disabled={saving === d.id}
+                          style={{
+                            accentColor: "var(--accent)",
+                            width: "16px",
+                            height: "16px",
+                            cursor: "pointer",
+                          }}
+                        />
+                      </td>
+
+                      {/* Active checkbox — unchecked = inactive, hidden from dropdowns and pilot list */}
+                      <td style={{ ...TD, textAlign: "center" }}>
+                        <input
+                          type="checkbox"
+                          checked={d.active !== false}
+                          onChange={(e) =>
+                            toggleActive(d.id, e.target.checked)
                           }
                           disabled={saving === d.id}
                           style={{

@@ -76,7 +76,7 @@ export default async function AdminPage() {
   // ── Inventory matrix data ────────────────────────────────────────────────
   // Only drivers with a completed iRacing sync appear as matrix columns
   const matrixDrivers = (drivers || []).filter(
-    (d) => d.approved && d.iracing_synced_at,
+    (d) => d.approved && d.active !== false && d.iracing_synced_at,
   );
 
   // Build unique cars list — one entry per iracing_car_id

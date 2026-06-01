@@ -70,6 +70,7 @@ export default async function HomePage() {
     { count: testDrivers },
     { count: overdueMembers },
     { count: syncRequired },
+    { count: inactiveDrivers },
     { data: teamEntries },
     { data: championships },
     // Active strategies — used to scope the "no stints" incomplete teams check
@@ -154,6 +155,15 @@ export default async function HomePage() {
           .eq("active", true)
           .eq("test_driver", false)
           .or(`last_driver_sync_at.is.null,last_driver_sync_at.lt.${syncCutoff}`)
+      : { count: 0 },
+
+    admin
+      ? supabase
+          .from("drivers")
+          .select("*", { count: "exact", head: true })
+          .eq("approved", true)
+          .eq("active", false)
+          .eq("test_driver", false)
       : { count: 0 },
 
     admin
@@ -988,6 +998,7 @@ export default async function HomePage() {
           }}
         >
           {[
+            // ── Counts ───────────────────────────────────────────────────────
             {
               label: totalEvents > 1 ? "Événements" : "Événement",
               value: totalEvents,
@@ -999,14 +1010,22 @@ export default async function HomePage() {
               color: "var(--accent)",
             },
             {
-              label: "En attente",
-              value: pendingCount,
-              color: pendingCount > 0 ? "var(--danger)" : "var(--text-dim)",
+              label: (inactiveDrivers || 0) > 1 ? "Pilotes inactifs" : "Pilote inactif",
+              value: inactiveDrivers || 0,
+              color: "var(--text-dim)",
+              href: "/admin?filter=all",
             },
             {
               label: (testDrivers || 0) > 1 ? "Pilotes test" : "Pilote test",
               value: testDrivers || 0,
               color: "var(--text-dim)",
+            },
+            // ── Action items ─────────────────────────────────────────────────
+            {
+              label: "En attente",
+              value: pendingCount,
+              color: pendingCount > 0 ? "var(--danger)" : "var(--text-dim)",
+              href: pendingCount > 0 ? "/admin?filter=pending" : undefined,
             },
             {
               label:
