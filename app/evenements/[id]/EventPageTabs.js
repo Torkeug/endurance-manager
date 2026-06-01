@@ -215,6 +215,26 @@ export default function EventPageTabs({
     return [...seen.entries()].map(([id, name]) => ({ id, name })).sort((a, b) => a.name.localeCompare(b.name));
   }, [event.signups, event.archived, carsMap]);
 
+  // Group preferred cars by category for the filter UI.
+  // Cars in multiple categories appear under each. Uncategorized cars listed last.
+  const carsByCategory = useMemo(() => {
+    const groups = new Map();
+    const uncategorized = [];
+    for (const { id, name } of allPreferredCars) {
+      const cats = carCategoriesMap.get(id);
+      if (cats && cats.size > 0) {
+        for (const cat of cats) {
+          if (!groups.has(cat)) groups.set(cat, []);
+          groups.get(cat).push({ id, name });
+        }
+      } else {
+        uncategorized.push({ id, name });
+      }
+    }
+    const sorted = [...groups.entries()].sort(([a], [b]) => a.localeCompare(b));
+    return { sorted, uncategorized };
+  }, [allPreferredCars, carCategoriesMap]);
+
   const formatPreferences = (signup) => {
     const classes = signup.preferred_class || [];
     // For archived events, use the snapshotted car names if available —
@@ -381,8 +401,24 @@ export default function EventPageTabs({
               {allPreferredCars.length > 0 && (
                 <>
                   <span style={{ color: "var(--border)" }}>|</span>
-                  <div style={{ display: "flex", gap: "0.25rem", flexWrap: "wrap" }}>
-                    {allPreferredCars.map(({ id, name }) => (
+                  <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap", alignItems: "center" }}>
+                    {carsByCategory.sorted.map(([cat, cars]) => (
+                      <div key={cat} style={{ display: "flex", alignItems: "center", gap: "0.25rem", flexWrap: "wrap" }}>
+                        <span style={{ fontSize: "0.65rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--text-dim)" }}>
+                          {cat}
+                        </span>
+                        {cars.map(({ id, name }) => (
+                          <button key={id} onClick={() => toggleCar(id)} style={{
+                            padding: "0.15rem 0.5rem", borderRadius: "3px", cursor: "pointer",
+                            fontSize: "0.75rem", fontWeight: 600,
+                            background: filterCars.includes(id) ? "var(--accent)" : "var(--surface-1)",
+                            color: filterCars.includes(id) ? "#000" : "var(--text-dim)",
+                            border: `1px solid ${filterCars.includes(id) ? "var(--accent)" : "var(--border)"}`,
+                          }}>{name}</button>
+                        ))}
+                      </div>
+                    ))}
+                    {carsByCategory.uncategorized.map(({ id, name }) => (
                       <button key={id} onClick={() => toggleCar(id)} style={{
                         padding: "0.15rem 0.5rem", borderRadius: "3px", cursor: "pointer",
                         fontSize: "0.75rem", fontWeight: 600,
