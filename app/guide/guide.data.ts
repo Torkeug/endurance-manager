@@ -271,7 +271,7 @@ export const guide: GuideSection[] = [
       },
       {
         type: "text",
-        content: "Liste de tous les pilotes inscrits à cet événement. Chaque ligne correspond à une inscription — un pilote peut apparaître plusieurs fois s'il est dans plusieurs équipages.",
+        content: "Liste de tous les pilotes inscrits à cet événement. Un pilote peut apparaître plusieurs fois s'il est dans plusieurs équipages ou a choisi plusieurs créneaux de départ.",
       },
       {
         type: "list",
@@ -281,6 +281,27 @@ export const guide: GuideSection[] = [
           "Préférences — Classe et voitures souhaitées lors de l'inscription.",
           "Créneaux — Horaires de départ préférés.",
           "Tags — Profil de pilote choisi lors de l'inscription (ex : chill, compet, solo, gros rouleur).",
+        ],
+      },
+      {
+        type: "text",
+        content: "Tri — Clique sur un en-tête de colonne pour trier. Pilote et iRating conservent les inscriptions d'un même pilote groupées. Équipe et Créneaux éclatent les lignes pour respecter l'ordre de tri, avec un en-tête de groupe pour chaque nouvelle valeur.",
+      },
+      {
+        type: "text",
+        content: "Pilotes dupliqués — Quand un pilote apparaît plusieurs fois (plusieurs équipes ou plusieurs créneaux), ses lignes sont marquées d'une barre colorée à gauche et d'un badge indiquant le nombre d'occurrences (ex : « 2 équipages »). Chaque couleur est propre à un pilote. En tri par iRating, un séparateur 🌭 Merguez marque le seuil des 3 000 iRating.",
+      },
+      {
+        type: "text",
+        content: "Filtres — La barre de filtres au-dessus du tableau permet de restreindre la liste :",
+      },
+      {
+        type: "list",
+        items: [
+          "Sans équipe — Affiche uniquement les pilotes sans équipage assigné.",
+          "iRating min / max — Filtre par niveau de pilote.",
+          "Catégories / Voitures — Clique sur un label de catégorie (GT3, GTP…) pour sélectionner toutes ses voitures d'un coup. Tu peux aussi sélectionner des voitures individuellement. Si une catégorie n'a aucune voiture préférée (ex : LMP2), son label filtre directement par classe déclarée.",
+          "× Réinitialiser — Efface tous les filtres actifs (apparaît dès qu'un filtre est actif).",
         ],
       },
     ],
