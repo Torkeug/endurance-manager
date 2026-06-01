@@ -115,20 +115,20 @@ export default function InscriptionsDemo() {
           <input readOnly placeholder="max" style={{ width: "64px", padding: "0.15rem 0.35rem", background: "var(--surface-1)", border: "1px solid var(--border)", borderRadius: "3px", color: "var(--text)", fontSize: "0.82rem" }} />
         </div>
         <span style={{ color: "var(--border)" }}>|</span>
-        {/* GT3 group */}
-        <div style={{ display: "flex", alignItems: "center", gap: "0.25rem", padding: "0.25rem 0.5rem", borderRadius: "4px", background: "hsla(200, 60%, 50%, 0.18)" }}>
-          <span style={{ fontSize: "0.6rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", color: "hsl(200, 75%, 38%)", paddingRight: "0.3rem", whiteSpace: "nowrap", cursor: "pointer" }}>GT3</span>
-          {["Audi R8 LMS GT3", "Ferrari 296 GT3", "McLaren 720S GT3 EVO"].map(car => (
-            <span key={car} style={{ padding: "0.15rem 0.5rem", borderRadius: "3px", fontSize: "0.75rem", fontWeight: 600, background: "var(--surface-1)", color: "var(--text-dim)", border: "1px solid var(--border)", cursor: "pointer" }}>{car}</span>
-          ))}
-        </div>
-        {/* GTP group */}
-        <div style={{ display: "flex", alignItems: "center", gap: "0.25rem", padding: "0.25rem 0.5rem", borderRadius: "4px", background: "hsla(340, 60%, 50%, 0.18)" }}>
-          <span style={{ fontSize: "0.6rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", color: "hsl(340, 75%, 38%)", paddingRight: "0.3rem", whiteSpace: "nowrap", cursor: "pointer" }}>GTP</span>
-          {["Ferrari 499P", "Porsche 963 GTP"].map(car => (
-            <span key={car} style={{ padding: "0.15rem 0.5rem", borderRadius: "3px", fontSize: "0.75rem", fontWeight: 600, background: "var(--surface-1)", color: "var(--text-dim)", border: "1px solid var(--border)", cursor: "pointer" }}>{car}</span>
-          ))}
-        </div>
+        {[
+          { label: "GT3", hue: 200, cars: ["Audi R8 LMS GT3", "Ferrari 296 GT3", "McLaren 720S GT3 EVO"] },
+          { label: "GTP", hue: 340, cars: ["Ferrari 499P", "Porsche 963 GTP"] },
+        ].map(({ label, hue, cars: catCars }) => (
+          <div key={label} style={{ display: "flex", alignItems: "center", gap: "0.25rem", padding: "0.25rem 0.5rem", borderRadius: "4px", background: `hsla(${hue}, 60%, 50%, 0.18)` }}>
+            <label style={{ display: "flex", alignItems: "center", gap: "0.25rem", cursor: "pointer", paddingRight: "0.3rem", whiteSpace: "nowrap" }}>
+              <input type="checkbox" readOnly style={{ accentColor: `hsl(${hue}, 75%, 45%)`, width: "10px", height: "10px", cursor: "pointer" }} />
+              <span style={{ fontSize: "0.6rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", color: `hsl(${hue}, 75%, 45%)` }}>{label}</span>
+            </label>
+            {catCars.map(car => (
+              <span key={car} style={{ padding: "0.15rem 0.5rem", borderRadius: "3px", fontSize: "0.75rem", fontWeight: 600, background: "var(--surface-1)", color: "var(--text-dim)", border: "1px solid var(--border)", cursor: "pointer" }}>{car}</span>
+            ))}
+          </div>
+        ))}
       </div>
 
       {/* Table */}
