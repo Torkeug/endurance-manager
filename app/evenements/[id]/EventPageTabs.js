@@ -393,16 +393,20 @@ export default function EventPageTabs({
                 <>
                   <span style={{ color: "var(--border)" }}>|</span>
                   <div style={{ display: "flex", gap: "0.4rem", flexWrap: "wrap", alignItems: "stretch" }}>
-                    {[...carsByCategory.sorted, ...(carsByCategory.uncategorized.length > 0 ? [["—", carsByCategory.uncategorized]] : [])].map(([cat, cars]) => (
+                    {[...carsByCategory.sorted, ...(carsByCategory.uncategorized.length > 0 ? [["—", carsByCategory.uncategorized]] : [])].map(([cat, cars]) => {
+                      const hue = (hashString(cat) * 137.508) % 360;
+                      const catColor = `hsl(${hue.toFixed(1)}, 75%, 58%)`;
+                      const catBg    = `hsla(${hue.toFixed(1)}, 60%, 50%, 0.1)`;
+                      return (
                       <div key={cat} style={{
                         display: "flex", alignItems: "center", gap: "0.25rem", flexWrap: "wrap",
                         padding: "0.25rem 0.5rem",
                         borderRadius: "4px",
-                        background: `${getStripeColor(cat)}18`,
+                        background: catBg,
                       }}>
                         <span style={{
                           fontSize: "0.6rem", fontWeight: 700, textTransform: "uppercase",
-                          letterSpacing: "0.08em", color: getStripeColor(cat),
+                          letterSpacing: "0.08em", color: catColor,
                           paddingRight: "0.3rem",
                           whiteSpace: "nowrap",
                         }}>
@@ -418,7 +422,8 @@ export default function EventPageTabs({
                           }}>{name}</button>
                         ))}
                       </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 </>
               )}
