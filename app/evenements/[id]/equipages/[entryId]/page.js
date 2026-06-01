@@ -146,9 +146,9 @@ export default async function EquipageDetail({ params }) {
           ? `${entry.cars.tank_size_litres}L`
           : "—",
     },
-    { label: "Pit lane", value: pitTime ? `${pitTime}s` : "—" },
     { label: "BOP Puissance", value: `${entry.bop_power_percent ?? 100}%` },
     { label: "BOP Poids", value: `${entry.bop_weight_kg ?? 0}kg` },
+    { label: "Pit lane", value: pitTime ? `${pitTime}s` : "—" },
     {
       label: "Ravitaillement",
       value: entry.refuel_time_seconds ? `${entry.refuel_time_seconds}s` : "—",
