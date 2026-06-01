@@ -63,7 +63,8 @@ function ConfirmModal({ modal, onConfirm, onCancel }) {
 }
 
 // Role hierarchy: super_admin can change anyone except other super_admins.
-// Admin can only change drivers and externals — cannot touch other admins.
+// Admin can promote/demote drivers, externals, and engineers (including to admin),
+// but cannot touch existing admins or super_admins.
 // Returns null if the current user cannot change this target's role at all.
 function getAllowedRoles(currentRole, targetRole, targetId, currentDriverId) {
   // Can't change own role
@@ -74,9 +75,9 @@ function getAllowedRoles(currentRole, targetRole, targetId, currentDriverId) {
     return ["driver", "external", "engineer", "admin"];
   }
   if (currentRole === "admin") {
-    // Admin can promote drivers/externals/engineers, cannot touch other admins or super_admins
+    // Admin cannot touch existing admins or super_admins, but can promote anyone else to admin
     if (targetRole === "admin" || targetRole === "super_admin") return null;
-    return ["driver", "external", "engineer"];
+    return ["driver", "external", "engineer", "admin"];
   }
   return null;
 }
