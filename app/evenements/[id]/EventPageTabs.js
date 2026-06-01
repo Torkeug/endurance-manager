@@ -179,6 +179,18 @@ export default function EventPageTabs({
     [allCars],
   );
 
+  // car id → Set<category> derived from team entries (admin-confirmed class per car).
+  const carCategoriesMap = useMemo(() => {
+    const map = new Map();
+    for (const entry of event.team_entries || []) {
+      if (entry.class && entry.cars?.id) {
+        if (!map.has(entry.cars.id)) map.set(entry.cars.id, new Set());
+        map.get(entry.cars.id).add(entry.class);
+      }
+    }
+    return map;
+  }, [event.team_entries]);
+
   // Unique categories and cars preferred across all signups — used to build filter pills.
   const allCategories = useMemo(() => {
     const cats = new Set();
@@ -457,7 +469,14 @@ export default function EventPageTabs({
                       const ir = s.drivers?.irating ?? null;
                       if (filterIrMin !== "" && (ir === null || ir < Number(filterIrMin))) return false;
                       if (filterIrMax !== "" && ir !== null && ir > Number(filterIrMax)) return false;
-                      if (filterCategories.length > 0 && !(s.preferred_class || []).some((c) => filterCategories.includes(c))) return false;
+                      if (filterCategories.length > 0) {
+                        const explicit = (s.preferred_class || []).some((c) => filterCategories.includes(c));
+                        const viacar  = (s.preferred_car_ids || []).some((id) => {
+                          const cats = carCategoriesMap.get(id);
+                          return cats && filterCategories.some((c) => cats.has(c));
+                        });
+                        if (!explicit && !viacar) return false;
+                      }
                       if (filterCars.length > 0 && !(s.preferred_car_ids || []).some((id) => filterCars.includes(id))) return false;
                       return true;
                     });
