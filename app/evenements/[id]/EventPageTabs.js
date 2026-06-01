@@ -207,26 +207,30 @@ export default function EventPageTabs({
   }, [event.signups, event.archived, carsMap]);
 
   // Group preferred cars by category for the filter UI.
-  // All categories from the DB are shown even if no driver preferred a car in them.
+  // Categories are shown when referenced by this event's signups (via preferred_class
+  // or via a preferred car's class) — not all DB categories.
   const carsByCategory = useMemo(() => {
-    // Seed all known categories from allCars
     const groups = new Map();
-    for (const car of allCars || []) {
-      if (car.class && !groups.has(car.class)) groups.set(car.class, []);
+    // Seed from explicit class preferences
+    for (const s of event.signups || []) {
+      for (const cls of s.preferred_class || []) {
+        if (!groups.has(cls)) groups.set(cls, []);
+      }
     }
-    // Populate with cars that at least one driver preferred
+    // Populate / add categories from preferred cars
     const uncategorized = [];
     for (const { id, name } of allPreferredCars) {
       const cls = carClassMap[id];
-      if (cls && groups.has(cls)) {
+      if (cls) {
+        if (!groups.has(cls)) groups.set(cls, []);
         groups.get(cls).push({ id, name });
-      } else if (!cls) {
+      } else {
         uncategorized.push({ id, name });
       }
     }
     const sorted = [...groups.entries()].sort(([a], [b]) => a.localeCompare(b));
     return { sorted, uncategorized };
-  }, [allCars, allPreferredCars, carClassMap]);
+  }, [event.signups, allPreferredCars, carClassMap]);
 
   const formatPreferences = (signup) => {
     const classes = signup.preferred_class || [];
