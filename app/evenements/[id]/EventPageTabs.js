@@ -392,10 +392,16 @@ export default function EventPageTabs({
               {allPreferredCars.length > 0 && (
                 <>
                   <span style={{ color: "var(--border)" }}>|</span>
-                  <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap", alignItems: "center" }}>
-                    {carsByCategory.sorted.map(([cat, cars]) => (
-                      <div key={cat} style={{ display: "flex", alignItems: "center", gap: "0.25rem", flexWrap: "wrap" }}>
-                        <span style={{ fontSize: "0.65rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--text-dim)" }}>
+                  <div style={{ display: "flex", gap: "0.1rem", flexWrap: "wrap", alignItems: "center" }}>
+                    {[...carsByCategory.sorted, ...(carsByCategory.uncategorized.length > 0 ? [["—", carsByCategory.uncategorized]] : [])].map(([cat, cars], i) => (
+                      <div key={cat} style={{ display: "flex", alignItems: "center", gap: "0.25rem", flexWrap: "wrap", paddingLeft: i > 0 ? "0.5rem" : 0, borderLeft: i > 0 ? "1px solid var(--border)" : "none", marginLeft: i > 0 ? "0.5rem" : 0 }}>
+                        <span style={{
+                          fontSize: "0.65rem", fontWeight: 700, textTransform: "uppercase",
+                          letterSpacing: "0.06em", padding: "0.1rem 0.35rem",
+                          borderRadius: "3px", border: "1px solid var(--border)",
+                          background: "var(--surface-1)", color: "var(--text-dim)",
+                          whiteSpace: "nowrap",
+                        }}>
                           {cat}
                         </span>
                         {cars.map(({ id, name }) => (
@@ -408,15 +414,6 @@ export default function EventPageTabs({
                           }}>{name}</button>
                         ))}
                       </div>
-                    ))}
-                    {carsByCategory.uncategorized.map(({ id, name }) => (
-                      <button key={id} onClick={() => toggleCar(id)} style={{
-                        padding: "0.15rem 0.5rem", borderRadius: "3px", cursor: "pointer",
-                        fontSize: "0.75rem", fontWeight: 600,
-                        background: filterCars.includes(id) ? "var(--accent)" : "var(--surface-1)",
-                        color: filterCars.includes(id) ? "#000" : "var(--text-dim)",
-                        border: `1px solid ${filterCars.includes(id) ? "var(--accent)" : "var(--border)"}`,
-                      }}>{name}</button>
                     ))}
                   </div>
                 </>
