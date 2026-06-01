@@ -69,7 +69,7 @@ export default async function EvenementDetail({ params }) {
         )
         .eq("id", id)
         .single(),
-      supabase.from("cars").select("id, name"),
+      supabase.from("cars").select("id, name, class"),
       // Fetch crew name colors for the pill system
       supabase.from("crew_names").select("name, color"),
     ]);

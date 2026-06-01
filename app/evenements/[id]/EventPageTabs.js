@@ -179,17 +179,11 @@ export default function EventPageTabs({
     [allCars],
   );
 
-  // car id → Set<category> derived from team entries (admin-confirmed class per car).
-  const carCategoriesMap = useMemo(() => {
-    const map = new Map();
-    for (const entry of event.team_entries || []) {
-      if (entry.class && entry.cars?.id) {
-        if (!map.has(entry.cars.id)) map.set(entry.cars.id, new Set());
-        map.get(entry.cars.id).add(entry.class);
-      }
-    }
-    return map;
-  }, [event.team_entries]);
+  // car id → class string, sourced directly from the cars table.
+  const carClassMap = useMemo(
+    () => (allCars || []).reduce((acc, car) => { if (car.class) acc[car.id] = car.class; return acc; }, {}),
+    [allCars],
+  );
 
   // Unique categories and cars preferred across all signups — used to build filter pills.
   const allCategories = useMemo(() => {
@@ -216,24 +210,21 @@ export default function EventPageTabs({
   }, [event.signups, event.archived, carsMap]);
 
   // Group preferred cars by category for the filter UI.
-  // Cars in multiple categories appear under each. Uncategorized cars listed last.
   const carsByCategory = useMemo(() => {
     const groups = new Map();
     const uncategorized = [];
     for (const { id, name } of allPreferredCars) {
-      const cats = carCategoriesMap.get(id);
-      if (cats && cats.size > 0) {
-        for (const cat of cats) {
-          if (!groups.has(cat)) groups.set(cat, []);
-          groups.get(cat).push({ id, name });
-        }
+      const cls = carClassMap[id];
+      if (cls) {
+        if (!groups.has(cls)) groups.set(cls, []);
+        groups.get(cls).push({ id, name });
       } else {
         uncategorized.push({ id, name });
       }
     }
     const sorted = [...groups.entries()].sort(([a], [b]) => a.localeCompare(b));
     return { sorted, uncategorized };
-  }, [allPreferredCars, carCategoriesMap]);
+  }, [allPreferredCars, carClassMap]);
 
   const formatPreferences = (signup) => {
     const classes = signup.preferred_class || [];
@@ -507,10 +498,7 @@ export default function EventPageTabs({
                       if (filterIrMax !== "" && ir !== null && ir > Number(filterIrMax)) return false;
                       if (filterCategories.length > 0) {
                         const explicit = (s.preferred_class || []).some((c) => filterCategories.includes(c));
-                        const viacar  = (s.preferred_car_ids || []).some((id) => {
-                          const cats = carCategoriesMap.get(id);
-                          return cats && filterCategories.some((c) => cats.has(c));
-                        });
+                        const viacar = (s.preferred_car_ids || []).some((id) => filterCategories.includes(carClassMap[id]));
                         if (!explicit && !viacar) return false;
                       }
                       if (filterCars.length > 0 && !(s.preferred_car_ids || []).some((id) => filterCars.includes(id))) return false;
