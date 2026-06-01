@@ -403,8 +403,8 @@ function DriverRow({
 
   // ── Garage61 import handlers ───────────────────────────────────────────────
 
-  const fetchG61Laps = async () => {
-    if (g61Laps !== null) { setG61Panel(true); return; } // use cache
+  const fetchG61Laps = async (forceRefresh = false) => {
+    if (!forceRefresh && g61Laps !== null) { setG61Panel(true); return; } // use cache
     setG61Loading(true);
     setG61Error(null);
     try {
@@ -990,7 +990,7 @@ function DriverRow({
               <span style={{ fontSize: "0.72rem", fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--text-dim)" }}>
                 📥 Importer depuis Garage61
               </span>
-              <button type="button" onClick={fetchG61Laps} className="btn btn-secondary btn-sm" disabled={g61Loading}>
+              <button type="button" onClick={() => fetchG61Laps(g61Laps !== null)} className="btn btn-secondary btn-sm" disabled={g61Loading}>
                 {g61Loading ? "Chargement…" : g61Laps !== null ? "🔄 Actualiser" : "Charger les chronos"}
               </button>
               {g61Track && (
