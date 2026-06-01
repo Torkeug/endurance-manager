@@ -550,16 +550,45 @@ export default function EventPageTabs({
                         return sortDir === "asc" ? diff : -diff;
                       });
 
-                      return expanded.map(({ s, st }) =>
-                        renderRow(s, {
+                      const rows = [];
+                      let lastStId = undefined;
+                      for (const { s, st } of expanded) {
+                        const stId = st?.id ?? null;
+                        if (stId !== lastStId) {
+                          lastStId = stId;
+                          rows.push(
+                            <tr key={`header-${stId ?? "none"}`}>
+                              <td colSpan={7} style={{
+                                padding: "0.4rem 0.75rem",
+                                background: "var(--surface-2)",
+                                borderTop: rows.length > 0 ? "2px solid var(--border)" : undefined,
+                                borderBottom: "1px solid var(--border)",
+                              }}>
+                                {st ? (
+                                  <>
+                                    <span style={{ fontWeight: 600, fontSize: "0.85rem" }}>{st.label}</span>
+                                    {" "}
+                                    <span className="mono" style={{ color: "var(--accent)", fontSize: "0.82rem" }}>
+                                      Départ à {formatTimeInZone(st.irl_start, tz)}
+                                    </span>
+                                  </>
+                                ) : (
+                                  <span style={{ color: "var(--text-dim)", fontSize: "0.85rem" }}>Pas de créneau préféré</span>
+                                )}
+                              </td>
+                            </tr>
+                          );
+                        }
+                        rows.push(renderRow(s, {
                           key: st ? `${s.id}-${st.id}` : s.id,
                           showDriver: true,
                           borderTop: undefined,
                           displayedStartTimes: st ? [st] : [],
                           duplicateCount: (s.preferred_start_time_ids || []).length,
                           badgeLabel: `${(s.preferred_start_time_ids || []).length} créneaux`,
-                        }),
-                      );
+                        }));
+                      }
+                      return rows;
                     }
 
                     // ── Grouped mode: name / irating ────────────────────────
