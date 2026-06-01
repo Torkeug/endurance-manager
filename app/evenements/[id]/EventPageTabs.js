@@ -190,14 +190,6 @@ export default function EventPageTabs({
     [allCars],
   );
 
-  // Unique categories and cars preferred across all signups — used to build filter pills.
-  const allCategories = useMemo(() => {
-    const cats = new Set();
-    for (const s of event.signups || []) {
-      for (const c of s.preferred_class || []) cats.add(c);
-    }
-    return [...cats].sort();
-  }, [event.signups]);
 
   const allPreferredCars = useMemo(() => {
     const seen = new Map();
@@ -215,21 +207,26 @@ export default function EventPageTabs({
   }, [event.signups, event.archived, carsMap]);
 
   // Group preferred cars by category for the filter UI.
+  // All categories from the DB are shown even if no driver preferred a car in them.
   const carsByCategory = useMemo(() => {
+    // Seed all known categories from allCars
     const groups = new Map();
+    for (const car of allCars || []) {
+      if (car.class && !groups.has(car.class)) groups.set(car.class, []);
+    }
+    // Populate with cars that at least one driver preferred
     const uncategorized = [];
     for (const { id, name } of allPreferredCars) {
       const cls = carClassMap[id];
-      if (cls) {
-        if (!groups.has(cls)) groups.set(cls, []);
+      if (cls && groups.has(cls)) {
         groups.get(cls).push({ id, name });
-      } else {
+      } else if (!cls) {
         uncategorized.push({ id, name });
       }
     }
     const sorted = [...groups.entries()].sort(([a], [b]) => a.localeCompare(b));
     return { sorted, uncategorized };
-  }, [allPreferredCars, carClassMap]);
+  }, [allCars, allPreferredCars, carClassMap]);
 
   const formatPreferences = (signup) => {
     const classes = signup.preferred_class || [];
