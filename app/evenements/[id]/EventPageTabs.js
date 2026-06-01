@@ -342,16 +342,11 @@ export default function EventPageTabs({
 
               <div style={{ display: "flex", alignItems: "center", gap: "0.35rem", color: "var(--text-dim)" }}>
                 <span>iRating</span>
-                {[
-                  { val: filterIrMin, set: setFilterIrMin, ph: "min" },
-                  { val: filterIrMax, set: setFilterIrMax, ph: "max" },
-                ].map(({ val, set, ph }, i) => (
-                  <>
-                    {i === 1 && <span>—</span>}
-                    <input key={ph} type="number" placeholder={ph} value={val} onChange={(e) => set(e.target.value)}
-                      style={{ width: "64px", padding: "0.15rem 0.35rem", background: "var(--surface-1)", border: "1px solid var(--border)", borderRadius: "3px", color: "var(--text)", fontSize: "0.82rem" }} />
-                  </>
-                ))}
+                <input type="number" placeholder="min" value={filterIrMin} onChange={(e) => setFilterIrMin(e.target.value)}
+                  style={{ width: "64px", padding: "0.15rem 0.35rem", background: "var(--surface-1)", border: "1px solid var(--border)", borderRadius: "3px", color: "var(--text)", fontSize: "0.82rem" }} />
+                <span>—</span>
+                <input type="number" placeholder="max" value={filterIrMax} onChange={(e) => setFilterIrMax(e.target.value)}
+                  style={{ width: "64px", padding: "0.15rem 0.35rem", background: "var(--surface-1)", border: "1px solid var(--border)", borderRadius: "3px", color: "var(--text)", fontSize: "0.82rem" }} />
               </div>
 
               {allCategories.length > 0 && (
