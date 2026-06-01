@@ -841,7 +841,10 @@ export default function DriversManager({ initialDrivers, currentDriver }) {
                         {allowedRoles ? (
                           <select
                             value={d.role || "driver"}
-                            onChange={(e) => changeRole(d.id, e.target.value)}
+                            onChange={(e) => {
+                              e.target.style.color = ROLE_COLORS[e.target.value] || "var(--text)";
+                              changeRole(d.id, e.target.value);
+                            }}
                             disabled={saving === d.id}
                             style={{
                               background: "var(--surface-2)",
@@ -856,7 +859,7 @@ export default function DriversManager({ initialDrivers, currentDriver }) {
                             }}
                           >
                             {allowedRoles.map((r) => (
-                              <option key={r} value={r}>
+                              <option key={r} value={r} style={{ color: ROLE_COLORS[r] }}>
                                 {ROLE_LABELS[r]}
                               </option>
                             ))}
