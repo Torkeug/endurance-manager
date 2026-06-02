@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import AdminDemoShell from "./AdminDemoShell";
 
 const ENTRIES = [
   { id: 1, crew: "Kronos Alpha", car: "Audi R8 LMS GT3 EVO II", cls: "GT3", rounds: [{ label: "Round 1 · Spa 6H", num: 56 }, { label: "Round 2 · Le Mans 24H", num: 56 }, { label: "Round 3 · Portimão 3H", num: 56 }] },
@@ -17,6 +18,7 @@ export default function AdminChampionshipTeamsDemo() {
   const [expanded, setExpanded] = useState<Record<number, boolean>>({ 2: true });
 
   return (
+    <AdminDemoShell activeTab="equipages">
     <div>
       {/* View toggle */}
       <div style={{ display: "flex", gap: "0.5rem", marginBottom: "1rem" }}>
@@ -104,5 +106,6 @@ export default function AdminChampionshipTeamsDemo() {
         })}
       </div>
     </div>
+    </AdminDemoShell>
   );
 }

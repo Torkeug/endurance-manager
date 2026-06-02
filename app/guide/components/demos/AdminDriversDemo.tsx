@@ -1,4 +1,5 @@
 import type { CSSProperties } from "react";
+import AdminDemoShell from "./AdminDemoShell";
 
 const TH: CSSProperties = {
   background: "var(--surface-2)", color: "var(--text-dim)", fontSize: "0.72rem", fontWeight: 700,
@@ -26,6 +27,7 @@ const DRIVERS = [
 
 export default function AdminDriversDemo() {
   return (
+    <AdminDemoShell activeTab="pilotes">
     <div>
       {/* Sync All button + filter pills */}
       <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: "1rem" }}>
@@ -113,5 +115,6 @@ export default function AdminDriversDemo() {
         </table>
       </div>
     </div>
+    </AdminDemoShell>
   );
 }

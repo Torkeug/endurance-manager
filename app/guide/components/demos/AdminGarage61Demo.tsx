@@ -1,3 +1,5 @@
+import AdminDemoShell from "./AdminDemoShell";
+
 const thStyle = {
   background: "var(--surface-2)", color: "var(--text-dim)", fontSize: "0.72rem", fontWeight: 700,
   letterSpacing: "0.08em", textTransform: "uppercase" as const, padding: "0.6rem 1rem",
@@ -24,6 +26,7 @@ const ROWS = [
 
 export default function AdminGarage61Demo() {
   return (
+    <AdminDemoShell activeTab="garage61">
     <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
       {/* Controls */}
       <div style={{ display: "flex", gap: "0.75rem", alignItems: "center", flexWrap: "wrap" }}>
@@ -84,5 +87,6 @@ export default function AdminGarage61Demo() {
         </div>
       </div>
     </div>
+    </AdminDemoShell>
   );
 }

@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import AdminDemoShell from "./AdminDemoShell";
 
 const TYPES = [
   { id: 1, name: "Endurance GT",  cars: [
@@ -19,6 +20,7 @@ export default function AdminEventTypesDemo() {
   const [expanded, setExpanded] = useState<number | null>(1);
 
   return (
+    <AdminDemoShell activeTab="types">
     <div>
       <button className="btn btn-primary" style={{ marginBottom: "0.75rem" }}>+ Ajouter un type d'événement</button>
       <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem", marginBottom: "0.75rem" }}>
@@ -90,5 +92,6 @@ export default function AdminEventTypesDemo() {
         })}
       </div>
     </div>
+    </AdminDemoShell>
   );
 }

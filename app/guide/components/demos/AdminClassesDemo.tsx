@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import AdminDemoShell from "./AdminDemoShell";
 
 const CLASSES = [
   {
@@ -25,6 +26,7 @@ export default function AdminClassesDemo() {
   const [expanded, setExpanded] = useState<number | null>(1);
 
   return (
+    <AdminDemoShell activeTab="classes">
     <div>
       <button className="btn btn-primary" style={{ marginBottom: "0.75rem" }}>+ Ajouter une classe</button>
 
@@ -110,5 +112,6 @@ export default function AdminClassesDemo() {
         </div>
       )}
     </div>
+    </AdminDemoShell>
   );
 }

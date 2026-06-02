@@ -1,4 +1,5 @@
 import type { CSSProperties } from "react";
+import AdminDemoShell from "./AdminDemoShell";
 
 const TH: CSSProperties = {
   padding: "0.5rem 0.75rem", textAlign: "left", fontSize: "0.72rem", fontWeight: 700,
@@ -31,6 +32,7 @@ function CrewPill({ name, color }: { name: string; color: string | null }) {
 
 export default function AdminCrewNamesDemo() {
   return (
+    <AdminDemoShell activeTab="equipages">
     <div>
       <button className="btn btn-primary" style={{ marginBottom: "0.75rem", fontSize: "0.82rem" }}>
         + Ajouter un nom d'équipage
@@ -98,5 +100,6 @@ export default function AdminCrewNamesDemo() {
         </table>
       </div>
     </div>
+    </AdminDemoShell>
   );
 }

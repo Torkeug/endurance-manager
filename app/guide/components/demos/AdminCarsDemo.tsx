@@ -1,4 +1,5 @@
 import React from "react";
+import AdminDemoShell from "./AdminDemoShell";
 
 const TH = {
   background: "var(--surface-2)", color: "var(--text-dim)", fontSize: "0.72rem", fontWeight: 700,
@@ -23,6 +24,7 @@ for (const c of CARS) {
 
 export default function AdminCarsDemo() {
   return (
+    <AdminDemoShell activeTab="voitures">
     <div>
       {/* Sub-tabs */}
       <div style={{ display: "flex", gap: "0.25rem", borderBottom: "1px solid var(--border)", marginBottom: "1.5rem" }}>
@@ -89,5 +91,6 @@ export default function AdminCarsDemo() {
         </table>
       </div>
     </div>
+    </AdminDemoShell>
   );
 }

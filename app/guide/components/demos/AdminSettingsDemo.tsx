@@ -1,3 +1,5 @@
+import AdminDemoShell from "./AdminDemoShell";
+
 const TH = {
   background: "var(--surface-2)", color: "var(--text-dim)", fontSize: "0.72rem", fontWeight: 700,
   letterSpacing: "0.08em", textTransform: "uppercase" as const, padding: "0.6rem 1rem",
@@ -22,6 +24,7 @@ const TAGS = ["chill", "compet", "gros rouleur", "solo"];
 
 export default function AdminSettingsDemo() {
   return (
+    <AdminDemoShell activeTab="parametres">
     <div>
       {/* Duration presets */}
       <div className="card" style={{ marginBottom: "1.5rem" }}>
@@ -107,5 +110,6 @@ export default function AdminSettingsDemo() {
         </div>
       </div>
     </div>
+    </AdminDemoShell>
   );
 }

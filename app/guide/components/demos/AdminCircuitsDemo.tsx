@@ -1,5 +1,6 @@
 "use client";
 import React, { useState } from "react";
+import AdminDemoShell from "./AdminDemoShell";
 
 const TH = {
   background: "var(--surface-2)", color: "var(--text-dim)", fontSize: "0.72rem", fontWeight: 700,
@@ -32,6 +33,7 @@ export default function AdminCircuitsDemo() {
     });
 
   return (
+    <AdminDemoShell activeTab="circuits">
     <div>
       <button className="btn btn-primary" style={{ marginBottom: "0.75rem" }}>+ Ajouter un circuit</button>
       <div className="table-wrap" style={{ marginBottom: "0.75rem" }}>
@@ -74,5 +76,6 @@ export default function AdminCircuitsDemo() {
         </table>
       </div>
     </div>
+    </AdminDemoShell>
   );
 }
