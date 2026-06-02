@@ -17,6 +17,7 @@ import CourseDemo from "./demos/CourseDemo";
 import StartTimesDemo from "./demos/StartTimesDemo";
 import InventoryDemo from "./demos/InventoryDemo";
 import NewEquipageDemo from "./demos/NewEquipageDemo";
+import AdminTabsDemo from "./demos/AdminTabsDemo";
 import AdminDriversDemo from "./demos/AdminDriversDemo";
 import AdminCrewNamesDemo from "./demos/AdminCrewNamesDemo";
 import AdminChampionshipTeamsDemo from "./demos/AdminChampionshipTeamsDemo";
@@ -53,6 +54,7 @@ export default function ComponentDemo({ type, config }: ComponentDemoProps) {
     case "horaires":           return <StartTimesDemo />;
     case "inventory":          return <InventoryDemo />;
     case "new-equipage":       return <NewEquipageDemo />;
+    case "admin-tabs":                return <AdminTabsDemo />;
     case "admin-drivers":             return <AdminDriversDemo />;
     case "admin-crew-names":          return <AdminCrewNamesDemo />;
     case "admin-championship-teams":  return <AdminChampionshipTeamsDemo />;

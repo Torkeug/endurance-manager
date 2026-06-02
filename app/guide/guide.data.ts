@@ -871,11 +871,15 @@ export const guide: GuideSection[] = [
       {
         type: "callout",
         variant: "warn",
-        content: "Cette section est réservée aux pilotes avec le rôle Admin. Les onglets décrits ici ne sont pas visibles par les pilotes standard.",
+        content: "Cette section est réservée aux pilotes avec le rôle Admin ou Super Admin. Les onglets décrits ici ne sont pas visibles par les pilotes standard.",
       },
       {
         type: "text",
-        content: "L'espace admin regroupe tous les outils de configuration et de gestion de l'équipe. Il est accessible depuis le menu principal par le bouton Admin.",
+        content: "L'espace admin regroupe tous les outils de configuration et de gestion de l'équipe. Il est accessible depuis le menu principal via le bouton Admin. Huit onglets organisent les différentes sections.",
+      },
+      {
+        type: "component-demo",
+        componentType: "admin-tabs",
       },
     ],
   },
@@ -888,13 +892,13 @@ export const guide: GuideSection[] = [
     blocks: [
       {
         type: "text",
-        content: "Gestion des comptes pilotes et des demandes d'inscription. Trois sous-onglets :",
+        content: "Gestion des comptes pilotes et des demandes d'inscription. Trois boutons filtre permettent de basculer entre les vues :",
       },
       {
         type: "list",
         items: [
-          "En attente — Nouvelles demandes d'inscription. Approuve ou refuse chaque pilote. Un badge rouge sur l'onglet signale le nombre de demandes en attente.",
-          "Approuvés — Liste de tous les pilotes actifs. Permet de modifier le Discord, changer le rôle (pilote / ingénieur / admin), activer ou désactiver le statut membre, marquer comme inactif ou compte test, et supprimer un pilote (avec avertissement si des inscriptions ou relais existent).",
+          "En attente — Nouvelles demandes d'inscription. Boutons ✓ Approuver et ✗ Refuser par pilote. Un badge rouge sur l'onglet Pilotes signale le nombre de demandes en attente.",
+          "Approuvés — Tableau complet des pilotes actifs. Colonnes : Nom, Email (avec copie presse-papier), Rôle (sélecteur déroulant), Discord ID (crayon inline), Cotis. (checkbox), Test (checkbox), Actif (checkbox), iRacing sync (date de dernière synchro). Actions Révoquer et Supprimer disponibles selon le rôle.",
           "Refusés — Pilotes dont la demande a été refusée. Possibilité de les ré-approuver.",
         ],
       },
@@ -905,7 +909,7 @@ export const guide: GuideSection[] = [
       {
         type: "callout",
         variant: "tip",
-        content: "Le bouton « Sync iRacing (tous) » met à jour l'iRating de tous les pilotes approuvés en une seule action. L'inventaire (voitures et circuits possédés) n'est pas synchronisé ici — chaque pilote doit relancer sa propre synchronisation depuis son profil pour mettre à jour son inventaire.",
+        content: "Le bouton « 🔄 Sync All iRacing » met à jour l'iRating de tous les pilotes approuvés en une seule action. L'inventaire (voitures et circuits possédés) n'est pas synchronisé ici — chaque pilote doit relancer sa propre synchronisation depuis son profil.",
       },
     ],
   },
@@ -1007,8 +1011,8 @@ export const guide: GuideSection[] = [
       {
         type: "list",
         items: [
-          "Créer / modifier / supprimer — Nom de la classe + taux de ravitaillement (L/s) avec boutons +/−.",
-          "Assigner des voitures — Cocher les voitures appartenant à cette classe. Une voiture ne peut appartenir qu'à une seule classe.",
+          "Créer / modifier / supprimer — Nom de la classe + taux de ravitaillement (L/s) avec boutons −/+.",
+          "Assigner des voitures — Cliquer sur ▼ Voitures pour ouvrir le panneau. Les voitures déjà assignées apparaissent en pills accent avec × pour les retirer. Les voitures non classées apparaissent comme boutons « + Voiture » à cliquer pour assigner. Une voiture ne peut appartenir qu'à une seule classe.",
           "Override par voiture — Le taux de ravitaillement défini sur une voiture individuelle (onglet Voitures) prend le dessus sur celui de la classe.",
         ],
       },
@@ -1032,7 +1036,7 @@ export const guide: GuideSection[] = [
       {
         type: "list",
         items: [
-          "Créer / modifier / supprimer — Nom du circuit + durée du tour de pit lane (secondes, optionnel).",
+          "Créer / modifier / supprimer — Nom Kronos du circuit + temps pit lane (secondes, optionnel).",
           "Lien iRacing — Associe le circuit à un circuit du catalogue iRacing pour la correspondance avec l'inventaire des pilotes.",
           "Groupement — Les circuits sont groupés par circuit iRacing de base, avec affichage repliable (état sauvegardé localement).",
         ],
@@ -1058,7 +1062,7 @@ export const guide: GuideSection[] = [
         type: "list",
         items: [
           "Créer / modifier / supprimer — Nom du type d'événement.",
-          "Voitures autorisées — Cocher les voitures autorisées pour ce type. Si aucune voiture n'est cochée, toutes les voitures sont autorisées.",
+          "Voitures autorisées — Cocher les voitures autorisées pour ce type via ▼ Voitures. Les voitures sont groupées par classe avec une case à cocher de classe pour tout sélectionner/désélectionner d'un coup. Si aucune voiture n'est cochée, toutes sont autorisées.",
         ],
       },
       {
@@ -1076,14 +1080,16 @@ export const guide: GuideSection[] = [
     blocks: [
       {
         type: "text",
-        content: "Outil de correspondance entre les membres Garage61 de l'équipe et les pilotes de la base de données. Permet de lier automatiquement les comptes.",
+        content: "Outil de correspondance entre les membres Garage61 de l'équipe et les pilotes de la base de données. Affiche un tableau unique de tous les pilotes détectés sur Garage61 avec leur statut de correspondance.",
       },
       {
         type: "list",
         items: [
-          "Correspondances exactes — Noms identiques entre Garage61 et la DB. Applique toutes les correspondances en masse d'un clic, ou une par une.",
-          "Ambiguïtés / Conflits — Correspondances incertaines ou multiples à résoudre manuellement.",
-          "Non trouvés — Pilotes DB sans correspondance Garage61 détectée.",
+          "🔄 Actualiser — Relance la détection Garage61 et met à jour le cache. La date de dernière détection est affichée.",
+          "Compte de détection — Sélecteur pour choisir quel pilote (membre de toutes les équipes) est utilisé pour la détection.",
+          "✓ Appliquer N correspondances exactes — Bouton visible si des correspondances exactes non encore appliquées existent. Applique toutes en une fois.",
+          "Statuts par ligne : ✓ Lié (déjà lié), → Correspondance exacte (applicable), ~ Correspondance partielle (prénom abrégé), ⚠ Conflit (slug différent déjà en base), ⚠ Ambigu (plusieurs pilotes, même nom normalisé), Inconnu (aucune correspondance).",
+          "Bouton Appliquer — Sur les lignes exactes non encore appliquées. Bouton Résoudre — Sur les lignes partielles ou ambiguës pour forcer manuellement.",
         ],
       },
       {
