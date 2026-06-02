@@ -1004,11 +1004,13 @@ export default async function HomePage() {
               label: totalEvents > 1 ? "Événements" : "Événement",
               value: totalEvents,
               color: "var(--accent)",
+              href: "/evenements",
             },
             {
               label: totalDrivers > 1 ? "Pilotes actifs" : "Pilote actif",
               value: totalDrivers,
               color: "var(--accent)",
+              href: "/admin?filter=all",
             },
             {
               label: (inactiveDrivers || 0) > 1 ? "Pilotes inactifs" : "Pilote inactif",
@@ -1020,6 +1022,7 @@ export default async function HomePage() {
               label: (testDrivers || 0) > 1 ? "Pilotes test" : "Pilote test",
               value: testDrivers || 0,
               color: "var(--text-dim)",
+              href: "/admin?filter=all",
             },
             // ── Action items ─────────────────────────────────────────────────
             {
