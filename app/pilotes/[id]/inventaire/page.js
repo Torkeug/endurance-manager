@@ -238,7 +238,7 @@ export default async function InventairePage({ params, searchParams }) {
     });
 
   const syncedAt = driver.iracing_synced_at
-    ? new Date(driver.iracing_synced_at).toLocaleDateString("fr-FR", {
+    ? new Date(driver.iracing_synced_at).toLocaleString("fr-FR", {
         day: "2-digit",
         month: "2-digit",
         year: "numeric",

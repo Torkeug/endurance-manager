@@ -462,7 +462,7 @@ export default async function DriverDetail({ params, searchParams }) {
           {driver.iracing_synced_at && (
             <span>
               iRating synchronisé le{" "}
-              {new Date(driver.iracing_synced_at).toLocaleDateString("fr-FR", {
+              {new Date(driver.iracing_synced_at).toLocaleString("fr-FR", {
                 day: "2-digit",
                 month: "2-digit",
                 year: "numeric",
@@ -474,7 +474,7 @@ export default async function DriverDetail({ params, searchParams }) {
           {driver.last_driver_sync_at && (
             <span>
               Inventaire synchronisé le{" "}
-              {new Date(driver.last_driver_sync_at).toLocaleDateString(
+              {new Date(driver.last_driver_sync_at).toLocaleString(
                 "fr-FR",
                 {
                   day: "2-digit",
