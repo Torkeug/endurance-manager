@@ -569,7 +569,7 @@ export default function DriversManager({ initialDrivers, currentDriver }) {
         </div>
       )}
 
-      {/* Sync All iRacing — admin only, triggers OAuth flow with mode=syncall */}
+      {/* Sync All iRating — admin only, triggers OAuth flow with mode=syncall */}
       {["admin", "super_admin"].includes(currentDriver?.role) && (
         <div
           style={{
@@ -582,7 +582,7 @@ export default function DriversManager({ initialDrivers, currentDriver }) {
             href="/auth/iracing?mode=syncall"
             className="btn btn-secondary btn-sm"
           >
-            🔄 Sync All iRacing
+            🔄 Sync All iRating
           </a>
         </div>
       )}

@@ -52,7 +52,7 @@ export default function AdminDriversDemo() {
     <div>
       {/* Sync All + tab pills */}
       <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: "1rem" }}>
-        <a className="btn btn-secondary btn-sm">🔄 Sync All iRacing</a>
+        <a className="btn btn-secondary btn-sm">🔄 Sync All iRating</a>
       </div>
       <div style={{ display: "flex", gap: "0.5rem", marginBottom: "1.5rem", flexWrap: "wrap" }}>
         {tabs.map(({ id, label, danger }) => {
