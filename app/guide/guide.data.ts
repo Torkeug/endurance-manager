@@ -42,7 +42,7 @@ export const guide: GuideSection[] = [
     ],
   },
   {
-    id: "accueil",
+    id: "accueil-admin",
     navTab: "Accueil",
     label: "Accueil",
     title: "Tableau de bord",
