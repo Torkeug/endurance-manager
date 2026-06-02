@@ -62,8 +62,44 @@ export const guide: GuideSection[] = [
           "Bannière ⚠️ — Apparaît si des pilotes sont en attente d'approbation, avec lien direct vers la gestion des accès.",
           "Actions rapides — Boutons + Ajouter un pilote, + Créer un événement, + Créer un championnat en plus des actions standard.",
           "Grille de statistiques — Compteurs en temps réel : Événements, Pilotes actifs, Pilotes inactifs, Pilotes test, En attente, Cotisations expirées, Syncs iRacing. Les cases en rouge ou orange sont cliquables et mènent directement à la section concernée.",
-          "Onglet Suivi — Visible uniquement pour les admins, avec un badge rouge indiquant le nombre d'équipages incomplets. Regroupe les équipages sans pilotes, sans relais planifiés, et les inscriptions non assignées à un équipage.",
+          "Onglet Suivi — Visible uniquement pour les admins, avec un badge rouge indiquant le nombre total d'éléments à traiter. Trois sous-onglets organisent les alertes.",
         ],
+      },
+      {
+        type: "divider",
+        content: "Sans pilotes",
+      },
+      {
+        type: "text",
+        content: "Équipages inscrits à un événement mais sans aucun pilote signé. Cliquer sur une carte ouvre directement la page de l'équipage.",
+      },
+      {
+        type: "component-demo",
+        componentType: "admin-suivi-sans-pilotes",
+      },
+      {
+        type: "divider",
+        content: "Sans relais",
+      },
+      {
+        type: "text",
+        content: "Équipages avec des pilotes inscrits mais dont la stratégie active ne contient aucun relais assigné. Cliquer sur une carte ouvre la page de l'équipage.",
+      },
+      {
+        type: "component-demo",
+        componentType: "admin-suivi-sans-relais",
+      },
+      {
+        type: "divider",
+        content: "Sans équipage",
+      },
+      {
+        type: "text",
+        content: "Pilotes inscrits à un événement mais non assignés à un équipage. Cliquer sur une carte ouvre la page de l'événement pour procéder à l'assignation.",
+      },
+      {
+        type: "component-demo",
+        componentType: "admin-suivi-sans-equipage",
       },
     ],
   },

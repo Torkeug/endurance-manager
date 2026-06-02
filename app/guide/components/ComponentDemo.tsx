@@ -18,6 +18,7 @@ import StartTimesDemo from "./demos/StartTimesDemo";
 import InventoryDemo from "./demos/InventoryDemo";
 import NewEquipageDemo from "./demos/NewEquipageDemo";
 import AdminAccueilDemo from "./demos/AdminAccueilDemo";
+import { AdminSuiviSansPilotesDemo, AdminSuiviSansRelaisDemo, AdminSuiviSansEquipageDemo } from "./demos/AdminSuiviDemo";
 import AdminTabsDemo from "./demos/AdminTabsDemo";
 import AdminDriversDemo from "./demos/AdminDriversDemo";
 import AdminCrewNamesDemo from "./demos/AdminCrewNamesDemo";
@@ -57,6 +58,9 @@ export default function ComponentDemo({ type, config }: ComponentDemoProps) {
     case "inventory":          return <InventoryDemo />;
     case "new-equipage":       return <NewEquipageDemo />;
     case "admin-accueil":             return <AdminAccueilDemo />;
+    case "admin-suivi-sans-pilotes":  return <AdminSuiviSansPilotesDemo />;
+    case "admin-suivi-sans-relais":   return <AdminSuiviSansRelaisDemo />;
+    case "admin-suivi-sans-equipage": return <AdminSuiviSansEquipageDemo />;
     case "admin-tabs":                return <AdminTabsDemo />;
     case "admin-drivers":             return <AdminDriversDemo />;
     case "admin-crew-names":          return <AdminCrewNamesDemo />;
