@@ -1,5 +1,6 @@
 "use client";
 import { useState, useEffect } from "react";
+import { usePathname } from "next/navigation";
 import { supabaseBrowser as supabase } from "../../../../../lib/supabase-browser";
 
 // ── Lap time helpers ───────────────────────────────────────
@@ -1233,6 +1234,7 @@ export default function PerformanceData({
   entryCarName = null,
   g61Linked = false,
 }) {
+  const pathname = usePathname();
   const [perfData, setPerfData] = useState({});
   const [loading, setLoading] = useState(true);
   const [nightDryAdd, setNightDryAdd] = useState(0);
@@ -1452,8 +1454,8 @@ export default function PerformanceData({
       {/* Garage61 not linked notice — only when the track has a Garage61 ID */}
       {iracingTrackId && !g61Linked && !archived && (
         <div style={{ fontSize: "0.8rem", color: "var(--text-dim)", marginBottom: "0.75rem" }}>
-          <a href={`/pilotes/${currentDriverId}`} style={{ color: "var(--accent)" }}>Liez votre compte Garage61</a>
-          {" "}sur votre profil pour importer des chronos depuis vos sessions d&apos;entraînement.
+          <a href={`/auth/garage61?returnTo=${pathname}`} style={{ color: "var(--accent)" }}>Liez votre compte Garage61</a>
+          {" "}pour importer des chronos depuis vos sessions d&apos;entraînement.
         </div>
       )}
 
