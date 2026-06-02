@@ -977,13 +977,23 @@ export const guide: GuideSection[] = [
     blocks: [
       {
         type: "text",
-        content: "Gestion du catalogue de voitures utilisées dans les événements. Deux sous-onglets :",
+        content: "Deux sous-onglets : le catalogue Kronos utilisé dans les événements, et le catalogue iRacing complet pour les labels d'inventaire.",
+      },
+      {
+        type: "divider",
+        content: "Kronos Endurance",
+      },
+      {
+        type: "text",
+        content: "Voitures actives dans l'app, liées au catalogue iRacing. Ce sont ces voitures qui apparaissent lors de la création d'un équipage.",
       },
       {
         type: "list",
         items: [
-          "Kronos Endurance — Voitures actives dans l'app. Configure la taille du réservoir (L) et un taux de ravitaillement (L/s) optionnel qui remplace le taux de sa classe.",
-          "Catalogue iRacing — Vue complète des voitures iRacing. Permet d'assigner un libellé de type (car_type) pour regrouper les voitures dans l'inventaire des pilotes.",
+          "Réservoir — Taille en litres, utilisée par le planificateur de relais.",
+          "Ravit. — Taux de ravitaillement (L/s) optionnel par voiture. Si vide, le taux de la classe s'applique.",
+          "Type iRacing — Label de regroupement dans l'inventaire pilote (ex : GT3, GTP). Hérité du catalogue iRacing mais modifiable.",
+          "Suppression — Bloquée si un équipage actif utilise cette voiture. Un avertissement s'affiche si des pilotes l'ont en préférence.",
         ],
       },
       {
@@ -995,13 +1005,20 @@ export const guide: GuideSection[] = [
         content: "Catalogue iRacing",
       },
       {
-        type: "component-demo",
-        componentType: "admin-cars-iracing",
+        type: "text",
+        content: "Vue complète des voitures du catalogue iRacing, alimentée lors des synchronisations iRacing. Permet d'assigner un label de type à chaque voiture pour le regroupement dans l'inventaire des pilotes.",
       },
       {
-        type: "callout",
-        variant: "note",
-        content: "La suppression d'une voiture est bloquée si des pilotes l'ont en préférence ou si un équipage actif l'utilise.",
+        type: "list",
+        items: [
+          "Label inventaire — Texte libre (ex : gt3, gtp, lmp2) ou sélectionnable depuis les tags iRacing de la voiture. Affiché en majuscules dans l'inventaire.",
+          "Tags iRacing — Tags natifs iRacing de la voiture (lecture seule), affichés comme référence pour choisir le label.",
+          "Ces labels n'affectent pas les événements ni les équipages — uniquement l'affichage dans l'inventaire pilote.",
+        ],
+      },
+      {
+        type: "component-demo",
+        componentType: "admin-cars-iracing",
       },
     ],
   },
