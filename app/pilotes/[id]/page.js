@@ -468,6 +468,7 @@ export default async function DriverDetail({ params, searchParams }) {
                 year: "numeric",
                 hour: "2-digit",
                 minute: "2-digit",
+                timeZone: "Europe/Paris",
               })}
             </span>
           )}
@@ -482,6 +483,7 @@ export default async function DriverDetail({ params, searchParams }) {
                   year: "numeric",
                   hour: "2-digit",
                   minute: "2-digit",
+                  timeZone: "Europe/Paris",
                 },
               )}
             </span>
