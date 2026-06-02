@@ -5,6 +5,7 @@ import { getSessionAndDriver, isAdmin } from "../../../lib/auth";
 import DriverPageTabs from "./DriverPageTabs";
 import DriverStats from "./DriverStats";
 import EngagementsTab from "./EngagementsTab";
+import LocalDate from "../../../components/LocalDate";
 
 export default async function DriverDetail({ params, searchParams }) {
   const { id } = await params;
@@ -462,30 +463,13 @@ export default async function DriverDetail({ params, searchParams }) {
           {driver.iracing_synced_at && (
             <span>
               iRating synchronisé le{" "}
-              {new Date(driver.iracing_synced_at).toLocaleString("fr-FR", {
-                day: "2-digit",
-                month: "2-digit",
-                year: "numeric",
-                hour: "2-digit",
-                minute: "2-digit",
-                timeZone: "Europe/Paris",
-              })}
+              <LocalDate iso={driver.iracing_synced_at} />
             </span>
           )}
           {driver.last_driver_sync_at && (
             <span>
               Inventaire synchronisé le{" "}
-              {new Date(driver.last_driver_sync_at).toLocaleString(
-                "fr-FR",
-                {
-                  day: "2-digit",
-                  month: "2-digit",
-                  year: "numeric",
-                  hour: "2-digit",
-                  minute: "2-digit",
-                  timeZone: "Europe/Paris",
-                },
-              )}
+              <LocalDate iso={driver.last_driver_sync_at} />
             </span>
           )}
         </div>

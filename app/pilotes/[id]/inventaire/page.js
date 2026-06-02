@@ -5,6 +5,7 @@ import Link from "next/link";
 import InventaireDisplay from "./InventaireDisplay";
 import { isLegacyContent } from "../../../../lib/car-types";
 import { fetchAllRows } from "../../../../lib/db-utils";
+import LocalDate from "../../../../components/LocalDate";
 
 export default async function InventairePage({ params, searchParams }) {
   const { id } = await params;
@@ -237,16 +238,6 @@ export default async function InventairePage({ params, searchParams }) {
       };
     });
 
-  const syncedAt = driver.iracing_synced_at
-    ? new Date(driver.iracing_synced_at).toLocaleString("fr-FR", {
-        day: "2-digit",
-        month: "2-digit",
-        year: "numeric",
-        hour: "2-digit",
-        minute: "2-digit",
-        timeZone: "Europe/Paris",
-      })
-    : null;
 
   const hasData =
     ownedCars.length > 0 || ownedTracks.length > 0;
@@ -272,7 +263,7 @@ export default async function InventairePage({ params, searchParams }) {
         <div>
           <h1>Inventaire — {driver.name}</h1>
           <div className="accent-line" />
-          {syncedAt && (
+          {driver.iracing_synced_at && (
             <p
               style={{
                 color: "var(--text-dim)",
@@ -280,7 +271,7 @@ export default async function InventairePage({ params, searchParams }) {
                 marginTop: "0.4rem",
               }}
             >
-              Synchronisé le {syncedAt}
+              Synchronisé le <LocalDate iso={driver.iracing_synced_at} />
             </p>
           )}
         </div>
