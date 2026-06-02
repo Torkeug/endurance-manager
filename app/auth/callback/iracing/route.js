@@ -437,60 +437,6 @@ export async function GET(request) {
             await backfillIratingHistory(accessToken, d.id, d.iracing_id);
             // Insert latest iRating for all categories
             await syncAllCategoryIratings(accessToken, d.id, d.iracing_id);
-
-            // Stale inventory check — last_driver_sync_at is only updated by
-            // syncOneDriver (which syncs inventory). Syncall only syncs iRating
-            // so we warn drivers whose inventory hasn't been refreshed in 100 days.
-            // Cooldown of 30 days prevents repeated emails on consecutive syncalls.
-            const staleThreshold = 100 * 24 * 60 * 60 * 1000;
-            const cooldown = 30 * 24 * 60 * 60 * 1000;
-            const { data: driverRow } = await supabase
-              .from("drivers")
-              .select(
-                "name, email, last_driver_sync_at, stale_sync_notified_at",
-              )
-              .eq("id", d.id)
-              .single();
-
-            if (driverRow?.email) {
-              const isStale =
-                !driverRow.last_driver_sync_at ||
-                Date.now() - new Date(driverRow.last_driver_sync_at).getTime() >
-                  staleThreshold;
-              const canNotify =
-                !driverRow.stale_sync_notified_at ||
-                Date.now() -
-                  new Date(driverRow.stale_sync_notified_at).getTime() >
-                  cooldown;
-
-              if (isStale && canNotify) {
-                const profileUrl = `${process.env.NEXT_PUBLIC_APP_URL}/pilotes/${d.id}`;
-                // Fire and forget — stale notification must not block the sync loop
-                fetch(
-                  `${process.env.NEXT_PUBLIC_APP_URL}/api/notify-stale-sync`,
-                  {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({
-                      driver_name: driverRow.name,
-                      driver_email: driverRow.email,
-                      profile_url: profileUrl,
-                    }),
-                  },
-                ).catch((e) =>
-                  console.error(
-                    `[syncall] Stale notify failed for ${d.id}:`,
-                    e,
-                  ),
-                );
-
-                // Update cooldown timestamp regardless of email result
-                await supabase
-                  .from("drivers")
-                  .update({ stale_sync_notified_at: now })
-                  .eq("id", d.id);
-              }
-            }
           }
         } catch (err) {
           console.error(`iRacing sync failed for driver ${d.id}:`, err.message);

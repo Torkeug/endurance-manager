@@ -3,6 +3,10 @@
     {
       "path": "/api/cron/cleanup-iracing-laps",
       "schedule": "0 3 * * *"
+    },
+    {
+      "path": "/api/cron/check-stale-syncs",
+      "schedule": "0 8 * * 1"
     }
   ]
 }
