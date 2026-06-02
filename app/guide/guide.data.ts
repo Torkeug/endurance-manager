@@ -893,10 +893,14 @@ export const guide: GuideSection[] = [
       {
         type: "list",
         items: [
-          "En attente — Nouvelles demandes d'inscription. Approuve ou refuse chaque pilote. Un badge rouge sur l'onglet Pilotes signale le nombre de demandes en attente.",
+          "En attente — Nouvelles demandes d'inscription. Approuve ou refuse chaque pilote. Un badge rouge sur l'onglet signale le nombre de demandes en attente.",
           "Approuvés — Liste de tous les pilotes actifs. Permet de modifier le Discord, changer le rôle (pilote / ingénieur / admin), activer ou désactiver le statut membre, marquer comme inactif ou compte test, et supprimer un pilote (avec avertissement si des inscriptions ou relais existent).",
           "Refusés — Pilotes dont la demande a été refusée. Possibilité de les ré-approuver.",
         ],
+      },
+      {
+        type: "component-demo",
+        componentType: "admin-drivers",
       },
       {
         type: "callout",
@@ -914,15 +918,49 @@ export const guide: GuideSection[] = [
     blocks: [
       {
         type: "text",
-        content: "Gestion des noms d'équipages (crew names) utilisés lors de la création des équipes pour un événement.",
+        content: "Deux sous-onglets : la gestion des numéros de voiture par équipe et championnat, et la configuration des noms d'équipages.",
+      },
+      {
+        type: "divider",
+        content: "Équipages utilisés en championnats",
+      },
+      {
+        type: "text",
+        content: "Vue de tous les équipages inscrits dans les championnats actifs, avec édition des numéros de voiture par manche.",
       },
       {
         type: "list",
         items: [
-          "Créer / modifier / supprimer — Ajoute un nom d'équipage avec une couleur optionnelle. La suppression est bloquée si des équipages actifs utilisent ce nom.",
-          "Couleur — Sélecteur de couleur avec presets et roue native. La couleur est utilisée pour les pills colorées dans toute l'app. La luminance est calculée automatiquement pour garantir la lisibilité sur fond clair et sombre.",
-          "Aperçu en direct — La pill colorée se met à jour en temps réel lors de la sélection de couleur.",
+          "Vue par équipe / par championnat — Bascule entre les deux modes d'affichage via les boutons en haut.",
+          "Numéro de voiture — Champ éditable inline par manche. La valeur est sauvegardée à la perte de focus.",
+          "Indicateur « varie » — Apparaît en orange quand le numéro de voiture diffère entre les manches d'un même championnat. La ligne est automatiquement dépliée pour résolution.",
+          "Conflit de numéro — Si le numéro saisi est déjà utilisé par un autre équipage dans la même manche (et le même créneau de départ), une fenêtre de confirmation apparaît.",
         ],
+      },
+      {
+        type: "component-demo",
+        componentType: "admin-championship-teams",
+      },
+      {
+        type: "divider",
+        content: "Configuration",
+      },
+      {
+        type: "text",
+        content: "Gestion des noms d'équipages (crew names) disponibles lors de la création des équipes.",
+      },
+      {
+        type: "list",
+        items: [
+          "Créer / modifier / supprimer — Ajoute un nom d'équipage avec une couleur optionnelle.",
+          "Couleur — Sélecteur avec presets et roue native. La luminance est calculée automatiquement pour garantir la lisibilité sur fond clair et sombre.",
+          "Aperçu en direct — La pill colorée se met à jour en temps réel lors de la sélection.",
+          "Suppression — Bloquée si des équipages actifs utilisent ce nom.",
+        ],
+      },
+      {
+        type: "component-demo",
+        componentType: "admin-crew-names",
       },
     ],
   },
@@ -940,9 +978,13 @@ export const guide: GuideSection[] = [
       {
         type: "list",
         items: [
-          "Kronos Endurance — Voitures actives dans l'app. Chaque voiture est liée au catalogue iRacing. Configure la taille du réservoir (L) et un taux de ravitaillement (L/s) optionnel qui remplace le taux de sa classe.",
-          "Catalogue iRacing — Vue complète des voitures iRacing. Permet d'assigner un libellé de type (car_type) pour regrouper les voitures dans l'inventaire.",
+          "Kronos Endurance — Voitures actives dans l'app. Configure la taille du réservoir (L) et un taux de ravitaillement (L/s) optionnel qui remplace le taux de sa classe.",
+          "Catalogue iRacing — Vue complète des voitures iRacing. Permet d'assigner un libellé de type (car_type) pour regrouper les voitures dans l'inventaire des pilotes.",
         ],
+      },
+      {
+        type: "component-demo",
+        componentType: "admin-cars",
       },
       {
         type: "callout",
@@ -966,9 +1008,13 @@ export const guide: GuideSection[] = [
         type: "list",
         items: [
           "Créer / modifier / supprimer — Nom de la classe + taux de ravitaillement (L/s) avec boutons +/−.",
-          "Assigner des voitures — Cocher les voitures appartenant à cette classe. Une voiture peut appartenir à une seule classe.",
-          "Override par voiture — Le taux de ravitaillement d'une voiture individuelle (défini dans l'onglet Voitures) prend le dessus sur celui de la classe.",
+          "Assigner des voitures — Cocher les voitures appartenant à cette classe. Une voiture ne peut appartenir qu'à une seule classe.",
+          "Override par voiture — Le taux de ravitaillement défini sur une voiture individuelle (onglet Voitures) prend le dessus sur celui de la classe.",
         ],
+      },
+      {
+        type: "component-demo",
+        componentType: "admin-classes",
       },
     ],
   },
@@ -987,9 +1033,13 @@ export const guide: GuideSection[] = [
         type: "list",
         items: [
           "Créer / modifier / supprimer — Nom du circuit + durée du tour de pit lane (secondes, optionnel).",
-          "Lien iRacing — Associe le circuit à un circuit du catalogue iRacing pour la correspondance avec l'inventaire.",
+          "Lien iRacing — Associe le circuit à un circuit du catalogue iRacing pour la correspondance avec l'inventaire des pilotes.",
           "Groupement — Les circuits sont groupés par circuit iRacing de base, avec affichage repliable (état sauvegardé localement).",
         ],
+      },
+      {
+        type: "component-demo",
+        componentType: "admin-circuits",
       },
     ],
   },
@@ -1011,6 +1061,10 @@ export const guide: GuideSection[] = [
           "Voitures autorisées — Cocher les voitures autorisées pour ce type. Si aucune voiture n'est cochée, toutes les voitures sont autorisées.",
         ],
       },
+      {
+        type: "component-demo",
+        componentType: "admin-event-types",
+      },
     ],
   },
   {
@@ -1027,11 +1081,14 @@ export const guide: GuideSection[] = [
       {
         type: "list",
         items: [
-          "Détection — Lance la détection des membres Garage61 via un compte configuré. Les résultats sont mis en cache.",
-          "Correspondances exactes — Noms identiques entre Garage61 et la DB. Applique en masse d'un clic.",
+          "Correspondances exactes — Noms identiques entre Garage61 et la DB. Applique toutes les correspondances en masse d'un clic, ou une par une.",
           "Ambiguïtés / Conflits — Correspondances incertaines ou multiples à résoudre manuellement.",
           "Non trouvés — Pilotes DB sans correspondance Garage61 détectée.",
         ],
+      },
+      {
+        type: "component-demo",
+        componentType: "admin-garage61",
       },
     ],
   },
@@ -1054,6 +1111,10 @@ export const guide: GuideSection[] = [
           "Créneaux spéciaux — Heures de départ fixes par jour de la semaine (vendredi, samedi, dimanche) pour les événements marqués « spéciaux ».",
           "Tags d'inscription — Liste des tags disponibles lors de l'inscription d'un pilote à un événement (ex : chill, compet, solo, gros rouleur).",
         ],
+      },
+      {
+        type: "component-demo",
+        componentType: "admin-settings",
       },
     ],
   },

@@ -17,6 +17,15 @@ import CourseDemo from "./demos/CourseDemo";
 import StartTimesDemo from "./demos/StartTimesDemo";
 import InventoryDemo from "./demos/InventoryDemo";
 import NewEquipageDemo from "./demos/NewEquipageDemo";
+import AdminDriversDemo from "./demos/AdminDriversDemo";
+import AdminCrewNamesDemo from "./demos/AdminCrewNamesDemo";
+import AdminChampionshipTeamsDemo from "./demos/AdminChampionshipTeamsDemo";
+import AdminCarsDemo from "./demos/AdminCarsDemo";
+import AdminClassesDemo from "./demos/AdminClassesDemo";
+import AdminCircuitsDemo from "./demos/AdminCircuitsDemo";
+import AdminEventTypesDemo from "./demos/AdminEventTypesDemo";
+import AdminGarage61Demo from "./demos/AdminGarage61Demo";
+import AdminSettingsDemo from "./demos/AdminSettingsDemo";
 
 interface ComponentDemoProps {
   type: string;
@@ -44,6 +53,15 @@ export default function ComponentDemo({ type, config }: ComponentDemoProps) {
     case "horaires":           return <StartTimesDemo />;
     case "inventory":          return <InventoryDemo />;
     case "new-equipage":       return <NewEquipageDemo />;
+    case "admin-drivers":             return <AdminDriversDemo />;
+    case "admin-crew-names":          return <AdminCrewNamesDemo />;
+    case "admin-championship-teams":  return <AdminChampionshipTeamsDemo />;
+    case "admin-cars":                return <AdminCarsDemo />;
+    case "admin-classes":             return <AdminClassesDemo />;
+    case "admin-circuits":            return <AdminCircuitsDemo />;
+    case "admin-event-types":         return <AdminEventTypesDemo />;
+    case "admin-garage61":            return <AdminGarage61Demo />;
+    case "admin-settings":            return <AdminSettingsDemo />;
     default:
       return <div style={{ color: "var(--danger)" }}>Unknown component type: {type}</div>;
   }
