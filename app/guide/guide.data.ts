@@ -7,6 +7,10 @@ export type GuideSection = {
   title: string;
   parent?: string;
   blocks: any[];
+  /** Only shown to admins — filtered out for regular users */
+  adminOnly?: boolean;
+  /** Hidden for admins — shown only to regular users */
+  hideForAdmins?: boolean;
 };
 
 export const guide: GuideSection[] = [
@@ -16,6 +20,7 @@ export const guide: GuideSection[] = [
     navTab: "Accueil",
     label: "Accueil",
     title: "Tableau de bord",
+    hideForAdmins: true,
     blocks: [
       {
         type: "component-demo",
@@ -32,6 +37,32 @@ export const guide: GuideSection[] = [
           "Prochain événement — Card avec nom, circuit, format, durée, horaire et compte à rebours.",
           "Mon prochain relais — Relais que tu vas piloter, avec équipage, numéro et heure de départ.",
           "Mes événements à venir — Liste de toutes tes inscriptions avec voiture et équipe assignées.",
+        ],
+      },
+    ],
+  },
+  {
+    id: "accueil",
+    navTab: "Accueil",
+    label: "Accueil",
+    title: "Tableau de bord",
+    adminOnly: true,
+    blocks: [
+      {
+        type: "component-demo",
+        componentType: "admin-accueil",
+      },
+      {
+        type: "text",
+        content: "En tant qu'admin, le tableau de bord affiche des éléments supplémentaires :",
+      },
+      {
+        type: "list",
+        items: [
+          "Bannière ⚠️ — Apparaît si des pilotes sont en attente d'approbation, avec lien direct vers la gestion des accès.",
+          "Actions rapides — Boutons + Ajouter un pilote, + Créer un événement, + Créer un championnat en plus des actions standard.",
+          "Grille de statistiques — Compteurs en temps réel : Événements, Pilotes actifs, Pilotes inactifs, Pilotes test, En attente, Cotisations expirées, Syncs iRacing. Les cases en rouge ou orange sont cliquables et mènent directement à la section concernée.",
+          "Onglet Suivi — Visible uniquement pour les admins, avec un badge rouge indiquant le nombre d'équipages incomplets. Regroupe les équipages sans pilotes, sans relais planifiés, et les inscriptions non assignées à un équipage.",
         ],
       },
     ],
