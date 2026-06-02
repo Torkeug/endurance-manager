@@ -20,6 +20,19 @@ export default function AdminChampionshipTeamsDemo() {
   return (
     <AdminDemoShell activeTab="equipages">
     <div>
+      {/* Équipages sub-tabs */}
+      <div style={{ display: "flex", gap: "0.25rem", borderBottom: "1px solid var(--border)", marginBottom: "1.5rem" }}>
+        {(["Équipages utilisés en championnats", "Configuration"] as const).map((label, i) => (
+          <button key={label} style={{
+            padding: "0.5rem 1.25rem", background: "transparent", border: "none",
+            borderBottom: i === 0 ? "2px solid var(--accent)" : "2px solid transparent",
+            color: i === 0 ? "var(--accent)" : "var(--text-dim)",
+            fontFamily: "var(--font-rajdhani),sans-serif", fontSize: "0.85rem",
+            fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase" as const,
+            cursor: "default", marginBottom: "-1px",
+          }}>{label}</button>
+        ))}
+      </div>
       {/* View toggle */}
       <div style={{ display: "flex", gap: "0.5rem", marginBottom: "1rem" }}>
         {([["team", "Par équipe"], ["championship", "Par championnat"]] as const).map(([key, label]) => (

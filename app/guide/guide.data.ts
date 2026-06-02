@@ -892,7 +892,7 @@ export const guide: GuideSection[] = [
     blocks: [
       {
         type: "text",
-        content: "Gestion des comptes pilotes et des demandes d'inscription. Trois boutons filtre permettent de basculer entre les vues :",
+        content: "Gestion des comptes pilotes et des demandes d'inscription. Trois onglets (un seul actif à la fois) permettent de basculer entre les vues :",
       },
       {
         type: "list",

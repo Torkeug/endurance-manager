@@ -34,6 +34,19 @@ export default function AdminCrewNamesDemo() {
   return (
     <AdminDemoShell activeTab="equipages">
     <div>
+      {/* Équipages sub-tabs */}
+      <div style={{ display: "flex", gap: "0.25rem", borderBottom: "1px solid var(--border)", marginBottom: "1.5rem" }}>
+        {(["Équipages utilisés en championnats", "Configuration"] as const).map((label, i) => (
+          <button key={label} style={{
+            padding: "0.5rem 1.25rem", background: "transparent", border: "none",
+            borderBottom: i === 1 ? "2px solid var(--accent)" : "2px solid transparent",
+            color: i === 1 ? "var(--accent)" : "var(--text-dim)",
+            fontFamily: "var(--font-rajdhani),sans-serif", fontSize: "0.85rem",
+            fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase" as const,
+            cursor: "default", marginBottom: "-1px",
+          }}>{label}</button>
+        ))}
+      </div>
       <button className="btn btn-primary" style={{ marginBottom: "0.75rem", fontSize: "0.82rem" }}>
         + Ajouter un nom d'équipage
       </button>
