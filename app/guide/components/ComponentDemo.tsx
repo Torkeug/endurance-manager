@@ -22,6 +22,7 @@ import AdminDriversDemo from "./demos/AdminDriversDemo";
 import AdminCrewNamesDemo from "./demos/AdminCrewNamesDemo";
 import AdminChampionshipTeamsDemo from "./demos/AdminChampionshipTeamsDemo";
 import AdminCarsDemo from "./demos/AdminCarsDemo";
+import AdminCarsIracingDemo from "./demos/AdminCarsIracingDemo";
 import AdminClassesDemo from "./demos/AdminClassesDemo";
 import AdminCircuitsDemo from "./demos/AdminCircuitsDemo";
 import AdminEventTypesDemo from "./demos/AdminEventTypesDemo";
@@ -59,6 +60,7 @@ export default function ComponentDemo({ type, config }: ComponentDemoProps) {
     case "admin-crew-names":          return <AdminCrewNamesDemo />;
     case "admin-championship-teams":  return <AdminChampionshipTeamsDemo />;
     case "admin-cars":                return <AdminCarsDemo />;
+    case "admin-cars-iracing":        return <AdminCarsIracingDemo />;
     case "admin-classes":             return <AdminClassesDemo />;
     case "admin-circuits":            return <AdminCircuitsDemo />;
     case "admin-event-types":         return <AdminEventTypesDemo />;

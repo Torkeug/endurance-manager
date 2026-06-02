@@ -991,6 +991,14 @@ export const guide: GuideSection[] = [
         componentType: "admin-cars",
       },
       {
+        type: "divider",
+        content: "Catalogue iRacing",
+      },
+      {
+        type: "component-demo",
+        componentType: "admin-cars-iracing",
+      },
+      {
         type: "callout",
         variant: "note",
         content: "La suppression d'une voiture est bloquée si des pilotes l'ont en préférence ou si un équipage actif l'utilise.",
