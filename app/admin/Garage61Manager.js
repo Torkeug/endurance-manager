@@ -114,14 +114,14 @@ export default function Garage61Manager({ currentDriver }) {
       .select("id, name, garage61_slug")
       .eq("approved", true)
       .neq("role", "engineer")
-      .not("test_driver", "is", true)
+      .eq("is_test_account", false)
       .order("name")
       .then(({ data }) => setDbDrivers(data || []));
 
     Promise.all([
       supabase.from("settings").select("value").eq("key", CACHE_KEY).maybeSingle(),
       supabase.from("settings").select("value").eq("key", DETECTION_DRIVER_KEY).maybeSingle(),
-      supabase.from("drivers").select("id, name").not("garage61_access_token", "is", null).neq("role", "engineer").not("test_driver", "is", true).order("name"),
+      supabase.from("drivers").select("id, name").not("garage61_access_token", "is", null).neq("role", "engineer").eq("is_test_account", false).order("name"),
     ]).then(([{ data: cacheRow }, { data: driverIdRow }, { data: linked }]) => {
       if (cacheRow?.value) {
         try {
