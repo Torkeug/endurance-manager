@@ -37,7 +37,7 @@ export default async function EquipageDetail({ params }) {
 
   const { data: allSignups } = await supabase
     .from("signups")
-    .select("*, drivers(id, name, irating, garage61_slug)")
+    .select("*, drivers(id, name, irating, garage61_slug, discord_alert_enabled, discord_alert_minutes)")
     .eq("event_id", entry.event_id)
     .order("drivers(name)");
 

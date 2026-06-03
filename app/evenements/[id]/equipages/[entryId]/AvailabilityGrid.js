@@ -178,14 +178,20 @@ export default function AvailabilityGrid({
   const [selectedDriverId, setSelectedDriverId] = useState("");
   const [availabilities, setAvailabilities] = useState({});
   const [loading, setLoading] = useState(true);
-  // notification overrides keyed by signup id: { notifications: bool, minutes: int|null }
+  // notification overrides keyed by signup id.
+  // When no per-event override is set, fall back to the driver's global defaults
+  // so the card is pre-populated and the driver can see their effective setting.
   const [notifOverrides, setNotifOverrides] = useState(() =>
     Object.fromEntries(
       (assignedDrivers || []).map((d) => [
         d.id,
         {
-          notifications: d.discord_alert_enabled_override ?? false,
-          minutes: d.discord_alert_minutes_override ?? "",
+          notifications: d.discord_alert_enabled_override
+            || d.drivers?.discord_alert_enabled
+            || false,
+          minutes: d.discord_alert_minutes_override
+            ?? d.drivers?.discord_alert_minutes
+            ?? "",
         },
       ]),
     ),
@@ -574,8 +580,8 @@ export default function AvailabilityGrid({
         </div>
       )}
 
-      {/* Discord notification override — only shown to the current driver, not archived */}
-      {!archived && (() => {
+      {/* Discord notification override — shown to the current driver once they select themselves */}
+      {!archived && selectedDriverId === currentDriverId && (() => {
         const mySignup = assignedDrivers.find((d) => d.drivers?.id === currentDriverId);
         if (!mySignup) return null;
         const notif = notifOverrides[mySignup.id] || { notifications: false, minutes: "" };
