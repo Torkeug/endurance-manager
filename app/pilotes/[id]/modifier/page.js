@@ -106,7 +106,8 @@ export default function ModifierPilote({ params }) {
           twitch: data.twitch || "",
           instagram: data.instagram || "",
           email: data.email || "",
-          discord_alert_minutes: data.discord_alert_minutes ?? "",
+          discord_alerts_enabled: data.discord_alert_minutes != null,
+          discord_alert_minutes: data.discord_alert_minutes ?? "5",
         });
         setFetching(false);
       });
@@ -162,9 +163,10 @@ export default function ModifierPilote({ params }) {
       discord: form.discord.trim() || null,
       twitch: form.twitch.trim() || null,
       instagram: form.instagram.trim() || null,
-      discord_alert_minutes: form.discord_alert_minutes
-        ? Math.max(1, parseInt(form.discord_alert_minutes))
-        : null,
+      discord_alert_minutes:
+        form.discord_alerts_enabled && form.discord_alert_minutes
+          ? Math.max(1, parseInt(form.discord_alert_minutes))
+          : null,
     };
 
     const { error: err } = await supabase
@@ -343,19 +345,27 @@ export default function ModifierPilote({ params }) {
             Notifications Discord
           </h3>
           <div className="form-grid">
-            <div className="form-group">
-              <label htmlFor="discord_alert_minutes">
-                Alerte relais — délai par défaut (min)
+            <div className="form-group" style={{ gridColumn: "1 / -1" }}>
+              <label
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "0.6rem",
+                  cursor: "pointer",
+                }}
+              >
+                <input
+                  type="checkbox"
+                  checked={form.discord_alerts_enabled}
+                  onChange={(e) =>
+                    setForm((prev) => ({
+                      ...prev,
+                      discord_alerts_enabled: e.target.checked,
+                    }))
+                  }
+                />
+                Activer les alertes relais Discord
               </label>
-              <input
-                id="discord_alert_minutes"
-                type="number"
-                value={form.discord_alert_minutes}
-                onChange={set("discord_alert_minutes")}
-                min="1"
-                max="60"
-                placeholder="5"
-              />
               <div
                 style={{
                   fontSize: "0.75rem",
@@ -363,11 +373,26 @@ export default function ModifierPilote({ params }) {
                   marginTop: "0.3rem",
                 }}
               >
-                Le bot Discord vous alertera X minutes avant la fin de vos
-                relais. Laisser vide pour désactiver. Peut être remplacé
-                événement par événement dans l&apos;onglet Disponibilités.
+                Le bot Discord vous alertera avant la fin de vos relais. Ce
+                délai peut être remplacé événement par événement dans
+                l&apos;onglet Disponibilités.
               </div>
             </div>
+            {form.discord_alerts_enabled && (
+              <div className="form-group">
+                <label htmlFor="discord_alert_minutes">
+                  Délai par défaut (min)
+                </label>
+                <input
+                  id="discord_alert_minutes"
+                  type="number"
+                  value={form.discord_alert_minutes}
+                  onChange={set("discord_alert_minutes")}
+                  min="1"
+                  max="60"
+                />
+              </div>
+            )}
           </div>
         </div>
 
