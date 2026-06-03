@@ -1191,6 +1191,7 @@ export default function StintGrid({
   const autoGenDone = useRef(false);
   const [conflictStints, setConflictStints] = useState([]);
   const [showRecalcModal, setShowRecalcModal] = useState(false);
+  const [showAvailability, setShowAvailability] = useState(true);
   const [recalcDiffs, setRecalcDiffs] = useState([]);
   const [recalcRaceEndDiff, setRecalcRaceEndDiff] = useState(null);
   const [recalcMergedPerf, setRecalcMergedPerf] = useState(null);
@@ -2667,8 +2668,26 @@ export default function StintGrid({
           alignItems: "center",
         }}
       >
-        <span style={{ fontWeight: 700, color: "var(--text)" }}>Dispo :</span>
-        {[
+        <label
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "0.35rem",
+            cursor: "pointer",
+            fontWeight: 700,
+            color: "var(--text)",
+            userSelect: "none",
+          }}
+        >
+          <input
+            type="checkbox"
+            checked={showAvailability}
+            onChange={(e) => setShowAvailability(e.target.checked)}
+            style={{ cursor: "pointer" }}
+          />
+          Dispo
+        </label>
+        {showAvailability && [
           { color: "#2eb460", label: "Disponible" },
           { color: "#c9a84c", label: "Partielle" },
           { color: "#e05555", label: "Indisponible" },
@@ -2680,8 +2699,8 @@ export default function StintGrid({
           >
             <span
               style={{
-                width: 8,
-                height: 8,
+                width: 12,
+                height: 12,
                 borderRadius: "50%",
                 background: color,
                 display: "inline-block",
@@ -2823,13 +2842,33 @@ export default function StintGrid({
           style={{
             borderCollapse: "collapse",
             width: "100%",
-            minWidth: `${680 + assignedDrivers.length * 32}px`, // 680px base + 32px per driver avail-dot column
+            minWidth: `${680 + (showAvailability ? assignedDrivers.length * 32 : 0)}px`,
           }}
         >
           <thead>
             <tr>
               <th style={{ ...TH, width: "28px" }}>#</th>
-              <th style={{ ...TH, minWidth: "130px", textAlign: "left" }}>Pilote</th>
+              {showAvailability && assignedDrivers.map((d, di) => (
+                <th
+                  key={d.drivers?.id}
+                  style={{
+                    ...TH,
+                    ...(di === 0 ? GS : {}),
+                    width: "32px",
+                    textAlign: "center",
+                    fontSize: "0.58rem",
+                  }}
+                  title={d.drivers?.name}
+                >
+                  {(() => {
+                    const parts = (d.drivers?.name || "").trim().split(/\s+/);
+                    const first = parts[0]?.slice(0, 3) || "?";
+                    const last = parts.length > 1 ? parts[parts.length - 1][0] : "";
+                    return last ? `${first} ${last}.` : first;
+                  })()}
+                </th>
+              ))}
+              <th style={{ ...TH, ...GS, minWidth: "130px", textAlign: "left" }}>Pilote</th>
               <th style={{ ...TH, ...GS, textAlign: "center" }}>Départ IRL</th>
               <th style={{ ...TH, ...IS, textAlign: "center" }}>Fin IRL</th>
               {!archived && (
@@ -2855,26 +2894,6 @@ export default function StintGrid({
               <th style={{ ...TH, width: "24px" }} title="Changement de pneus">
                 🛞
               </th>
-              {assignedDrivers.map((d, di) => (
-                <th
-                  key={d.drivers?.id}
-                  style={{
-                    ...TH,
-                    ...(di === 0 ? GS : {}),
-                    width: "32px",
-                    textAlign: "center",
-                    fontSize: "0.58rem",
-                  }}
-                  title={d.drivers?.name}
-                >
-                  {(() => {
-                    const parts = (d.drivers?.name || "").trim().split(/\s+/);
-                    const first = parts[0]?.slice(0, 3) || "?";
-                    const last = parts.length > 1 ? parts[parts.length - 1][0] : "";
-                    return last ? `${first} ${last}.` : first;
-                  })()}
-                </th>
-              ))}
               {!archived && <th style={{ ...TH, ...GS, width: "36px" }}></th>}
             </tr>
           </thead>
@@ -2884,7 +2903,7 @@ export default function StintGrid({
                 <td
                   colSpan={
                     12 +
-                    assignedDrivers.length +
+                    (showAvailability ? assignedDrivers.length : 0) +
                     (archived ? 0 : 2) +
                     (raceCovered ? 1 : 0)
                   }
@@ -3126,8 +3145,56 @@ export default function StintGrid({
                     </div>
                   </td>
 
+                  {/* Availability dots — 2nd column group */}
+                  {showAvailability && assignedDrivers.map((d, di) => {
+                    const driverId = d.drivers?.id;
+                    const status = checkAvailability(
+                      availabilities,
+                      driverId,
+                      stint._irlStart,
+                      stint._irlEnd,
+                    );
+                    const isAssigned = stint.driver_id === driverId;
+                    const color =
+                      status === "available"
+                        ? "#2eb460"
+                        : status === "partial"
+                          ? "#c9a84c"
+                          : status === "unavailable"
+                            ? "#e05555"
+                            : status === "tentative"
+                              ? "#4a4a6a"
+                              : "#3a3a5a";
+                    return (
+                      <td
+                        key={driverId}
+                        style={{
+                          ...TD,
+                          ...(di === 0 ? GS : {}),
+                          textAlign: "center",
+                          padding: "0.35rem 0.2rem",
+                        }}
+                      >
+                        <div
+                          style={{
+                            width: "12px",
+                            height: "12px",
+                            borderRadius: "50%",
+                            background: color,
+                            margin: "0 auto",
+                            outline: isAssigned
+                              ? "2px solid var(--accent)"
+                              : "none",
+                            outlineOffset: "2px",
+                          }}
+                          title={`${d.drivers?.name} — ${status || "non renseigné"}${isAssigned ? " (assigné)" : ""}`}
+                        />
+                      </td>
+                    );
+                  })}
+
                   {/* Driver selector */}
-                  <td style={TD}>
+                  <td style={{ ...TD, ...GS }}>
                     <select
                       value={stint.driver_id || ""}
                       onChange={(e) =>
@@ -3623,54 +3690,6 @@ export default function StintGrid({
                       }}
                     />
                   </td>
-
-                  {/* Availability dots */}
-                  {assignedDrivers.map((d, di) => {
-                    const driverId = d.drivers?.id;
-                    const status = checkAvailability(
-                      availabilities,
-                      driverId,
-                      stint._irlStart,
-                      stint._irlEnd,
-                    );
-                    const isAssigned = stint.driver_id === driverId;
-                    const color =
-                      status === "available"
-                        ? "#2eb460"
-                        : status === "partial"
-                          ? "#c9a84c"
-                          : status === "unavailable"
-                            ? "#e05555"
-                            : status === "tentative"
-                              ? "#4a4a6a"
-                              : "#3a3a5a";
-                    return (
-                      <td
-                        key={driverId}
-                        style={{
-                          ...TD,
-                          ...(di === 0 ? GS : {}),
-                          textAlign: "center",
-                          padding: "0.35rem 0.2rem",
-                        }}
-                      >
-                        <div
-                          style={{
-                            width: "9px",
-                            height: "9px",
-                            borderRadius: "50%",
-                            background: color,
-                            margin: "0 auto",
-                            outline: isAssigned
-                              ? "2px solid var(--accent)"
-                              : "none",
-                            outlineOffset: "2px",
-                          }}
-                          title={`${d.drivers?.name} — ${status || "non renseigné"}${isAssigned ? " (assigné)" : ""}`}
-                        />
-                      </td>
-                    );
-                  })}
 
                   {/* Delete + reorder controls */}
                   {!archived && (
