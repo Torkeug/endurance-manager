@@ -184,5 +184,5 @@ Triggered by Vercel Cron. Both require `Authorization: Bearer $CRON_SECRET`.
 
 | Endpoint | Frequency | Purpose |
 |----------|-----------|---------|
-| `GET /api/cron/check-stale-syncs` | Weekly | Find drivers with >100-day stale iRacing sync, send email reminder (30-day per-driver cooldown) |
-| `GET /api/cron/cleanup-iracing-laps` | Daily | Delete iRacing laps older than 7 days |
+| `GET /api/cron/check-stale-syncs` | Mondays 8am UTC | Find drivers with >100-day stale iRacing sync, send email reminder (30-day per-driver cooldown) |
+| `GET /api/cron/cleanup-iracing-laps` | Daily 3am UTC | Delete iRacing laps older than 7 days |
