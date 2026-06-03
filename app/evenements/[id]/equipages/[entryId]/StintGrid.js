@@ -2529,6 +2529,7 @@ export default function StintGrid({
             currentDriver={currentDriver}
             isActive={showAvailability}
             channelSuffix="-stintgrid"
+            showSummary={false}
           />
         </div>
       )}

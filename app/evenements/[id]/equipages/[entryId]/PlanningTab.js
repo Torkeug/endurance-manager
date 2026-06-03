@@ -44,6 +44,7 @@ export default function PlanningTab({
   currentDriver,
   isActive = false,
   channelSuffix = "",
+  showSummary = true,
 }) {
   const [stints, setStints] = useState([]);
   const [availabilities, setAvailabilities] = useState([]);
@@ -505,7 +506,7 @@ export default function PlanningTab({
   return (
     <div>
       {/* ── Summary card — current driver's stints only ──────────────────── */}
-      {myStints.length > 0 && (
+      {showSummary && myStints.length > 0 && (
         <div
           style={{
             marginBottom: "1.5rem",
