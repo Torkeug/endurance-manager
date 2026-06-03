@@ -229,6 +229,30 @@ export default function AvailabilityGrid({
       });
   }, [teamEntryId]);
 
+  // Realtime — keeps availability slots live for all concurrent users
+  useEffect(() => {
+    if (!teamEntryId) return;
+    const channel = supabase
+      .channel(`availability-live-${teamEntryId}`)
+      .on("postgres_changes", { event: "*", schema: "public", table: "availabilities", filter: `team_entry_id=eq.${teamEntryId}` },
+        (payload) => {
+          const row = payload.new || payload.old;
+          if (!row?.driver_id || !row?.slot_start) return;
+          const key = `${row.driver_id}_${new Date(row.slot_start).toISOString()}`;
+          setAvailabilities((prev) => {
+            if (payload.eventType === "DELETE") {
+              const next = { ...prev };
+              delete next[key];
+              return next;
+            }
+            return { ...prev, [key]: payload.new };
+          });
+        },
+      )
+      .subscribe();
+    return () => supabase.removeChannel(channel);
+  }, [teamEntryId]);
+
   // Auto-select external drivers — they can only edit their own availability
   useEffect(() => {
     if (isExternalUser && currentDriverId) {

@@ -1244,47 +1244,52 @@ export default function StintGrid({
   // Guard against double-click on "+ Nouvelle stratégie"
   const creatingStrategy = useRef(false);
 
-  // Realtime subscription — silently patches irl_end_actual into local stints
-  // so the active-stint highlight updates when a pit stop is stamped in RaceMode
-  // without waiting for the next tab activation refetch.
+  // Realtime subscription — keeps stints live for all concurrent users.
+  // Safeguard: skips updates for stints currently being saved by this user
+  // to avoid overwriting optimistic local state mid-save.
   useEffect(() => {
     if (!teamEntryId) return;
     const channel = supabase
-      .channel(`stintgrid-actual-${teamEntryId}`)
-      .on(
-        "postgres_changes",
-        {
-          event: "UPDATE",
-          schema: "public",
-          table: "stints",
-          filter: `team_entry_id=eq.${teamEntryId}`,
-        },
+      .channel(`stintgrid-live-${teamEntryId}`)
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "stints", filter: `team_entry_id=eq.${teamEntryId}` },
         (payload) => {
-          // Guard — ignore patches before initial load completes to avoid
-          // merging into an empty stints array
           if (!hasLoadedOnce.current) return;
-          // Only patch actual-stamp fields — ignore all other field changes to avoid
-          // conflicting with the persist effect which writes irl_start/irl_end_planned
-          if (
-            payload.new?.irl_end_actual !== undefined ||
-            payload.new?.irl_start_actual !== undefined
-          ) {
-            setStints((prev) =>
-              prev.map((s) =>
-                s.id === payload.new.id
-                  ? {
-                      ...s,
-                      ...(payload.new.irl_end_actual !== undefined
-                        ? { irl_end_actual: payload.new.irl_end_actual }
-                        : {}),
-                      ...(payload.new.irl_start_actual !== undefined
-                        ? { irl_start_actual: payload.new.irl_start_actual }
-                        : {}),
-                    }
-                  : s,
-              ),
-            );
-          }
+          // Only add if it belongs to the currently viewed strategy
+          setStints((prev) => {
+            if (prev.find((s) => s.id === payload.new.id)) return prev;
+            if (payload.new.strategy_id !== selectedStrategyIdRef.current) return prev;
+            return [...prev, payload.new].sort((a, b) => a.stint_number - b.stint_number);
+          });
+        },
+      )
+      .on("postgres_changes", { event: "DELETE", schema: "public", table: "stints", filter: `team_entry_id=eq.${teamEntryId}` },
+        (payload) => {
+          if (!hasLoadedOnce.current) return;
+          setStints((prev) => prev.filter((s) => s.id !== payload.old.id));
+        },
+      )
+      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "stints", filter: `team_entry_id=eq.${teamEntryId}` },
+        (payload) => {
+          if (!hasLoadedOnce.current) return;
+          // Skip if this user is currently saving this stint — avoids clobbering optimistic state
+          if (savingRef.current === payload.new.id) return;
+          setStints((prev) =>
+            prev.map((s) => {
+              if (s.id !== payload.new.id) return s;
+              return {
+                ...s,
+                // User-input fields from other users
+                driver_id: payload.new.driver_id,
+                laps_planned: payload.new.laps_planned,
+                rain: payload.new.rain,
+                tyre_change: payload.new.tyre_change,
+                previous_driver_id: payload.new.previous_driver_id,
+                // Race Mode actual stamps
+                irl_end_actual: payload.new.irl_end_actual,
+                irl_start_actual: payload.new.irl_start_actual,
+              };
+            }),
+          );
         },
       )
       .subscribe();
@@ -1292,6 +1297,11 @@ export default function StintGrid({
   }, [teamEntryId]);
   // Tracks whether initial fetch has completed — used to skip re-fetch when inactive
   const hasLoadedOnce = useRef(false);
+  // Refs so realtime callbacks always see current values without stale closures
+  const selectedStrategyIdRef = useRef(selectedStrategyId);
+  useEffect(() => { selectedStrategyIdRef.current = selectedStrategyId; }, [selectedStrategyId]);
+  const savingRef = useRef(saving);
+  useEffect(() => { savingRef.current = saving; }, [saving]);
 
   // Single parallel fetch — strategies + stints + perf + avail in one Promise.all.
   // Eliminates the previous two-step waterfall (strategies first → then stints).
