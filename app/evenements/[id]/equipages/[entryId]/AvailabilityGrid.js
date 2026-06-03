@@ -178,6 +178,18 @@ export default function AvailabilityGrid({
   const [selectedDriverId, setSelectedDriverId] = useState("");
   const [availabilities, setAvailabilities] = useState({});
   const [loading, setLoading] = useState(true);
+  // notification overrides keyed by signup id: { notifications: bool, minutes: int|null }
+  const [notifOverrides, setNotifOverrides] = useState(() =>
+    Object.fromEntries(
+      (assignedDrivers || []).map((d) => [
+        d.id,
+        {
+          notifications: d.discord_notifications_override ?? false,
+          minutes: d.discord_alert_minutes_override ?? "",
+        },
+      ]),
+    ),
+  );
 
   const isDragging = useRef(false);
   const dragValue = useRef(null);
@@ -216,6 +228,22 @@ export default function AvailabilityGrid({
       setSelectedDriverId(currentDriverId);
     }
   }, [isExternalUser, currentDriverId]);
+
+  const saveNotifOverride = async (signupId, patch) => {
+    setNotifOverrides((prev) => {
+      const merged = { ...prev[signupId], ...patch };
+      supabase
+        .from("signups")
+        .update({
+          discord_notifications_override: merged.notifications,
+          discord_alert_minutes_override: merged.minutes
+            ? Math.max(1, parseInt(merged.minutes))
+            : null,
+        })
+        .eq("id", signupId);
+      return { ...prev, [signupId]: merged };
+    });
+  };
 
   const getAvail = (driverId, slot) =>
     availabilities[`${driverId}_${slot.toISOString()}`];
@@ -650,12 +678,14 @@ export default function AvailabilityGrid({
                 </th>
                 <th style={{ ...TH, minWidth: "52px" }}>IG</th>
                 <th style={{ ...TH, width: "30px" }}>⏱</th>
-                {assignedDrivers.map((d) => (
+                {assignedDrivers.map((d) => {
+                  const notif = notifOverrides[d.id] || { notifications: false, minutes: "" };
+                  return (
                   <th
                     key={d.drivers?.id}
                     style={{
                       ...TH,
-                      minWidth: "50px",
+                      minWidth: "80px",
                       color:
                         d.drivers?.id === selectedDriverId
                           ? "var(--accent)"
@@ -672,8 +702,71 @@ export default function AvailabilityGrid({
                     >
                       {driverCounts[d.drivers?.id] || 0}×30m
                     </div>
+                    {!archived && (
+                      <div
+                        style={{
+                          marginTop: "0.35rem",
+                          display: "flex",
+                          flexDirection: "column",
+                          alignItems: "center",
+                          gap: "0.2rem",
+                        }}
+                        title="Notifications Discord pour ce pilote sur cet événement"
+                      >
+                        <label
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "0.25rem",
+                            cursor: "pointer",
+                            fontSize: "0.6rem",
+                            fontWeight: 400,
+                            color: notif.notifications ? "var(--accent)" : "var(--text-dim)",
+                            whiteSpace: "nowrap",
+                          }}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={notif.notifications}
+                            onChange={(e) =>
+                              saveNotifOverride(d.id, { notifications: e.target.checked })
+                            }
+                            style={{ width: "10px", height: "10px" }}
+                          />
+                          🔔
+                        </label>
+                        {notif.notifications && (
+                          <input
+                            type="number"
+                            value={notif.minutes}
+                            onChange={(e) =>
+                              setNotifOverrides((prev) => ({
+                                ...prev,
+                                [d.id]: { ...prev[d.id], minutes: e.target.value },
+                              }))
+                            }
+                            onBlur={() => saveNotifOverride(d.id, { minutes: notif.minutes })}
+                            min="1"
+                            max="60"
+                            placeholder="5"
+                            style={{
+                              width: "42px",
+                              fontSize: "0.65rem",
+                              padding: "0.1rem 0.2rem",
+                              textAlign: "center",
+                              background: "var(--surface-2)",
+                              border: "1px solid var(--border)",
+                              borderRadius: "3px",
+                              color: "var(--text)",
+                            }}
+                            title="Minutes avant la fin du relais"
+                          />
+                        )}
+                      </div>
+                    )}
                   </th>
-                ))}
+                  );
+                })}
               </tr>
             </thead>
             <tbody>

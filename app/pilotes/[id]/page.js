@@ -200,6 +200,12 @@ export default async function DriverDetail({ params, searchParams }) {
     { label: "Email", value: driver.email || "—" },
     { label: "Discord", value: driver.discord || "—" },
     {
+      label: "Alerte relais",
+      value: driver.discord_alert_minutes
+        ? `${driver.discord_alert_minutes} min`
+        : null,
+    },
+    {
       label: "Twitch",
       value: driver.twitch,
       link: driver.twitch ? `https://twitch.tv/${driver.twitch}` : null,

@@ -106,6 +106,7 @@ export default function ModifierPilote({ params }) {
           twitch: data.twitch || "",
           instagram: data.instagram || "",
           email: data.email || "",
+          discord_alert_minutes: data.discord_alert_minutes ?? "",
         });
         setFetching(false);
       });
@@ -161,6 +162,9 @@ export default function ModifierPilote({ params }) {
       discord: form.discord.trim() || null,
       twitch: form.twitch.trim() || null,
       instagram: form.instagram.trim() || null,
+      discord_alert_minutes: form.discord_alert_minutes
+        ? Math.max(1, parseInt(form.discord_alert_minutes))
+        : null,
     };
 
     const { error: err } = await supabase
@@ -330,6 +334,39 @@ export default function ModifierPilote({ params }) {
                 value={form.instagram}
                 onChange={set("instagram")}
               />
+            </div>
+          </div>
+        </div>
+
+        <div className="card" style={{ marginBottom: "1.5rem" }}>
+          <h3 style={{ marginBottom: "1.25rem", color: "var(--text-dim)" }}>
+            Notifications Discord
+          </h3>
+          <div className="form-grid">
+            <div className="form-group">
+              <label htmlFor="discord_alert_minutes">
+                Alerte relais — délai par défaut (min)
+              </label>
+              <input
+                id="discord_alert_minutes"
+                type="number"
+                value={form.discord_alert_minutes}
+                onChange={set("discord_alert_minutes")}
+                min="1"
+                max="60"
+                placeholder="5"
+              />
+              <div
+                style={{
+                  fontSize: "0.75rem",
+                  color: "var(--text-dim)",
+                  marginTop: "0.3rem",
+                }}
+              >
+                Le bot Discord vous alertera X minutes avant la fin de vos
+                relais. Laisser vide pour désactiver. Peut être remplacé
+                événement par événement dans l&apos;onglet Disponibilités.
+              </div>
             </div>
           </div>
         </div>
