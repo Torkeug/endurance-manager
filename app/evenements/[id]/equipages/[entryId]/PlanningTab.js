@@ -652,9 +652,11 @@ export default function PlanningTab({
       )}
 
       {/* ── Gantt chart ──────────────────────────────────────────────────── */}
-      {/* overflowX: auto allows horizontal scroll on narrow screens */}
+      {/* overflowX: auto allows horizontal scroll on narrow screens and when zoomed in.
+          Page max-width: 1200px means zoom-creates-scroll naturally once the
+          CSS viewport drops below 1200px (~160% zoom on 1920px screens). */}
       <div style={{ overflowX: "auto" }}>
-        <div style={{ minWidth: "600px" }}>
+        <div style={{ minWidth: "600px", paddingRight: "20px" }}>
           {/* Race-end flag row — above the hour axis so it doesn't overlap ticks */}
           {raceEndPct != null && (
             <div
