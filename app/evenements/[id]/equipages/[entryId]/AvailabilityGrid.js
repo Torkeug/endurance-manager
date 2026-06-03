@@ -235,20 +235,19 @@ export default function AvailabilityGrid({
     }
   }, [isExternalUser, currentDriverId]);
 
-  const saveNotifOverride = async (signupId, patch) => {
-    setNotifOverrides((prev) => {
-      const merged = { ...prev[signupId], ...patch };
-      supabase
-        .from("signups")
-        .update({
-          discord_alert_enabled_override: merged.notifications,
-          discord_alert_minutes_override: merged.minutes
-            ? Math.max(1, parseInt(merged.minutes))
-            : null,
-        })
-        .eq("id", signupId);
-      return { ...prev, [signupId]: merged };
-    });
+  const saveNotifOverride = (signupId, patch) => {
+    const current = notifOverrides[signupId] || { notifications: false, minutes: "" };
+    const merged = { ...current, ...patch };
+    setNotifOverrides((prev) => ({ ...prev, [signupId]: merged }));
+    supabase
+      .from("signups")
+      .update({
+        discord_alert_enabled_override: merged.notifications,
+        discord_alert_minutes_override: merged.minutes
+          ? Math.max(1, parseInt(merged.minutes))
+          : null,
+      })
+      .eq("id", signupId);
   };
 
   const getAvail = (driverId, slot) =>
