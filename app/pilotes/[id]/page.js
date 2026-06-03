@@ -201,10 +201,9 @@ export default async function DriverDetail({ params, searchParams }) {
     { label: "Discord", value: driver.discord || "—" },
     {
       label: "Alerte relais",
-      value:
-        driver.discord_alert_enabled && driver.discord_alert_minutes
-          ? `${driver.discord_alert_minutes} min`
-          : null,
+      value: driver.discord_alert_enabled && driver.discord_alert_minutes
+        ? `${driver.discord_alert_minutes} min`
+        : "Désactivée",
     },
     {
       label: "Twitch",
