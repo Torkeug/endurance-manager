@@ -45,10 +45,13 @@ export default function PlanningTab({
   isActive = false,
   channelSuffix = "",
   showSummary = true,
+  strategyId = null,
 }) {
   const [stints, setStints] = useState([]);
   const [availabilities, setAvailabilities] = useState([]);
   const [loading, setLoading] = useState(false);
+  // Incremented by the realtime subscription to trigger a re-fetch
+  const [refreshTick, setRefreshTick] = useState(0);
   // Hovered stint object — displayed in the detail panel below the Gantt
   const [hoveredStint, setHoveredStint] = useState(null);
   const [now, setNow] = useState(new Date());
@@ -60,32 +63,22 @@ export default function PlanningTab({
     return () => clearInterval(interval);
   }, []);
 
-  // Realtime subscription — patches irl_end_actual silently so completed state
-  // updates without waiting for next tab activation
+  // Realtime subscription — any stints change triggers a re-fetch so the Gantt
+  // stays live for all concurrent users, not just the local user.
   useEffect(() => {
     if (!teamEntryId) return;
     const channel = supabase
-      .channel(`planning-actual-${teamEntryId}${channelSuffix}`)
+      .channel(`planning-watch-${teamEntryId}${channelSuffix}`)
       .on(
         "postgres_changes",
         {
-          event: "UPDATE",
+          event: "*",
           schema: "public",
           table: "stints",
           filter: `team_entry_id=eq.${teamEntryId}`,
         },
-        (payload) => {
-          // Guard — ignore patches before initial load completes
-          if (!hasLoadedOnce.current) return;
-          if (payload.new?.irl_end_actual !== undefined) {
-            setStints((prev) =>
-              prev.map((s) =>
-                s.id === payload.new.id
-                  ? { ...s, irl_end_actual: payload.new.irl_end_actual }
-                  : s,
-              ),
-            );
-          }
+        () => {
+          if (hasLoadedOnce.current) setRefreshTick((t) => t + 1);
         },
       )
       .subscribe();
@@ -105,7 +98,7 @@ export default function PlanningTab({
     let cancelled = false;
 
     async function loadStints() {
-      setLoading(true);
+      if (!hasLoadedOnce.current) setLoading(true);
       try {
         // 1. Fetch strategies and ALL stints for this team entry in parallel —
         //    avoids sequential round trips (strategy fetch → stints fetch).
@@ -144,7 +137,9 @@ export default function PlanningTab({
         if (!strategies || strategies.length === 0) return;
 
         // Prefer the marked-active strategy; fall back to first in sort order
-        const strategy = strategies.find((s) => s.is_active) || strategies[0];
+        const strategy = (strategyId
+          ? strategies.find((s) => s.id === strategyId)
+          : strategies.find((s) => s.is_active)) || strategies[0];
 
         // Filter stints to the active strategy client-side
         const stintsData = (allStints || []).filter(
@@ -171,7 +166,7 @@ export default function PlanningTab({
     return () => {
       cancelled = true;
     };
-  }, [teamEntryId, isActive]);
+  }, [teamEntryId, isActive, refreshTick, strategyId]);
 
   if (loading)
     return (

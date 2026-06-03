@@ -2520,7 +2520,7 @@ export default function StintGrid({
       </div>
 
       {/* ── Planning Gantt — tied to availability visibility ────────────────── */}
-      {showAvailability && (
+      {showAvailability && selectedStrategyId && (
         <div style={{ marginBottom: "1rem" }}>
           <PlanningTab
             teamEntryId={teamEntryId}
@@ -2530,6 +2530,7 @@ export default function StintGrid({
             isActive={showAvailability}
             channelSuffix="-stintgrid"
             showSummary={false}
+            strategyId={selectedStrategyId}
           />
         </div>
       )}
