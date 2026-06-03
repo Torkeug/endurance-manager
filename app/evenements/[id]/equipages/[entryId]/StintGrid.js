@@ -2841,7 +2841,7 @@ export default function StintGrid({
         <table
           style={{
             borderCollapse: "collapse",
-            width: "100%",
+            width: showAvailability ? "100%" : "auto",
             minWidth: `${680 + (showAvailability ? assignedDrivers.length * 32 : 0)}px`,
           }}
         >
