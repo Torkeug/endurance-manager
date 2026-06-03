@@ -128,6 +128,8 @@ export default async function HomePage() {
           .from("drivers")
           .select("*", { count: "exact", head: true })
           .eq("active", true)
+          .eq("is_test_account", false)
+          .neq("role", "engineer")
       : { count: 0 },
 
     admin
@@ -155,6 +157,7 @@ export default async function HomePage() {
           .eq("approved", true)
           .eq("active", true)
           .eq("test_driver", false)
+          .neq("role", "engineer")
           .or(`last_driver_sync_at.is.null,last_driver_sync_at.lt.${syncCutoff}`)
       : { count: 0 },
 
@@ -165,6 +168,7 @@ export default async function HomePage() {
           .eq("approved", true)
           .eq("active", false)
           .eq("test_driver", false)
+          .neq("role", "engineer")
       : { count: 0 },
 
     admin

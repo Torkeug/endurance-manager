@@ -763,7 +763,9 @@ export default function DriversManager({ initialDrivers, currentDriver }) {
                   return (
                     <tr
                       key={d.id}
-                      style={{ opacity: saving === d.id ? 0.5 : 1 }}
+                      style={{
+                        opacity: saving === d.id ? 0.5 : d.active === false ? 0.45 : 1,
+                      }}
                     >
                       {/* Name + (vous) badge */}
                       <td style={TD}>
