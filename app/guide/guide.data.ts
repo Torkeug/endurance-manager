@@ -326,7 +326,6 @@ export const guide: GuideSection[] = [
           "Streams Twitch — Chaînes associées à cet équipage pour le suivi en direct.",
           "BOP — Ajustements de puissance (%), poids (kg) et taille de réservoir (%) imposés par l'organisateur.",
           "Ravitaillement & pneus — Durée des arrêts en secondes.",
-          "Alerte relais Discord — Le bot Discord alertera X minutes avant la fin de chaque relais. Laisser vide pour désactiver.",
         ],
       },
     ],

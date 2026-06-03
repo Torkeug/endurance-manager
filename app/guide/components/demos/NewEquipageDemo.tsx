@@ -192,7 +192,6 @@ export default function NewEquipageDemo() {
             { lbl: "BOP Réservoir (%)",          val: ""    },
             { lbl: "Temps ravitaillement (sec)", val: "30"  },
             { lbl: "Temps changement pneus (sec)", val: "0" },
-            { lbl: "Alerte relais Discord (min)", val: "5"  },
           ].map(({ lbl, val }) => (
             <Field key={lbl} lbl={lbl}>
               <div style={{ ...inputStyle, fontFamily: "var(--font-mono), monospace", color: val ? "var(--text)" : "var(--text-dim)" }}>
