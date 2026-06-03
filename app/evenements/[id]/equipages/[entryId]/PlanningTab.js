@@ -205,19 +205,35 @@ export default function PlanningTab({
     );
   }
 
+  // ── Race end — used to draw a finish marker and extend the timeline ──────────
+  const raceEndMs = teamEntry?.event_start_times?.irl_start &&
+    teamEntry?.events?.duration_minutes
+    ? new Date(teamEntry.event_start_times.irl_start).getTime() +
+      teamEntry.events.duration_minutes * 60 * 1000
+    : null;
+
   // ── Timeline bounds ────────────────────────────────────────────────────────
   const timelineStart = Math.min(
     ...validStints.map((s) => new Date(s.irl_start).getTime()),
   );
+  // Extend past the last bar by a small buffer so the last pill isn't flush
+  // against the edge. Cap at 15 min so short races don't get a huge margin.
+  const bufferMs = teamEntry?.events?.duration_minutes
+    ? Math.min(teamEntry.events.duration_minutes * 60 * 1000 * 0.03, 15 * 60 * 1000)
+    : 0;
   const timelineEnd = Math.max(
     ...validStints.map((s) =>
       new Date(s.irl_end_actual || s.irl_end_planned).getTime(),
     ),
+    raceEndMs ? raceEndMs + bufferMs : 0,
   );
   const timelineMs = timelineEnd - timelineStart;
 
   // Convert an absolute timestamp to a % position on the timeline
   const toPercent = (ts) => ((ts - timelineStart) / timelineMs) * 100;
+
+  // Position of the race-end finish marker on the timeline
+  const raceEndPct = raceEndMs != null ? toPercent(raceEndMs) : null;
 
   // ── Driver → color map (stable index = consistent color per driver) ────────
   const driverColorMap = {};
@@ -360,6 +376,22 @@ export default function PlanningTab({
         />
       ))}
 
+      {/* Race-end marker — vertical line at the checkered flag moment */}
+      {raceEndPct != null && (
+        <div
+          style={{
+            position: "absolute",
+            top: 0,
+            bottom: 0,
+            left: `${raceEndPct}%`,
+            width: "2px",
+            background: "rgba(224, 85, 85, 0.5)",
+            pointerEvents: "none",
+            zIndex: 2,
+          }}
+        />
+      )}
+
       {/* Stint bars */}
       {rowStints.map((stint) => {
         const startMs = new Date(stint.irl_start).getTime();
@@ -367,7 +399,6 @@ export default function PlanningTab({
           stint.irl_end_actual || stint.irl_end_planned,
         ).getTime();
         const left = toPercent(startMs);
-        const width = toPercent(endMs) - left;
         const isHovered = hoveredStint?.id === stint.id;
         const isPast =
           !!stint.irl_end_actual ||
@@ -386,6 +417,8 @@ export default function PlanningTab({
             ? "rgba(120, 120, 140, 0.45)"
             : color;
 
+        const barWidth = Math.min(Math.max(toPercent(endMs) - left, 0.5), 100 - left);
+
         return (
           <div
             key={stint.id}
@@ -398,8 +431,7 @@ export default function PlanningTab({
               top: "4px",
               bottom: "4px",
               left: `${left}%`,
-              // Minimum 0.5% width so very short stints are still visible
-              width: `${Math.max(width, 0.5)}%`,
+              width: `${barWidth}%`,
               background: barColor,
               borderRadius: "3px",
               border: isUnassigned ? "1px dashed var(--border)" : "none",
@@ -408,7 +440,6 @@ export default function PlanningTab({
               paddingLeft: "5px",
               overflow: "hidden",
               cursor: "default",
-              // Highlight on hover — white ring around the bar
               boxShadow: isActive
                 ? "0 0 0 2px var(--accent)"
                 : isHovered
@@ -623,6 +654,29 @@ export default function PlanningTab({
       {/* overflowX: auto allows horizontal scroll on narrow screens */}
       <div style={{ overflowX: "auto" }}>
         <div style={{ minWidth: "600px" }}>
+          {/* Race-end flag row — above the hour axis so it doesn't overlap ticks */}
+          {raceEndPct != null && (
+            <div
+              style={{
+                position: "relative",
+                height: "14px",
+                marginLeft: "130px",
+              }}
+            >
+              <div
+                style={{
+                  position: "absolute",
+                  left: `${raceEndPct}%`,
+                  transform: "translateX(-50%)",
+                  fontSize: "0.72rem",
+                  lineHeight: 1,
+                }}
+              >
+                🏁
+              </div>
+            </div>
+          )}
+
           {/* Hour axis — positioned above the chart rows */}
           <div
             style={{
