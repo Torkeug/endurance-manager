@@ -304,7 +304,6 @@ export default function RaceMode({
   const [saving, setSaving] = useState(false);
   const [now, setNow] = useState(new Date());
   const [confirmModal, setConfirmModal] = useState(null);
-  const [undoCooldown, setUndoCooldown] = useState(false);
   // { value: number (L/lap avg), count: number } | null — live fuel from bridge
   const [liveFuelPerLap, setLiveFuelPerLap] = useState(null);
   // Bridge event banners — conditions_change and driver_mismatch
@@ -632,6 +631,16 @@ export default function RaceMode({
 
   const nextStint = activeIndex >= 0 ? (stints[activeIndex + 1] ?? null) : null;
 
+  // canUndo: DB-derived — true when there's a stamped stint whose next stint still
+  // has the pre-stamp backup (backup is cleared on undo, so this survives page reloads).
+  // For the final stint (no next), just having irl_end_actual is enough.
+  // Reuses lastStampedIndex defined above for activeStint detection.
+  const nextAfterLastStamped = lastStampedIndex >= 0 ? (stints[lastStampedIndex + 1] ?? null) : null;
+  const canUndo =
+    !archived &&
+    lastStampedIndex >= 0 &&
+    (nextAfterLastStamped === null || nextAfterLastStamped.irl_start_actual_backup != null);
+
   // ── Live fuel effects — placed after activeStint derivation ───────────────
   // Re-fetch whenever the active driver or stint start changes.
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -714,8 +723,15 @@ export default function RaceMode({
     isPreRace && raceStart ? Math.floor((raceStart - now) / 1000) : null;
 
   // ── Derived: active stint countdown ───────────────────────────────────────
-  const plannedEnd = activeStint?.irl_end_planned
-    ? new Date(activeStint.irl_end_planned)
+  // Prefer irl_start_actual + duration_sec_calc so the countdown adjusts when
+  // the actual start differs from planned (e.g. pit exit was late/early).
+  // Falls back to irl_end_planned when actual start or duration isn't available.
+  const plannedEnd = activeStint
+    ? activeStint.irl_start_actual && activeStint.duration_sec_calc
+      ? new Date(new Date(activeStint.irl_start_actual).getTime() + activeStint.duration_sec_calc * 1000)
+      : activeStint.irl_end_planned
+        ? new Date(activeStint.irl_end_planned)
+        : null
     : null;
   const stintRemainingSec = plannedEnd
     ? Math.floor((plannedEnd - now) / 1000)
@@ -772,7 +788,6 @@ export default function RaceMode({
 
   const markPitStop = async (stint) => {
     if (!stint || archived || saving || !isInRace) return;
-    setUndoCooldown(false);
     setSaving(true);
     const actualEnd = new Date().toISOString();
 
@@ -788,16 +803,21 @@ export default function RaceMode({
       ? new Date(new Date(actualEnd).getTime() + pitStopSec * 1000).toISOString()
       : null;
 
-    // Save previous irl_start_actual of next stint so undoLastPit can restore it
+    // Save the pre-stamp irl_start_actual of the next stint for undo.
+    // Stored in both the in-memory ref (fast path) and DB (survives page reload).
     if (nextStint) {
-      prevNextStintIrlStartRef.current = { id: nextStint.id, value: nextStint.irl_start_actual ?? null };
+      const backup = nextStint.irl_start_actual ?? null;
+      prevNextStintIrlStartRef.current = { id: nextStint.id, value: backup };
+      // Persist backup to DB so undoLastPit can recover after a page reload
+      supabase.from("stints").update({ irl_start_actual_backup: backup }).eq("id", nextStint.id);
     }
 
     // Optimistic update — instant UI response before DB confirms
     setStints((prev) =>
       prev.map((s) => {
         if (s.id === stint.id) return { ...s, irl_end_actual: actualEnd };
-        if (nextStint && s.id === nextStint.id) return { ...s, irl_start_actual: nextIrlStart };
+        if (nextStint && s.id === nextStint.id)
+          return { ...s, irl_start_actual: nextIrlStart, irl_start_actual_backup: nextStint.irl_start_actual ?? null };
         return s;
       }),
     );
@@ -827,20 +847,31 @@ export default function RaceMode({
       confirmLabel: "Annuler l'arrêt",
       onConfirm: async () => {
         setConfirmModal(null);
-        setUndoCooldown(true);
         setSaving(true);
         const prev = prevNextStintIrlStartRef.current;
         prevNextStintIrlStartRef.current = null;
+
+        // Determine which stint to restore and what value to use.
+        // Fast path: in-memory ref (same session).
+        // Fallback: irl_start_actual_backup from already-loaded stints (after page reload).
+        const lastIndex = stints.findIndex((s) => s.id === last.id);
+        const nextAfterLast = lastIndex >= 0 ? (stints[lastIndex + 1] ?? null) : null;
+        const nextId = prev?.id ?? nextAfterLast?.id ?? null;
+        const restoreValue = prev
+          ? prev.value
+          : (nextAfterLast?.irl_start_actual_backup ?? null);
+
         setStints((s) =>
           s.map((stint) => {
             if (stint.id === last.id) return { ...stint, irl_end_actual: null };
-            if (prev && stint.id === prev.id) return { ...stint, irl_start_actual: prev.value };
+            if (nextId && stint.id === nextId)
+              return { ...stint, irl_start_actual: restoreValue, irl_start_actual_backup: null };
             return stint;
           }),
         );
         await supabase.from("stints").update({ irl_end_actual: null }).eq("id", last.id);
-        if (prev) {
-          await supabase.from("stints").update({ irl_start_actual: prev.value }).eq("id", prev.id);
+        if (nextId) {
+          await supabase.from("stints").update({ irl_start_actual: restoreValue, irl_start_actual_backup: null }).eq("id", nextId);
         }
         setSaving(false);
       },
@@ -1284,7 +1315,7 @@ export default function RaceMode({
         )}
 
         {/* Undo last pit — inside the card, above the pit button, only when relevant */}
-        {!archived && stints.some((s) => s.irl_end_actual) && !undoCooldown && (
+        {canUndo && (
           <div style={{ textAlign: "right", marginBottom: "0.5rem" }}>
             <button
               onClick={undoLastPit}
