@@ -241,6 +241,7 @@ export default function EquipageTabs({
               teamEntryId={entryId}
               teamEntry={teamEntry}
               assignedDrivers={assignedDrivers}
+              currentDriver={currentDriver}
               archived={archived}
               autoOpenRecalc={recalcRequested}
               onAutoOpenHandled={() => setRecalcRequested(false)}

@@ -2,6 +2,7 @@
 import { useState, useEffect, useRef, useMemo } from "react";
 import { supabaseBrowser as supabase } from "../../../../../lib/supabase-browser";
 import ActualEndInput from "./ActualEndInput";
+import PlanningTab from "./PlanningTab";
 
 // ─── Display helpers ────────────────────────────────────────────────────────
 
@@ -32,6 +33,7 @@ function formatDuration(seconds) {
   if (h > 0) return `${h}h ${String(m).padStart(2, "0")}min`;
   return `${m} min`;
 }
+
 
 // ─── In-game time calculation ───────────────────────────────────────────────
 
@@ -1169,6 +1171,7 @@ export default function StintGrid({
   teamEntryId,
   teamEntry,
   assignedDrivers,
+  currentDriver = null,
   archived = false,
   autoOpenRecalc = false,
   onAutoOpenHandled = null,
@@ -2515,6 +2518,20 @@ export default function StintGrid({
           </div>
         ))}
       </div>
+
+      {/* ── Planning Gantt — tied to availability visibility ────────────────── */}
+      {showAvailability && (
+        <div style={{ marginBottom: "1rem" }}>
+          <PlanningTab
+            teamEntryId={teamEntryId}
+            teamEntry={teamEntry}
+            assignedDrivers={assignedDrivers}
+            currentDriver={currentDriver}
+            isActive={showAvailability}
+            channelSuffix="-stintgrid"
+          />
+        </div>
+      )}
 
       {/* Fair share indicators */}
       {assignedDrivers.length > 0 &&

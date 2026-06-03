@@ -43,6 +43,7 @@ export default function PlanningTab({
   assignedDrivers,
   currentDriver,
   isActive = false,
+  channelSuffix = "",
 }) {
   const [stints, setStints] = useState([]);
   const [availabilities, setAvailabilities] = useState([]);
@@ -63,7 +64,7 @@ export default function PlanningTab({
   useEffect(() => {
     if (!teamEntryId) return;
     const channel = supabase
-      .channel(`planning-actual-${teamEntryId}`)
+      .channel(`planning-actual-${teamEntryId}${channelSuffix}`)
       .on(
         "postgres_changes",
         {
