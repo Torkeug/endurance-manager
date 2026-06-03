@@ -190,7 +190,7 @@ export const guide: GuideSection[] = [
       {
         type: "list",
         items: [
-          "Infos de base — Nom, email, iRacing ID (lien cliquable), Discord, Twitch, Instagram, Garage61 (lien vers le profil public).",
+          "Infos de base — Nom, email, iRacing ID (lien cliquable), Discord, Alerte relais (délai par défaut si activé), Twitch, Instagram, Garage61 (lien vers le profil public).",
           "Badge ⚠️ — Synchronisation iRacing en retard (>100 jours).",
         ],
       },
@@ -214,6 +214,23 @@ export const guide: GuideSection[] = [
         type: "callout",
         variant: "note",
         content: "En liant ton compte Garage61, tu autorises les membres de ton équipe à consulter tes stats d'entraînement et à importer tes chronos (utile si un ingénieur renseigne les données de performance).",
+      },
+      { type: "divider", content: "" },
+      {
+        type: "header",
+        content: "Notifications Discord",
+      },
+      {
+        type: "text",
+        content: "Depuis la page de modification de ton profil, tu peux configurer un délai d'alerte Discord par défaut : le bot t'alertera X minutes avant la fin de chacun de tes relais.",
+      },
+      {
+        type: "list",
+        items: [
+          "Activer / désactiver — La case à cocher active ou désactive les alertes globalement.",
+          "Délai par défaut — Nombre de minutes avant la fin du relais (ex : 5 min).",
+          "Override par événement — Dans l'onglet Disponibilités de ton équipage, tu peux configurer un délai différent pour un événement spécifique, sans toucher au réglage global.",
+        ],
       },
     ],
   },
@@ -573,6 +590,11 @@ export const guide: GuideSection[] = [
         type: "callout",
         variant: "tip",
         content: "Sur mobile : appuie et glisse pour remplir rapidement plusieurs cases. Sur desktop : clique ou clique-glisse pour basculer l'état de plusieurs cases d'un coup.",
+      },
+      {
+        type: "callout",
+        variant: "note",
+        content: "Une fois ton nom sélectionné, une carte « Alerte relais Discord » apparaît. Elle affiche ton délai par défaut et te permet de le remplacer pour cet événement uniquement — sans modifier ton réglage global.",
       },
     ],
   },
