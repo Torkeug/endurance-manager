@@ -868,6 +868,8 @@ ALTER PUBLICATION supabase_realtime ADD TABLE
   public.drivers,
   public.event_start_times,
   public.events,
+  public.iracing_events,
+  public.iracing_laps,
   public.signups,
   public.stints,
   public.team_entries;
