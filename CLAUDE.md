@@ -198,6 +198,9 @@ DB schema is applied (migration done). App UI not yet built:
 Active driver count excludes: `is_test_account = true`, `role = engineer`.
 Sync required / inactive / overdue membership counts exclude: `test_driver = true`, `role = engineer`.
 
+### Who can create team entries
+Any approved non-engineer, non-external driver can create a team entry — not just admins. The "Ajouter un équipage" button is shown to all regular drivers in `EventPageTabs.js`. The `team_entries_insert` RLS policy (`is_approved_driver() AND NOT is_external()`) intentionally matches this. Do not assume team entry creation is admin-only — it is a collaborative workflow where drivers set up their own crew entries.
+
 ### Archiving events
 Done via the `archive_event(uuid)` DB function — snapshots circuit/car/driver names then sets `archived = true`. Callable by `authenticated` and `service_role` only (anon is explicitly revoked).
 
