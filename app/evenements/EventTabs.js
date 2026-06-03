@@ -28,7 +28,7 @@ function getYear(dtStr, tz) {
   return DateTime.fromISO(dtStr, { zone: "utc" }).setZone(tz).toFormat("yyyy");
 }
 
-function EventCard({ ev }) {
+function EventCard({ ev, showTypeBadges = false }) {
   return (
     <Link href={`/evenements/${ev.id}`} style={{ textDecoration: "none" }}>
       <div
@@ -123,7 +123,7 @@ function EventCard({ ev }) {
                 Archivé
               </span>
             )}
-            {ev.is_special && !ev.championship_id && (
+            {showTypeBadges && ev.is_special && !ev.championship_id && (
               <span
                 style={{
                   fontSize: "0.65rem",
@@ -140,7 +140,7 @@ function EventCard({ ev }) {
                 Spécial
               </span>
             )}
-            {ev.championship_id && (
+            {showTypeBadges && ev.championship_id && (
               <span
                 style={{
                   fontSize: "0.65rem",
@@ -290,7 +290,7 @@ function sortByDate(events, ascending) {
   });
 }
 
-function EventList({ events, emptyMessage, ascending = false }) {
+function EventList({ events, emptyMessage, ascending = false, showTypeBadges = false }) {
   const active = events.filter((ev) => !ev.archived);
   const archived = events.filter((ev) => ev.archived);
   const [showArchived, setShowArchived] = useState(false);
@@ -311,7 +311,7 @@ function EventList({ events, emptyMessage, ascending = false }) {
           }}
         >
           {sortByDate(active, ascending).map((ev) => (
-              <EventCard key={ev.id} ev={ev} />
+              <EventCard key={ev.id} ev={ev} showTypeBadges={showTypeBadges} />
             ))}
         </div>
       )}
@@ -348,7 +348,7 @@ function EventList({ events, emptyMessage, ascending = false }) {
               }}
             >
               {sortByDate(archived, ascending).map((ev) => (
-                  <EventCard key={ev.id} ev={ev} />
+                  <EventCard key={ev.id} ev={ev} showTypeBadges={showTypeBadges} />
                 ))}
             </div>
           )}
@@ -593,6 +593,7 @@ export default function EventTabs({
           events={allEvents}
           emptyMessage="Aucun événement."
           ascending={true}
+          showTypeBadges={true}
         />
       )}
 
