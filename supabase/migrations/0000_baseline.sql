@@ -234,7 +234,7 @@ CREATE TABLE public.team_entries (
   night_dry_add_seconds    numeric DEFAULT 0,
   night_wet_add_seconds    numeric DEFAULT 0,
   stream_urls              text[] DEFAULT '{}',
-  notification_minutes_before integer DEFAULT 5,
+
   car_number               integer,
   discord_voice_channel_id text,
   day_wet_add_seconds      double precision DEFAULT 0,

@@ -165,9 +165,8 @@ A separate external codebase (not in this repo) that reads directly from the dat
 - `signups.discord_notifications_override` — whether to send alerts for a driver on a given entry
 - `signups.discord_alert_minutes_override` — per-entry timing override
 - `drivers.discord_alert_minutes` — per-driver default timing
-- `team_entries.notification_minutes_before` — legacy team-level fallback
 
-Resolution order: signup override → driver default → team fallback → disabled.
+Resolution order: signup override → driver default → disabled.
 
 ### iRacing webhook bridge
 

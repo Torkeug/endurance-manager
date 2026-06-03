@@ -184,9 +184,8 @@ External codebase, not in this repo. Reads directly from the DB. Current schema 
 | `discord_alert_minutes_override` | `signups` | int — per-entry alert timing override |
 | `discord_alert_enabled` | `drivers` | boolean — per-driver default on/off |
 | `discord_alert_minutes` | `drivers` | int — per-driver default timing |
-| `notification_minutes_before` | `team_entries` | int — legacy team-level fallback (still in DB) |
 
-**Resolution order:** signup override (`discord_alert_enabled_override` + `discord_alert_minutes_override`) → driver default (`discord_alert_enabled` + `discord_alert_minutes`) → team fallback (`notification_minutes_before`) → disabled.
+**Resolution order:** signup override (`discord_alert_enabled_override` + `discord_alert_minutes_override`) → driver default (`discord_alert_enabled` + `discord_alert_minutes`) → disabled.
 
 ⚠️ **The bot currently queries `signups.discord_notifications` which no longer exists** (renamed through two migrations, now `discord_alert_enabled_override`). The bot needs updating before the Discord notification system works again.
 

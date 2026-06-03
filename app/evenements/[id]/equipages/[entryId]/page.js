@@ -154,12 +154,7 @@ export default async function EquipageDetail({ params }) {
       value: entry.refuel_time_seconds ? `${entry.refuel_time_seconds}s` : "—",
     },
     { label: "Chgt pneus", value: `${entry.tyre_change_time_seconds ?? 0}s` },
-    {
-      label: "Alerte relais",
-      value: entry.notification_minutes_before
-        ? `${entry.notification_minutes_before} min`
-        : "—",
-    },
+
     { label: "Lever soleil IG", value: entry.events?.ig_sunrise || "—" },
     { label: "Coucher soleil IG", value: entry.events?.ig_sunset || "—" },
   ];
