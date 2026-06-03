@@ -134,6 +134,7 @@ export default async function EvenementsPage() {
       </div>
 
       <EventTabs
+        allEvents={allEvents}
         normalEvents={normalEvents}
         specialEvents={specialEvents}
         championshipRounds={championshipRounds}

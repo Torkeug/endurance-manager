@@ -123,6 +123,40 @@ function EventCard({ ev }) {
                 Archivé
               </span>
             )}
+            {ev.is_special && !ev.championship_id && (
+              <span
+                style={{
+                  fontSize: "0.65rem",
+                  fontWeight: 700,
+                  letterSpacing: "0.08em",
+                  textTransform: "uppercase",
+                  padding: "0.1rem 0.4rem",
+                  background: "rgba(255,170,0,0.1)",
+                  border: "1px solid #ffaa00",
+                  borderRadius: "3px",
+                  color: "#ffaa00",
+                }}
+              >
+                Spécial
+              </span>
+            )}
+            {ev.championship_id && (
+              <span
+                style={{
+                  fontSize: "0.65rem",
+                  fontWeight: 700,
+                  letterSpacing: "0.08em",
+                  textTransform: "uppercase",
+                  padding: "0.1rem 0.4rem",
+                  background: "rgba(160,100,240,0.1)",
+                  border: "1px solid #a064f0",
+                  borderRadius: "3px",
+                  color: "#a064f0",
+                }}
+              >
+                Championnat
+              </span>
+            )}
             {ev.round_number && (
               <span
                 style={{
@@ -246,7 +280,17 @@ function EventCard({ ev }) {
   );
 }
 
-function EventList({ events, emptyMessage }) {
+function sortByDate(events, ascending) {
+  return [...events].sort((a, b) => {
+    if (!a.irl_start && !b.irl_start) return 0;
+    if (!a.irl_start) return 1;
+    if (!b.irl_start) return -1;
+    const diff = new Date(a.irl_start) - new Date(b.irl_start);
+    return ascending ? diff : -diff;
+  });
+}
+
+function EventList({ events, emptyMessage, ascending = false }) {
   const active = events.filter((ev) => !ev.archived);
   const archived = events.filter((ev) => ev.archived);
   const [showArchived, setShowArchived] = useState(false);
@@ -266,15 +310,7 @@ function EventList({ events, emptyMessage }) {
             marginBottom: "1rem",
           }}
         >
-          {/* Sort newest-first (descending by start date). Events with no start time sink to the bottom. */}
-          {active
-            .sort((a, b) => {
-              if (!a.irl_start && !b.irl_start) return 0;
-              if (!a.irl_start) return 1;
-              if (!b.irl_start) return -1;
-              return new Date(b.irl_start) - new Date(a.irl_start);
-            })
-            .map((ev) => (
+          {sortByDate(active, ascending).map((ev) => (
               <EventCard key={ev.id} ev={ev} />
             ))}
         </div>
@@ -311,15 +347,7 @@ function EventList({ events, emptyMessage }) {
                 gap: "0.75rem",
               }}
             >
-              {/* Sort newest-first (descending by start date). Events with no start time sink to the bottom. */}
-              {archived
-                .sort((a, b) => {
-                  if (!a.irl_start && !b.irl_start) return 0;
-                  if (!a.irl_start) return 1;
-                  if (!b.irl_start) return -1;
-                  return new Date(b.irl_start) - new Date(a.irl_start);
-                })
-                .map((ev) => (
+              {sortByDate(archived, ascending).map((ev) => (
                   <EventCard key={ev.id} ev={ev} />
                 ))}
             </div>
@@ -481,25 +509,27 @@ function ChampionshipSection({ championship, rounds, admin }) {
 }
 
 const TABS = [
+  { id: "tous", label: "Tous" },
   { id: "normaux", label: "Normaux" },
   { id: "speciaux", label: "Spéciaux" },
   { id: "championnats", label: "Championnats" },
 ];
 
 export default function EventTabs({
+  allEvents,
   normalEvents,
   specialEvents,
   championshipRounds,
   championships,
   admin,
 }) {
-  const [activeTab, setActiveTab] = useState("normaux");
+  const [activeTab, setActiveTab] = useState("tous");
 
   // Read persisted tab from localStorage in useEffect, not in useState initializer.
   // Reading localStorage during render causes hydration mismatch (server has no localStorage).
   useEffect(() => {
     const saved = localStorage.getItem("events-active-tab");
-    if (saved) setActiveTab(saved);
+    if (saved && TABS.some((t) => t.id === saved)) setActiveTab(saved);
   }, []);
 
   const switchTab = (tabId) => {
@@ -556,6 +586,15 @@ export default function EventTabs({
           </button>
         ))}
       </div>
+
+      {/* Tous */}
+      {activeTab === "tous" && (
+        <EventList
+          events={allEvents}
+          emptyMessage="Aucun événement."
+          ascending={true}
+        />
+      )}
 
       {/* Normaux */}
       {activeTab === "normaux" && (
