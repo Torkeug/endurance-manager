@@ -179,7 +179,7 @@ export default function ModifierPilote({ params }) {
       setError(err.message);
       setLoading(false);
     } else {
-      router.push("/pilotes");
+      router.push(`/pilotes/${id}`);
       router.refresh();
     }
   };
@@ -219,7 +219,7 @@ export default function ModifierPilote({ params }) {
         <div className="alert alert-error">
           {error || "Pilote introuvable."}
         </div>
-        <Link href="/pilotes" className="btn btn-secondary">
+        <Link href={`/pilotes/${id}`} className="btn btn-secondary">
           ← Retour
         </Link>
       </div>
@@ -244,7 +244,7 @@ export default function ModifierPilote({ params }) {
           <h1>Modifier le pilote</h1>
           <div className="accent-line" />
         </div>
-        <Link href="/pilotes" className="btn btn-secondary">
+        <Link href={`/pilotes/${id}`} className="btn btn-secondary">
           ← Retour
         </Link>
       </div>
@@ -436,7 +436,7 @@ export default function ModifierPilote({ params }) {
             >
               {loading ? "Enregistrement…" : "✓ Enregistrer"}
             </button>
-            <Link href="/pilotes" className="btn btn-secondary">
+            <Link href={`/pilotes/${id}`} className="btn btn-secondary">
               Annuler
             </Link>
           </div>
