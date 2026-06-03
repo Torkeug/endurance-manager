@@ -2841,7 +2841,7 @@ export default function StintGrid({
         <table
           style={{
             borderCollapse: "collapse",
-            width: showAvailability ? "100%" : "auto",
+            width: "100%",
             minWidth: `${680 + (showAvailability ? assignedDrivers.length * 32 : 0)}px`,
           }}
         >
@@ -2874,13 +2874,13 @@ export default function StintGrid({
               {!archived && (
                 <th style={{ ...TH, ...IS, minWidth: "110px", textAlign: "center" }}>Fin réelle</th>
               )}
-              <th style={{ ...TH, ...GS, width: "68px" }}>Durée</th>
-              <th style={{ ...TH, ...IS, width: "52px" }}>Tours</th>
-              <th style={{ ...TH, ...IS, width: "60px" }}>Conso</th>
+              <th style={{ ...TH, ...GS, minWidth: "68px" }}>Durée</th>
+              <th style={{ ...TH, ...IS, minWidth: "52px" }}>Tours</th>
+              <th style={{ ...TH, ...IS, minWidth: "60px" }}>Conso</th>
               {/* Skip last pit — only shown when race is fully covered */}
               {raceCovered && (
                 <th
-                  style={{ ...TH, ...IS, width: "90px" }}
+                  style={{ ...TH, ...IS, minWidth: "90px" }}
                   title="Conso cible pour supprimer le dernier arrêt"
                 >
                   Skip fin
