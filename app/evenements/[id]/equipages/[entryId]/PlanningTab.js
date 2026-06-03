@@ -49,6 +49,7 @@ export default function PlanningTab({
 }) {
   const [stints, setStints] = useState([]);
   const [availabilities, setAvailabilities] = useState([]);
+  const [strategyLabel, setStrategyLabel] = useState(null);
   const [loading, setLoading] = useState(false);
   // Incremented by the realtime subscription to trigger a re-fetch
   const [refreshTick, setRefreshTick] = useState(0);
@@ -67,20 +68,11 @@ export default function PlanningTab({
   // stays live for all concurrent users, not just the local user.
   useEffect(() => {
     if (!teamEntryId) return;
+    const tick = () => { if (hasLoadedOnce.current) setRefreshTick((t) => t + 1); };
     const channel = supabase
       .channel(`planning-watch-${teamEntryId}${channelSuffix}`)
-      .on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "stints",
-          filter: `team_entry_id=eq.${teamEntryId}`,
-        },
-        () => {
-          if (hasLoadedOnce.current) setRefreshTick((t) => t + 1);
-        },
-      )
+      .on("postgres_changes", { event: "*", schema: "public", table: "stints", filter: `team_entry_id=eq.${teamEntryId}` }, tick)
+      .on("postgres_changes", { event: "*", schema: "public", table: "strategies", filter: `team_entry_id=eq.${teamEntryId}` }, tick)
       .subscribe();
     return () => supabase.removeChannel(channel);
   }, [teamEntryId]);
@@ -110,7 +102,7 @@ export default function PlanningTab({
         ] = await Promise.all([
           supabase
             .from("strategies")
-            .select("id, is_active, actual_start_offset_minutes")
+            .select("id, name, description, is_active, actual_start_offset_minutes")
             .eq("team_entry_id", teamEntryId)
             .order("sort_order"),
           supabase
@@ -140,6 +132,11 @@ export default function PlanningTab({
         const strategy = (strategyId
           ? strategies.find((s) => s.id === strategyId)
           : strategies.find((s) => s.is_active)) || strategies[0];
+
+        if (!cancelled)
+          setStrategyLabel(strategy
+            ? { name: strategy.name, isActive: strategy.is_active, description: strategy.description }
+            : null);
 
         // Filter stints to the active strategy client-side
         const stintsData = (allStints || []).filter(
@@ -647,6 +644,26 @@ export default function PlanningTab({
       )}
 
       {/* ── Gantt chart ──────────────────────────────────────────────────── */}
+      {/* Active strategy label — only shown in standalone Planning tab */}
+      {strategyId === null && strategyLabel && (
+        <div
+          style={{
+            marginBottom: "0.75rem",
+            textAlign: "center",
+            fontSize: "0.78rem",
+            color: "var(--text-dim)",
+          }}
+        >
+          Stratégie active :{" "}
+          <span style={{ fontWeight: 700, color: "var(--text)" }}>
+            {strategyLabel.name}
+          </span>
+          {strategyLabel.description && (
+            <span> — {strategyLabel.description}</span>
+          )}
+        </div>
+      )}
+
       {/* overflowX: auto allows horizontal scroll on narrow screens and when zoomed in.
           Page max-width: 1200px means zoom-creates-scroll naturally once the
           CSS viewport drops below 1200px (~160% zoom on 1920px screens). */}
