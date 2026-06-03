@@ -64,6 +64,34 @@ const STRATEGIES = [
   { id: 2, name: "Plan B", desc: "Pluie probable",         offset: 3,  active: false },
 ];
 
+// ── Embedded planning Gantt data ───────────────────────────────────────────
+const G_START   = 14;
+const G_RACE_END = 23;
+const G_END     = 23.25; // ~15 min buffer past race end
+const G_HOURS   = [14, 15, 16, 17, 18, 19, 20, 21, 22, 23];
+const G_NIGHT   = { s: 20.5, e: 23.25 }; // sunset → end of timeline
+
+const G_DRIVERS = [
+  {
+    name: "Marc Dubois", color: "#7c6af0",
+    stints: [{ n: 1, s: 14, e: 15.87 }, { n: 4, s: 19.6, e: 21.47 }],
+    avail:  [{ s: 14, e: 23, ok: true }],
+  },
+  {
+    name: "Léa Fontaine", color: "#4a9fd4",
+    stints: [{ n: 2, s: 15.87, e: 17.73 }],
+    avail:  [{ s: 14, e: 18, ok: true }, { s: 18, e: 23, ok: false }],
+  },
+  {
+    name: "Théo Bernard", color: "#2eb460",
+    stints: [{ n: 3, s: 17.73, e: 19.6 }, { n: 5, s: 21.47, e: 23 }],
+    avail:  [{ s: 16, e: 23, ok: true }],
+  },
+];
+
+function gPct(h: number) { return ((h - G_START) / (G_END - G_START)) * 100; }
+const G_RACE_END_PCT = gPct(G_RACE_END);
+
 export default function StintGridDemo() {
   return (
     <div>
@@ -134,6 +162,77 @@ export default function StintGridDemo() {
             <div style={{ fontFamily: "var(--font-mono), monospace", fontSize: "0.88rem", fontWeight: 700, color: color ?? "var(--text)" }}>{value}</div>
           </div>
         ))}
+      </div>
+
+      {/* ── Embedded Gantt (shown when Dispo is checked) ── */}
+      <div style={{ marginBottom: "1rem" }}>
+        <div style={{ overflowX: "auto" }}>
+          <div style={{ minWidth: "600px", paddingRight: "20px" }}>
+
+            {/* 🏁 flag row */}
+            <div style={{ position: "relative", height: "14px", marginLeft: "130px" }}>
+              <div style={{ position: "absolute", left: `${G_RACE_END_PCT}%`, transform: "translateX(-50%)", fontSize: "0.72rem", lineHeight: 1 }}>🏁</div>
+            </div>
+
+            {/* Hour axis */}
+            <div style={{ position: "relative", height: "20px", marginLeft: "130px", marginBottom: "4px" }}>
+              {G_HOURS.map((h) => (
+                <div key={h} style={{ position: "absolute", left: `${gPct(h)}%`, transform: "translateX(-50%)", fontSize: "0.65rem", color: "var(--text-dim)", fontFamily: "var(--font-mono), monospace", whiteSpace: "nowrap" }}>
+                  {String(h % 24).padStart(2, "0")}:00
+                </div>
+              ))}
+            </div>
+
+            {/* Driver rows */}
+            <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+              {G_DRIVERS.map((d) => (
+                <div key={d.name} style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                  <div style={{ width: "122px", flexShrink: 0, fontSize: "0.78rem", color: "var(--text-dim)", textAlign: "right", paddingRight: "8px", borderRight: "2px solid var(--border)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                    {d.name}
+                  </div>
+                  <div style={{ flex: 1, position: "relative", height: "32px", background: "var(--surface-2)", borderRadius: "3px", overflow: "hidden" }}>
+                    {/* Availability bands */}
+                    {d.avail.map((a, i) => (
+                      <div key={i} style={{ position: "absolute", top: 0, bottom: 0, left: `${gPct(a.s)}%`, width: `${gPct(a.e) - gPct(a.s)}%`, background: a.ok ? "rgba(46,180,96,0.18)" : "rgba(224,85,85,0.18)", pointerEvents: "none", zIndex: 0 }} />
+                    ))}
+                    {/* Night band */}
+                    <div style={{ position: "absolute", top: 0, bottom: 0, left: `${gPct(G_NIGHT.s)}%`, width: `${gPct(G_NIGHT.e) - gPct(G_NIGHT.s)}%`, background: "rgba(10,10,30,0.45)", pointerEvents: "none", zIndex: 0 }} />
+                    {/* Race-end marker */}
+                    <div style={{ position: "absolute", top: 0, bottom: 0, left: `${G_RACE_END_PCT}%`, width: "2px", background: "rgba(224,85,85,0.5)", zIndex: 2, pointerEvents: "none" }} />
+                    {/* Stint bars */}
+                    {d.stints.map((s) => (
+                      <div key={s.n} style={{ position: "absolute", top: "4px", bottom: "4px", left: `${gPct(s.s)}%`, width: `${gPct(s.e) - gPct(s.s)}%`, background: d.color, borderRadius: "3px", display: "flex", alignItems: "center", paddingLeft: "5px", overflow: "hidden", opacity: 0.88, zIndex: 1 }}>
+                        <span style={{ fontSize: "0.62rem", fontWeight: 700, color: "#fff", whiteSpace: "nowrap", textShadow: "0 1px 2px rgba(0,0,0,0.5)" }}>R{s.n}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Hover detail panel placeholder */}
+            <div style={{ marginTop: "0.75rem", padding: "0.65rem 0.9rem", fontSize: "0.75rem", color: "var(--text-dim)", fontStyle: "italic", opacity: 0.5 }}>
+              Survolez un relais pour voir les détails
+            </div>
+
+            {/* Legend */}
+            <div style={{ marginTop: "0.75rem", display: "flex", gap: "1.25rem", flexWrap: "wrap", fontSize: "0.72rem", color: "var(--text-dim)", alignItems: "center" }}>
+              {[
+                { bg: "rgba(46,180,96,0.35)", label: "Disponible" },
+                { bg: "rgba(224,85,85,0.35)", label: "Indisponible" },
+                { bg: "rgba(74,74,106,0.35)", label: "Incertain" },
+                { bg: "rgba(10,10,30,0.45)",  label: "Nuit IG" },
+                { bg: "rgba(74,159,212,0.8)",  label: "🌧 Pluie" },
+              ].map(({ bg, label }) => (
+                <span key={label} style={{ display: "flex", alignItems: "center", gap: "4px" }}>
+                  <span style={{ display: "inline-block", width: "12px", height: "10px", background: bg, borderRadius: "2px", border: "1px solid var(--border)" }} />
+                  {label}
+                </span>
+              ))}
+            </div>
+
+          </div>
+        </div>
       </div>
 
       {/* Legend — availability dots */}

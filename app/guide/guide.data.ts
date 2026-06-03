@@ -596,6 +596,11 @@ export const guide: GuideSection[] = [
         variant: "note",
         content: "Une fois ton nom sélectionné, une carte « Alerte relais Discord » apparaît. Elle affiche ton délai par défaut et te permet de le remplacer pour cet événement uniquement — sans modifier ton réglage global.",
       },
+      {
+        type: "callout",
+        variant: "tip",
+        content: "Les disponibilités sont mises à jour en temps réel — les cases cochées par les autres pilotes apparaissent instantanément sans recharger la page.",
+      },
     ],
   },
 
@@ -683,6 +688,14 @@ export const guide: GuideSection[] = [
       },
       {
         type: "header",
+        content: "Gantt intégré",
+      },
+      {
+        type: "text",
+        content: "Quand la case « Dispo » est cochée, un diagramme de Gantt s'affiche au-dessus du Fair Share. Il représente la stratégie actuellement sélectionnée (pas nécessairement la stratégie active) et se met à jour en temps réel.",
+      },
+      {
+        type: "header",
         content: "Fair Share",
       },
       {
@@ -693,6 +706,11 @@ export const guide: GuideSection[] = [
         type: "callout",
         variant: "warn",
         content: "Important : Les temps IRL sont calculés quand tu ouvres cet onglet. Ils sont enregistrés en base et utilisés par Planning + Course. S'ils manquent, c'est que le calcul n'a pas eu lieu — simplement ré-ouvrir cet onglet les génère.",
+      },
+      {
+        type: "callout",
+        variant: "tip",
+        content: "Le tableau est mis à jour en temps réel — les modifications d'un autre utilisateur (assignation pilote, tours, pluie) apparaissent instantanément.",
       },
     ],
   },
@@ -716,7 +734,7 @@ export const guide: GuideSection[] = [
       },
       {
         type: "text",
-        content: "Diagramme de Gantt visualisant ta stratégie active. Une ligne par pilote, bandes de relais colorées, avec fond de disponibilité et bande nuit IG.",
+        content: "Diagramme de Gantt visualisant la stratégie active. Le nom de la stratégie est affiché centré au-dessus du diagramme. Une ligne par pilote, bandes de relais colorées, avec fond de disponibilité et bande nuit IG.",
       },
       {
         type: "header",
@@ -731,6 +749,7 @@ export const guide: GuideSection[] = [
           "Bandes grises pointillées — Relais non assignés.",
           "Fond vert/rouge/gris — Disponibilité du pilote à ce moment-là.",
           "Fond foncé — Nuit IG (ig_sunset → ig_sunrise).",
+          "🏁 + ligne rouge — Fin de course (heure réelle de fin d'épreuve).",
         ],
       },
       {
@@ -740,6 +759,11 @@ export const guide: GuideSection[] = [
       {
         type: "text",
         content: "Survolez une bande de relais pour afficher ses détails dans un panneau ci-dessous (numéro, horaires, durée, tours, badge de complétion).",
+      },
+      {
+        type: "callout",
+        variant: "tip",
+        content: "Le Planning est mis à jour en temps réel — les modifications de relais et les changements de stratégie active apparaissent instantanément pour tous les utilisateurs sur la page.",
       },
     ],
   },

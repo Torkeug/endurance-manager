@@ -73,6 +73,9 @@ MCP is configured in `.mcp.json` — use it to inspect the live schema and apply
 | `/championnats/[id]/nouveau-round` | Add round |
 | `/guide` | End-user documentation with interactive demos |
 
+### Guide demos (`app/guide/components/demos/`)
+Static TSX components that visually reproduce each feature for the guide. **Demos must always be accurate to the current app** — when a feature changes (layout, new columns, new visual elements, new behavior), update the corresponding demo to match. Never simplify or approximate; the demo is the user's reference for what to expect in the real UI.
+
 ### Team entry tabs (`/evenements/[id]/equipages/[entryId]`)
 | Tab | Component | What it does |
 |-----|-----------|-------------|

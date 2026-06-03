@@ -32,9 +32,24 @@ function toPercent(h: number) {
 const LABEL_W = 88;
 const ROW_H = 36;
 
+const RACE_END = RACE_START + RACE_HOURS; // 23h
+
 export default function PlanningDemo() {
+  const raceEndPct = toPercent(RACE_END);
   return (
+    <div>
+      {/* Strategy label */}
+      <div style={{ textAlign: "center", marginBottom: "0.6rem", fontSize: "0.78rem", color: "var(--text-dim)" }}>
+        Stratégie active : <span style={{ fontWeight: 700, color: "var(--text)" }}>Plan A</span>
+        <span> — Météo sèche — nominal</span>
+      </div>
+
     <div style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "4px", overflow: "hidden" }}>
+      {/* 🏁 flag row */}
+      <div style={{ position: "relative", height: "14px", marginLeft: LABEL_W }}>
+        <div style={{ position: "absolute", left: `${raceEndPct}%`, transform: "translateX(-50%)", fontSize: "0.72rem", lineHeight: 1 }}>🏁</div>
+      </div>
+
       {/* Hour axis */}
       <div style={{ display: "flex", marginLeft: LABEL_W, borderBottom: "1px solid var(--border)", position: "relative", height: "24px" }}>
         {HOURS.map((h) => (
@@ -85,9 +100,13 @@ export default function PlanningDemo() {
             {HOURS.map((h) => (
               <div key={h} style={{ position: "absolute", top: 0, bottom: 0, left: `${toPercent(h)}%`, width: "1px", background: "rgba(255,255,255,0.04)", pointerEvents: "none" }} />
             ))}
+
+            {/* Race-end marker */}
+            <div style={{ position: "absolute", top: 0, bottom: 0, left: `${raceEndPct}%`, width: "2px", background: "rgba(224,85,85,0.5)", pointerEvents: "none", zIndex: 2 }} />
           </div>
         </div>
       ))}
+    </div>
     </div>
   );
 }
