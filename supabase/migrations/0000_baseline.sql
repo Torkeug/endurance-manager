@@ -169,6 +169,7 @@ CREATE TABLE public.drivers (
   garage61_access_token  text,
   garage61_refresh_token text,
   garage61_slug          text,
+  discord_alert_enabled  boolean NOT NULL DEFAULT false,
   discord_alert_minutes  integer
 );
 
@@ -273,7 +274,7 @@ CREATE TABLE public.signups (
   preferred_start_time_ids_snapshot uuid[],
   preferred_car_names_snapshot    text[],
   tags                            text[],
-  discord_notifications_override  boolean NOT NULL DEFAULT false,
+  discord_alert_enabled_override  boolean NOT NULL DEFAULT false,
   discord_alert_minutes_override  integer,
   UNIQUE (driver_id, team_entry_id)
 );

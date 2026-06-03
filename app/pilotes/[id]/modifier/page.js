@@ -106,7 +106,7 @@ export default function ModifierPilote({ params }) {
           twitch: data.twitch || "",
           instagram: data.instagram || "",
           email: data.email || "",
-          discord_alerts_enabled: data.discord_alert_minutes != null,
+          discord_alerts_enabled: data.discord_alert_enabled ?? false,
           discord_alert_minutes: data.discord_alert_minutes ?? "5",
         });
         setFetching(false);
@@ -163,6 +163,7 @@ export default function ModifierPilote({ params }) {
       discord: form.discord.trim() || null,
       twitch: form.twitch.trim() || null,
       instagram: form.instagram.trim() || null,
+      discord_alert_enabled: form.discord_alerts_enabled,
       discord_alert_minutes:
         form.discord_alerts_enabled && form.discord_alert_minutes
           ? Math.max(1, parseInt(form.discord_alert_minutes))

@@ -184,7 +184,7 @@ export default function AvailabilityGrid({
       (assignedDrivers || []).map((d) => [
         d.id,
         {
-          notifications: d.discord_notifications_override ?? false,
+          notifications: d.discord_alert_enabled_override ?? false,
           minutes: d.discord_alert_minutes_override ?? "",
         },
       ]),
@@ -235,7 +235,7 @@ export default function AvailabilityGrid({
       supabase
         .from("signups")
         .update({
-          discord_notifications_override: merged.notifications,
+          discord_alert_enabled_override: merged.notifications,
           discord_alert_minutes_override: merged.minutes
             ? Math.max(1, parseInt(merged.minutes))
             : null,
