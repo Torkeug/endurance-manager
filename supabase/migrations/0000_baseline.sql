@@ -728,7 +728,7 @@ CREATE POLICY driver_car_experience_write  ON public.driver_car_experience FOR A
 
 -- driver_car_ownership
 CREATE POLICY "Approved drivers can read car ownership" ON public.driver_car_ownership FOR SELECT
-  USING (EXISTS (SELECT 1 FROM drivers WHERE drivers.auth_user_id = auth.uid() AND drivers.approved = true));
+  USING (is_approved_driver());
 
 -- driver_circuit_experience
 CREATE POLICY driver_circuit_experience_select ON public.driver_circuit_experience FOR SELECT USING (is_approved_driver());
@@ -746,7 +746,7 @@ CREATE POLICY driver_performance_delete ON public.driver_performance FOR DELETE
 
 -- driver_track_ownership
 CREATE POLICY "Approved drivers can read track ownership" ON public.driver_track_ownership FOR SELECT
-  USING (EXISTS (SELECT 1 FROM drivers WHERE drivers.auth_user_id = auth.uid() AND drivers.approved = true));
+  USING (is_approved_driver());
 
 -- drivers
 CREATE POLICY drivers_select_approved ON public.drivers FOR SELECT USING (is_approved_driver());
@@ -785,7 +785,7 @@ CREATE POLICY events_delete   ON public.events FOR DELETE USING (is_admin());
 
 -- iracing_cars
 CREATE POLICY "Approved drivers can read iracing_cars" ON public.iracing_cars FOR SELECT
-  USING (EXISTS (SELECT 1 FROM drivers WHERE drivers.auth_user_id = auth.uid() AND drivers.approved = true));
+  USING (is_approved_driver());
 CREATE POLICY "Admins can update iracing_cars" ON public.iracing_cars FOR UPDATE
   USING (EXISTS (SELECT 1 FROM drivers WHERE drivers.auth_user_id = auth.uid() AND drivers.role = ANY(ARRAY['admin','super_admin'])));
 
@@ -799,7 +799,7 @@ CREATE POLICY iracing_laps_select ON public.iracing_laps FOR SELECT
 
 -- iracing_tracks
 CREATE POLICY "Approved drivers can read iracing_tracks" ON public.iracing_tracks FOR SELECT
-  USING (EXISTS (SELECT 1 FROM drivers WHERE drivers.auth_user_id = auth.uid() AND drivers.approved = true));
+  USING (is_approved_driver());
 
 -- irating_history
 CREATE POLICY irating_history_read ON public.irating_history FOR SELECT USING (is_approved_driver());
