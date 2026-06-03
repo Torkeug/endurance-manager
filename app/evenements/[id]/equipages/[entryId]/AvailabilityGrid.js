@@ -618,8 +618,9 @@ export default function AvailabilityGrid({
                 Alerte relais Discord
               </span>
             </div>
-            {/* Default — informational, shown when no override is active (null or false) */}
-            {!notif.notifications && (
+            {/* Default — informational, shown only when no override is set (null).
+                false = user explicitly disabled for this event, no info needed. */}
+            {notif.notifications === null && (
               <div style={{ fontSize: "0.85rem", color: "var(--text-dim)", marginBottom: "0.6rem" }}>
                 Par défaut&nbsp;:{" "}
                 {mySignup.drivers?.discord_alert_enabled && mySignup.drivers?.discord_alert_minutes
@@ -639,14 +640,16 @@ export default function AvailabilityGrid({
             >
               <input
                 type="checkbox"
-                checked={notif.notifications}
+                checked={notif.notifications === true}
                 onChange={(e) =>
-                  saveNotifOverride(mySignup.id, { notifications: e.target.checked })
+                  saveNotifOverride(mySignup.id, {
+                    notifications: e.target.checked ? true : false,
+                  })
                 }
               />
-              Configurer pour cet événement
+              Activer les alertes pour cet événement
             </label>
-            {notif.notifications && (
+            {notif.notifications === true && (
               <div style={{ marginTop: "0.75rem", display: "flex", alignItems: "center", gap: "0.75rem" }}>
                 <label
                   htmlFor="notif-minutes-override"
