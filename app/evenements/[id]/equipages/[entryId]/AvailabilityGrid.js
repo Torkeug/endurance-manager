@@ -618,8 +618,7 @@ export default function AvailabilityGrid({
                 Alerte relais Discord
               </span>
             </div>
-            {/* When null: no override, checkbox reflects driver default.
-                When true/false: explicit override set by the driver for this event. */}
+            {/* null = no override, inherit default; true = override: alerts on; false = override: alerts off */}
             {notif.notifications === null && (
               <div style={{ fontSize: "0.75rem", color: "var(--text-dim)", marginBottom: "0.5rem" }}>
                 Paramètre par défaut — modifier pour configurer cet événement séparément.
