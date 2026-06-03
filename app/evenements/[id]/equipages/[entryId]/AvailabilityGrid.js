@@ -188,7 +188,8 @@ export default function AvailabilityGrid({
       (assignedDrivers || []).map((d) => [
         d.id,
         {
-          notifications: d.discord_alert_enabled_override ?? false,
+          // null = no override set; true/false = explicit override
+          notifications: d.discord_alert_enabled_override ?? null,
           minutes: d.discord_alert_minutes_override
             ?? d.drivers?.discord_alert_minutes
             ?? "",
@@ -236,7 +237,7 @@ export default function AvailabilityGrid({
   }, [isExternalUser, currentDriverId]);
 
   const saveNotifOverride = (signupId, patch) => {
-    const current = notifOverrides[signupId] || { notifications: false, minutes: "" };
+    const current = notifOverrides[signupId] || { notifications: null, minutes: "" };
     const merged = { ...current, ...patch };
     setNotifOverrides((prev) => ({ ...prev, [signupId]: merged }));
     supabase
@@ -247,7 +248,10 @@ export default function AvailabilityGrid({
           ? Math.max(1, parseInt(merged.minutes))
           : null,
       })
-      .eq("id", signupId);
+      .eq("id", signupId)
+      .then(({ error }) => {
+        if (error) console.error("[saveNotifOverride]", error.message, { signupId, merged });
+      });
   };
 
   const getAvail = (driverId, slot) =>
@@ -614,7 +618,7 @@ export default function AvailabilityGrid({
                 Alerte relais Discord
               </span>
             </div>
-            {/* Default — informational, shown when no override is active */}
+            {/* Default — informational, shown when no override is active (null or false) */}
             {!notif.notifications && (
               <div style={{ fontSize: "0.85rem", color: "var(--text-dim)", marginBottom: "0.6rem" }}>
                 Par défaut&nbsp;:{" "}

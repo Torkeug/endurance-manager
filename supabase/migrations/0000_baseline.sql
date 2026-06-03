@@ -274,7 +274,7 @@ CREATE TABLE public.signups (
   preferred_start_time_ids_snapshot uuid[],
   preferred_car_names_snapshot    text[],
   tags                            text[],
-  discord_alert_enabled_override  boolean NOT NULL DEFAULT false,
+  discord_alert_enabled_override  boolean DEFAULT NULL,  -- NULL=no override, TRUE=override on, FALSE=override off
   discord_alert_minutes_override  integer,
   UNIQUE (driver_id, team_entry_id)
 );
