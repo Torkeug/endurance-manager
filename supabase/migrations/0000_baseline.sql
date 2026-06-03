@@ -857,3 +857,49 @@ CREATE POLICY team_entries_update   ON public.team_entries FOR UPDATE
   USING ((is_admin() OR (NOT is_external() AND EXISTS (SELECT 1 FROM signups WHERE signups.team_entry_id = team_entries.id AND signups.driver_id = get_current_driver_id()))) AND NOT EXISTS (SELECT 1 FROM events WHERE events.id = team_entries.event_id AND events.archived = true));
 CREATE POLICY team_entries_delete   ON public.team_entries FOR DELETE
   USING (is_admin() AND NOT EXISTS (SELECT 1 FROM events WHERE events.id = team_entries.event_id AND events.archived = true));
+
+
+-- ── Realtime publications ─────────────────────────────────────────────────────
+
+ALTER PUBLICATION supabase_realtime ADD TABLE
+  public.championships,
+  public.deleted_signups_logs,
+  public.deleted_team_entries_logs,
+  public.drivers,
+  public.event_start_times,
+  public.events,
+  public.signups,
+  public.stints,
+  public.team_entries;
+
+
+-- ── pg_cron jobs ──────────────────────────────────────────────────────────────
+
+-- Auto-archive events 2 hours after their last start time + duration has elapsed.
+-- Runs every 15 minutes; calls archive_event() which snapshots names before flipping archived = true.
+SELECT cron.schedule(
+  'auto-archive-events',
+  '*/15 * * * *',
+  $$
+  DO $inner$
+  DECLARE
+    ev RECORD;
+  BEGIN
+    FOR ev IN
+      SELECT e.id
+      FROM events e
+      WHERE e.archived = false
+        AND EXISTS (
+          SELECT 1 FROM event_start_times est
+          WHERE est.event_id = e.id
+          GROUP BY e.id, e.duration_minutes
+          HAVING MAX(est.irl_start) +
+                 (e.duration_minutes + 120) * interval '1 minute' < NOW()
+        )
+    LOOP
+      PERFORM archive_event(ev.id);
+    END LOOP;
+  END;
+  $inner$
+  $$
+);

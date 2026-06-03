@@ -201,6 +201,8 @@ Sync required / inactive / overdue membership counts exclude: `test_driver = tru
 ### Archiving events
 Done via the `archive_event(uuid)` DB function — snapshots circuit/car/driver names then sets `archived = true`. Callable by `authenticated` and `service_role` only (anon is explicitly revoked).
 
+**Auto-archiving:** a pg_cron job (`auto-archive-events`) runs every 15 minutes and automatically calls `archive_event()` on any unarchived event whose last start time + duration + 2h buffer has passed. No manual archiving needed after a race.
+
 ### Supabase clients
 Always use `supabase-server.js` in server components and API routes. Use `supabase-browser.js` in `"use client"` components. The legacy `supabase.js` anon client is not actively used.
 
