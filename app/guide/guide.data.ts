@@ -232,12 +232,13 @@ export const guide: GuideSection[] = [
       },
       {
         type: "text",
-        content: "Toutes les courses (normales, spéciales, championnats) sont listées ici, triées par type.",
+        content: "Toutes les courses sont listées ici. L'onglet « Tous » est affiché par défaut et regroupe tous les types, triés chronologiquement.",
       },
       {
         type: "list",
         items: [
-          "Normaux — Courses avec horaires éditables.",
+          "Tous — Vue chronologique de l'ensemble des événements. Des badges colorés identifient le type : Spécial (orange) ou Championnat (violet).",
+          "Normaux — Courses standards avec horaires éditables.",
           "Spéciaux — Courses avec créneaux horaires fixes.",
           "Championnats — Séries avec plusieurs manches. Chaque manche est une course appartenant à ce championnat.",
         ],
