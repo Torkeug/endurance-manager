@@ -655,6 +655,13 @@ export default function RaceMode({
     return () => supabase.removeChannel(channel);
   }, [fetchLiveFuel, activeStint?.driver_id, activeStint?.irl_start_actual, activeStint?.irl_start]);
 
+  // ── Derived: tank size — needed before liveLapsDelta ─────────────────────
+  const carTankSize = teamEntry?.cars?.tank_size_litres;
+  const tankSize =
+    carTankSize && teamEntry?.bop_tank_size_percent
+      ? carTankSize * (teamEntry.bop_tank_size_percent / 100)
+      : (carTankSize ?? null);
+
   // ── Derived: live fuel deviation for active stint card ────────────────────
   const activeStintStart = activeStint
     ? (activeStint.irl_start_actual ?? activeStint.irl_start)
@@ -723,11 +730,6 @@ export default function RaceMode({
   // fuel_remaining_calc is persisted by StintGrid — it represents how much
   // fuel is left in the tank at the end of this stint.
   // Fuel to add = tankSize − fuelRemaining (capped at tankSize).
-  const carTankSize = teamEntry?.cars?.tank_size_litres;
-  const tankSize =
-    carTankSize && teamEntry?.bop_tank_size_percent
-      ? carTankSize * (teamEntry.bop_tank_size_percent / 100) // BOP reduces usable tank capacity
-      : (carTankSize ?? null);
   const fuelToAdd =
     activeStint?.fuel_remaining_calc != null && tankSize != null
       ? Math.max(0, tankSize - activeStint.fuel_remaining_calc)
