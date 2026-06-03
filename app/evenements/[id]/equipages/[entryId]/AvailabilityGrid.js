@@ -618,14 +618,11 @@ export default function AvailabilityGrid({
                 Alerte relais Discord
               </span>
             </div>
-            {/* Default — informational, shown only when no override is set (null).
-                false = user explicitly disabled for this event, no info needed. */}
+            {/* When null: no override, checkbox reflects driver default.
+                When true/false: explicit override set by the driver for this event. */}
             {notif.notifications === null && (
-              <div style={{ fontSize: "0.85rem", color: "var(--text-dim)", marginBottom: "0.6rem" }}>
-                Par défaut&nbsp;:{" "}
-                {mySignup.drivers?.discord_alert_enabled && mySignup.drivers?.discord_alert_minutes
-                  ? <span style={{ color: "var(--text)" }}>{mySignup.drivers.discord_alert_minutes} min</span>
-                  : <span>désactivées</span>}
+              <div style={{ fontSize: "0.75rem", color: "var(--text-dim)", marginBottom: "0.5rem" }}>
+                Paramètre par défaut — modifier pour configurer cet événement séparément.
               </div>
             )}
 
@@ -640,16 +637,19 @@ export default function AvailabilityGrid({
             >
               <input
                 type="checkbox"
-                checked={notif.notifications === true}
+                checked={
+                  notif.notifications !== null
+                    ? notif.notifications === true
+                    : mySignup.drivers?.discord_alert_enabled ?? false
+                }
                 onChange={(e) =>
-                  saveNotifOverride(mySignup.id, {
-                    notifications: e.target.checked ? true : false,
-                  })
+                  saveNotifOverride(mySignup.id, { notifications: e.target.checked })
                 }
               />
               Activer les alertes pour cet événement
             </label>
-            {notif.notifications === true && (
+            {(notif.notifications === true ||
+              (notif.notifications === null && mySignup.drivers?.discord_alert_enabled)) && (
               <div style={{ marginTop: "0.75rem", display: "flex", alignItems: "center", gap: "0.75rem" }}>
                 <label
                   htmlFor="notif-minutes-override"
