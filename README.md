@@ -30,9 +30,12 @@ SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
 NEXT_PUBLIC_APP_URL=http://localhost:3000
 GARAGE61_CLIENT_SECRET=your-garage61-client-secret
 RESEND_API_KEY=your-resend-api-key
+API_KEY=your-iracing-webhook-secret
+CRON_SECRET=your-cron-secret
+NEXT_PUBLIC_SHOW_TEST_ACCOUNTS=true
 ```
 
-`SUPABASE_SERVICE_ROLE_KEY`, `GARAGE61_CLIENT_SECRET`, and `RESEND_API_KEY` are used server-side only (never exposed to the client). `NEXT_PUBLIC_APP_URL` must match the registered OAuth redirect URIs. iRacing OAuth uses a hardcoded public client ID and PKCE — no server-side secret required.
+`SUPABASE_SERVICE_ROLE_KEY`, `GARAGE61_CLIENT_SECRET`, `RESEND_API_KEY`, `API_KEY`, and `CRON_SECRET` are server-side only (never exposed to the client). `NEXT_PUBLIC_APP_URL` must match the registered OAuth redirect URIs. iRacing OAuth uses a hardcoded public client ID and PKCE — no server-side secret required.
 
 ### Install and run
 
@@ -60,6 +63,13 @@ app/
     notify-driver-approved/ # Emails a driver to confirm their account has been approved
     notify-stale-sync/      # Emails a driver whose iRacing data hasn't been synced in over 100 days
     register-driver/        # Server-side driver record insert during registration (bypasses RLS — user has no session yet)
+  api/
+    iracing/
+      event/                # Webhook: receives iRacing session events from the bridge (auth: Bearer API_KEY)
+      lap/                  # Webhook: receives lap telemetry from the bridge (auth: Bearer API_KEY)
+    cron/
+      check-stale-syncs/    # Finds drivers with >100-day stale iRacing sync, sends email (cooldown: 30d per driver)
+      cleanup-iracing-laps/ # Deletes iRacing laps older than 7 days
   auth/
     callback/
       garage61/             # Garage61 OAuth callback — exchanges code, stores tokens + slug
@@ -103,7 +113,9 @@ lib/
   car-types.js          # Car class / type definitions
   manufacturers.js      # Manufacturer lookup
 supabase/
-  migrations/       # SQL migrations — run manually in Supabase dashboard
+  migrations/       # SQL migrations — 0000_baseline.sql is the full schema snapshot;
+                    # new migrations are applied via Supabase MCP or dashboard
+.mcp.json           # Supabase MCP server config (Claude Code integration)
 ```
 
 ## Roles
@@ -145,3 +157,32 @@ A `Garage61` subtab in the Statistics section of the driver profile shows an agg
 Both features use the requesting user's Garage61 token to fetch team-level data — any linked team member can view data for any other driver in the team without requiring that driver to be online.
 
 API responses are cached server-side: track catalogue 1 h, team statistics and laps 15 min, `/me` 1 h.
+
+### Discord bot
+
+A separate external codebase (not in this repo) that reads directly from the database to send stint handoff alerts. It uses:
+
+- `signups.discord_notifications_override` — whether to send alerts for a driver on a given entry
+- `signups.discord_alert_minutes_override` — per-entry timing override
+- `drivers.discord_alert_minutes` — per-driver default timing
+- `team_entries.notification_minutes_before` — legacy team-level fallback
+
+Resolution order: signup override → driver default → team fallback → disabled.
+
+### iRacing webhook bridge
+
+An external bridge sends session and lap telemetry to this app in real time:
+
+- `POST /api/iracing/event` — session events (start, end, etc.)
+- `POST /api/iracing/lap` — per-lap telemetry (lap time, fuel, conditions, weather)
+
+Both endpoints require `Authorization: Bearer $API_KEY`.
+
+## Cron jobs
+
+Triggered by Vercel Cron. Both require `Authorization: Bearer $CRON_SECRET`.
+
+| Endpoint | Frequency | Purpose |
+|----------|-----------|---------|
+| `GET /api/cron/check-stale-syncs` | Weekly | Find drivers with >100-day stale iRacing sync, send email reminder (30-day per-driver cooldown) |
+| `GET /api/cron/cleanup-iracing-laps` | Daily | Delete iRacing laps older than 7 days |
