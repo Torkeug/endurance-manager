@@ -666,7 +666,7 @@ export default function AvailabilityGrid({
                       [mySignup.id]: { ...prev[mySignup.id], minutes: e.target.value },
                     }))
                   }
-                  onBlur={() => saveNotifOverride(mySignup.id, { minutes: notif.minutes })}
+                  onBlur={(e) => saveNotifOverride(mySignup.id, { minutes: e.target.value })}
                   min="1"
                   max="60"
                   placeholder="5"
