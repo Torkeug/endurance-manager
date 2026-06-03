@@ -490,7 +490,7 @@ function calculateAllStints(
         );
         coveringStint._calcLaps = coveringStint._laps;
         coveringStint._stintDurationSec =
-          coveringStint._laps * coveringStint._lapTimeSec;
+          Math.round(coveringStint._laps * coveringStint._lapTimeSec);
         coveringStint._irlEnd = new Date(
           coveringStint._irlStart.getTime() +
             coveringStint._stintDurationSec * 1000,
