@@ -179,16 +179,16 @@ export default function AvailabilityGrid({
   const [availabilities, setAvailabilities] = useState({});
   const [loading, setLoading] = useState(true);
   // notification overrides keyed by signup id.
-  // When no per-event override is set, fall back to the driver's global defaults
-  // so the card is pre-populated and the driver can see their effective setting.
+  // notifications = actual discord_alert_enabled_override from DB (never falls back to defaults —
+  // the checkbox only reflects whether a per-event override is active).
+  // minutes = discord_alert_minutes_override if set, otherwise driver default as a pre-fill
+  // so the input is convenient when the driver first enables an override.
   const [notifOverrides, setNotifOverrides] = useState(() =>
     Object.fromEntries(
       (assignedDrivers || []).map((d) => [
         d.id,
         {
-          notifications: d.discord_alert_enabled_override
-            || d.drivers?.discord_alert_enabled
-            || false,
+          notifications: d.discord_alert_enabled_override ?? false,
           minutes: d.discord_alert_minutes_override
             ?? d.drivers?.discord_alert_minutes
             ?? "",
@@ -615,6 +615,16 @@ export default function AvailabilityGrid({
                 Alerte relais Discord
               </span>
             </div>
+            {/* Default — informational, shown when no override is active */}
+            {!notif.notifications && (
+              <div style={{ fontSize: "0.85rem", color: "var(--text-dim)", marginBottom: "0.6rem" }}>
+                Par défaut&nbsp;:{" "}
+                {mySignup.drivers?.discord_alert_enabled && mySignup.drivers?.discord_alert_minutes
+                  ? <span style={{ color: "var(--text)" }}>{mySignup.drivers.discord_alert_minutes} min</span>
+                  : <span>désactivées</span>}
+              </div>
+            )}
+
             <label
               style={{
                 display: "flex",
@@ -631,7 +641,7 @@ export default function AvailabilityGrid({
                   saveNotifOverride(mySignup.id, { notifications: e.target.checked })
                 }
               />
-              Activer les alertes pour cet événement
+              Configurer pour cet événement
             </label>
             {notif.notifications && (
               <div style={{ marginTop: "0.75rem", display: "flex", alignItems: "center", gap: "0.75rem" }}>
@@ -662,9 +672,6 @@ export default function AvailabilityGrid({
                 </span>
               </div>
             )}
-            <div style={{ marginTop: "0.5rem", fontSize: "0.75rem", color: "var(--text-dim)" }}>
-              Remplace votre délai par défaut pour cet événement uniquement.
-            </div>
           </div>
         );
       })()}
