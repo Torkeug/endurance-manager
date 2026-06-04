@@ -1,6 +1,7 @@
 "use client";
 import { useState, useEffect, useRef } from "react";
 import { supabaseBrowser as supabase } from "../../../../../lib/supabase-browser";
+import { useTranslations } from "next-intl";
 
 // ─── Driver color palette ────────────────────────────────────────────────────
 // Cycles when there are more than 8 drivers.
@@ -47,6 +48,7 @@ export default function PlanningTab({
   showSummary = true,
   strategyId = null,
 }) {
+  const t = useTranslations("planningTab");
   const [stints, setStints] = useState([]);
   const [availabilities, setAvailabilities] = useState([]);
   const [strategyLabel, setStrategyLabel] = useState(null);
@@ -178,7 +180,7 @@ export default function PlanningTab({
   if (loading)
     return (
       <div className="card">
-        <div className="empty">Chargement…</div>
+        <div className="empty">{t("loading")}</div>
       </div>
     );
 
@@ -191,7 +193,7 @@ export default function PlanningTab({
     return (
       <div className="card">
         <div className="empty">
-          Aucun relais configuré dans la stratégie active.
+          {t("noStints")}
         </div>
       </div>
     );
@@ -201,8 +203,7 @@ export default function PlanningTab({
     return (
       <div className="card">
         <div className="empty">
-          Horaires non encore calculés — ouvrez l&apos;onglet Relais pour lancer
-          le calcul, puis revenez ici.
+          {t("noTimesCalculated")}
         </div>
       </div>
     );
@@ -461,7 +462,7 @@ export default function PlanningTab({
               zIndex: 1,
               transition: "opacity 0.1s, box-shadow 0.1s",
             }}
-            title={`Relais ${stint.stint_number}${stint.laps_planned ? ` · ${stint.laps_planned} tours` : ""}`}
+            title={`${t("stint")} ${stint.stint_number}${stint.laps_planned ? ` · ${stint.laps_planned} ${t("laps")}` : ""}`}
           >
             <span
               style={{
@@ -498,7 +499,7 @@ export default function PlanningTab({
               opacity: 0.5,
             }}
           >
-            Aucun relais assigné
+            {t("unassigned")}
           </span>
         </div>
       )}
@@ -528,7 +529,7 @@ export default function PlanningTab({
               marginBottom: "0.75rem",
             }}
           >
-            Vos relais
+            {t("yourStints")}
           </div>
           <div
             style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}
@@ -564,7 +565,7 @@ export default function PlanningTab({
                       minWidth: "64px",
                     }}
                   >
-                    Relais {s.stint_number}
+                    {t("stint")} {s.stint_number}
                   </span>
 
                   {/* IRL window */}
@@ -600,7 +601,7 @@ export default function PlanningTab({
                           opacity: 0.8,
                         }}
                       >
-                        réel
+                        {t("actual")}
                       </span>
                     </span>
                   ) : (
@@ -616,7 +617,7 @@ export default function PlanningTab({
                     <span
                       style={{ fontSize: "0.78rem", color: "var(--text-dim)" }}
                     >
-                      · {s.laps_planned || s.laps_calc} tours
+                      · {s.laps_planned || s.laps_calc} {t("laps")}
                       {!s.laps_planned && (
                         <span style={{ opacity: 0.6 }}> *</span>
                       )}
@@ -625,7 +626,7 @@ export default function PlanningTab({
 
                   {/* Rain flag */}
                   {s.rain && (
-                    <span style={{ fontSize: "0.8rem" }} title="Pluie">
+                    <span style={{ fontSize: "0.8rem" }} title={t("rainTitle")}>
                       🌧
                     </span>
                   )}
@@ -643,7 +644,7 @@ export default function PlanningTab({
                         padding: "0.1rem 0.4rem",
                       }}
                     >
-                      ✓ complété
+                      {t("completed")}
                     </span>
                   )}
                 </div>
@@ -664,7 +665,7 @@ export default function PlanningTab({
             color: "var(--text-dim)",
           }}
         >
-          Stratégie active :{" "}
+          {t("activeStrategy")}{" "}
           <span style={{ fontWeight: 700, color: "var(--text)" }}>
             {strategyLabel.name}
           </span>
@@ -792,7 +793,7 @@ export default function PlanningTab({
                     fontStyle: "italic",
                   }}
                 >
-                  Non assigné
+                  {t("unassigned")}
                 </div>
                 {renderBarArea(unassignedStints, null, true)}
               </div>
@@ -822,7 +823,7 @@ export default function PlanningTab({
                 }}
               >
                 <span style={{ fontWeight: 700 }}>
-                  Relais {hoveredStint.stint_number}
+                  {t("stint")} {hoveredStint.stint_number}
                 </span>
                 <span className="mono">
                   {formatTime(new Date(hoveredStint._startMs))} →{" "}
@@ -833,10 +834,10 @@ export default function PlanningTab({
                 </span>
                 {hoveredStint.laps_planned && (
                   <span style={{ color: "var(--text-dim)" }}>
-                    {hoveredStint.laps_planned} tours
+                    {hoveredStint.laps_planned} {t("laps")}
                   </span>
                 )}
-                {hoveredStint.rain && <span>🌧 Pluie</span>}
+                {hoveredStint.rain && <span>🌧 {t("rain")}</span>}
                 {hoveredStint.irl_end_actual && (
                   <span
                     style={{
@@ -848,7 +849,7 @@ export default function PlanningTab({
                       padding: "0.1rem 0.4rem",
                     }}
                   >
-                    ✓ complété
+                    {t("completed")}
                   </span>
                 )}
               </div>
@@ -863,7 +864,7 @@ export default function PlanningTab({
                   opacity: 0.5,
                 }}
               >
-                Survolez un relais pour voir les détails
+                {t("hoverHint")}
               </div>
             )}
           </div>
@@ -883,15 +884,15 @@ export default function PlanningTab({
             {/* Availability swatches */}
             <span style={{ display: "flex", alignItems: "center", gap: "4px" }}>
               <span style={{ display: "inline-block", width: "12px", height: "10px", background: "rgba(46,180,96,0.35)", border: "1px solid var(--border)", borderRadius: "2px" }} />
-              Disponible
+              {t("legendAvailable")}
             </span>
             <span style={{ display: "flex", alignItems: "center", gap: "4px" }}>
               <span style={{ display: "inline-block", width: "12px", height: "10px", background: "rgba(224,85,85,0.35)", border: "1px solid var(--border)", borderRadius: "2px" }} />
-              Indisponible
+              {t("legendUnavailable")}
             </span>
             <span style={{ display: "flex", alignItems: "center", gap: "4px" }}>
               <span style={{ display: "inline-block", width: "12px", height: "10px", background: "rgba(74,74,106,0.35)", border: "1px solid var(--border)", borderRadius: "2px" }} />
-              Incertain
+              {t("legendUncertain")}
             </span>
 
             {/* Night band swatch */}
@@ -906,7 +907,7 @@ export default function PlanningTab({
                   borderRadius: "2px",
                 }}
               />
-              Nuit IG
+              {t("legendNight")}
             </span>
 
             {/* Rain swatch */}
@@ -920,13 +921,13 @@ export default function PlanningTab({
                   borderRadius: "2px",
                 }}
               />
-              🌧 Pluie
+              🌧 {t("rain")}
             </span>
 
             {/* Current driver highlight explanation */}
             {currentDriverId && (
               <span style={{ color: "var(--accent)", fontWeight: 600 }}>
-                Votre ligne en surbrillance
+                {t("yourHighlight")}
               </span>
             )}
           </div>

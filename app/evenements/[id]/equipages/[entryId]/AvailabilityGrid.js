@@ -2,6 +2,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { supabaseBrowser as supabase } from "../../../../../lib/supabase-browser";
 import React from "react";
+import { useTranslations } from "next-intl";
 
 // ── Time helpers ───────────────────────────────────────────────────────────────
 
@@ -102,8 +103,10 @@ function Badge({ label, bg, borderColor }) {
 
 // Replaces native prompt() for wipe-all action — consistent with app modal pattern
 function WipeModal({ onConfirm, onCancel }) {
+  const t = useTranslations("availabilityGrid");
   const [input, setInput] = useState("");
-  const valid = input === "CONFIRMER";
+  const confirmWord = t("clearAllConfirmWord");
+  const valid = input === confirmWord;
   return (
     <div
       style={{
@@ -118,44 +121,24 @@ function WipeModal({ onConfirm, onCancel }) {
       }}
     >
       <div className="card" style={{ maxWidth: "420px", width: "100%" }}>
-        <h3 style={{ marginBottom: "0.75rem" }}>
-          Effacer toutes les disponibilités
-        </h3>
-        <p
-          style={{
-            fontSize: "0.9rem",
-            color: "var(--text-dim)",
-            marginBottom: "1rem",
-          }}
-        >
-          Cette action effacera les disponibilités de{" "}
-          <strong style={{ color: "var(--text)" }}>tous les pilotes</strong>.
-          Tapez{" "}
-          <span className="mono" style={{ color: "var(--danger)" }}>
-            CONFIRMER
-          </span>{" "}
-          pour continuer.
+        <h3 style={{ marginBottom: "0.75rem" }}>{t("clearAllTitle")}</h3>
+        <p style={{ fontSize: "0.9rem", color: "var(--text-dim)", marginBottom: "1rem" }}>
+          {t("clearAllConfirmPrompt")}
         </p>
         <input
           type="text"
           value={input}
           onChange={(e) => setInput(e.target.value)}
-          placeholder="CONFIRMER"
+          placeholder={confirmWord}
           autoFocus
           style={{ marginBottom: "1rem" }}
         />
-        <div
-          style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}
-        >
-          <button
-            onClick={onConfirm}
-            className="btn btn-danger"
-            disabled={!valid}
-          >
-            Effacer définitivement
+        <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+          <button onClick={onConfirm} className="btn btn-danger" disabled={!valid}>
+            {t("clearAllConfirmBtn")}
           </button>
           <button onClick={onCancel} className="btn btn-secondary">
-            Annuler
+            {t("cancelBtn")}
           </button>
         </div>
       </div>
@@ -175,6 +158,7 @@ export default function AvailabilityGrid({
   currentDriverId = null,
   isExternalUser = false,
 }) {
+  const t = useTranslations("availabilityGrid");
   const [selectedDriverId, setSelectedDriverId] = useState("");
   const [availabilities, setAvailabilities] = useState({});
   const [loading, setLoading] = useState(true);
@@ -418,13 +402,13 @@ export default function AvailabilityGrid({
   if (!irlStart)
     return (
       <div className="card">
-        <div className="empty">Aucun horaire de départ configuré.</div>
+        <div className="empty">{t("noStartTimes")}</div>
       </div>
     );
   if (assignedDrivers.length === 0)
     return (
       <div className="card">
-        <div className="empty">Aucun pilote assigné à cet équipage.</div>
+        <div className="empty">{t("noDrivers")}</div>
       </div>
     );
 
@@ -436,8 +420,8 @@ export default function AvailabilityGrid({
           <div className="form-group">
             <label>
               {isExternalUser
-                ? "Votre disponibilité"
-                : "Remplir ma disponibilité"}
+                ? t("yourAvailability")
+                : t("fillMyAvailability")}
             </label>
             {/* External drivers are auto-selected — no dropdown needed */}
             {!isExternalUser && (
@@ -445,7 +429,7 @@ export default function AvailabilityGrid({
                 value={selectedDriverId}
                 onChange={(e) => setSelectedDriverId(e.target.value)}
               >
-                <option value="">— Sélectionnez votre nom —</option>
+                <option value="">{t("selectNamePlaceholder")}</option>
                 {assignedDrivers
                   // External drivers can only select themselves
                   .filter(
@@ -467,8 +451,8 @@ export default function AvailabilityGrid({
             }}
           >
             {selectedDriverId
-              ? "Cliquez ou glissez sur les créneaux pour marquer votre disponibilité."
-              : "Sélectionnez votre nom pour activer l'édition."}
+              ? t("clickDragHint")
+              : t("selectNameHint")}
           </p>
 
           {/* Paint mode selector */}
@@ -484,25 +468,13 @@ export default function AvailabilityGrid({
                   marginBottom: "0.5rem",
                 }}
               >
-                Mode de saisie
+                {t("inputMode")}
               </div>
               <div style={{ display: "flex", gap: "0.5rem" }}>
                 {[
-                  {
-                    value: "available",
-                    label: "✓ Disponible",
-                    color: "var(--accent)",
-                  },
-                  {
-                    value: "unavailable",
-                    label: "✗ Indisponible",
-                    color: "var(--danger)",
-                  },
-                  {
-                    value: "tentative",
-                    label: "? Incertain",
-                    color: "#3a8080",
-                  },
+                  { value: "available", label: t("available"), color: "var(--accent)" },
+                  { value: "unavailable", label: t("unavailable"), color: "var(--danger)" },
+                  { value: "tentative", label: t("uncertain"), color: "#3a8080" },
                 ].map(({ value, label, color }) => (
                   <button
                     key={value}
@@ -561,7 +533,7 @@ export default function AvailabilityGrid({
                 }}
                 className="btn btn-primary btn-sm"
               >
-                Tout marquer disponible
+                {t("markAllAvailable")}
               </button>
             )}
 
@@ -599,7 +571,7 @@ export default function AvailabilityGrid({
                   onClick={() => setWipeModal(true)}
                   className="btn btn-danger btn-sm"
                 >
-                  Effacer toutes les disponibilités
+                  {t("clearAll")}
                 </button>
               </>
             )}
@@ -639,13 +611,13 @@ export default function AvailabilityGrid({
                   letterSpacing: "0.06em",
                 }}
               >
-                Alerte relais Discord
+                {t("discordAlert")}
               </span>
             </div>
             {/* null = no override, inherit default; true = override: alerts on; false = override: alerts off */}
             {notif.notifications === null && (
               <div style={{ fontSize: "0.75rem", color: "var(--text-dim)", marginBottom: "0.5rem" }}>
-                Paramètre par défaut — modifier pour configurer cet événement séparément.
+                {t("discordDefault")}
               </div>
             )}
 
@@ -669,7 +641,7 @@ export default function AvailabilityGrid({
                   saveNotifOverride(mySignup.id, { notifications: e.target.checked })
                 }
               />
-              Activer les alertes pour cet événement
+              {t("discordEnable")}
             </label>
             {(notif.notifications === true ||
               (notif.notifications === null && mySignup.drivers?.discord_alert_enabled)) && (
@@ -678,7 +650,7 @@ export default function AvailabilityGrid({
                   htmlFor="notif-minutes-override"
                   style={{ fontSize: "0.85rem", color: "var(--text-dim)", whiteSpace: "nowrap" }}
                 >
-                  Me prévenir
+                  {t("discordNotify")}
                 </label>
                 <input
                   id="notif-minutes-override"
@@ -691,7 +663,7 @@ export default function AvailabilityGrid({
                   style={{ width: "60px" }}
                 />
                 <span style={{ fontSize: "0.85rem", color: "var(--text-dim)" }}>
-                  min avant la fin du relais
+                  {t("discordMinutesBefore")}
                 </span>
               </div>
             )}
@@ -722,7 +694,7 @@ export default function AvailabilityGrid({
               display: "inline-block",
             }}
           />
-          Disponible
+          {t("legendAvailable")}
         </span>
         <span style={{ display: "flex", alignItems: "center", gap: "0.35rem" }}>
           <span
@@ -735,7 +707,7 @@ export default function AvailabilityGrid({
               display: "inline-block",
             }}
           />
-          Incertain
+          {t("legendUncertain")}
         </span>
         <span style={{ display: "flex", alignItems: "center", gap: "0.35rem" }}>
           <span
@@ -748,25 +720,25 @@ export default function AvailabilityGrid({
               display: "inline-block",
             }}
           />
-          Indisponible
+          {t("legendUnavailable")}
         </span>
         <span style={{ display: "flex", alignItems: "center", gap: "0.35rem" }}>
           <Badge label="▶" bg="#2eb460" borderColor="#2eb460" />
-          Départ
+          {t("legendStart")}
         </span>
         <span style={{ display: "flex", alignItems: "center", gap: "0.35rem" }}>
           <Badge label="■" bg="var(--danger)" borderColor="var(--danger)" />
-          Fin
+          {t("legendEnd")}
         </span>
         {!archived && (
-          <span>Cliquez ou glissez pour appliquer le mode sélectionné.</span>
+          <span>{t("clickDragApply")}</span>
         )}
       </div>
 
       {/* Grid */}
       {loading ? (
         <div className="card">
-          <div className="empty">Chargement…</div>
+          <div className="empty">{t("loading")}</div>
         </div>
       ) : (
         <div
