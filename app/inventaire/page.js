@@ -23,11 +23,12 @@ export default async function InventairePage({ searchParams }) {
         .order("name"),
       supabase
         .from("drivers")
-        .select("id, name, role, approved, iracing_synced_at, iracing_id")
+        .select("id, name, role, approved, active, iracing_synced_at, iracing_id")
+        .eq("active", true)
         .order("name"),
     ]);
 
-  // Only drivers with a completed iRacing sync appear as matrix columns
+  // Only active drivers with a completed iRacing sync appear as matrix columns
   const matrixDrivers = (drivers || []).filter(
     (d) => d.approved && d.iracing_synced_at,
   );
