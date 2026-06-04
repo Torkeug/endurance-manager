@@ -631,15 +631,19 @@ export default function RaceMode({
 
   const nextStint = activeIndex >= 0 ? (stints[activeIndex + 1] ?? null) : null;
 
-  // canUndo: DB-derived — true when there's a stamped stint whose next stint still
-  // has the pre-stamp backup (backup is cleared on undo, so this survives page reloads).
-  // For the final stint (no next), just having irl_end_actual is enough.
-  // Reuses lastStampedIndex defined above for activeStint detection.
+  // canUndo: true when there's a stamped stint that can be reversed.
+  // Three signals, any one is sufficient:
+  //   1. Final stint (no next) — just having irl_end_actual is enough.
+  //   2. In-memory ref is set — markPitStop ran this session.
+  //   3. Next stint has irl_start_actual — markPitStop wrote it; survives reload
+  //      even when the backup column is null (first pit stop, next had no prior actual).
   const nextAfterLastStamped = lastStampedIndex >= 0 ? (stints[lastStampedIndex + 1] ?? null) : null;
   const canUndo =
     !archived &&
     lastStampedIndex >= 0 &&
-    (nextAfterLastStamped === null || nextAfterLastStamped.irl_start_actual_backup != null);
+    (nextAfterLastStamped === null ||
+     prevNextStintIrlStartRef.current !== null ||
+     nextAfterLastStamped.irl_start_actual != null);
 
   // ── Live fuel effects — placed after activeStint derivation ───────────────
   // Re-fetch whenever the active driver or stint start changes.
@@ -805,11 +809,14 @@ export default function RaceMode({
 
     // Save the pre-stamp irl_start_actual of the next stint for undo.
     // Stored in both the in-memory ref (fast path) and DB (survives page reload).
+    // When there is no next stint, clear the ref so a stale value from the
+    // previous pit stop cannot corrupt the final-stint undo path.
     if (nextStint) {
       const backup = nextStint.irl_start_actual ?? null;
       prevNextStintIrlStartRef.current = { id: nextStint.id, value: backup };
-      // Persist backup to DB so undoLastPit can recover after a page reload
-      supabase.from("stints").update({ irl_start_actual_backup: backup }).eq("id", nextStint.id);
+      await supabase.from("stints").update({ irl_start_actual_backup: backup }).eq("id", nextStint.id);
+    } else {
+      prevNextStintIrlStartRef.current = null;
     }
 
     // Optimistic update — instant UI response before DB confirms
@@ -851,11 +858,16 @@ export default function RaceMode({
         const prev = prevNextStintIrlStartRef.current;
         prevNextStintIrlStartRef.current = null;
 
+        // Re-read from ref so a concurrent markPitStop between modal-open and
+        // confirm doesn't cause the undo to operate on a stale snapshot.
+        const currentStints = stintsRef.current;
+        const freshLast = [...currentStints].reverse().find((s) => s.irl_end_actual) ?? last;
+
         // Determine which stint to restore and what value to use.
         // Fast path: in-memory ref (same session).
         // Fallback: irl_start_actual_backup from already-loaded stints (after page reload).
-        const lastIndex = stints.findIndex((s) => s.id === last.id);
-        const nextAfterLast = lastIndex >= 0 ? (stints[lastIndex + 1] ?? null) : null;
+        const lastIndex = currentStints.findIndex((s) => s.id === freshLast.id);
+        const nextAfterLast = lastIndex >= 0 ? (currentStints[lastIndex + 1] ?? null) : null;
         const nextId = prev?.id ?? nextAfterLast?.id ?? null;
         const restoreValue = prev
           ? prev.value
@@ -863,13 +875,13 @@ export default function RaceMode({
 
         setStints((s) =>
           s.map((stint) => {
-            if (stint.id === last.id) return { ...stint, irl_end_actual: null };
+            if (stint.id === freshLast.id) return { ...stint, irl_end_actual: null };
             if (nextId && stint.id === nextId)
               return { ...stint, irl_start_actual: restoreValue, irl_start_actual_backup: null };
             return stint;
           }),
         );
-        await supabase.from("stints").update({ irl_end_actual: null }).eq("id", last.id);
+        await supabase.from("stints").update({ irl_end_actual: null }).eq("id", freshLast.id);
         if (nextId) {
           await supabase.from("stints").update({ irl_start_actual: restoreValue, irl_start_actual_backup: null }).eq("id", nextId);
         }

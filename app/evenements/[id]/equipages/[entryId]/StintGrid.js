@@ -1284,9 +1284,15 @@ export default function StintGrid({
                 rain: payload.new.rain,
                 tyre_change: payload.new.tyre_change,
                 previous_driver_id: payload.new.previous_driver_id,
-                // Race Mode actual stamps
+                // Race Mode actual stamps and undo backup
                 irl_end_actual: payload.new.irl_end_actual,
                 irl_start_actual: payload.new.irl_start_actual,
+                irl_start_actual_backup: payload.new.irl_start_actual_backup,
+                // Recalc-computed timing fields
+                irl_start: payload.new.irl_start,
+                irl_end_planned: payload.new.irl_end_planned,
+                duration_sec_calc: payload.new.duration_sec_calc,
+                laps_calc: payload.new.laps_calc,
               };
             }),
           );
@@ -1481,16 +1487,20 @@ export default function StintGrid({
 
   // Strategy switch — lightweight targeted fetch for just the new strategy's stints.
   // Perf/avail/conflict data is already loaded and shared across all strategies.
+  // Cancellation token prevents a slow response for a previous strategy from
+  // overwriting the stints for the strategy the user actually switched to.
   useEffect(() => {
     if (!selectedStrategyId || !teamEntryId || loading) return;
+    let cancelled = false;
     supabase
       .from("stints")
       .select("*")
       .eq("strategy_id", selectedStrategyId)
       .order("stint_number")
       .then(({ data }) => {
-        setStints(data || []);
+        if (!cancelled) setStints(data || []);
       });
+    return () => { cancelled = true; };
   // Only re-fetch stints when the tab is active — avoids unnecessary DB calls
   // when switching strategies while the Relais tab is hidden.
   }, [selectedStrategyId, isActive]);

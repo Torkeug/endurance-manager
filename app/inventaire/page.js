@@ -57,10 +57,10 @@ export default async function InventairePage({ searchParams }) {
     .filter((c) => !c.iracing_track_id)
     .map((c) => c.name);
 
-  // Current driver's iRacing link status — used for sync button visibility
-  const currentDriverHasIracingId = !!(drivers || []).find(
-    (d) => d.id === currentDriver?.id,
-  )?.iracing_id;
+  // Current driver's iRacing link status — used for sync button visibility.
+  // Check the session driver directly rather than the active-filtered list,
+  // so the sync button stays visible even if the driver's active flag is cleared.
+  const currentDriverHasIracingId = !!currentDriver?.iracing_id;
 
   return (
     <div className="page">

@@ -50,7 +50,7 @@ export default function PlanningTab({
   const [stints, setStints] = useState([]);
   const [availabilities, setAvailabilities] = useState([]);
   const [strategyLabel, setStrategyLabel] = useState(null);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   // Incremented by the realtime subscription to trigger a re-fetch
   const [refreshTick, setRefreshTick] = useState(0);
   // Hovered stint object — displayed in the detail panel below the Gantt
@@ -126,12 +126,22 @@ export default function PlanningTab({
           console.error("[PlanningTab] stints fetch error:", stintsError);
           return;
         }
-        if (!strategies || strategies.length === 0) return;
+        if (!strategies || strategies.length === 0) {
+          if (!cancelled) { setStints([]); setStrategyLabel(null); }
+          return;
+        }
 
-        // Prefer the marked-active strategy; fall back to first in sort order
-        const strategy = (strategyId
-          ? strategies.find((s) => s.id === strategyId)
-          : strategies.find((s) => s.is_active)) || strategies[0];
+        // Prefer the marked-active strategy; fall back to first in sort order.
+        // When a specific strategyId is requested but no longer exists (deleted),
+        // render nothing rather than silently showing a different strategy's data.
+        const strategy = strategyId
+          ? strategies.find((s) => s.id === strategyId) ?? null
+          : strategies.find((s) => s.is_active) ?? strategies[0];
+
+        if (!strategy) {
+          if (!cancelled) { setStints([]); setStrategyLabel(null); }
+          return;
+        }
 
         if (!cancelled)
           setStrategyLabel(strategy
