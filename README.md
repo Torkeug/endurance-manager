@@ -18,8 +18,8 @@ Built with Next.js 16 + React 19, backed by Supabase.
 
 - Node.js 18+
 - A Supabase project
-- An iRacing OAuth client ID — register your app via the [iRacing Developer Program](https://members.iracing.com/member/dev.do)
-- A Garage61 OAuth client ID — register at [garage61.net](https://garage61.net) (optional; only needed if you want Garage61 lap import)
+- An iRacing OAuth client ID — register your app at [oauth.iracing.com](https://oauth.iracing.com/oauth2/book/client_registration.html)
+- A Garage61 OAuth client ID — register at [garage61.net/developer/applications](https://garage61.net/developer/applications) (optional; only needed if you want Garage61 lap import)
 
 ### Language
 
