@@ -1,20 +1,12 @@
 "use client";
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import DriversAssignment from "./DriversAssignment";
 import AvailabilityGrid from "./AvailabilityGrid";
 import PerformanceData from "./PerformanceData";
 import StintGrid from "./StintGrid";
 import RaceMode from "./RaceMode";
 import PlanningTab from "./PlanningTab";
-
-const TABS = [
-  { id: "pilotes", label: "Pilotes" },
-  { id: "disponibilites", label: "Disponibilités" },
-  { id: "relais", label: "Relais" },
-  { id: "planning", label: "Planning" },
-  { id: "performances", label: "Performances" },
-  { id: "course", label: "🏁 Course" },
-];
 
 export default function EquipageTabs({
   entryId,
@@ -31,6 +23,7 @@ export default function EquipageTabs({
   isInEvent = false,
   isInTeam = false,
 }) {
+  const t = useTranslations("equipageTabs");
   const isAdmin =
     currentDriver?.role === "admin" || currentDriver?.role === "super_admin";
   const isEngineer = currentDriver?.role === "engineer";
@@ -38,6 +31,15 @@ export default function EquipageTabs({
   // Full access: admins and engineers can see and interact with everything
   // (engineers are read-only on non-relais tabs via the archived-style lock)
   const fullAccess = isAdmin || isEngineer;
+
+  const TABS = [
+    { id: "pilotes", label: t("tabPilotes") },
+    { id: "disponibilites", label: t("tabDisponibilites") },
+    { id: "relais", label: t("tabRelais") },
+    { id: "planning", label: t("tabPlanning") },
+    { id: "performances", label: t("tabPerformances") },
+    { id: "course", label: t("tabCourse") },
+  ];
 
   // activeStrategy — lifted from StintGrid via onActiveStrategyChange callback.
   // Avoids a redundant fetch since StintGrid already fetches all strategies.
@@ -63,10 +65,10 @@ export default function EquipageTabs({
       <div className="card">
         <div className="empty">
           <p style={{ fontWeight: 600, marginBottom: "0.25rem" }}>
-            Accès limité
+            {t("accessDeniedTitle")}
           </p>
           <small style={{ color: "var(--text-dim)" }}>
-            Vous devez être inscrit à cet événement pour voir cet équipage.
+            {t("accessDeniedMsg")}
           </small>
         </div>
       </div>
@@ -140,8 +142,7 @@ export default function EquipageTabs({
             color: "var(--danger)",
           }}
         >
-          📦 Cet événement est archivé — toutes les données sont en lecture
-          seule.
+          {t("archivedNotice")}
         </div>
       )}
 
@@ -160,8 +161,7 @@ export default function EquipageTabs({
               color: "var(--accent)",
             }}
           >
-            💡 Rejoignez cet équipage via le tableau ci-dessous pour accéder aux
-            autres onglets.
+            {t("selfAssignHint")}
           </div>
         )}
 
@@ -202,9 +202,7 @@ export default function EquipageTabs({
                 marginBottom: "1rem",
               }}
             >
-              {archived
-                ? "Disponibilités enregistrées au moment de l'archivage."
-                : "Sélectionnez votre nom et cliquez ou glissez sur les créneaux pour marquer votre disponibilité."}
+              {archived ? t("availArchivedNote") : t("availActiveNote")}
             </p>
             <AvailabilityGrid
               teamEntryId={entryId}
@@ -233,9 +231,7 @@ export default function EquipageTabs({
                 marginBottom: "1rem",
               }}
             >
-              {archived
-                ? "Relais planifiés au moment de l'archivage."
-                : "Les temps IRL et IG sont calculés automatiquement. Les points colorés indiquent la disponibilité de chaque pilote."}
+              {archived ? t("stintsArchivedNote") : t("stintsActiveNote")}
             </p>
             <StintGrid
               teamEntryId={entryId}
@@ -278,9 +274,7 @@ export default function EquipageTabs({
                 marginBottom: "1rem",
               }}
             >
-              {archived
-                ? "Données de performance enregistrées au moment de l'archivage."
-                : "Chronos et consommations relevés lors des essais. Cliquez sur Modifier pour renseigner vos données."}
+              {archived ? t("perfArchivedNote") : t("perfActiveNote")}
             </p>
             <PerformanceData
               teamEntryId={entryId}

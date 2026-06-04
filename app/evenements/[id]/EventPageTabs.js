@@ -866,7 +866,7 @@ export default function EventPageTabs({
         <div>
           {event.archived && (
             <div style={{ marginBottom: "1.25rem", padding: "0.65rem 0.9rem", background: "rgba(224,85,85,0.08)", border: "1px solid var(--danger)", borderRadius: "3px", fontSize: "0.82rem", color: "var(--danger)" }}>
-              📦 Cet événement est archivé — toutes les données sont en lecture seule.
+              {t("archivedNotice")}
             </div>
           )}
           <div

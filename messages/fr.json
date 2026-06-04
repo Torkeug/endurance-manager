@@ -501,7 +501,7 @@
     "tabEquipages": "Équipages",
     "tabStartTimes": "Horaires de départ",
     "tabInventory": "Inventaire",
-    "archivedNotice": "Cet événement est archivé — toutes les données sont en lecture seule.",
+    "archivedNotice": "📦 Cet événement est archivé — toutes les données sont en lecture seule.",
     "signedUpCount_one": "# pilote inscrit",
     "signedUpCount_other": "# pilotes inscrits",
     "inscriptionsLabel": "Inscriptions",
@@ -837,5 +837,56 @@
     "legacyGroup": "Legacy & Retraités",
     "fullConfig": "Circuit complet",
     "categoryOther": "Autre"
+  },
+  "equipageTabs": {
+    "tabPilotes": "Pilotes",
+    "tabDisponibilites": "Disponibilités",
+    "tabRelais": "Relais",
+    "tabPlanning": "Planning",
+    "tabPerformances": "Performances",
+    "tabCourse": "🏁 Course",
+    "archivedNotice": "📦 Cet événement est archivé — toutes les données sont en lecture seule.",
+    "accessDeniedTitle": "Accès limité",
+    "accessDeniedMsg": "Vous devez être inscrit à cet événement pour voir cet équipage.",
+    "selfAssignHint": "💡 Rejoignez cet équipage via le tableau ci-dessous pour accéder aux autres onglets.",
+    "availArchivedNote": "Disponibilités enregistrées au moment de l'archivage.",
+    "availActiveNote": "Sélectionnez votre nom et cliquez ou glissez sur les créneaux pour marquer votre disponibilité.",
+    "stintsArchivedNote": "Relais planifiés au moment de l'archivage.",
+    "stintsActiveNote": "Les temps IRL et IG sont calculés automatiquement. Les points colorés indiquent la disponibilité de chaque pilote.",
+    "perfArchivedNote": "Données de performance enregistrées au moment de l'archivage.",
+    "perfActiveNote": "Chronos et consommations relevés lors des essais. Cliquez sur Modifier pour renseigner vos données."
+  },
+  "entryDetail": {
+    "labelCar": "Voiture",
+    "labelClass": "Classe",
+    "labelCarNumber": "#",
+    "labelSoF": "SoF",
+    "labelTank": "Réservoir",
+    "labelBopPower": "BOP Puissance",
+    "labelBopWeight": "BOP Poids",
+    "labelPitLane": "Pit lane",
+    "labelRefuel": "Ravitaillement",
+    "labelTyreChange": "Chgt pneus",
+    "labelIGSunrise": "Lever soleil IG",
+    "labelIGSunset": "Coucher soleil IG",
+    "badgeArchived": "Archivé",
+    "carTbd": "Voiture à définir",
+    "editEntry": "Modifier",
+    "backToEvent": "Événement"
+  },
+  "collapsibleSummary": {
+    "startLabel": "Départ",
+    "startAt": "à {time}",
+    "entrySummary": "Résumé équipage",
+    "expand": "▼ Afficher",
+    "startTimeLabel": "Horaire de départ",
+    "collapse": "▲ Réduire",
+    "streams": "Streams",
+    "stream": "Stream"
+  },
+  "actualEndInput": {
+    "clearTitle": "Effacer",
+    "showDate": "▼ date",
+    "hideDate": "▲ date"
   }
 }

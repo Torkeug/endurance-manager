@@ -1,5 +1,6 @@
 "use client";
 import { useState, useEffect } from "react";
+import { useTranslations } from "next-intl";
 
 export default function ActualEndInput({
   plannedEnd,
@@ -65,6 +66,7 @@ export default function ActualEndInput({
     onSave(null);
   };
 
+  const t = useTranslations("actualEndInput");
   const isSet = !!actualEnd;
 
   return (
@@ -97,7 +99,7 @@ export default function ActualEndInput({
         {isSet && !archived && (
           <button
             onClick={handleClear}
-            title="Effacer"
+            title={t("clearTitle")}
             style={{
               background: "none",
               border: "none",
@@ -125,7 +127,7 @@ export default function ActualEndInput({
             textDecoration: "underline",
           }}
         >
-          {showDate ? "▲ date" : "▼ date"}
+          {showDate ? t("hideDate") : t("showDate")}
         </button>
         {showDate && (
           <input

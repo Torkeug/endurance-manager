@@ -520,7 +520,7 @@
     "tabEquipages": "Entries",
     "tabStartTimes": "Start times",
     "tabInventory": "Inventory",
-    "archivedNotice": "This event is archived — all data is read-only.",
+    "archivedNotice": "📦 This event is archived — all data is read-only.",
     "signedUpCount_one": "# driver signed up",
     "signedUpCount_other": "# drivers signed up",
     "inscriptionsLabel": "Sign-ups",
@@ -837,5 +837,56 @@
     "legacyGroup": "Legacy & Retired",
     "fullConfig": "Full circuit",
     "categoryOther": "Other"
+  },
+  "equipageTabs": {
+    "tabPilotes": "Drivers",
+    "tabDisponibilites": "Availability",
+    "tabRelais": "Stints",
+    "tabPlanning": "Planning",
+    "tabPerformances": "Performance",
+    "tabCourse": "🏁 Race",
+    "archivedNotice": "📦 This event is archived — all data is read-only.",
+    "accessDeniedTitle": "Access restricted",
+    "accessDeniedMsg": "You must be registered for this event to view this entry.",
+    "selfAssignHint": "💡 Join this entry via the table below to access the other tabs.",
+    "availArchivedNote": "Availability recorded at the time of archiving.",
+    "availActiveNote": "Select your name and click or drag over slots to mark your availability.",
+    "stintsArchivedNote": "Stints as planned at the time of archiving.",
+    "stintsActiveNote": "IRL and IG times are calculated automatically. Coloured dots show each driver's availability.",
+    "perfArchivedNote": "Performance data recorded at the time of archiving.",
+    "perfActiveNote": "Lap times and fuel recorded during practice. Click Edit to enter your data."
+  },
+  "entryDetail": {
+    "labelCar": "Car",
+    "labelClass": "Class",
+    "labelCarNumber": "#",
+    "labelSoF": "SoF",
+    "labelTank": "Tank",
+    "labelBopPower": "BoP Power",
+    "labelBopWeight": "BoP Weight",
+    "labelPitLane": "Pit lane",
+    "labelRefuel": "Refuel",
+    "labelTyreChange": "Tyre change",
+    "labelIGSunrise": "IG sunrise",
+    "labelIGSunset": "IG sunset",
+    "badgeArchived": "Archived",
+    "carTbd": "Car TBD",
+    "editEntry": "Edit",
+    "backToEvent": "Event"
+  },
+  "collapsibleSummary": {
+    "startLabel": "Start",
+    "startAt": "at {time}",
+    "entrySummary": "Entry summary",
+    "expand": "▼ Show",
+    "startTimeLabel": "Start time",
+    "collapse": "▲ Collapse",
+    "streams": "Streams",
+    "stream": "Stream"
+  },
+  "actualEndInput": {
+    "clearTitle": "Clear",
+    "showDate": "▼ date",
+    "hideDate": "▲ date"
   }
 }

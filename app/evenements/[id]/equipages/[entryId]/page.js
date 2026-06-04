@@ -9,11 +9,13 @@ import {
 } from "../../../../../lib/auth";
 import { formatTimeInZone } from "../../../../../lib/timezone";
 import CollapsibleSummary from "./CollapsibleSummary";
+import { getTranslations } from "next-intl/server";
 
 export default async function EquipageDetail({ params }) {
   const { id, entryId } = await params;
 
   const { driver: currentDriver } = await getSessionAndDriver();
+  const t = await getTranslations("entryDetail");
   const isEngineer = currentDriver?.role === "engineer";
 
   const { data: entry, error } = await supabase
@@ -122,41 +124,40 @@ export default async function EquipageDetail({ params }) {
   const infoItems = [
     // Use snapshot if available (archived event), fall back to live car name.
     {
-      label: "Voiture",
+      label: t("labelCar"),
       value:
         (archived ? entry.car_name_snapshot : null) || entry.cars?.name || "—",
     },
-    { label: "Classe", value: entryClass || "—" },
+    { label: t("labelClass"), value: entryClass || "—" },
     ...(entry.events?.championship_id
       ? [
           {
-            label: "#",
+            label: t("labelCarNumber"),
             value: entry.car_number != null ? `#${entry.car_number}` : "—",
           },
         ]
       : []),
-    { label: "SoF", value: avgIrating ? `${avgIrating} iR` : "—" },
+    { label: t("labelSoF"), value: avgIrating ? `${avgIrating} iR` : "—" },
     // If BoP tank size is set, show the reduced capacity and the percentage.
     // Otherwise show the car's default full tank size.
     {
-      label: "Réservoir",
+      label: t("labelTank"),
       value: entry.bop_tank_size_percent
         ? `${((entry.cars?.tank_size_litres * entry.bop_tank_size_percent) / 100).toFixed(1)}L (${entry.bop_tank_size_percent}% BoP)`
         : entry.cars?.tank_size_litres
           ? `${entry.cars.tank_size_litres}L`
           : "—",
     },
-    { label: "BOP Puissance", value: `${entry.bop_power_percent ?? 100}%` },
-    { label: "BOP Poids", value: `${entry.bop_weight_kg ?? 0}kg` },
-    { label: "Pit lane", value: pitTime ? `${pitTime}s` : "—" },
+    { label: t("labelBopPower"), value: `${entry.bop_power_percent ?? 100}%` },
+    { label: t("labelBopWeight"), value: `${entry.bop_weight_kg ?? 0}kg` },
+    { label: t("labelPitLane"), value: pitTime ? `${pitTime}s` : "—" },
     {
-      label: "Ravitaillement",
+      label: t("labelRefuel"),
       value: entry.refuel_time_seconds ? `${entry.refuel_time_seconds}s` : "—",
     },
-    { label: "Chgt pneus", value: `${entry.tyre_change_time_seconds ?? 0}s` },
-
-    { label: "Lever soleil IG", value: entry.events?.ig_sunrise || "—" },
-    { label: "Coucher soleil IG", value: entry.events?.ig_sunset || "—" },
+    { label: t("labelTyreChange"), value: `${entry.tyre_change_time_seconds ?? 0}s` },
+    { label: t("labelIGSunrise"), value: entry.events?.ig_sunrise || "—" },
+    { label: t("labelIGSunset"), value: entry.events?.ig_sunset || "—" },
   ];
 
   const driverId = currentDriver?.id;
@@ -188,7 +189,7 @@ export default async function EquipageDetail({ params }) {
                   color: "var(--danger)",
                 }}
               >
-                Archivé
+                {t("badgeArchived")}
               </span>
             )}
           </h1>
@@ -203,7 +204,7 @@ export default async function EquipageDetail({ params }) {
             {entry.events?.name} —{" "}
             {(archived ? entry.car_name_snapshot : null) ||
               entry.cars?.name ||
-              "Voiture à définir"}
+              t("carTbd")}
           </div>
         </div>
         <div style={{ display: "flex", gap: "0.75rem" }}>
@@ -216,11 +217,11 @@ export default async function EquipageDetail({ params }) {
                 href={`/evenements/${id}/equipages/${entryId}/modifier`}
                 className="btn btn-secondary"
               >
-                Modifier
+                {t("editEntry")}
               </Link>
             )}
           <Link href={`/evenements/${id}`} className="btn btn-secondary">
-            Événement
+            {t("backToEvent")}
           </Link>
         </div>
       </div>

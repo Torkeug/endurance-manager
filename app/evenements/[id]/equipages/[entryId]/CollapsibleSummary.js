@@ -1,5 +1,6 @@
 "use client";
 import { useState, useEffect } from "react";
+import { useTranslations } from "next-intl";
 
 export default function CollapsibleSummary({
   entryId,
@@ -8,6 +9,7 @@ export default function CollapsibleSummary({
   infoItems,
   streamUrls,
 }) {
+  const t = useTranslations("collapsibleSummary");
   const [collapsed, setCollapsed] = useState(false);
 
   // Persist collapsed state per team entry so each equipage remembers its own state.
@@ -54,7 +56,7 @@ export default function CollapsibleSummary({
                     color: "var(--text-dim)",
                   }}
                 >
-                  Départ
+                  {t("startLabel")}
                 </div>
                 <div style={{ fontWeight: 600, fontSize: "0.9rem" }}>
                   {startLabel}
@@ -63,17 +65,17 @@ export default function CollapsibleSummary({
                   className="mono"
                   style={{ fontSize: "0.82rem", color: "var(--accent)" }}
                 >
-                  à {startTime}
+                  {t("startAt", { time: startTime })}
                 </div>
               </>
             ) : (
               <div style={{ color: "var(--text-dim)", fontSize: "0.85rem" }}>
-                Résumé équipage
+                {t("entrySummary")}
               </div>
             )}
           </div>
           <span style={{ color: "var(--text-dim)", fontSize: "0.85rem" }}>
-            ▼ Afficher
+            {t("expand")}
           </span>
         </div>
       ) : (
@@ -107,7 +109,7 @@ export default function CollapsibleSummary({
                       marginBottom: "0.35rem",
                     }}
                   >
-                    Horaire de départ
+                    {t("startTimeLabel")}
                   </div>
                   <div style={{ fontWeight: 600, fontSize: "0.9rem" }}>
                     {startLabel}
@@ -116,7 +118,7 @@ export default function CollapsibleSummary({
                     className="mono"
                     style={{ fontSize: "0.82rem", color: "var(--accent)" }}
                   >
-                    à {startTime}
+                    {t("startAt", { time: startTime })}
                   </div>
                 </div>
                 <button
@@ -130,7 +132,7 @@ export default function CollapsibleSummary({
                     whiteSpace: "nowrap",
                   }}
                 >
-                  ▲ Réduire
+                  {t("collapse")}
                 </button>
               </div>
             </div>
@@ -182,7 +184,7 @@ export default function CollapsibleSummary({
         marginBottom: "0.4rem",
       }}
     >
-      {streamUrls.length > 1 ? "Streams" : "Stream"}
+      {streamUrls.length > 1 ? t("streams") : t("stream")}
     </div>
 
     <div style={{ display: "flex", flexDirection: "column", gap: "0.25rem" }}>
