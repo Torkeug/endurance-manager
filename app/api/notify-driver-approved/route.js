@@ -30,8 +30,7 @@ export async function POST(req) {
       return NextResponse.json({ success: false, reason: "driver_not_found" });
     }
 
-    const appUrl =
-      process.env.NEXT_PUBLIC_APP_URL || "https://kronos-simsports.com";
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL;
 
     // Send via Resend using plain fetch — same pattern as notify-admins
     const res = await fetch("https://api.resend.com/emails", {
@@ -41,7 +40,7 @@ export async function POST(req) {
         Authorization: `Bearer ${process.env.RESEND_API_KEY}`,
       },
       body: JSON.stringify({
-        from: "Kronos Planner <noreply@kronos-simsports.com>",
+        from: process.env.EMAIL_FROM,
         to: driver.email,
         subject: "Votre accès Kronos a été approuvé",
         html: buildEmail({ name: driver.name, appUrl }),

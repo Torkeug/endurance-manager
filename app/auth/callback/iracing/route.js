@@ -5,7 +5,7 @@ import { supabaseServer as supabase } from "../../../../lib/supabase-server";
 const IRACING_TOKEN_URL = "https://oauth.iracing.com/oauth2/token";
 const IRACING_PROFILE_URL = "https://oauth.iracing.com/oauth2/iracing/profile";
 const IRACING_DATA_BASE = "https://members-ng.iracing.com";
-const CLIENT_ID = "kronos-team";
+const CLIENT_ID = process.env.NEXT_PUBLIC_IRACING_CLIENT_ID;
 const REDIRECT_URI = `${process.env.NEXT_PUBLIC_APP_URL}/auth/callback/iracing`;
 
 // ─── Helpers ────────────────────────────────────────────────────────────────

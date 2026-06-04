@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import crypto from "crypto";
 
 const GARAGE61_AUTH_URL = "https://garage61.net/app/account/oauth";
-const CLIENT_ID = "01KSEXK2MP3Q4T2219885XN17V";
+const CLIENT_ID = process.env.NEXT_PUBLIC_GARAGE61_CLIENT_ID;
 const REDIRECT_URI = `${process.env.NEXT_PUBLIC_APP_URL}/auth/callback/garage61`;
 const SCOPE = "driving_data analyses";
 

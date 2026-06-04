@@ -3,7 +3,7 @@ import { createClient } from "../../../../lib/auth";
 import { supabaseServer as supabase } from "../../../../lib/supabase-server";
 
 const GARAGE61_TOKEN_URL = "https://garage61.net/api/oauth/token";
-const CLIENT_ID = "01KSEXK2MP3Q4T2219885XN17V";
+const CLIENT_ID = process.env.NEXT_PUBLIC_GARAGE61_CLIENT_ID;
 const REDIRECT_URI = `${process.env.NEXT_PUBLIC_APP_URL}/auth/callback/garage61`;
 
 export async function GET(request) {

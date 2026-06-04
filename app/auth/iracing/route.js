@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import crypto from "crypto";
 
 const IRACING_AUTH_URL = "https://oauth.iracing.com/oauth2/authorize";
-const CLIENT_ID = "kronos-team";
+const CLIENT_ID = process.env.NEXT_PUBLIC_IRACING_CLIENT_ID;
 const REDIRECT_URI = `${process.env.NEXT_PUBLIC_APP_URL}/auth/callback/iracing`;
 const SCOPE = "iracing.profile iracing.auth";
 

@@ -49,7 +49,7 @@ export async function POST(req) {
           Authorization: `Bearer ${process.env.RESEND_API_KEY}`,
         },
         body: JSON.stringify({
-          from: "Kronos Planner <noreply@kronos-simsports.com>",
+          from: process.env.EMAIL_FROM,
           to: admin.email,
           subject: `Nouveau pilote en attente — ${name}`,
           html: buildEmail({

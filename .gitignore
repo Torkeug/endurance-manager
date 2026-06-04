@@ -57,6 +57,7 @@ iracing-bridge/build/
 iracing-bridge/__pycache__/
 iracing-bridge/*.spec
 iracing-bridge/KronosBridge.ico
+iracing-bridge/kronos_bridge.ini
 
 .vercel
 .env*

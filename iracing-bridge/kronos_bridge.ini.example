@@ -1,0 +1,4 @@
+[kronos]
+api_url = https://your-app.example.com/api/iracing/lap
+event_url = https://your-app.example.com/api/iracing/event
+api_key = your-iracing-bridge-api-key

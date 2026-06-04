@@ -6,7 +6,9 @@ Runs as a system tray application.
 Connection management adapted from iracing_coach/telemetry_reader.py.
 """
 
+import configparser
 import enum
+import os
 import queue
 import time
 import threading
@@ -21,12 +23,15 @@ from PIL import Image, ImageDraw
 
 
 # ---------------------------------------------------------------------------
-# Config
+# Config — read from kronos_bridge.ini next to the script/executable
 # ---------------------------------------------------------------------------
 
-KRONOS_API_URL = "https://planner.kronos-simsports.com/api/iracing/lap"
-KRONOS_EVENT_URL = "https://planner.kronos-simsports.com/api/iracing/event"
-KRONOS_API_KEY = "BGmzJnh1hdh-YssdLqDfa69forQLLma8rWoagkQ5FGs"
+_cfg = configparser.ConfigParser()
+_cfg.read(os.path.join(os.path.dirname(os.path.abspath(__file__)), "kronos_bridge.ini"))
+
+KRONOS_API_URL = _cfg.get("kronos", "api_url", fallback=os.environ.get("KRONOS_API_URL", ""))
+KRONOS_EVENT_URL = _cfg.get("kronos", "event_url", fallback=os.environ.get("KRONOS_EVENT_URL", ""))
+KRONOS_API_KEY = _cfg.get("kronos", "api_key", fallback=os.environ.get("KRONOS_API_KEY", ""))
 POLL_HZ = 10          # 10Hz is enough — we only need lap crossings
 RETRY_INTERVAL = 30   # seconds between retry attempts
 RETRY_QUEUE_MAX = 20  # keep last 20 laps in memory if server is unreachable
