@@ -259,7 +259,10 @@
     "colDrySetup": "Setup ☀️",
     "colWetSetup": "Setup 💧",
     "teamModifier": "entry modifier",
-    "noModifier": "no modifier configured"
+    "noModifier": "no modifier configured",
+    "g61ErrorUnknown": "Unknown error",
+    "g61ErrorNetwork": "Network error",
+    "g61ErrorPrefix": "Error: {error}"
   },
   "raceMode": {
     "confirm": "Confirm",
@@ -426,6 +429,8 @@
     "recalcColRevised": "Revised",
     "recalcColDelta": "Delta",
     "defaultStrategyName": "Strategy 1",
+    "newStrategyName": "Strategy {number}",
+    "thisDriverFallback": "this driver",
     "deleteStrategyMsg": "All stints for this strategy will be permanently deleted. This action cannot be undone.",
     "setActiveConfirmTitle": "Change active strategy",
     "setActiveMsg": "Race Mode will now use \"{name}\".",
@@ -830,6 +835,7 @@
     "carsTitle": "Cars",
     "tracksTitle": "Tracks",
     "legacyGroup": "Legacy & Retired",
-    "fullConfig": "Full circuit"
+    "fullConfig": "Full circuit",
+    "categoryOther": "Other"
   }
 }

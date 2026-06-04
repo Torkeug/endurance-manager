@@ -13,7 +13,6 @@ const CAR_CATEGORY_LABELS = {
   oval: "Oval",
   dirt_oval: "Dirt Oval",
   dirt_road: "Dirt Road",
-  other: "Autre",
 };
 
 const TRACK_CATEGORY_LABELS = {
@@ -21,7 +20,6 @@ const TRACK_CATEGORY_LABELS = {
   oval: "Oval",
   dirt_oval: "Dirt Oval",
   dirt_road: "Dirt Road",
-  other: "Autre",
 };
 
 // Reusable collapse row — arrow + label + count
@@ -274,7 +272,7 @@ export default function InventaireDisplay({
               return (
                 <div key={cat.category}>
                   <CollapseHeader
-                    label={CAR_CATEGORY_LABELS[cat.category] || cat.category}
+                    label={CAR_CATEGORY_LABELS[cat.category] || t("categoryOther")}
                     count={cat.count}
                     expanded={catExpanded}
                     onToggle={() => toggle(setExpandedCarCats, cat.category)}
@@ -412,7 +410,7 @@ export default function InventaireDisplay({
                 <div key={cat.category}>
                   {/* Category header */}
                   <CollapseHeader
-                    label={TRACK_CATEGORY_LABELS[cat.category] || cat.category}
+                    label={TRACK_CATEGORY_LABELS[cat.category] || t("categoryOther")}
                     count={cat.count}
                     expanded={catExpanded}
                     onToggle={() => toggle(setExpandedTrackCats, cat.category)}

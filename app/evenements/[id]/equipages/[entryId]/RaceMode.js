@@ -438,9 +438,9 @@ export default function RaceMode({
       // Stamp irl_start on stint 1 (stints are ordered by stint_number)
       const first = currentStints[0];
       if (!first) return;
-      const t = event.recorded_at;
-      setStints((prev) => prev.map((s) => s.id === first.id ? { ...s, irl_start_actual: t } : s));
-      await supabase.from("stints").update({ irl_start_actual: t }).eq("id", first.id);
+      const ts = event.recorded_at;
+      setStints((prev) => prev.map((s) => s.id === first.id ? { ...s, irl_start_actual: ts } : s));
+      await supabase.from("stints").update({ irl_start_actual: ts }).eq("id", first.id);
       return;
     }
 
@@ -459,9 +459,9 @@ export default function RaceMode({
           !s.irl_end_actual,
       );
       if (!active) return;
-      const t = event.recorded_at;
-      setStints((prev) => prev.map((s) => s.id === active.id ? { ...s, irl_end_actual: t } : s));
-      await supabase.from("stints").update({ irl_end_actual: t }).eq("id", active.id);
+      const ts = event.recorded_at;
+      setStints((prev) => prev.map((s) => s.id === active.id ? { ...s, irl_end_actual: ts } : s));
+      await supabase.from("stints").update({ irl_end_actual: ts }).eq("id", active.id);
       return;
     }
 
@@ -486,10 +486,10 @@ export default function RaceMode({
       const activeIdx = currentStints.findIndex((s) => s.id === active.id);
       const nextStint = currentStints[activeIdx + 1] ?? null;
       if (!nextStint) return;
-      const t = event.recorded_at;
+      const ts = event.recorded_at;
       prevNextStintIrlStartRef.current = { id: nextStint.id, value: nextStint.irl_start_actual ?? null };
-      setStints((prev) => prev.map((s) => s.id === nextStint.id ? { ...s, irl_start_actual: t } : s));
-      await supabase.from("stints").update({ irl_start_actual: t }).eq("id", nextStint.id);
+      setStints((prev) => prev.map((s) => s.id === nextStint.id ? { ...s, irl_start_actual: ts } : s));
+      await supabase.from("stints").update({ irl_start_actual: ts }).eq("id", nextStint.id);
 
       // Check if the driver who exited is the one planned for this stint
       if (nextStint.driver_id && event.driver_id && nextStint.driver_id !== event.driver_id) {

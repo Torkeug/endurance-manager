@@ -417,14 +417,14 @@ function DriverRow({
       const res = await fetch(`/api/garage61-sync?${params}`);
       const data = await res.json();
       if (!res.ok) {
-        setG61Error(data.error ?? "Erreur inconnue");
+        setG61Error(data.error ?? t("g61ErrorUnknown"));
       } else {
         setG61Track(data.track);
         setG61Laps(data.laps ?? []);
         setG61Panel(true);
       }
     } catch {
-      setG61Error("Erreur réseau");
+      setG61Error(t("g61ErrorNetwork"));
     } finally {
       setG61Loading(false);
     }
@@ -1009,7 +1009,7 @@ function DriverRow({
                 {g61Error === "not_linked" && t("noGarage61")}
                 {g61Error === "track_not_found" && t("noCircuit")}
                 {g61Error === "token_expired" && t("sessionExpired")}
-                {!["not_linked", "track_not_found", "token_expired"].includes(g61Error) && `Erreur : ${g61Error}`}
+                {!["not_linked", "track_not_found", "token_expired"].includes(g61Error) && t("g61ErrorPrefix", { error: g61Error })}
               </div>
             )}
 

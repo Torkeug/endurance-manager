@@ -1677,7 +1677,7 @@ export default function StintGrid({
       .from("strategies")
       .insert({
         team_entry_id: teamEntryId,
-        name: `Stratégie ${nextSort}`,
+        name: t("newStrategyName", { number: nextSort }),
         sort_order: nextSort,
         is_active: false,
         // Inherit offset from current strategy — driver can adjust per strategy
@@ -1991,7 +1991,7 @@ export default function StintGrid({
   const clearDriverStints = (driverId) => {
     if (archived) return;
     const driver = assignedDrivers.find((d) => d.drivers?.id === driverId);
-    const driverName = driver?.drivers?.name || "ce pilote";
+    const driverName = driver?.drivers?.name || t("thisDriverFallback");
     const stintCount = calculated.filter(
       (s) => s.driver_id === driverId && isEligible(s),
     ).length;

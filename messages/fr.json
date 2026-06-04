@@ -240,7 +240,10 @@
     "colDrySetup": "Réglages ☀️",
     "colWetSetup": "Réglages 💧",
     "teamModifier": "modificateur équipage",
-    "noModifier": "sans modificateur configuré"
+    "noModifier": "sans modificateur configuré",
+    "g61ErrorUnknown": "Erreur inconnue",
+    "g61ErrorNetwork": "Erreur réseau",
+    "g61ErrorPrefix": "Erreur : {error}"
   },
   "raceMode": {
     "confirm": "Confirmer",
@@ -407,6 +410,8 @@
     "recalcColRevised": "Révisé",
     "recalcColDelta": "Écart",
     "defaultStrategyName": "Stratégie 1",
+    "newStrategyName": "Stratégie {number}",
+    "thisDriverFallback": "ce pilote",
     "deleteStrategyMsg": "Tous les relais de cette stratégie seront supprimés définitivement. Cette action est irréversible.",
     "setActiveConfirmTitle": "Changer la stratégie active",
     "setActiveMsg": "Race Mode utilisera désormais \"{name}\".",
@@ -830,6 +835,7 @@
     "carsTitle": "Voitures",
     "tracksTitle": "Circuits",
     "legacyGroup": "Legacy & Retraités",
-    "fullConfig": "Circuit complet"
+    "fullConfig": "Circuit complet",
+    "categoryOther": "Autre"
   }
 }
