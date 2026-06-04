@@ -63,3 +63,5 @@ iracing-bridge/KronosBridge.ico
 
 # supabase local dev artefacts
 supabase/.temp/
+
+.env*
