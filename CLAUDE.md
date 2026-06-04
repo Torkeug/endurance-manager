@@ -5,7 +5,7 @@ Web app for managing iRacing endurance teams. Handles driver registration/approv
 ## Stack
 
 - **Next.js 16** — App Router, mostly JS (not TS). Server components for data fetching, client components for interactivity.
-- **Supabase** — Postgres + Auth + Realtime. Project ref: `xiehdrcywoyeggtnbzcl`
+- **Supabase** — Postgres + Auth + Realtime.
 - **Resend** — transactional email (driver approval, stale sync warnings)
 - **iRacing API** — syncs driver iRating, car/track inventory via OAuth PKCE
 - **Garage61** — lap data integration via OAuth PKCE
