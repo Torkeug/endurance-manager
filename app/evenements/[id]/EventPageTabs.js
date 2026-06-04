@@ -5,6 +5,7 @@ import StartTimesManager from "./StartTimesManager";
 import EventInventoryTab from "./EventInventoryTab";
 import { formatTimeInZone } from "../../../lib/timezone";
 import { useSearchParams } from "next/navigation";
+import { useTranslations } from "next-intl";
 
 // ── Crew name coloring ────────────────────────────────────────────────────────
 // Deterministic hash → one of 8 palette entries. Colors are chosen to be legible
@@ -93,9 +94,6 @@ function CrewPill({ name, color }) {
   );
 }
 
-// ── Tab definitions ───────────────────────────────────────────────────────────
-const TAB_IDS = ["inscriptions", "equipages", "horaires", "inventaire"];
-
 export default function EventPageTabs({
   event,
   allCars,
@@ -105,6 +103,7 @@ export default function EventPageTabs({
   currentDriver,
   crewColorsMap = {},
 }) {
+  const t = useTranslations("events");
   const [activeTab, setActiveTab] = useState("inscriptions");
   const searchParams = useSearchParams();
 
@@ -156,10 +155,10 @@ export default function EventPageTabs({
   ).size;
 
   const tabs = [
-    { id: "inscriptions", label: "Inscriptions", count: uniqueDriverCount },
-    { id: "equipages", label: "Équipages", count: teamCount },
-    { id: "horaires", label: "Horaires de départ" },
-    ...(!isExternal ? [{ id: "inventaire", label: "Inventaire" }] : []),
+    { id: "inscriptions", label: t("tabInscriptions"), count: uniqueDriverCount },
+    { id: "equipages", label: t("tabEquipages"), count: teamCount },
+    { id: "horaires", label: t("tabStartTimes") },
+    ...(!isExternal ? [{ id: "inventaire", label: t("tabInventory") }] : []),
   ];
 
   // Persist tab state per event — read in useEffect to avoid hydration mismatch.
@@ -257,10 +256,6 @@ export default function EventPageTabs({
 
   const tz = event.timezone || "Europe/Paris";
 
-  const isInEvent = (event.signups || []).some(
-    (s) => s.drivers?.id === currentDriver?.id,
-  );
-
   return (
     <div>
       {/* ── Tab bar ────────────────────────────────────────────────────── */}
@@ -332,7 +327,7 @@ export default function EventPageTabs({
         <div>
           {event.archived && (
             <div style={{ marginBottom: "1.25rem", padding: "0.65rem 0.9rem", background: "rgba(224,85,85,0.08)", border: "1px solid var(--danger)", borderRadius: "3px", fontSize: "0.82rem", color: "var(--danger)" }}>
-              📦 Cet événement est archivé — toutes les données sont en lecture seule.
+              {t("archivedNotice")}
             </div>
           )}
           <div
@@ -345,10 +340,10 @@ export default function EventPageTabs({
           >
             <div style={{ fontSize: "0.85rem", color: "var(--text-dim)" }}>
               {isExternal
-                ? "Inscriptions"
-                : `${uniqueDriverCount} pilote${uniqueDriverCount !== 1 ? "s" : ""} inscrit${
-                    uniqueDriverCount !== 1 ? "s" : ""
-                  }`}
+                ? t("inscriptionsLabel")
+                : (uniqueDriverCount !== 1
+                    ? t("signedUpCount_other").replace("#", uniqueDriverCount)
+                    : t("signedUpCount_one").replace("#", uniqueDriverCount))}
             </div>
             {/* Engineers don't sign up — they're staff, not drivers, externals cannot sign up by themselves */}
             {!event.archived && !engineer && !isExternal && (
@@ -356,7 +351,7 @@ export default function EventPageTabs({
                 href={`/evenements/${event.id}/inscription`}
                 className="btn btn-primary"
               >
-                + S&apos;inscrire
+                {t("signUp")}
               </Link>
             )}
           </div>
@@ -372,7 +367,7 @@ export default function EventPageTabs({
             }}>
               <label style={{ display: "flex", alignItems: "center", gap: "0.35rem", cursor: "pointer", color: "var(--text-dim)", whiteSpace: "nowrap" }}>
                 <input type="checkbox" checked={filterExcludeWithTeam} onChange={(e) => setFilterExcludeWithTeam(e.target.checked)} style={{ accentColor: "var(--accent)" }} />
-                Sans équipe
+                {t("filterNoTeam")}
               </label>
 
               <span style={{ color: "var(--border)" }}>|</span>
@@ -442,7 +437,7 @@ export default function EventPageTabs({
                     fontSize: "0.75rem", fontWeight: 600,
                     background: "transparent", color: "var(--danger)",
                     border: "1px solid var(--danger)",
-                  }}>× Réinitialiser</button>
+                  }}>{t("filterReset")}</button>
                 </>
               )}
             </div>
@@ -450,9 +445,7 @@ export default function EventPageTabs({
 
           {signupCount === 0 ? (
             <div className="table-wrap">
-              <div className="empty">
-                Aucun pilote inscrit pour l&apos;instant.
-              </div>
+              <div className="empty">{t("noSignups")}</div>
             </div>
           ) : (
             <div className="table-wrap inscriptions-table">
@@ -463,7 +456,7 @@ export default function EventPageTabs({
                       onClick={() => toggleSort("name")}
                       style={{ cursor: "pointer", userSelect: "none", whiteSpace: "nowrap" }}
                     >
-                      Pilote{" "}
+                      {t("colDriver")}{" "}
                       <span style={{ opacity: sortField === "name" ? 1 : 0.3, fontSize: "0.75em" }}>
                         {sortField === "name" && sortDir === "desc" ? "▼" : "▲"}
                       </span>
@@ -481,22 +474,22 @@ export default function EventPageTabs({
                       onClick={() => toggleSort("team")}
                       style={{ cursor: "pointer", userSelect: "none", whiteSpace: "nowrap" }}
                     >
-                      Équipe{" "}
+                      {t("colTeam")}{" "}
                       <span style={{ opacity: sortField === "team" ? 1 : 0.3, fontSize: "0.75em" }}>
                         {sortField === "team" && sortDir === "desc" ? "▼" : "▲"}
                       </span>
                     </th>
-                    <th>Préférences</th>
+                    <th>{t("colPreferences")}</th>
                     <th
                       onClick={() => toggleSort("starttime")}
                       style={{ cursor: "pointer", userSelect: "none", whiteSpace: "nowrap" }}
                     >
-                      Créneaux{" "}
+                      {t("colSlots")}{" "}
                       <span style={{ opacity: sortField === "starttime" ? 1 : 0.3, fontSize: "0.75em" }}>
                         {sortField === "starttime" && sortDir === "desc" ? "▼" : "▲"}
                       </span>
                     </th>
-                    <th>Tags</th>
+                    <th>{t("colTags")}</th>
                     <th></th>
                   </tr>
                 </thead>
@@ -518,7 +511,7 @@ export default function EventPageTabs({
 
                     if (filtered.length === 0) return (
                       <tr><td colSpan={7} style={{ padding: "2rem", textAlign: "center", color: "var(--text-dim)", fontStyle: "italic" }}>
-                        Aucun pilote ne correspond aux filtres actifs.
+                        {t("noSignupsFilter")}
                       </td></tr>
                     );
 
@@ -627,7 +620,7 @@ export default function EventPageTabs({
                                       className="mono"
                                       style={{ fontSize: "0.78rem", color: "var(--accent)" }}
                                     >
-                                      Départ à {formatTimeInZone(st.irl_start, tz)}
+                                      {t("startAt", { time: formatTimeInZone(st.irl_start, tz) })}
                                     </div>
                                   </div>
                                 );
@@ -656,7 +649,7 @@ export default function EventPageTabs({
                                   href={`/evenements/${event.id}/inscription?driver=${s.drivers.id}`}
                                   className="btn btn-secondary btn-sm"
                                 >
-                                  {isExternal === true ? "Voir" : "Gérer"}
+                                  {isExternal === true ? t("see") : t("manage")}
                                 </Link>
                               )}
                           </td>
@@ -699,7 +692,7 @@ export default function EventPageTabs({
                                     {teamName}
                                   </span>
                                 ) : (
-                                  <span style={{ color: "var(--text-dim)", fontSize: "0.85rem", fontStyle: "italic" }}>Sans équipage</span>
+                                  <span style={{ color: "var(--text-dim)", fontSize: "0.85rem", fontStyle: "italic" }}>{t("noTeamHeader")}</span>
                                 )}
                               </td>
                             </tr>
@@ -723,7 +716,7 @@ export default function EventPageTabs({
                           borderTop: undefined,
                           duplicateCount: siblings.length,
                           allDriverTeams,
-                          badgeLabel: `${siblings.length} équipages`,
+                          badgeLabel: t("teamsBadge", { count: siblings.length }),
                         }));
                       }
                       return result;
@@ -772,11 +765,11 @@ export default function EventPageTabs({
                                     <span style={{ fontWeight: 700, fontSize: "0.85rem", letterSpacing: "0.04em", textTransform: "uppercase" }}>{st.label}</span>
                                     <span style={{ margin: "0 0.5rem", color: "var(--text-dim)" }}>·</span>
                                     <span className="mono" style={{ color: "var(--accent)", fontSize: "0.85rem", fontWeight: 600 }}>
-                                      Départ à {formatTimeInZone(st.irl_start, tz)}
+                                      {t("startAt", { time: formatTimeInZone(st.irl_start, tz) })}
                                     </span>
                                   </>
                                 ) : (
-                                  <span style={{ color: "var(--text-dim)", fontSize: "0.85rem", fontStyle: "italic" }}>Pas de créneau préféré</span>
+                                  <span style={{ color: "var(--text-dim)", fontSize: "0.85rem", fontStyle: "italic" }}>{t("noPreferredSlot")}</span>
                                 )}
                               </td>
                             </tr>
@@ -788,7 +781,7 @@ export default function EventPageTabs({
                           borderTop: undefined,
                           displayedStartTimes: st ? [st] : [],
                           duplicateCount: (s.preferred_start_time_ids || []).length,
-                          badgeLabel: `${(s.preferred_start_time_ids || []).length} créneaux`,
+                          badgeLabel: t("slotsBadge", { count: (s.preferred_start_time_ids || []).length }),
                         }));
                       }
                       return rows;
@@ -886,10 +879,10 @@ export default function EventPageTabs({
           >
             <div style={{ fontSize: "0.85rem", color: "var(--text-dim)" }}>
               {isExternal
-                ? "Équipages"
-                : `${teamCount} équipage${teamCount !== 1 ? "s" : ""} engagé${
-                    teamCount !== 1 ? "s" : ""
-                  }`}
+                ? t("equipagesLabel")
+                : (teamCount !== 1
+                    ? t("equipagesCount_other").replace("#", teamCount)
+                    : t("equipagesCount_one").replace("#", teamCount))}
             </div>
             {/* Engineers and external drivers cannot create team entries */}
             {!event.archived && !engineer && !isExternal && (
@@ -897,30 +890,28 @@ export default function EventPageTabs({
                 href={`/evenements/${event.id}/equipages/nouveau`}
                 className="btn btn-primary"
               >
-                + Ajouter un équipage
+                {t("addTeamEntry")}
               </Link>
             )}
           </div>
 
           {teamCount === 0 ? (
             <div className="table-wrap">
-              <div className="empty">
-                Aucun équipage engagé pour cet événement.
-              </div>
+              <div className="empty">{t("noTeamEntries")}</div>
             </div>
           ) : (
             <div className="table-wrap">
               <table>
                 <thead>
                   <tr>
-                    <th>Équipage</th>
-                    <th>Voiture</th>
-                    <th>Classe</th>
+                    <th>{t("colCrew")}</th>
+                    <th>{t("colCar")}</th>
+                    <th>{t("colClass")}</th>
                     {event.championship_id && <th>#</th>}
-                    <th>Pilotes</th>
-                    <th>SoF</th>
-                    <th>Départ IRL</th>
-                    <th>Stream</th>
+                    <th>{t("colDrivers")}</th>
+                    <th>{t("colSoF")}</th>
+                    <th>{t("colStart")}</th>
+                    <th>{t("colStream")}</th>
                     <th></th>
                   </tr>
                 </thead>
@@ -967,7 +958,7 @@ export default function EventPageTabs({
                                   color: "#50c878",
                                 }}
                               >
-                                Inscrit ✓
+                                {t("badgeSignedUp")}
                               </span>
                             )}
                           </div>
@@ -1078,11 +1069,7 @@ export default function EventPageTabs({
                                   marginTop: "0.1rem",
                                 }}
                               >
-                                Départ à{" "}
-                                {formatTimeInZone(
-                                  entry.event_start_times.irl_start,
-                                  tz,
-                                )}
+                                {t("startAt", { time: formatTimeInZone(entry.event_start_times.irl_start, tz) })}
                               </div>
                             </>
                           ) : (
@@ -1148,14 +1135,14 @@ export default function EventPageTabs({
                             // Archived events are fully read-only — always show "Voir" regardless
                             // of role or team membership. "Gérer" implies write access which is blocked.
                             const label = event.archived
-                              ? "Voir"
+                              ? t("see")
                               : admin
-                                ? "Gérer"
+                                ? t("manage")
                                 : engineer
-                                  ? "Voir"
+                                  ? t("see")
                                   : isInTeam
-                                    ? "Gérer"
-                                    : "Voir";
+                                    ? t("manage")
+                                    : t("see");
 
                             return (
                               <Link

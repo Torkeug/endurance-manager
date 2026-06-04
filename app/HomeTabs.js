@@ -1,9 +1,9 @@
 "use client";
 import { useState, useEffect } from "react";
+import { useTranslations } from "next-intl";
 
 // Thin client shell — only manages tab state.
 // All content is server-rendered and passed as JSX props (planningTab / incompleteTab).
-// This avoids serializing large data objects to the client.
 export default function HomeTabs({
   planningTab,
   incompleteTab,
@@ -11,6 +11,7 @@ export default function HomeTabs({
   incompleteCount,
 }) {
   const [activeTab, setActiveTab] = useState("planning");
+  const t = useTranslations("homeTabs");
 
   // Read persisted tab in useEffect — never in useState to avoid hydration mismatch
   useEffect(() => {
@@ -24,13 +25,12 @@ export default function HomeTabs({
   };
 
   const tabs = [
-    { id: "planning", label: "Mon planning", count: signupCount },
-    { id: "incomplete", label: "Suivi", count: incompleteCount, danger: true },
+    { id: "planning", label: t("planning"), count: signupCount },
+    { id: "incomplete", label: t("incomplete"), count: incompleteCount, danger: true },
   ];
 
   return (
     <div>
-      {/* Tab bar */}
       <div
         style={{
           display: "flex",
@@ -51,10 +51,7 @@ export default function HomeTabs({
               padding: "0.6rem 1.25rem",
               background: "transparent",
               border: "none",
-              borderBottom:
-                activeTab === tab.id
-                  ? "2px solid var(--accent)"
-                  : "2px solid transparent",
+              borderBottom: activeTab === tab.id ? "2px solid var(--accent)" : "2px solid transparent",
               color: activeTab === tab.id ? "var(--accent)" : "var(--text-dim)",
               fontFamily: "var(--font-rajdhani), sans-serif",
               fontSize: "0.9rem",
@@ -72,7 +69,6 @@ export default function HomeTabs({
             }}
           >
             {tab.label}
-            {/* Count badge — red for incomplete teams, neutral for planning */}
             {tab.count > 0 && (
               <span
                 style={{
@@ -81,26 +77,14 @@ export default function HomeTabs({
                   padding: "0.05rem 0.35rem",
                   borderRadius: "10px",
                   background: tab.danger
-                    ? activeTab === tab.id
-                      ? "var(--danger)"
-                      : "rgba(224,85,85,0.15)"
-                    : activeTab === tab.id
-                      ? "var(--accent)"
-                      : "var(--surface-2)",
+                    ? activeTab === tab.id ? "var(--danger)" : "rgba(224,85,85,0.15)"
+                    : activeTab === tab.id ? "var(--accent)" : "var(--surface-2)",
                   color: tab.danger
-                    ? activeTab === tab.id
-                      ? "#fff"
-                      : "var(--danger)"
-                    : activeTab === tab.id
-                      ? "#fff"
-                      : "var(--text-dim)",
+                    ? activeTab === tab.id ? "#fff" : "var(--danger)"
+                    : activeTab === tab.id ? "#fff" : "var(--text-dim)",
                   border: tab.danger
-                    ? activeTab === tab.id
-                      ? "none"
-                      : "1px solid var(--danger)"
-                    : activeTab === tab.id
-                      ? "none"
-                      : "1px solid var(--border)",
+                    ? activeTab === tab.id ? "none" : "1px solid var(--danger)"
+                    : activeTab === tab.id ? "none" : "1px solid var(--border)",
                 }}
               >
                 {tab.count}
@@ -110,13 +94,8 @@ export default function HomeTabs({
         ))}
       </div>
 
-      {/* Tab content — both are rendered server-side, shown/hidden via display */}
-      <div style={{ display: activeTab === "planning" ? "block" : "none" }}>
-        {planningTab}
-      </div>
-      <div style={{ display: activeTab === "incomplete" ? "block" : "none" }}>
-        {incompleteTab}
-      </div>
+      <div style={{ display: activeTab === "planning" ? "block" : "none" }}>{planningTab}</div>
+      <div style={{ display: activeTab === "incomplete" ? "block" : "none" }}>{incompleteTab}</div>
     </div>
   );
 }

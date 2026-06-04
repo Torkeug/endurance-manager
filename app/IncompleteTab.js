@@ -1,5 +1,6 @@
 "use client";
 import { useState, useEffect } from "react";
+import { useTranslations } from "next-intl";
 
 // Thin client shell for the "Suivi" sub-tabs.
 // All section content is server-rendered and passed as JSX props.
@@ -12,6 +13,7 @@ export default function IncompleteTab({
   unassignedCount,
 }) {
   const [activeTab, setActiveTab] = useState("noDrivers");
+  const t = useTranslations("incompleteTab");
 
   // Read persisted sub-tab in useEffect — never in useState to avoid hydration mismatch
   useEffect(() => {
@@ -26,14 +28,13 @@ export default function IncompleteTab({
   };
 
   const tabs = [
-    { id: "noDrivers", label: "Sans pilotes", count: noDriversCount },
-    { id: "noStints", label: "Sans relais", count: noStintsCount },
-    { id: "unassigned", label: "Sans équipage", count: unassignedCount },
+    { id: "noDrivers", label: t("noDrivers"), count: noDriversCount },
+    { id: "noStints", label: t("noStints"), count: noStintsCount },
+    { id: "unassigned", label: t("unassigned"), count: unassignedCount },
   ];
 
   return (
     <div>
-      {/* Sub-tab bar */}
       <div
         style={{
           display: "flex",
@@ -54,10 +55,7 @@ export default function IncompleteTab({
               padding: "0.6rem 1.25rem",
               background: "transparent",
               border: "none",
-              borderBottom:
-                activeTab === tab.id
-                  ? "2px solid var(--danger)"
-                  : "2px solid transparent",
+              borderBottom: activeTab === tab.id ? "2px solid var(--danger)" : "2px solid transparent",
               color: activeTab === tab.id ? "var(--danger)" : "var(--text-dim)",
               fontFamily: "var(--font-rajdhani), sans-serif",
               fontSize: "0.9rem",
@@ -75,7 +73,6 @@ export default function IncompleteTab({
             }}
           >
             {tab.label}
-            {/* Count badge — always danger-colored since all sub-tabs are alert categories */}
             {tab.count > 0 && (
               <span
                 style={{
@@ -83,13 +80,9 @@ export default function IncompleteTab({
                   fontWeight: 700,
                   padding: "0.05rem 0.35rem",
                   borderRadius: "10px",
-                  background:
-                    activeTab === tab.id
-                      ? "var(--danger)"
-                      : "rgba(224,85,85,0.15)",
+                  background: activeTab === tab.id ? "var(--danger)" : "rgba(224,85,85,0.15)",
                   color: activeTab === tab.id ? "#fff" : "var(--danger)",
-                  border:
-                    activeTab === tab.id ? "none" : "1px solid var(--danger)",
+                  border: activeTab === tab.id ? "none" : "1px solid var(--danger)",
                 }}
               >
                 {tab.count}
@@ -99,16 +92,9 @@ export default function IncompleteTab({
         ))}
       </div>
 
-      {/* Sub-tab content — server-rendered slots, toggled via display */}
-      <div style={{ display: activeTab === "noDrivers" ? "block" : "none" }}>
-        {noDriversSection}
-      </div>
-      <div style={{ display: activeTab === "noStints" ? "block" : "none" }}>
-        {noStintsSection}
-      </div>
-      <div style={{ display: activeTab === "unassigned" ? "block" : "none" }}>
-        {unassignedSection}
-      </div>
+      <div style={{ display: activeTab === "noDrivers" ? "block" : "none" }}>{noDriversSection}</div>
+      <div style={{ display: activeTab === "noStints" ? "block" : "none" }}>{noStintsSection}</div>
+      <div style={{ display: activeTab === "unassigned" ? "block" : "none" }}>{unassignedSection}</div>
     </div>
   );
 }

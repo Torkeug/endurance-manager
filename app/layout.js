@@ -2,6 +2,8 @@ import { Rajdhani, DM_Mono } from "next/font/google";
 import "./globals.css";
 import Nav from "../components/Nav";
 import PullToRefresh from "../components/PullToRefresh";
+import { NextIntlClientProvider } from "next-intl";
+import { getMessages, getLocale } from "next-intl/server";
 
 const rajdhani = Rajdhani({
   subsets: ["latin"],
@@ -26,12 +28,17 @@ export const metadata = {
   },
 };
 
-export default function RootLayout({ children }) {
+export default async function RootLayout({ children }) {
+  const locale = await getLocale();
+  const messages = await getMessages();
+
   return (
-    <html lang="fr" className={`${rajdhani.variable} ${dmMono.variable}`} data-scroll-behavior="smooth">
+    <html lang={locale} className={`${rajdhani.variable} ${dmMono.variable}`} data-scroll-behavior="smooth">
       <body className="h-screen flex flex-col overflow-hidden">
-        <Nav />
-        <PullToRefresh>{children}</PullToRefresh>
+        <NextIntlClientProvider messages={messages}>
+          <Nav />
+          <PullToRefresh>{children}</PullToRefresh>
+        </NextIntlClientProvider>
       </body>
     </html>
   );

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { formatInZone } from "../lib/timezone";
 import HomeTabs from "./HomeTabs";
 import IncompleteTab from "./IncompleteTab";
+import { getTranslations } from "next-intl/server";
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
@@ -12,18 +13,6 @@ function formatDuration(minutes) {
   const h = Math.floor(minutes / 60);
   const m = minutes % 60;
   return m === 0 ? `${h}h` : `${h}h${String(m).padStart(2, "0")}`;
-}
-
-function timeUntil(dtStr) {
-  if (!dtStr) return null;
-  const diff = new Date(dtStr) - new Date();
-  // Returns null for past times — callers use this to filter out elapsed starts
-  if (diff < 0) return null;
-  const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-  const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-  if (days > 0) return `dans ${days}j ${hours}h`;
-  if (hours > 0) return `dans ${hours}h`;
-  return "imminent";
 }
 
 function Badge({
@@ -53,10 +42,22 @@ function Badge({
 // ─── Page ───────────────────────────────────────────────────────────────────
 
 export default async function HomePage() {
+  const t = await getTranslations("dashboard");
   const { driver: currentDriver } = await getSessionAndDriver();
   const admin = isAdmin(currentDriver);
-  // Engineers don't have personal stints — "Mon prochain relais" is not relevant to them
+  // Engineers don't have personal stints — "My next stint" is not relevant to them
   const engineer = isEngineer(currentDriver);
+
+  const timeUntil = (dtStr) => {
+    if (!dtStr) return null;
+    const diff = new Date(dtStr) - new Date();
+    if (diff < 0) return null;
+    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+    const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+    if (days > 0) return t("timeUntilDays", { days, hours });
+    if (hours > 0) return t("timeUntilHours", { hours });
+    return t("imminent");
+  };
 
   // ── Data fetching ──────────────────────────────────────────────────────────
   const syncCutoff = new Date(Date.now() - 100 * 24 * 60 * 60 * 1000).toISOString();
@@ -73,9 +74,7 @@ export default async function HomePage() {
     { count: inactiveDrivers },
     { data: teamEntries },
     { data: championships },
-    // Active strategies — used to scope the "no stints" incomplete teams check
     { data: activeStrategies },
-    // Signups with no team entry assigned — drivers floating without a crew
     { data: unassignedSignupsRaw },
   ] = await Promise.all([
     supabase
@@ -105,9 +104,6 @@ export default async function HomePage() {
       ? supabase
           .from("stints")
           .select(
-            // strategies!inner filters to stints that belong to a strategy — .eq below
-            // restricts to the active one so "Mon prochain relais" never shows
-            // stints from inactive scenario strategies.
             `*, strategies!inner(is_active), team_entries(id, crew_name, event_id, events(name, timezone), event_start_times(label, irl_start))`,
           )
           .eq("driver_id", currentDriver.id)
@@ -116,92 +112,41 @@ export default async function HomePage() {
       : { data: [] },
 
     admin
-      ? supabase
-          .from("drivers")
-          .select("id")
-          .eq("approved", false)
-          .eq("refused", false)
+      ? supabase.from("drivers").select("id").eq("approved", false).eq("refused", false)
       : { data: [] },
 
     admin
-      ? supabase
-          .from("drivers")
-          .select("*", { count: "exact", head: true })
-          .eq("active", true)
-          .eq("is_test_account", false)
-          .neq("role", "engineer")
+      ? supabase.from("drivers").select("*", { count: "exact", head: true }).eq("active", true).eq("is_test_account", false).neq("role", "engineer")
       : { count: 0 },
 
     admin
-      ? supabase
-          .from("drivers")
-          .select("*", { count: "exact", head: true })
-          .eq("test_driver", true)
-          .eq("approved", true)
+      ? supabase.from("drivers").select("*", { count: "exact", head: true }).eq("test_driver", true).eq("approved", true)
       : { count: 0 },
 
     admin
-      ? supabase
-          .from("drivers")
-          .select("*", { count: "exact", head: true })
-          .eq("membership_ok", false)
-          .eq("approved", true)
-          .eq("active", true)
-          .eq("test_driver", false)
+      ? supabase.from("drivers").select("*", { count: "exact", head: true }).eq("membership_ok", false).eq("approved", true).eq("active", true).eq("test_driver", false)
       : { count: 0 },
 
     admin
-      ? supabase
-          .from("drivers")
-          .select("*", { count: "exact", head: true })
-          .eq("approved", true)
-          .eq("active", true)
-          .eq("is_test_account", false)
-          .neq("role", "engineer")
-          .or(`last_driver_sync_at.is.null,last_driver_sync_at.lt.${syncCutoff}`)
+      ? supabase.from("drivers").select("*", { count: "exact", head: true }).eq("approved", true).eq("active", true).eq("is_test_account", false).neq("role", "engineer").or(`last_driver_sync_at.is.null,last_driver_sync_at.lt.${syncCutoff}`)
       : { count: 0 },
 
     admin
-      ? supabase
-          .from("drivers")
-          .select("*", { count: "exact", head: true })
-          .eq("approved", true)
-          .eq("active", false)
-          .neq("role", "engineer")
+      ? supabase.from("drivers").select("*", { count: "exact", head: true }).eq("approved", true).eq("active", false).neq("role", "engineer")
       : { count: 0 },
 
     admin
-      ? supabase
-          .from("team_entries")
-          .select(
-            // strategy_id included so the derived-data check can filter to active strategy only
-            // archived included so completed events are excluded from the incomplete sections
-            `id, crew_name, event_id, events (name, archived), signups (id), stints (id, driver_id, strategy_id)`,
-          )
-          .order("crew_name")
+      ? supabase.from("team_entries").select(`id, crew_name, event_id, events (name, archived), signups (id), stints (id, driver_id, strategy_id)`).order("crew_name")
       : { data: [] },
 
-    // Championships — used to build the name map and archived set
     supabase.from("championships").select("id, name, archived").order("name"),
 
-    // Fetch active strategy IDs — one per team entry — to scope the stints check below
     admin
-      ? supabase
-          .from("strategies")
-          .select("id, team_entry_id")
-          .eq("is_active", true)
+      ? supabase.from("strategies").select("id, team_entry_id").eq("is_active", true)
       : { data: [] },
 
-    // Drivers who signed up for an event but are not yet assigned to a team entry
     admin
-      ? supabase
-          .from("signups")
-          .select(
-            `id, driver_id, event_id,
-             drivers (name),
-             events (id, name, archived)`,
-          )
-          .is("team_entry_id", null)
+      ? supabase.from("signups").select(`id, driver_id, event_id, drivers (name), events (id, name, archived)`).is("team_entry_id", null)
       : { data: [] },
   ]);
 
@@ -218,22 +163,14 @@ export default async function HomePage() {
   );
 
   const upcomingEvents = (events || [])
-    .filter(
-      (ev) =>
-        !ev.championship_id || !archivedChampionshipIds.has(ev.championship_id),
-    )
+    .filter((ev) => !ev.championship_id || !archivedChampionshipIds.has(ev.championship_id))
     .map((ev) => {
-      const starts = (ev.event_start_times || []).sort(
-        (a, b) => new Date(a.irl_start) - new Date(b.irl_start),
-      );
+      const starts = (ev.event_start_times || []).sort((a, b) => new Date(a.irl_start) - new Date(b.irl_start));
       const next = starts.find((s) => new Date(s.irl_start) > now);
       return { ...ev, nextStart: next };
     })
     .filter((ev) => ev.nextStart)
-    .sort(
-      (a, b) =>
-        new Date(a.nextStart.irl_start) - new Date(b.nextStart.irl_start),
-    );
+    .sort((a, b) => new Date(a.nextStart.irl_start) - new Date(b.nextStart.irl_start));
 
   const nextEvent = upcomingEvents[0] || null;
 
@@ -243,33 +180,20 @@ export default async function HomePage() {
       .sort((a, b) => new Date(a.irl_start) - new Date(b.irl_start))[0] || null;
 
   const myUpcomingSignups = (mySignups || [])
-    .filter(
-      (s) =>
-        !s.events?.championship_id ||
-        !archivedChampionshipIds.has(s.events.championship_id),
-    )
+    .filter((s) => !s.events?.championship_id || !archivedChampionshipIds.has(s.events.championship_id))
     .filter((s) => {
       const starts = s.events?.event_start_times || [];
       return starts.some((st) => new Date(st.irl_start) > now);
     })
     .sort((a, b) => {
-      const aStart = Math.min(
-        ...(a.events?.event_start_times || []).map(
-          (st) => new Date(st.irl_start),
-        ),
-      );
-      const bStart = Math.min(
-        ...(b.events?.event_start_times || []).map(
-          (st) => new Date(st.irl_start),
-        ),
-      );
+      const aStart = Math.min(...(a.events?.event_start_times || []).map((st) => new Date(st.irl_start)));
+      const bStart = Math.min(...(b.events?.event_start_times || []).map((st) => new Date(st.irl_start)));
       return aStart - bStart;
     });
 
   const pendingCount = (pendingDrivers || []).length;
   const totalEvents = (events || []).length;
 
-  // Map of eventId → next upcoming start Date — used to sort Suivi sections by urgency
   const eventNextStartMap = Object.fromEntries(
     (events || []).map((ev) => {
       const next =
@@ -281,43 +205,29 @@ export default async function HomePage() {
     }),
   );
 
-  // Admin: team entries with zero signups — exclude archived events
   const noDrivers = admin
-    ? (teamEntries || []).filter(
-        (te) => !te.events?.archived && (te.signups || []).length === 0,
-      )
+    ? (teamEntries || []).filter((te) => !te.events?.archived && (te.signups || []).length === 0)
     : [];
 
-  // Active strategy IDs as a Set for O(1) lookup
-  const activeStrategyIdSet = new Set(
-    (activeStrategies || []).map((s) => s.id),
-  );
+  const activeStrategyIdSet = new Set((activeStrategies || []).map((s) => s.id));
 
-  // Admin: team entries with signups but no assigned stints in their active strategy.
-  // Scoped to active strategy only — inactive scenario strategies are excluded
-  // so a team with stints only in a non-active strategy correctly appears here.
-  // Also excludes archived events.
   const noStints = admin
     ? (teamEntries || []).filter(
         (te) =>
           !te.events?.archived &&
           (te.signups || []).length > 0 &&
-          (te.stints || []).filter(
-            (s) => s.driver_id && activeStrategyIdSet.has(s.strategy_id),
-          ).length === 0,
+          (te.stints || []).filter((s) => s.driver_id && activeStrategyIdSet.has(s.strategy_id)).length === 0,
       )
     : [];
 
-  // Admin: drivers who signed up for a non-archived event but have no team entry assigned
   const unassignedSignups = admin
     ? (unassignedSignupsRaw || []).filter((s) => !s.events?.archived)
     : [];
 
-  // ── Planning section — server-rendered JSX, passed as a slot to HomeTabs ──
+  // ── Planning section ───────────────────────────────────────────────────────
 
   const planningTab = (
     <div>
-      {/* Next event + next stint side by side */}
       <div
         style={{
           display: "grid",
@@ -329,29 +239,16 @@ export default async function HomePage() {
       >
         {/* Next upcoming event */}
         <div style={{ display: "flex", flexDirection: "column" }}>
-          <h2 style={{ marginBottom: "1rem" }}>Prochain événement</h2>
+          <h2 style={{ marginBottom: "1rem" }}>{t("nextEvent")}</h2>
           {nextEvent ? (
-            <Link
-              href={`/evenements/${nextEvent.id}`}
-              style={{ textDecoration: "none", flex: 1, display: "flex" }}
-            >
-              <div
-                className="card event-card"
-                style={{ cursor: "pointer", flex: 1 }}
-              >
+            <Link href={`/evenements/${nextEvent.id}`} style={{ textDecoration: "none", flex: 1, display: "flex" }}>
+              <div className="card event-card" style={{ cursor: "pointer", flex: 1 }}>
                 {(nextEvent.is_special || nextEvent.championship_id) && (
-                  <div
-                    style={{
-                      display: "flex",
-                      gap: "0.4rem",
-                      flexWrap: "wrap",
-                      marginBottom: "0.35rem",
-                    }}
-                  >
-                    {nextEvent.is_special && <Badge label="Spécial" />}
+                  <div style={{ display: "flex", gap: "0.4rem", flexWrap: "wrap", marginBottom: "0.35rem" }}>
+                    {nextEvent.is_special && <Badge label={t("specialBadge")} />}
                     {nextEvent.championship_id && (
                       <Badge
-                        label={`${championshipsMap[nextEvent.championship_id] || "?"} · Manche ${nextEvent.round_number}`}
+                        label={`${championshipsMap[nextEvent.championship_id] || "?"} · ${t("round", { number: nextEvent.round_number })}`}
                         color="var(--text-dim)"
                         bg="var(--surface-2)"
                         border="var(--border)"
@@ -359,66 +256,27 @@ export default async function HomePage() {
                     )}
                   </div>
                 )}
-                <div
-                  style={{
-                    fontWeight: 700,
-                    fontSize: "1rem",
-                    marginBottom: "0.35rem",
-                  }}
-                >
-                  {nextEvent.name}
-                </div>
-                <div
-                  style={{
-                    fontSize: "0.82rem",
-                    color: "var(--text-dim)",
-                    marginBottom: "0.5rem",
-                  }}
-                >
+                <div style={{ fontWeight: 700, fontSize: "1rem", marginBottom: "0.35rem" }}>{nextEvent.name}</div>
+                <div style={{ fontSize: "0.82rem", color: "var(--text-dim)", marginBottom: "0.5rem" }}>
                   {nextEvent.circuits?.name}
                   {nextEvent.format && ` · ${nextEvent.format}`}
-                  {nextEvent.duration_minutes &&
-                    ` · ${formatDuration(nextEvent.duration_minutes)}`}
+                  {nextEvent.duration_minutes && ` · ${formatDuration(nextEvent.duration_minutes)}`}
                 </div>
-                <div
-                  className="mono"
-                  style={{
-                    fontSize: "0.85rem",
-                    color: "var(--accent)",
-                    marginBottom: "0.25rem",
-                  }}
-                >
-                  {formatInZone(
-                    nextEvent.nextStart.irl_start,
-                    nextEvent.timezone || "Europe/Paris",
-                  )}
+                <div className="mono" style={{ fontSize: "0.85rem", color: "var(--accent)", marginBottom: "0.25rem" }}>
+                  {formatInZone(nextEvent.nextStart.irl_start, nextEvent.timezone || "Europe/Paris")}
                 </div>
-                <div
-                  style={{
-                    fontSize: "0.78rem",
-                    color: "var(--text-dim)",
-                    marginBottom: "0.5rem",
-                  }}
-                >
+                <div style={{ fontSize: "0.78rem", color: "var(--text-dim)", marginBottom: "0.5rem" }}>
                   {timeUntil(nextEvent.nextStart.irl_start)}
                 </div>
                 <div style={{ fontSize: "0.78rem", color: "var(--text-dim)" }}>
-                  {nextEvent.team_entries?.length || 0} équipage
-                  {(nextEvent.team_entries?.length || 0) !== 1 ? "s" : ""}
+                  {nextEvent.team_entries?.length || 0}{" "}
+                  {(nextEvent.team_entries?.length || 0) !== 1 ? t("teamCount_other") : t("teamCount_one")}
                 </div>
               </div>
             </Link>
           ) : (
-            <div
-              className="card"
-              style={{
-                flex: 1,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-              }}
-            >
-              <div className="empty">Aucun événement à venir.</div>
+            <div className="card" style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <div className="empty">{t("noUpcomingEvent")}</div>
             </div>
           )}
         </div>
@@ -426,66 +284,32 @@ export default async function HomePage() {
         {/* Driver's next planned stint */}
         {!engineer && (
           <div style={{ display: "flex", flexDirection: "column" }}>
-            <h2 style={{ marginBottom: "1rem" }}>Mon prochain relais</h2>
+            <h2 style={{ marginBottom: "1rem" }}>{t("myNextStint")}</h2>
             {myNextStint ? (
               <Link
                 href={`/evenements/${myNextStint.team_entries?.event_id}/equipages/${myNextStint.team_entry_id}`}
                 style={{ textDecoration: "none", flex: 1, display: "flex" }}
               >
                 <div className="card" style={{ flex: 1 }}>
-                  <div
-                    style={{
-                      fontWeight: 700,
-                      fontSize: "1rem",
-                      marginBottom: "0.35rem",
-                    }}
-                  >
+                  <div style={{ fontWeight: 700, fontSize: "1rem", marginBottom: "0.35rem" }}>
                     {myNextStint.team_entries?.events?.name}
                   </div>
-                  <div
-                    style={{
-                      fontSize: "0.82rem",
-                      color: "var(--text-dim)",
-                      marginBottom: "0.5rem",
-                    }}
-                  >
-                    {myNextStint.team_entries?.crew_name} · Relais #
-                    {myNextStint.stint_number}
+                  <div style={{ fontSize: "0.82rem", color: "var(--text-dim)", marginBottom: "0.5rem" }}>
+                    {myNextStint.team_entries?.crew_name} · {t("stintLabel", { number: myNextStint.stint_number })}
                     {myNextStint.rain && " 💧"}
                     {myNextStint.tyre_change && " 🛞"}
                   </div>
-                  <div
-                    className="mono"
-                    style={{
-                      fontSize: "0.85rem",
-                      color: "var(--accent)",
-                      marginBottom: "0.25rem",
-                    }}
-                  >
-                    {formatInZone(
-                      myNextStint.irl_start,
-                      myNextStint.team_entries?.events?.timezone ||
-                        "Europe/Paris",
-                    )}
+                  <div className="mono" style={{ fontSize: "0.85rem", color: "var(--accent)", marginBottom: "0.25rem" }}>
+                    {formatInZone(myNextStint.irl_start, myNextStint.team_entries?.events?.timezone || "Europe/Paris")}
                   </div>
-                  <div
-                    style={{ fontSize: "0.78rem", color: "var(--text-dim)" }}
-                  >
+                  <div style={{ fontSize: "0.78rem", color: "var(--text-dim)" }}>
                     {timeUntil(myNextStint.irl_start)}
                   </div>
                 </div>
               </Link>
             ) : (
-              <div
-                className="card"
-                style={{
-                  flex: 1,
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                }}
-              >
-                <div className="empty">Aucun relais assigné.</div>
+              <div className="card" style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <div className="empty">{t("noStintAssigned")}</div>
               </div>
             )}
           </div>
@@ -495,43 +319,26 @@ export default async function HomePage() {
       {/* Driver's upcoming signups */}
       {myUpcomingSignups.length > 0 ? (
         <div style={{ marginBottom: "2rem" }}>
-          <h2 style={{ marginBottom: "1rem" }}>Mes événements à venir</h2>
-          <div
-            style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}
-          >
+          <h2 style={{ marginBottom: "1rem" }}>{t("myUpcomingEvents")}</h2>
+          <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
             {myUpcomingSignups.map((signup) => {
               const ev = signup.events;
-              const starts = (ev?.event_start_times || []).sort(
-                (a, b) => new Date(a.irl_start) - new Date(b.irl_start),
-              );
+              const starts = (ev?.event_start_times || []).sort((a, b) => new Date(a.irl_start) - new Date(b.irl_start));
               const nextStart = starts.find((s) => new Date(s.irl_start) > now);
               const teamEntry = signup.team_entries;
               return (
                 <div
                   key={signup.id}
                   className="card"
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "space-between",
-                    gap: "1rem",
-                    flexWrap: "wrap",
-                  }}
+                  style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "1rem", flexWrap: "wrap" }}
                 >
                   <div>
                     {(ev?.is_special || ev?.championship_id) && (
-                      <div
-                        style={{
-                          display: "flex",
-                          gap: "0.4rem",
-                          flexWrap: "wrap",
-                          marginBottom: "0.25rem",
-                        }}
-                      >
-                        {ev?.is_special && <Badge label="Spécial" />}
+                      <div style={{ display: "flex", gap: "0.4rem", flexWrap: "wrap", marginBottom: "0.25rem" }}>
+                        {ev?.is_special && <Badge label={t("specialBadge")} />}
                         {ev?.championship_id && (
                           <Badge
-                            label={`${championshipsMap[ev.championship_id] || "?"} · Manche ${ev.round_number}`}
+                            label={`${championshipsMap[ev.championship_id] || "?"} · ${t("round", { number: ev.round_number })}`}
                             color="var(--text-dim)"
                             bg="var(--surface-2)"
                             border="var(--border)"
@@ -540,46 +347,23 @@ export default async function HomePage() {
                       </div>
                     )}
                     <div style={{ fontWeight: 600 }}>{ev?.name}</div>
-                    <div
-                      style={{
-                        fontSize: "0.8rem",
-                        color: "var(--text-dim)",
-                        marginTop: "0.2rem",
-                      }}
-                    >
+                    <div style={{ fontSize: "0.8rem", color: "var(--text-dim)", marginTop: "0.2rem" }}>
                       {ev?.circuits?.name}
-                      {nextStart &&
-                        ` · ${formatInZone(nextStart.irl_start, ev?.timezone || "Europe/Paris")}`}
+                      {nextStart && ` · ${formatInZone(nextStart.irl_start, ev?.timezone || "Europe/Paris")}`}
                       {nextStart && ` · ${timeUntil(nextStart.irl_start)}`}
                     </div>
                     {teamEntry ? (
-                      <div
-                        style={{
-                          fontSize: "0.78rem",
-                          color: "var(--accent)",
-                          marginTop: "0.2rem",
-                        }}
-                      >
-                        {teamEntry.crew_name} —{" "}
-                        {teamEntry.cars?.name || "Voiture à définir"}
+                      <div style={{ fontSize: "0.78rem", color: "var(--accent)", marginTop: "0.2rem" }}>
+                        {teamEntry.crew_name} — {teamEntry.cars?.name || t("noCar")}
                       </div>
                     ) : (
-                      <div
-                        style={{
-                          fontSize: "0.78rem",
-                          color: "var(--text-dim)",
-                          marginTop: "0.2rem",
-                        }}
-                      >
-                        Non assigné à une équipe
+                      <div style={{ fontSize: "0.78rem", color: "var(--text-dim)", marginTop: "0.2rem" }}>
+                        {t("notAssigned")}
                       </div>
                     )}
                   </div>
-                  <Link
-                    href={`/evenements/${ev?.id}`}
-                    className="btn btn-secondary btn-sm"
-                  >
-                    Voir →
+                  <Link href={`/evenements/${ev?.id}`} className="btn btn-secondary btn-sm">
+                    {t("view")}
                   </Link>
                 </div>
               );
@@ -588,15 +372,14 @@ export default async function HomePage() {
         </div>
       ) : (
         <div className="table-wrap">
-          <div className="empty">Aucune inscription à venir.</div>
+          <div className="empty">{t("noUpcomingSignups")}</div>
         </div>
       )}
     </div>
   );
 
-  // ── Suivi sub-tab sections — server-rendered JSX slots ───────────────────
+  // ── Suivi sub-tab sections ─────────────────────────────────────────────────
 
-  // Helper: group an array by event_id and sort groups by urgency
   function groupByEvent(items, getEventId, getEventName) {
     const groups = {};
     for (const item of items) {
@@ -604,7 +387,6 @@ export default async function HomePage() {
       if (!groups[eid]) groups[eid] = { name: getEventName(item), items: [] };
       groups[eid].items.push(item);
     }
-    // Sort groups soonest-first using the pre-built eventNextStartMap
     return Object.entries(groups).sort(([aId], [bId]) => {
       const aNext = eventNextStartMap[aId];
       const bNext = eventNextStartMap[bId];
@@ -615,259 +397,95 @@ export default async function HomePage() {
     });
   }
 
-  // Section 1: team entries with no drivers signed up — grouped by event, sorted by urgency
+  const badgeStyle = {
+    fontSize: "0.72rem",
+    padding: "0.15rem 0.4rem",
+    background: "rgba(224,85,85,0.1)",
+    border: "1px solid var(--danger)",
+    borderRadius: "2px",
+    color: "var(--danger)",
+  };
+
+  function SuviSection({ items, getBadge, getEventId, getHref, getName }) {
+    return (
+      <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
+        {groupByEvent(items, getEventId, (item) => item.events?.name).map(([eventId, { items: groupItems }]) => (
+          <div key={eventId}>
+            <div style={{ display: "flex", alignItems: "baseline", gap: "0.5rem", marginBottom: "0.4rem" }}>
+              <span style={{ fontWeight: 700, fontSize: "0.85rem" }}>{groupItems[0]?.events?.name}</span>
+              {eventNextStartMap[eventId] && (
+                <span style={{ fontSize: "0.75rem", color: "var(--accent)" }}>
+                  {timeUntil(eventNextStartMap[eventId].toISOString())}
+                </span>
+              )}
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: "0.35rem", paddingLeft: "0.75rem", borderLeft: "2px solid var(--border)" }}>
+              {groupItems.map((item) => (
+                <Link key={item.id} href={getHref(item)} style={{ textDecoration: "none" }}>
+                  <div
+                    className="card event-card"
+                    style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "1rem", cursor: "pointer", padding: "0.6rem 0.85rem" }}
+                  >
+                    <div style={{ fontWeight: 600 }}>{getName(item)}</div>
+                    <span style={badgeStyle}>{getBadge()}</span>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+  }
+
   const noDriversSection =
     noDrivers.length === 0 ? (
-      <div className="table-wrap">
-        <div className="empty">Aucun équipage sans pilote. ✓</div>
-      </div>
+      <div className="table-wrap"><div className="empty">{t("noDriversEmpty")}</div></div>
     ) : (
-      <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
-        {groupByEvent(
-          noDrivers,
-          (te) => te.event_id,
-          (te) => te.events?.name,
-        ).map(([eventId, { name, items }]) => (
-          <div key={eventId}>
-            {/* Event header with urgency */}
-            <div
-              style={{
-                display: "flex",
-                alignItems: "baseline",
-                gap: "0.5rem",
-                marginBottom: "0.4rem",
-              }}
-            >
-              <span style={{ fontWeight: 700, fontSize: "0.85rem" }}>
-                {name}
-              </span>
-              {eventNextStartMap[eventId] && (
-                <span style={{ fontSize: "0.75rem", color: "var(--accent)" }}>
-                  {timeUntil(eventNextStartMap[eventId].toISOString())}
-                </span>
-              )}
-            </div>
-            {/* Entries indented under event */}
-            <div
-              style={{
-                display: "flex",
-                flexDirection: "column",
-                gap: "0.35rem",
-                paddingLeft: "0.75rem",
-                borderLeft: "2px solid var(--border)",
-              }}
-            >
-              {items.map((te) => (
-                <Link
-                  key={te.id}
-                  href={`/evenements/${te.event_id}/equipages/${te.id}`}
-                  style={{ textDecoration: "none" }}
-                >
-                  <div
-                    className="card event-card"
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "space-between",
-                      gap: "1rem",
-                      cursor: "pointer",
-                      padding: "0.6rem 0.85rem",
-                    }}
-                  >
-                    <div style={{ fontWeight: 600 }}>{te.crew_name}</div>
-                    <span
-                      style={{
-                        fontSize: "0.72rem",
-                        padding: "0.15rem 0.4rem",
-                        background: "rgba(224,85,85,0.1)",
-                        border: "1px solid var(--danger)",
-                        borderRadius: "2px",
-                        color: "var(--danger)",
-                      }}
-                    >
-                      Aucun pilote
-                    </span>
-                  </div>
-                </Link>
-              ))}
-            </div>
-          </div>
-        ))}
-      </div>
+      <SuviSection
+        items={noDrivers}
+        getEventId={(te) => te.event_id}
+        getHref={(te) => `/evenements/${te.event_id}/equipages/${te.id}`}
+        getName={(te) => te.crew_name}
+        getBadge={() => t("noDriversBadge")}
+      />
     );
 
-  // Section 2: team entries with drivers but no stints — grouped by event, sorted by urgency
   const noStintsSection =
     noStints.length === 0 ? (
-      <div className="table-wrap">
-        <div className="empty">Aucun équipage sans relais. ✓</div>
-      </div>
+      <div className="table-wrap"><div className="empty">{t("noStintsEmpty")}</div></div>
     ) : (
-      <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
-        {groupByEvent(
-          noStints,
-          (te) => te.event_id,
-          (te) => te.events?.name,
-        ).map(([eventId, { name, items }]) => (
-          <div key={eventId}>
-            {/* Event header with urgency */}
-            <div
-              style={{
-                display: "flex",
-                alignItems: "baseline",
-                gap: "0.5rem",
-                marginBottom: "0.4rem",
-              }}
-            >
-              <span style={{ fontWeight: 700, fontSize: "0.85rem" }}>
-                {name}
-              </span>
-              {eventNextStartMap[eventId] && (
-                <span style={{ fontSize: "0.75rem", color: "var(--accent)" }}>
-                  {timeUntil(eventNextStartMap[eventId].toISOString())}
-                </span>
-              )}
-            </div>
-            {/* Entries indented under event */}
-            <div
-              style={{
-                display: "flex",
-                flexDirection: "column",
-                gap: "0.35rem",
-                paddingLeft: "0.75rem",
-                borderLeft: "2px solid var(--border)",
-              }}
-            >
-              {items.map((te) => (
-                <Link
-                  key={te.id}
-                  href={`/evenements/${te.event_id}/equipages/${te.id}`}
-                  style={{ textDecoration: "none" }}
-                >
-                  <div
-                    className="card event-card"
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "space-between",
-                      gap: "1rem",
-                      cursor: "pointer",
-                      padding: "0.6rem 0.85rem",
-                    }}
-                  >
-                    <div style={{ fontWeight: 600 }}>{te.crew_name}</div>
-                    <span
-                      style={{
-                        fontSize: "0.72rem",
-                        padding: "0.15rem 0.4rem",
-                        background: "rgba(224,85,85,0.1)",
-                        border: "1px solid var(--danger)",
-                        borderRadius: "2px",
-                        color: "var(--danger)",
-                      }}
-                    >
-                      Aucun relais
-                    </span>
-                  </div>
-                </Link>
-              ))}
-            </div>
-          </div>
-        ))}
-      </div>
+      <SuviSection
+        items={noStints}
+        getEventId={(te) => te.event_id}
+        getHref={(te) => `/evenements/${te.event_id}/equipages/${te.id}`}
+        getName={(te) => te.crew_name}
+        getBadge={() => t("noStintsBadge")}
+      />
     );
 
-  // Section 3: drivers with no team entry assigned — grouped by event, sorted by urgency
   const unassignedSection =
     unassignedSignups.length === 0 ? (
-      <div className="table-wrap">
-        <div className="empty">Aucun pilote sans équipage. ✓</div>
-      </div>
+      <div className="table-wrap"><div className="empty">{t("unassignedEmpty")}</div></div>
     ) : (
-      <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
-        {groupByEvent(
-          unassignedSignups,
-          (s) => s.event_id,
-          (s) => s.events?.name,
-        ).map(([eventId, { name, items }]) => (
-          <div key={eventId}>
-            {/* Event header with urgency */}
-            <div
-              style={{
-                display: "flex",
-                alignItems: "baseline",
-                gap: "0.5rem",
-                marginBottom: "0.4rem",
-              }}
-            >
-              <span style={{ fontWeight: 700, fontSize: "0.85rem" }}>
-                {name}
-              </span>
-              {eventNextStartMap[eventId] && (
-                <span style={{ fontSize: "0.75rem", color: "var(--accent)" }}>
-                  {timeUntil(eventNextStartMap[eventId].toISOString())}
-                </span>
-              )}
-            </div>
-            {/* Drivers indented under event — link goes to event page for assignment */}
-            <div
-              style={{
-                display: "flex",
-                flexDirection: "column",
-                gap: "0.35rem",
-                paddingLeft: "0.75rem",
-                borderLeft: "2px solid var(--border)",
-              }}
-            >
-              {items.map((s) => (
-                <Link
-                  key={s.id}
-                  href={`/evenements/${s.event_id}`}
-                  style={{ textDecoration: "none" }}
-                >
-                  <div
-                    className="card event-card"
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "space-between",
-                      gap: "1rem",
-                      cursor: "pointer",
-                      padding: "0.6rem 0.85rem",
-                    }}
-                  >
-                    <div style={{ fontWeight: 600 }}>{s.drivers?.name}</div>
-                    <span
-                      style={{
-                        fontSize: "0.72rem",
-                        padding: "0.15rem 0.4rem",
-                        background: "rgba(224,85,85,0.1)",
-                        border: "1px solid var(--danger)",
-                        borderRadius: "2px",
-                        color: "var(--danger)",
-                      }}
-                    >
-                      Sans équipage
-                    </span>
-                  </div>
-                </Link>
-              ))}
-            </div>
-          </div>
-        ))}
-      </div>
+      <SuviSection
+        items={unassignedSignups}
+        getEventId={(s) => s.event_id}
+        getHref={(s) => `/evenements/${s.event_id}`}
+        getName={(s) => s.drivers?.name}
+        getBadge={() => t("unassignedBadge")}
+      />
     );
 
   // ── Render ─────────────────────────────────────────────────────────────────
 
   return (
     <div className="page">
-      {/* Stale iRacing sync warning — shown to the logged-in driver when their own data is stale */}
+      {/* Stale iRacing sync warning */}
       {currentDriver &&
         !admin &&
         (!currentDriver.last_driver_sync_at ||
-          Date.now() - new Date(currentDriver.last_driver_sync_at).getTime() >
-            100 * 24 * 60 * 60 * 1000) && (
+          Date.now() - new Date(currentDriver.last_driver_sync_at).getTime() > 100 * 24 * 60 * 60 * 1000) && (
           <div
             style={{
               background: "rgba(245,158,11,0.08)",
@@ -882,22 +500,15 @@ export default async function HomePage() {
               flexWrap: "wrap",
             }}
           >
-            <span
-              style={{ color: "#f59e0b", fontWeight: 600, fontSize: "0.9rem" }}
-            >
-              ⚠️ Vos données iRacing n&apos;ont pas été synchronisées depuis
-              plus de 100 jours.
+            <span style={{ color: "#f59e0b", fontWeight: 600, fontSize: "0.9rem" }}>
+              ⚠️ {t("staleSyncWarning")}
             </span>
             <Link
               href={`/pilotes/${currentDriver.id}`}
               className="btn btn-sm"
-              style={{
-                borderColor: "#f59e0b",
-                color: "#f59e0b",
-                background: "transparent",
-              }}
+              style={{ borderColor: "#f59e0b", color: "#f59e0b", background: "transparent" }}
             >
-              Mon profil →
+              {t("myProfileArrow")}
             </Link>
           </div>
         )}
@@ -918,76 +529,39 @@ export default async function HomePage() {
             flexWrap: "wrap",
           }}
         >
-          <span
-            style={{
-              color: "var(--danger)",
-              fontWeight: 600,
-              fontSize: "0.9rem",
-            }}
-          >
-            ⚠️ {pendingCount} pilote{pendingCount > 1 ? "s " : " "}en attente
-            d&apos;approbation
+          <span style={{ color: "var(--danger)", fontWeight: 600, fontSize: "0.9rem" }}>
+            ⚠️ {pendingCount === 1 ? t("pendingWarning_one").replace("#", pendingCount) : t("pendingWarning_other").replace("#", pendingCount)}
           </span>
-          <Link href="/admin" className="btn btn-danger btn-sm">
-            Gérer les accès →
-          </Link>
+          <Link href="/admin" className="btn btn-danger btn-sm">{t("manageAccess")}</Link>
         </div>
       )}
 
       {/* Page header */}
       <div className="page-header">
         <div>
-          <h1>Tableau de bord</h1>
+          <h1>{t("title")}</h1>
           <div className="accent-line" />
           {currentDriver && (
-            <div
-              style={{
-                marginTop: "0.4rem",
-                color: "var(--text-dim)",
-                fontSize: "0.9rem",
-              }}
-            >
-              Bienvenue,{" "}
-              <span style={{ color: "var(--text)", fontWeight: 600 }}>
-                {currentDriver.name}
-              </span>
+            <div style={{ marginTop: "0.4rem", color: "var(--text-dim)", fontSize: "0.9rem" }}>
+              {t("welcome")}{" "}
+              <span style={{ color: "var(--text)", fontWeight: 600 }}>{currentDriver.name}</span>
             </div>
           )}
         </div>
       </div>
 
-      {/* Quick actions — always at the top */}
-      <div
-        style={{
-          display: "flex",
-          gap: "0.75rem",
-          flexWrap: "wrap",
-          marginBottom: "2rem",
-        }}
-      >
+      {/* Quick actions */}
+      <div style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap", marginBottom: "2rem" }}>
         {admin && (
           <>
-            <Link href="/pilotes/nouveau" className="btn btn-primary">
-              + Ajouter un pilote
-            </Link>
-            <Link href="/evenements/nouveau" className="btn btn-primary">
-              + Créer un événement
-            </Link>
-            <Link href="/championnats/nouveau" className="btn btn-primary">
-              + Créer un championnat
-            </Link>
+            <Link href="/pilotes/nouveau" className="btn btn-primary">{t("addDriver")}</Link>
+            <Link href="/evenements/nouveau" className="btn btn-primary">{t("createEvent")}</Link>
+            <Link href="/championnats/nouveau" className="btn btn-primary">{t("createChampionship")}</Link>
           </>
         )}
-        <Link href="/evenements" className="btn btn-secondary">
-          Voir les événements
-        </Link>
+        <Link href="/evenements" className="btn btn-secondary">{t("viewEvents")}</Link>
         {currentDriver && (
-          <Link
-            href={`/pilotes/${currentDriver.id}`}
-            className="btn btn-secondary"
-          >
-            Mon profil
-          </Link>
+          <Link href={`/pilotes/${currentDriver.id}`} className="btn btn-secondary">{t("myProfile")}</Link>
         )}
       </div>
 
@@ -1002,95 +576,37 @@ export default async function HomePage() {
           }}
         >
           {[
-            // ── Counts ───────────────────────────────────────────────────────
-            {
-              label: totalEvents > 1 ? "Événements" : "Événement",
-              value: totalEvents,
-              color: "var(--accent)",
-              href: "/evenements",
-            },
-            {
-              label: totalDrivers > 1 ? "Pilotes actifs" : "Pilote actif",
-              value: totalDrivers,
-              color: "var(--accent)",
-              href: "/admin?filter=all",
-            },
-            {
-              label: (inactiveDrivers || 0) > 1 ? "Pilotes inactifs" : "Pilote inactif",
-              value: inactiveDrivers || 0,
-              color: "var(--text-dim)",
-              href: "/admin?filter=all",
-            },
-            {
-              label: (testDrivers || 0) > 1 ? "Pilotes test" : "Pilote test",
-              value: testDrivers || 0,
-              color: "var(--text-dim)",
-              href: "/admin?filter=all",
-            },
-            // ── Action items ─────────────────────────────────────────────────
-            {
-              label: "En attente",
-              value: pendingCount,
-              color: pendingCount > 0 ? "var(--danger)" : "var(--text-dim)",
-              href: pendingCount > 0 ? "/admin?filter=pending" : undefined,
-            },
-            {
-              label:
-                (overdueMembers || 0) > 1
-                  ? "Cotisations expirées"
-                  : "Cotisation expirée",
-              value: overdueMembers || 0,
-              color: overdueMembers > 0 ? "var(--danger)" : "var(--text-dim)",
-              href: "/admin?filter=all",
-            },
-            {
-              label: (syncRequired || 0) > 1 ? "Syncs iRacing" : "Sync iRacing",
-              value: syncRequired || 0,
-              color: (syncRequired || 0) > 0 ? "#f59e0b" : "var(--text-dim)",
-              href: "/pilotes",
-            },
+            { label: totalEvents !== 1 ? t("statEvents_other") : t("statEvents_one"), value: totalEvents, color: "var(--accent)", href: "/evenements" },
+            { label: totalDrivers !== 1 ? t("statActiveDrivers_other") : t("statActiveDrivers_one"), value: totalDrivers, color: "var(--accent)", href: "/admin?filter=all" },
+            { label: (inactiveDrivers || 0) !== 1 ? t("statInactiveDrivers_other") : t("statInactiveDrivers_one"), value: inactiveDrivers || 0, color: "var(--text-dim)", href: "/admin?filter=all" },
+            { label: (testDrivers || 0) !== 1 ? t("statTestDrivers_other") : t("statTestDrivers_one"), value: testDrivers || 0, color: "var(--text-dim)", href: "/admin?filter=all" },
+            { label: t("statPending"), value: pendingCount, color: pendingCount > 0 ? "var(--danger)" : "var(--text-dim)", href: pendingCount > 0 ? "/admin?filter=pending" : undefined },
+            { label: (overdueMembers || 0) !== 1 ? t("statOverdue_other") : t("statOverdue_one"), value: overdueMembers || 0, color: overdueMembers > 0 ? "var(--danger)" : "var(--text-dim)", href: "/admin?filter=all" },
+            { label: (syncRequired || 0) !== 1 ? t("statSync_other") : t("statSync_one"), value: syncRequired || 0, color: (syncRequired || 0) > 0 ? "#f59e0b" : "var(--text-dim)", href: "/pilotes" },
           ].map(({ label, value, color, href }) => {
             const cardContent = (
               <>
-                <div className="mono" style={{ fontSize: "1.8rem", fontWeight: 700, color }}>
-                  {value}
-                </div>
-                <div
-                  style={{
-                    fontSize: "0.75rem",
-                    fontWeight: 700,
-                    letterSpacing: "0.08em",
-                    textTransform: "uppercase",
-                    color: "var(--text-dim)",
-                    marginTop: "0.25rem",
-                  }}
-                >
+                <div className="mono" style={{ fontSize: "1.8rem", fontWeight: 700, color }}>{value}</div>
+                <div style={{ fontSize: "0.75rem", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "var(--text-dim)", marginTop: "0.25rem" }}>
                   {label}
                 </div>
               </>
             );
             return href ? (
               <Link key={label} href={href} style={{ textDecoration: "none" }}>
-                <div className="card" style={{ padding: "1rem", textAlign: "center", cursor: "pointer", height: "100%" }}>
-                  {cardContent}
-                </div>
+                <div className="card" style={{ padding: "1rem", textAlign: "center", cursor: "pointer", height: "100%" }}>{cardContent}</div>
               </Link>
             ) : (
-              <div key={label} className="card" style={{ padding: "1rem", textAlign: "center" }}>
-                {cardContent}
-              </div>
+              <div key={label} className="card" style={{ padding: "1rem", textAlign: "center" }}>{cardContent}</div>
             );
           })}
         </div>
       )}
 
-      {/* Admin: tabbed content — HomeTabs is a thin client shell, content is server-rendered */}
       {admin ? (
         <HomeTabs
           signupCount={myUpcomingSignups.length}
-          incompleteCount={
-            noDrivers.length + noStints.length + unassignedSignups.length
-          }
+          incompleteCount={noDrivers.length + noStints.length + unassignedSignups.length}
           planningTab={planningTab}
           incompleteTab={
             <IncompleteTab
@@ -1104,7 +620,6 @@ export default async function HomePage() {
           }
         />
       ) : (
-        // Non-admin: render planning content directly, no client component needed
         planningTab
       )}
     </div>

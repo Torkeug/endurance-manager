@@ -1,25 +1,26 @@
 "use client";
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { useState, useEffect } from "react";
 import { supabaseBrowser as supabase } from "../lib/supabase-browser";
-
-const links = [
-  { href: "/", label: "Accueil" },
-  { href: "/pilotes", label: "Pilotes" },
-  { href: "/evenements", label: "Événements" },
-  { href: "/inventaire", label: "Inventaire" },
-  { href: "/admin", label: "Admin" },
-  { href: "/guide", label: "Guide" },
-];
+import { useTranslations } from "next-intl";
+import LanguageToggle from "./LanguageToggle";
 
 export default function Nav() {
   const pathname = usePathname();
-  const router = useRouter();
   const [theme, setTheme] = useState("dark");
   const [driver, setDriver] = useState(null);
-
   const [pendingCount, setPendingCount] = useState(0);
+  const t = useTranslations("nav");
+
+  const links = [
+    { href: "/", label: t("home") },
+    { href: "/pilotes", label: t("drivers") },
+    { href: "/evenements", label: t("events") },
+    { href: "/inventaire", label: t("inventory") },
+    { href: "/admin", label: t("admin") },
+    { href: "/guide", label: t("guide") },
+  ];
 
   // Realtime keeps the badge live during the session without polling.
   // The separate pathname effect re-fetches on navigation as a safety net
@@ -93,9 +94,7 @@ export default function Nav() {
   };
 
   const isAdmin = driver?.role === "admin" || driver?.role === "super_admin";
-
   const isEngineer = driver?.role === "engineer";
-
   const logoSrc =
     theme === "dark" ? "/kronos-logo-text.png" : "/kronos-logo-light.png";
 
@@ -130,15 +129,13 @@ export default function Nav() {
           />
         </Link>
 
-        {/* Nav links — between logo and controls so desktop order is correct.
-          On mobile, width:100% from .nav-links forces this to its own row below. */}
+        {/* Nav links */}
         {driver && (
           <div
             className="nav-links"
             style={{
               display: "flex",
               gap: "0.25rem",
-              // flex:1 is in globals.css .nav-links — can't use inline or it overrides the mobile media query
               overflowX: "auto",
               WebkitOverflowScrolling: "touch",
               scrollbarWidth: "none",
@@ -147,9 +144,7 @@ export default function Nav() {
           >
             {links
               .filter((l) => {
-                // Hide Admin for non-admins
                 if (l.href === "/admin" && !isAdmin) return false;
-                // Hide Inventaire for external drivers
                 if (l.href === "/inventaire" && driver.role === "external")
                   return false;
                 return true;
@@ -203,7 +198,7 @@ export default function Nav() {
           </div>
         )}
 
-        {/* Right side — marginLeft:auto keeps it pinned right when links don't fill the row */}
+        {/* Right side */}
         <div
           className="nav-controls"
           style={{
@@ -232,7 +227,6 @@ export default function Nav() {
                   style={{
                     marginLeft: "0.4rem",
                     fontSize: "0.65rem",
-                    // Engineers get amber, admins get the standard accent colour
                     color: isEngineer ? "#f59e0b" : "var(--accent)",
                     fontWeight: 700,
                     letterSpacing: "0.06em",
@@ -240,26 +234,28 @@ export default function Nav() {
                   }}
                 >
                   {driver.role === "super_admin"
-                    ? "Super Admin"
+                    ? t("roleSuperAdmin")
                     : driver.role === "engineer"
-                      ? "Ingénieur"
-                      : "Admin"}
+                      ? t("roleEngineer")
+                      : t("roleAdmin")}
                 </span>
               )}
             </Link>
           )}
 
+          <LanguageToggle />
+
           <button
             onClick={toggleTheme}
             className="theme-toggle"
-            title={theme === "dark" ? "Mode clair" : "Mode sombre"}
+            title={theme === "dark" ? t("themeLight") : t("themeDark")}
           >
             {theme === "dark" ? "☀️" : "🌙"}
           </button>
 
           {driver && (
             <button onClick={handleLogout} className="btn btn-secondary btn-sm">
-              Déconnexion
+              {t("logout")}
             </button>
           )}
         </div>

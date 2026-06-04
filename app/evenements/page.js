@@ -2,6 +2,7 @@ import { supabaseServer as supabase } from "../../lib/supabase-server";
 import Link from "next/link";
 import { getSessionAndDriver, isAdmin } from "../../lib/auth";
 import EventTabs from "./EventTabs";
+import { getTranslations } from "next-intl/server";
 
 // Earliest start = used for sorting and display of the next upcoming start.
 function getEarliestStart(startTimes) {
@@ -43,6 +44,7 @@ function serializeEvent(ev, currentDriverId) {
 }
 
 export default async function EvenementsPage() {
+  const t = await getTranslations("events");
   const { driver: currentDriver } = await getSessionAndDriver();
   const admin = isAdmin(currentDriver);
   const isExternal = currentDriver?.role === "external";
@@ -88,7 +90,7 @@ export default async function EvenementsPage() {
   if (error) {
     return (
       <div className="page">
-        <div className="alert alert-error">Erreur : {error.message}</div>
+        <div className="alert alert-error">{t("error", { message: error.message })}</div>
       </div>
     );
   }
@@ -118,16 +120,16 @@ export default async function EvenementsPage() {
     <div className="page">
       <div className="page-header">
         <div>
-          <h1>Événements</h1>
+          <h1>{t("title")}</h1>
           <div className="accent-line" />
         </div>
         {admin && (
           <div style={{ display: "flex", gap: "0.75rem" }}>
             <Link href="/evenements/nouveau" className="btn btn-secondary">
-              + Événement
+              {t("addEvent")}
             </Link>
             <Link href="/championnats/nouveau" className="btn btn-primary">
-              + Championnat
+              {t("addChampionship")}
             </Link>
           </div>
         )}

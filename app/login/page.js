@@ -1,21 +1,20 @@
 "use client";
 import { useState, Suspense, useEffect } from "react";
 import { supabaseBrowser as supabase } from "../../lib/supabase-browser";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 
 function LoginForm() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  const router = useRouter();
   const searchParams = useSearchParams();
-  // Error params are set by auth/callback when a redirect fails —
-  // e.g. link_expired when a magic link or reset token is stale.
   const urlError = searchParams.get("error");
   const [theme, setTheme] = useState("dark");
-  // Read theme from localStorage in useEffect to avoid SSR hydration mismatch.
+  const t = useTranslations("login");
+
   useEffect(() => {
     const saved = localStorage.getItem("theme") || "dark";
     setTheme(saved);
@@ -24,7 +23,7 @@ function LoginForm() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!email.trim() || !password) {
-      setError("Email et mot de passe requis.");
+      setError(t("errorRequired"));
       return;
     }
     setLoading(true);
@@ -37,11 +36,9 @@ function LoginForm() {
 
     if (err) {
       if (err.message.includes("Invalid login credentials")) {
-        setError("Email ou mot de passe incorrect.");
+        setError(t("errorInvalid"));
       } else if (err.message.includes("Email not confirmed")) {
-        setError(
-          "Vérifiez votre email — un lien de confirmation vous a été envoyé.",
-        );
+        setError(t("errorNotConfirmed"));
       } else {
         setError(err.message);
       }
@@ -66,7 +63,6 @@ function LoginForm() {
       }}
     >
       <div style={{ width: "100%", maxWidth: "400px" }}>
-        {/* Logo */}
         <div style={{ textAlign: "center", marginBottom: "2rem" }}>
           <img
             src={
@@ -85,15 +81,9 @@ function LoginForm() {
         </div>
 
         <div className="card">
-          <h2 style={{ marginBottom: "0.5rem" }}>Connexion</h2>
-          <p
-            style={{
-              color: "var(--text-dim)",
-              fontSize: "0.85rem",
-              marginBottom: "1.5rem",
-            }}
-          >
-            Connectez-vous avec votre email et mot de passe.
+          <h2 style={{ marginBottom: "0.5rem" }}>{t("title")}</h2>
+          <p style={{ color: "var(--text-dim)", fontSize: "0.85rem", marginBottom: "1.5rem" }}>
+            {t("subtitle")}
           </p>
 
           {error && (
@@ -103,38 +93,37 @@ function LoginForm() {
           )}
           {urlError === "link_expired" && (
             <div className="alert alert-error" style={{ marginBottom: "1rem" }}>
-              Ce lien a expiré ou a déjà été utilisé. Demandez un nouveau lien.
+              {t("errorLinkExpired")}
             </div>
           )}
           {urlError === "auth" && (
             <div className="alert alert-error" style={{ marginBottom: "1rem" }}>
-              Erreur d&apos;authentification. Réessayez ou contactez un
-              administrateur.
+              {t("errorAuth")}
             </div>
           )}
 
           <form onSubmit={handleSubmit}>
             <div className="form-group" style={{ marginBottom: "1rem" }}>
-              <label htmlFor="email">Email</label>
+              <label htmlFor="email">{t("emailLabel")}</label>
               <input
                 id="email"
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="votre@email.com"
+                placeholder={t("emailPlaceholder")}
                 autoFocus
                 required
                 autoComplete="email"
               />
             </div>
             <div className="form-group" style={{ marginBottom: "1.5rem" }}>
-              <label htmlFor="password">Mot de passe</label>
+              <label htmlFor="password">{t("passwordLabel")}</label>
               <input
                 id="password"
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••"
+                placeholder={t("passwordPlaceholder")}
                 required
                 autoComplete="current-password"
               />
@@ -145,22 +134,16 @@ function LoginForm() {
               disabled={loading}
               style={{ width: "100%", marginBottom: "1rem" }}
             >
-              {loading ? "Connexion…" : "Se connecter"}
+              {loading ? t("submitting") : t("submit")}
             </button>
           </form>
 
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              fontSize: "0.82rem",
-            }}
-          >
+          <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.82rem" }}>
             <Link href="/register" style={{ color: "var(--text-dim)" }}>
-              Créer un compte
+              {t("createAccount")}
             </Link>
             <Link href="/reset-password" style={{ color: "var(--text-dim)" }}>
-              Mot de passe oublié ?
+              {t("forgotPassword")}
             </Link>
           </div>
         </div>
@@ -169,7 +152,6 @@ function LoginForm() {
   );
 }
 
-// useSearchParams() requires a Suspense boundary in Next.js app router.
 export default function LoginPage() {
   return (
     <Suspense>
