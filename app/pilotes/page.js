@@ -85,8 +85,9 @@ export default async function PilotesPage() {
                           Inactif
                         </span>
                       )}
-                      {/* Staleness badge — shown to admins and to the driver themselves */}
+                      {/* Staleness badge — shown to admins and to the driver themselves, but not for engineers */}
                       {(admin || currentDriver?.id === p.id) &&
+                        p.role !== "engineer" &&
                         (!p.last_driver_sync_at ||
                           Date.now() - new Date(p.last_driver_sync_at).getTime() >
                             100 * 24 * 60 * 60 * 1000) && (

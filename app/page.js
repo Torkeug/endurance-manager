@@ -156,7 +156,7 @@ export default async function HomePage() {
           .select("*", { count: "exact", head: true })
           .eq("approved", true)
           .eq("active", true)
-          .eq("test_driver", false)
+          .eq("is_test_account", false)
           .neq("role", "engineer")
           .or(`last_driver_sync_at.is.null,last_driver_sync_at.lt.${syncCutoff}`)
       : { count: 0 },

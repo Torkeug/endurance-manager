@@ -67,7 +67,7 @@ function buildEmail({ name, profileUrl }) {
                 Bonjour ${name},<br/><br/>
                 Vos données iRacing (inventaire voitures &amp; circuits) n&apos;ont pas été
                 synchronisées depuis plus de 100 jours.<br/>
-                Pensez à relancer la synchronisation depuis votre profil.
+                Pensez à effectuer une synchronisation depuis votre profil.
               </p>
               <table width="100%" cellpadding="0" cellspacing="0">
                 <tr>

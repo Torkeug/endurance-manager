@@ -19,7 +19,6 @@ export async function GET(request) {
     .eq("active", true)
     .neq("role", "engineer")
     .eq("is_test_account", false)
-    .not("iracing_id", "is", null)
     .or(`last_driver_sync_at.is.null,last_driver_sync_at.lt.${staleThresholdDate}`);
 
   if (error) {
