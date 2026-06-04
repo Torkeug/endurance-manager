@@ -167,7 +167,6 @@ export default async function HomePage() {
           .select("*", { count: "exact", head: true })
           .eq("approved", true)
           .eq("active", false)
-          .eq("test_driver", false)
           .neq("role", "engineer")
       : { count: 0 },
 

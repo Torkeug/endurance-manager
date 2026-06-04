@@ -176,7 +176,7 @@ Client-side calc, runs on demand (recalc modal) or after strategy changes.
 ### Test accounts vs test drivers
 Two distinct flags — do not conflate them:
 - `drivers.is_test_account` — permanent bot/automation accounts. Excluded from: active driver count, sync required count, stale sync emails.
-- `drivers.test_driver` — temporary flag toggled per-driver by admins. Excluded from: membership overdue count, inactive count. **NOT excluded from active driver count or sync required count** — use `is_test_account` for that.
+- `drivers.test_driver` — temporary flag toggled per-driver by admins. Excluded from: membership overdue count only. **NOT excluded from active driver count, sync required count, or inactive count** — use `is_test_account` for permanent bot/automation exclusions.
 
 ### Discord bot
 External codebase, not in this repo. Reads directly from the DB. Current schema it should use:
@@ -200,7 +200,8 @@ DB schema is applied (migration done). App UI not yet built:
 ### Admin home page stat cards
 Active driver count excludes: `is_test_account = true`, `role = engineer`.
 Sync required count excludes: `is_test_account = true`, `role = engineer`.
-Inactive / overdue membership counts exclude: `test_driver = true`, `role = engineer`.
+Inactive count excludes: `role = engineer`.
+Overdue membership count excludes: `test_driver = true`, `role = engineer`.
 
 ### RLS policy analysis
 When auditing RLS policies, always cross-check against the actual UI code (role guards, button visibility, page-level auth checks) before drawing conclusions. Do not infer intent from adjacent policies — a DELETE being admin-only does not mean INSERT should be too. The source of truth for intended access is the UI guard, not the shape of nearby policies.
