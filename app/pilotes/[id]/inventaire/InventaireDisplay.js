@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import {
   KronosBadge,
   FreeSubscriptionBadge,
@@ -109,6 +110,7 @@ function BaseTrackRow({
   onToggle,
   isLast,
 }) {
+  const t = useTranslations("driverInventory");
   return (
     <div>
       {/* Base track header — always collapsible */}
@@ -195,7 +197,7 @@ function BaseTrackRow({
             }}
           >
             <span style={{ fontSize: "0.82rem", color: "var(--text-dim)" }}>
-              Circuit complet
+              {t("fullConfig")}
             </span>
           </div>
         ))}
@@ -212,6 +214,7 @@ export default function InventaireDisplay({
   freeCarIdsArr = [], // iracing_car_id[] — cars free with subscription
   freeTrackNamesArr = [], // track_name[] — tracks free with subscription
 }) {
+  const t = useTranslations("driverInventory");
   // iracing_car_id integers — exact match, no string comparison fragility
   const kronosCarIds = new Set(kronosCarIdsArr);
   // Exact iracing_track_id match + name fallback for unlinked circuits
@@ -252,7 +255,7 @@ export default function InventaireDisplay({
       {carData.length > 0 && (
         <section>
           <h2 style={{ marginBottom: "0.75rem" }}>
-            Voitures
+            {t("carsTitle")}
             <span
               style={{
                 fontSize: "0.85rem",
@@ -328,7 +331,7 @@ export default function InventaireDisplay({
                   {catExpanded && cat.legacyCars && (
                     <div>
                       <CollapseHeader
-                        label="Legacy & Retraités"
+                        label={t("legacyGroup")}
                         count={cat.legacyCarCount}
                         expanded={expandedLegacyCarGroups.has(cat.category)}
                         onToggle={() =>
@@ -383,7 +386,7 @@ export default function InventaireDisplay({
       {trackData.length > 0 && (
         <section>
           <h2 style={{ marginBottom: "0.75rem" }}>
-            Circuits
+            {t("tracksTitle")}
             <span
               style={{
                 fontSize: "0.85rem",
@@ -447,7 +450,7 @@ export default function InventaireDisplay({
                       {cat.legacyTracks && (
                         <div>
                           <CollapseHeader
-                            label="Legacy & Retraités"
+                            label={t("legacyGroup")}
                             count={cat.legacyCount}
                             expanded={legacyExpanded}
                             onToggle={() =>

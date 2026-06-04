@@ -6,12 +6,14 @@ import InventaireDisplay from "./InventaireDisplay";
 import { isLegacyContent } from "../../../../lib/car-types";
 import { fetchAllRows } from "../../../../lib/db-utils";
 import LocalDate from "../../../../components/LocalDate";
+import { getTranslations } from "next-intl/server";
 
 export default async function InventairePage({ params, searchParams }) {
   const { id } = await params;
   const { iracing_synced, error: syncError } = await searchParams;
   const { driver: currentDriver } = await getSessionAndDriver();
   const admin = isAdmin(currentDriver);
+  const t = await getTranslations("driverInventory");
 
   if (!admin && currentDriver?.id !== id) redirect("/pilotes");
 
@@ -94,7 +96,7 @@ export default async function InventairePage({ params, searchParams }) {
     .filter((c) => c.free_with_subscription)
     .map((c) => c.iracing_car_id);
 
-  const freeTrackNamesArr = (iracingTracksFree || []).map((t) => t.track_name);
+  const freeTrackNamesArr = (iracingTracksFree || []).map((tr) => tr.track_name);
 
   // ── Car type priority lookup ──────────────────────────────────────────────
   // iRacing's car class system is series-based and unreliable for grouping.
@@ -141,7 +143,7 @@ export default async function InventairePage({ params, searchParams }) {
   function deriveCarClass(car_types) {
     if (!car_types || car_types.length === 0) return "—";
     for (const { match, label } of CAR_TYPE_PRIORITY) {
-      if (car_types.some((t) => match.includes(t))) return label;
+      if (car_types.some((tp) => match.includes(tp))) return label;
     }
     return "—";
   }
@@ -247,21 +249,21 @@ export default async function InventairePage({ params, searchParams }) {
       {/* Re-sync success banner */}
       {iracing_synced === "true" && (
         <div className="alert alert-success" style={{ marginBottom: "1rem" }}>
-          ✓ Synchronisation réussie — inventaire mis à jour.
+          {t("syncSuccess")}
         </div>
       )}
       {/* Sync error banner */}
       {syncError && (
         <div className="alert alert-error" style={{ marginBottom: "1rem" }}>
           {syncError === "iracing_sync_failed"
-            ? "Erreur lors de la synchronisation iRacing. Vos données n'ont pas été modifiées."
-            : "Une erreur iRacing est survenue. Veuillez réessayer."}
+            ? t("errorSyncFailed")
+            : t("errorGeneric")}
         </div>
       )}
 
       <div className="page-header">
         <div>
-          <h1>Inventaire — {driver.name}</h1>
+          <h1>{t("title", { name: driver.name })}</h1>
           <div className="accent-line" />
           {driver.iracing_synced_at && (
             <p
@@ -271,7 +273,7 @@ export default async function InventairePage({ params, searchParams }) {
                 marginTop: "0.4rem",
               }}
             >
-              Synchronisé le <LocalDate iso={driver.iracing_synced_at} />
+              {t("syncedAt")} <LocalDate iso={driver.iracing_synced_at} />
             </p>
           )}
         </div>
@@ -281,31 +283,27 @@ export default async function InventairePage({ params, searchParams }) {
               href={`/auth/iracing?mode=driver&returnTo=/pilotes/${id}/inventaire`}
               className="btn btn-primary btn-sm"
             >
-              🔄 Mettre à jour
+              {t("syncNow")}
             </a>
           )}
           <Link href={`/pilotes/${id}`} className="btn btn-secondary">
-            ← Pilote
+            {t("back")}
           </Link>
         </div>
       </div>
 
       {!driver.iracing_id && (
         <div className="card" style={{ marginBottom: "2rem" }}>
-          <div className="empty">
-            Ce pilote n&apos;a pas encore lié son compte iRacing.
-            L&apos;inventaire sera disponible après la liaison.
-          </div>
+          <div className="empty">{t("noIRacingId")}</div>
         </div>
       )}
 
       {driver.iracing_id && !hasData && (
         <div className="card" style={{ marginBottom: "2rem" }}>
           <div className="empty">
-            Aucune donnée synchronisée.{" "}
             {currentDriver?.id === id
-              ? "Cliquez sur « Mettre à jour » pour importer l'inventaire depuis iRacing."
-              : "Ce pilote doit lancer une synchronisation depuis son profil."}
+              ? t("noDataSelf")
+              : t("noDataOther")}
           </div>
         </div>
       )}

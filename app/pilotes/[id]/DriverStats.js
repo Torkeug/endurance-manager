@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import Garage61StatsTab from "./Garage61StatsTab";
 import {
   LineChart,
@@ -14,23 +15,19 @@ import {
 
 // ─── License category metadata ────────────────────────────────────────────────
 const CATEGORIES = {
-  1: { label: "Oval", warning: null },
-  2: {
-    label: "Road",
-    warning:
-      "Cette licence a été scindée en Sports Car et Formula Car en 2024 et n'est plus utilisée.",
-  },
-  3: { label: "Dirt Oval", warning: null },
-  4: { label: "Dirt Road", warning: null },
-  5: { label: "Sports Car", warning: null },
-  6: { label: "Formula Car", warning: null },
+  1: { label: "Oval", warningKey: null },
+  2: { label: "Road", warningKey: "roadWarning" },
+  3: { label: "Dirt Oval", warningKey: null },
+  4: { label: "Dirt Road", warningKey: null },
+  5: { label: "Sports Car", warningKey: null },
+  6: { label: "Formula Car", warningKey: null },
 };
 
-const DATE_RANGES = [
-  { key: "3m", label: "3 mois", months: 3 },
-  { key: "6m", label: "6 mois", months: 6 },
-  { key: "1y", label: "1 an", months: 12 },
-  { key: "all", label: "Tout", months: null },
+const DATE_RANGE_KEYS = [
+  { key: "3m", tKey: "dateRange3m", months: 3 },
+  { key: "6m", tKey: "dateRange6m", months: 6 },
+  { key: "1y", tKey: "dateRange1y", months: 12 },
+  { key: "all", tKey: "dateRangeAll", months: null },
 ];
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -133,6 +130,7 @@ function StatCard({ label, value, sub, color }) {
 }
 
 function MiniBar({ value, label, count, color }) {
+  const t = useTranslations("driverStats");
   return (
     <div style={{ marginBottom: "0.6rem" }}>
       <div
@@ -147,7 +145,7 @@ function MiniBar({ value, label, count, color }) {
         <span className="mono" style={{ color }}>
           {Math.round(value)}%{" "}
           <span style={{ color: "var(--text-dim)", fontSize: "0.72rem" }}>
-            ({count} relais)
+            ({count} {t("stintsUnit")})
           </span>
         </span>
       </div>
@@ -234,6 +232,7 @@ export default function DriverStats({
   currentIrating = null,
   garage61Slug = null,
 }) {
+  const t = useTranslations("driverStats");
   const [showAllTeammates, setShowAllTeammates] = useState(false);
   const [statsSubTab, setStatsSubTab] = useState("app");
 
@@ -279,7 +278,7 @@ export default function DriverStats({
     if (rawChartData.length === 0 && !currentIrating) return [];
 
     // Apply date range filter
-    const selectedRange = DATE_RANGES.find((r) => r.key === dateRange);
+    const selectedRange = DATE_RANGE_KEYS.find((r) => r.key === dateRange);
     const cutoff = selectedRange?.months
       ? new Date(Date.now() - selectedRange.months * 30 * 24 * 60 * 60 * 1000) // 30-day month approximation — accurate enough for a chart cutoff
       : null;
@@ -361,14 +360,14 @@ export default function DriverStats({
     .filter((p) => p.fuel_dry || p.fuel_wet)
     .map((p) => {
       const teammates = (teamPerfData || []).filter(
-        (t) => t.team_entry_id === p.team_entry_id,
+        (tp) => tp.team_entry_id === p.team_entry_id,
       );
-      const teamDryFuels = teammates.map((t) => t.fuel_dry).filter(Boolean);
+      const teamDryFuels = teammates.map((tp) => tp.fuel_dry).filter(Boolean);
       const teamAvgDry =
         teamDryFuels.length > 0
           ? teamDryFuels.reduce((s, f) => s + f, 0) / teamDryFuels.length
           : null;
-      const teamWetFuels = teammates.map((t) => t.fuel_wet).filter(Boolean);
+      const teamWetFuels = teammates.map((tp) => tp.fuel_wet).filter(Boolean);
       const teamAvgWet =
         teamWetFuels.length > 0
           ? teamWetFuels.reduce((s, f) => s + f, 0) / teamWetFuels.length
@@ -388,9 +387,9 @@ export default function DriverStats({
 
   // ── Teammates ──────────────────────────────────────────────────────────────
   const teammateCounts = {};
-  (teammatesData || []).forEach((t) => {
-    const driverId = t.drivers?.id;
-    const name = t.drivers?.name;
+  (teammatesData || []).forEach((tm) => {
+    const driverId = tm.drivers?.id;
+    const name = tm.drivers?.name;
     if (!driverId || !name) return;
     if (!teammateCounts[driverId])
       teammateCounts[driverId] = { name, count: 0 };
@@ -434,9 +433,7 @@ export default function DriverStats({
   ) {
     return (
       <div className="card">
-        <div className="empty">
-          Aucune donnée statistique disponible pour ce pilote.
-        </div>
+        <div className="empty">{t("empty")}</div>
       </div>
     );
   }
@@ -483,8 +480,8 @@ export default function DriverStats({
       {/* ── Subtab nav — only when Garage61 is linked ─────────────────── */}
       {garage61Slug && (
         <div style={{ display: "flex", gap: "0.25rem", borderBottom: "1px solid var(--border)", marginBottom: "0.25rem" }}>
-          <button style={subTabStyle("app")} onClick={() => setStatsSubTab("app")}>Endurance Manager</button>
-          <button style={subTabStyle("garage61")} onClick={() => setStatsSubTab("garage61")}>Garage61</button>
+          <button style={subTabStyle("app")} onClick={() => setStatsSubTab("app")}>{t("tabApp")}</button>
+          <button style={subTabStyle("garage61")} onClick={() => setStatsSubTab("garage61")}>{t("tabGarage61")}</button>
         </div>
       )}
 
@@ -496,7 +493,7 @@ export default function DriverStats({
       {/* ── iRating history ───────────────────────────────────────────── */}
       {availableCategories.length > 0 && (
         <div className="card">
-          <SectionHeader title="Évolution iRating" />
+          <SectionHeader title={t("iRatingSection")} />
 
           {/* Category tab selector */}
           <div
@@ -533,7 +530,7 @@ export default function DriverStats({
                   transition: "all 0.15s",
                 }}
               >
-                {CATEGORIES[catId]?.label ?? `Catégorie ${catId}`}
+                {CATEGORIES[catId]?.label ?? t("catFallback", { id: catId })}
               </button>
             ))}
           </div>
@@ -547,7 +544,7 @@ export default function DriverStats({
               marginBottom: "0.75rem",
             }}
           >
-            {DATE_RANGES.map((r) => (
+            {DATE_RANGE_KEYS.map((r) => (
               <button
                 key={r.key}
                 onClick={() => setDateRange(r.key)}
@@ -567,13 +564,13 @@ export default function DriverStats({
                   transition: "all 0.15s",
                 }}
               >
-                {r.label}
+                {t(r.tKey)}
               </button>
             ))}
           </div>
 
           {/* Road license warning */}
-          {CATEGORIES[selectedCategory]?.warning && (
+          {CATEGORIES[selectedCategory]?.warningKey && (
             <div
               style={{
                 fontSize: "0.78rem",
@@ -585,7 +582,7 @@ export default function DriverStats({
                 marginBottom: "0.75rem",
               }}
             >
-              ⚠️ {CATEGORIES[selectedCategory].warning}
+              ⚠️ {t(CATEGORIES[selectedCategory].warningKey)}
             </div>
           )}
 
@@ -607,8 +604,7 @@ export default function DriverStats({
                       marginBottom: "0.5rem",
                     }}
                   >
-                    - Points en violet = données pré-scission (
-                    {selectedCategory === 5 ? "Road" : "Road"})
+                    {t("preSplitNote", { label: "Road" })}
                   </div>
                 )}
 
@@ -656,22 +652,22 @@ export default function DriverStats({
         flexWrap: "wrap",
       }}
     >
-      {/* Historique */}
+      {/* History line */}
       <span style={{ display: "flex", alignItems: "center", gap: "0.4rem" }}>
         <svg width="16" height="10" style={{ display: "block", flexShrink: 0 }}>
           <line x1="0" y1="5" x2="16" y2="5" stroke="var(--accent)" strokeWidth="2" />
           <circle cx="8" cy="5" r="3" fill="var(--accent)" />
         </svg>
-        Historique iRating
+        {t("legendHistory")}
       </span>
 
-      {/* iRating actuel — only on Sports Car tab */}
+      {/* Current iRating — only on Sports Car tab */}
       {currentIrating && selectedCategory === 5 && (
         <span style={{ display: "flex", alignItems: "center", gap: "0.4rem" }}>
           <svg width="16" height="10" style={{ display: "block", flexShrink: 0 }}>
             <line x1="0" y1="5" x2="16" y2="5" stroke="var(--accent)" strokeWidth="2" strokeDasharray="4 3" opacity="0.4" />
           </svg>
-          iRating actuel
+          {t("legendCurrent")}
         </span>
       )}
     </div>
@@ -691,7 +687,7 @@ export default function DriverStats({
                     <Line
                       type="monotone"
                       dataKey="irating"
-                      name="Historique iRating"
+                      name={t("legendHistory")}
                       stroke="var(--accent)"
                       strokeWidth={2}
                       dot={(props) => {
@@ -728,19 +724,19 @@ export default function DriverStats({
                   }}
                 >
                   <span>
-                    Min :{" "}
+                    {t("annotationMin")}{" "}
                     <span className="mono" style={{ color: "var(--text)" }}>
                       {iratingMin} iR
                     </span>
                   </span>
                   <span>
-                    Max :{" "}
+                    {t("annotationMax")}{" "}
                     <span className="mono" style={{ color: "var(--text)" }}>
                       {iratingMax} iR
                     </span>
                   </span>
                   <span>
-                    Δ :{" "}
+                    {t("annotationDelta")}{" "}
                     <span
                       className="mono"
                       style={{
@@ -763,8 +759,7 @@ export default function DriverStats({
                     </span>
                   </span>
                   <span style={{ marginLeft: "auto" }}>
-                    {chartData.length} point
-                    {chartData.length !== 1 ? "s" : ""}
+                    {t("chartPoints", { count: chartData.length })}
                   </span>
                   <span
                     style={{
@@ -791,8 +786,7 @@ export default function DriverStats({
             </>
           ) : (
             <div style={{ color: "var(--text-dim)", fontSize: "0.82rem" }}>
-              Pas encore assez de données pour afficher un graphique. Le
-              graphique apparaîtra après plusieurs synchronisations.
+              {t("chartEmpty")}
             </div>
           )}
         </div>
@@ -800,26 +794,26 @@ export default function DriverStats({
 
       {/* ── Summary cards ─────────────────────────────────────────────── */}
       <div style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap" }}>
-        <StatCard label="Courses" value={totalRaces} />
+        <StatCard label={t("statRaces")} value={totalRaces} />
         {totalChampionships > 0 && (
-          <StatCard label="Championnats" value={totalChampionships} />
+          <StatCard label={t("statChampionships")} value={totalChampionships} />
         )}
-        <StatCard label="Relais" value={totalStints} />
+        <StatCard label={t("statStints")} value={totalStints} />
         <StatCard
-          label="Tours"
+          label={t("statLaps")}
           value={totalLaps > 0 ? totalLaps : "—"}
-          sub={totalLaps > 0 ? "estimés" : null}
+          sub={totalLaps > 0 ? t("statLapsEst") : null}
         />
       </div>
 
       {/* ── Conditions ────────────────────────────────────────────────── */}
       {totalStints > 0 && (rainStints > 0 || nightStintsCount > 0) && (
         <div className="card">
-          <SectionHeader title="Conditions" />
+          <SectionHeader title={t("conditionsSection")} />
           {rainStints > 0 && (
             <MiniBar
               value={rainPct}
-              label="Pluie 💧"
+              label={t("condRain")}
               count={rainStints}
               color="#4a9fd4"
             />
@@ -827,7 +821,7 @@ export default function DriverStats({
           {nightStintsCount > 0 && (
             <MiniBar
               value={nightPct}
-              label="Nuit 🌑"
+              label={t("condNight")}
               count={nightStintsCount}
               color="#8b5cf6"
             />
@@ -838,7 +832,7 @@ export default function DriverStats({
       {/* ── Lap times by circuit ──────────────────────────────────────── */}
       {circuitStats.length > 0 && (
         <div>
-          <SectionHeader title="Chronos par circuit" />
+          <SectionHeader title={t("lapTimesSection")} />
           <div
             style={{
               border: "1px solid var(--border)",
@@ -856,11 +850,11 @@ export default function DriverStats({
             >
               <thead>
                 <tr>
-                  <th style={TH}>Circuit</th>
-                  <th style={{ ...TH, textAlign: "right" }}>Sec ☀️</th>
-                  <th style={{ ...TH, textAlign: "right" }}>Pluie 💧</th>
-                  <th style={{ ...TH, textAlign: "right" }}>Nuit sec 🌑</th>
-                  <th style={{ ...TH, textAlign: "right" }}>Nuit pluie</th>
+                  <th style={TH}>{t("colCircuit")}</th>
+                  <th style={{ ...TH, textAlign: "right" }}>{t("colDry")}</th>
+                  <th style={{ ...TH, textAlign: "right" }}>{t("colWet")}</th>
+                  <th style={{ ...TH, textAlign: "right" }}>{t("colNightDry")}</th>
+                  <th style={{ ...TH, textAlign: "right" }}>{t("colNightWet")}</th>
                 </tr>
               </thead>
               <tbody>
@@ -924,7 +918,7 @@ export default function DriverStats({
       {/* ── Fuel efficiency ───────────────────────────────────────────── */}
       {fuelRows.length > 0 && (
         <div>
-          <SectionHeader title="Consommation vs équipe" />
+          <SectionHeader title={t("fuelSection")} />
           <div
             style={{
               border: "1px solid var(--border)",
@@ -942,14 +936,14 @@ export default function DriverStats({
             >
               <thead>
                 <tr>
-                  <th style={TH}>Événement</th>
-                  <th style={TH}>Circuit</th>
-                  <th style={{ ...TH, textAlign: "right" }}>Pilote ☀️</th>
-                  <th style={{ ...TH, textAlign: "right" }}>Équipe ☀️</th>
-                  <th style={{ ...TH, textAlign: "right" }}>Écart</th>
-                  <th style={{ ...TH, textAlign: "right" }}>Pilote 💧</th>
-                  <th style={{ ...TH, textAlign: "right" }}>Équipe 💧</th>
-                  <th style={{ ...TH, textAlign: "right" }}>Écart</th>
+                  <th style={TH}>{t("colEvent")}</th>
+                  <th style={TH}>{t("colCircuit")}</th>
+                  <th style={{ ...TH, textAlign: "right" }}>{t("colDriverDry")}</th>
+                  <th style={{ ...TH, textAlign: "right" }}>{t("colTeamDry")}</th>
+                  <th style={{ ...TH, textAlign: "right" }}>{t("colDiff")}</th>
+                  <th style={{ ...TH, textAlign: "right" }}>{t("colDriverWet")}</th>
+                  <th style={{ ...TH, textAlign: "right" }}>{t("colTeamWet")}</th>
+                  <th style={{ ...TH, textAlign: "right" }}>{t("colDiff")}</th>
                 </tr>
               </thead>
               <tbody>
@@ -1064,7 +1058,7 @@ export default function DriverStats({
       {/* ── Teammates ─────────────────────────────────────────────────── */}
       {sortedTeammates.length > 0 && (
         <div>
-          <SectionHeader title="Équipiers fréquents" />
+          <SectionHeader title={t("teammatesSection")} />
           <div
             style={{
               display: "flex",
@@ -1073,9 +1067,9 @@ export default function DriverStats({
               marginBottom: "0.5rem",
             }}
           >
-            {displayedTeammates.map((t) => (
+            {displayedTeammates.map((tm) => (
               <div
-                key={t.name}
+                key={tm.name}
                 style={{
                   display: "flex",
                   alignItems: "center",
@@ -1087,12 +1081,12 @@ export default function DriverStats({
                   fontSize: "0.82rem",
                 }}
               >
-                <span style={{ fontWeight: 600 }}>{t.name}</span>
+                <span style={{ fontWeight: 600 }}>{tm.name}</span>
                 <span
                   className="mono"
                   style={{ fontSize: "0.72rem", color: "var(--accent)" }}
                 >
-                  ×{t.count}
+                  ×{tm.count}
                 </span>
               </div>
             ))}
@@ -1103,8 +1097,8 @@ export default function DriverStats({
               className="btn btn-secondary btn-sm"
             >
               {showAllTeammates
-                ? "Voir moins"
-                : `Voir tous (${sortedTeammates.length})`}
+                ? t("showLess")
+                : t("showAll", { count: sortedTeammates.length })}
             </button>
           )}
         </div>
@@ -1113,7 +1107,7 @@ export default function DriverStats({
       {/* ── Most used circuits ────────────────────────────────────────── */}
       {sortedCircuits.length > 0 && (
         <div>
-          <SectionHeader title="Circuits" />
+          <SectionHeader title={t("circuitsSection")} />
           <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem" }}>
             {sortedCircuits.map((c) => (
               <div
@@ -1145,7 +1139,7 @@ export default function DriverStats({
       {/* ── Most used cars ────────────────────────────────────────────── */}
       {sortedCars.length > 0 && (
         <div>
-          <SectionHeader title="Voitures" />
+          <SectionHeader title={t("carsSection")} />
           <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem" }}>
             {sortedCars.map((c) => (
               <div

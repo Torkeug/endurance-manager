@@ -6,6 +6,7 @@ import DriverPageTabs from "./DriverPageTabs";
 import DriverStats from "./DriverStats";
 import EngagementsTab from "./EngagementsTab";
 import LocalDate from "../../../components/LocalDate";
+import { getTranslations } from "next-intl/server";
 
 export default async function DriverDetail({ params, searchParams }) {
   const { id } = await params;
@@ -17,6 +18,7 @@ export default async function DriverDetail({ params, searchParams }) {
   } = await searchParams;
   const { driver: currentDriver } = await getSessionAndDriver();
   const admin = isAdmin(currentDriver);
+  const t = await getTranslations("driverProfile");
 
   // Fetch driver
   const { data: driver, error } = await supabase
@@ -197,26 +199,30 @@ export default async function DriverDetail({ params, searchParams }) {
 
   const socials = [
     {
+      key: "iracing_id",
       label: "iRacing ID",
       value: driver.iracing_id,
       link: driver.iracing_id
         ? `https://members-ng.iracing.com/web/racing/profile?cust_id=${driver.iracing_id}&tab=licenses`
         : null,
     },
-    { label: "Email", value: driver.email || "—" },
-    { label: "Discord", value: driver.discord || "—" },
+    { key: "email", label: "Email", value: driver.email || "—" },
+    { key: "discord", label: "Discord", value: driver.discord || "—" },
     {
-      label: "Alerte relais",
+      key: "discord_alert",
+      label: t("socialDiscordAlert"),
       value: driver.discord_alert_enabled && driver.discord_alert_minutes
-        ? `${driver.discord_alert_minutes} min`
-        : "Désactivée",
+        ? t("discordAlertMinutes", { minutes: driver.discord_alert_minutes })
+        : t("discordAlertDisabled"),
     },
     {
+      key: "twitch",
       label: "Twitch",
       value: driver.twitch,
       link: driver.twitch ? `https://twitch.tv/${driver.twitch}` : null,
     },
     {
+      key: "instagram",
       label: "Instagram",
       value: driver.instagram,
       link: driver.instagram
@@ -224,6 +230,7 @@ export default async function DriverDetail({ params, searchParams }) {
         : null,
     },
     {
+      key: "garage61",
       label: "Garage61",
       value: driver.garage61_slug,
       link: driver.garage61_slug
@@ -232,7 +239,7 @@ export default async function DriverDetail({ params, searchParams }) {
     },
     // Always show Email even if empty — it's the primary contact field.
     // Other socials are filtered out if not set to keep the card clean.
-  ].filter((s) => s.value || s.label === "Email");
+  ].filter((s) => s.value || s.key === "email");
 
   return (
     <div className="page">
@@ -267,16 +274,16 @@ export default async function DriverDetail({ params, searchParams }) {
             >
               {driver.irating
                 ? `${driver.irating} iR`
-                : "iRating non renseigné"}
+                : t("iratingUnset")}
             </span>
             {!driver.active && (
-              <span className="badge badge-driver">Inactif</span>
+              <span className="badge badge-driver">{t("badgeInactive")}</span>
             )}
           </div>
         </div>
         {/* Back button — top right */}
         <Link href="/pilotes" className="btn btn-secondary">
-          ← Pilotes
+          {t("back")}
         </Link>
       </div>
 
@@ -301,10 +308,7 @@ export default async function DriverDetail({ params, searchParams }) {
               flexWrap: "wrap",
             }}
           >
-            <span>
-              ⚠️ Les données iRacing (inventaire voitures &amp; circuits)
-              n&apos;ont pas été synchronisées depuis plus de 100 jours.
-            </span>
+            <span>{t("staleWarning")}</span>
             {/* Only show the sync button to the driver themselves */}
             {currentDriver?.id === id && driver.iracing_id && (
               <a
@@ -317,7 +321,7 @@ export default async function DriverDetail({ params, searchParams }) {
                   whiteSpace: "nowrap",
                 }}
               >
-                🔄 Synchroniser maintenant
+                {t("syncNow")}
               </a>
             )}
           </div>
@@ -326,43 +330,34 @@ export default async function DriverDetail({ params, searchParams }) {
       {/* iRacing first-link success */}
       {iracing_linked === "true" && (
         <div className="alert alert-success" style={{ marginBottom: "1rem" }}>
-          ✓ Compte iRacing lié avec succès.
+          {t("successIRacingLinked")}
         </div>
       )}
       {/* iRacing re-sync success */}
       {iracing_synced === "true" && (
         <div className="alert alert-success" style={{ marginBottom: "1rem" }}>
-          ✓ Synchronisation réussie — inventaire mis à jour.
+          {t("successIRacingSynced")}
         </div>
       )}
       {/* Garage61 first-link success */}
       {garage61_linked === "true" && (
         <div className="alert alert-success" style={{ marginBottom: "1rem" }}>
-          ✓ Compte Garage61 lié avec succès.
+          {t("successGarage61Linked")}
         </div>
       )}
       {/* iRacing / Garage61 OAuth errors — both use the same ?error= param */}
       {syncError && (
         <div className="alert alert-error" style={{ marginBottom: "1rem" }}>
-          {syncError === "iracing_sync_failed" &&
-            "Erreur lors de la synchronisation iRacing. Vos données n'ont pas été modifiées."}
-          {syncError === "iracing_token" &&
-            "Erreur d'authentification iRacing. Veuillez réessayer."}
-          {syncError === "iracing_profile" &&
-            "Impossible de récupérer le profil iRacing. Veuillez réessayer."}
-          {syncError === "iracing_already_linked" &&
-            "Ce compte iRacing est déjà lié à un autre pilote."}
-          {syncError === "iracing_denied" && "Autorisation iRacing refusée."}
-          {syncError === "garage61_denied" &&
-            "Autorisation Garage61 refusée."}
-          {syncError === "garage61_token" &&
-            "Erreur d'authentification Garage61. Veuillez réessayer."}
-          {syncError === "garage61_save" &&
-            "Impossible d'enregistrer les tokens Garage61. Veuillez réessayer."}
-          {syncError === "garage61_no_driver" &&
-            "Compte Garage61 : profil pilote introuvable. Contactez un administrateur."}
-          {syncError === "garage61_error" &&
-            "Une erreur inattendue est survenue lors de la liaison Garage61. Veuillez réessayer."}
+          {syncError === "iracing_sync_failed" && t("errorSyncFailed")}
+          {syncError === "iracing_token" && t("errorIRacingToken")}
+          {syncError === "iracing_profile" && t("errorIRacingProfile")}
+          {syncError === "iracing_already_linked" && t("errorAlreadyLinked")}
+          {syncError === "iracing_denied" && t("errorIRacingDenied")}
+          {syncError === "garage61_denied" && t("errorGarage61Denied")}
+          {syncError === "garage61_token" && t("errorGarage61Token")}
+          {syncError === "garage61_save" && t("errorGarage61Save")}
+          {syncError === "garage61_no_driver" && t("errorGarage61NoDriver")}
+          {syncError === "garage61_error" && t("errorGarage61Error")}
           {![
             "iracing_sync_failed",
             "iracing_token",
@@ -374,8 +369,7 @@ export default async function DriverDetail({ params, searchParams }) {
             "garage61_save",
             "garage61_no_driver",
             "garage61_error",
-          ].includes(syncError) &&
-            "Une erreur d'authentification est survenue. Veuillez réessayer."}
+          ].includes(syncError) && t("errorGeneric")}
         </div>
       )}
 
@@ -406,14 +400,14 @@ export default async function DriverDetail({ params, searchParams }) {
                   cursor: "default",
                 }}
               >
-                ✓ Garage61 lié
+                {t("garage61Linked")}
               </span>
             ) : (
               <a
                 href={`/auth/garage61?returnTo=/pilotes/${id}`}
                 className="btn btn-primary btn-sm"
               >
-                🔗 Lier Garage61
+                {t("linkGarage61")}
               </a>
             ))}
 
@@ -429,13 +423,13 @@ export default async function DriverDetail({ params, searchParams }) {
                     cursor: "default",
                   }}
                 >
-                  ✓ iRacing lié
+                  {t("iracingLinked")}
                 </span>
                 <a
                   href={`/auth/iracing?mode=driver&returnTo=/pilotes/${id}`}
                   className="btn btn-secondary btn-sm"
                 >
-                  🔄 Mettre à jour
+                  {t("updateIRacing")}
                 </a>
               </>
             ) : (
@@ -443,7 +437,7 @@ export default async function DriverDetail({ params, searchParams }) {
                 href={`/auth/iracing?mode=driver&returnTo=/pilotes/${id}`}
                 className="btn btn-primary btn-sm"
               >
-                🏎️ Lier iRacing
+                {t("linkIRacing")}
               </a>
             ))}
         </div>
@@ -454,7 +448,7 @@ export default async function DriverDetail({ params, searchParams }) {
             href={`/pilotes/${id}/inventaire`}
             className="btn btn-secondary btn-sm"
           >
-            📦 Inventaire
+            {t("inventory")}
           </Link>
         )}
       </div>
@@ -474,13 +468,13 @@ export default async function DriverDetail({ params, searchParams }) {
         >
           {driver.iracing_synced_at && (
             <span>
-              iRating synchronisé le{" "}
+              {t("iratingSyncedAt")}{" "}
               <LocalDate iso={driver.iracing_synced_at} />
             </span>
           )}
           {driver.last_driver_sync_at && (
             <span>
-              Inventaire synchronisé le{" "}
+              {t("inventorySyncedAt")}{" "}
               <LocalDate iso={driver.last_driver_sync_at} />
             </span>
           )}
@@ -502,8 +496,8 @@ export default async function DriverDetail({ params, searchParams }) {
           >
             {/* Left: Socials data grid */}
             <div style={{ display: "flex", gap: "1.5rem", flexWrap: "wrap" }}>
-              {socials.map(({ label, value, link }) => (
-                <div key={label}>
+              {socials.map(({ key, label, value, link }) => (
+                <div key={key}>
                   <div
                     style={{
                       fontSize: "0.7rem",
@@ -517,7 +511,7 @@ export default async function DriverDetail({ params, searchParams }) {
                       gap: "0.3rem",
                     }}
                   >
-                    {(label === "Discord" || label === "Alerte relais") && (
+                    {(key === "discord" || key === "discord_alert") && (
                       <svg viewBox="0 0 24 24" fill="#5865F2" style={{ width: 10, height: 10, flexShrink: 0 }}>
                         <path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057c.001.033.022.063.044.083a19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028c.462-.63.874-1.295 1.226-1.994a.076.076 0 0 0-.041-.106 13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.946 2.418-2.157 2.418z" />
                       </svg>
@@ -533,23 +527,23 @@ export default async function DriverDetail({ params, searchParams }) {
                       style={{
                         fontSize: "0.85rem",
                         color:
-                          label === "Instagram"
+                          key === "instagram"
                             ? "#405DE6"
-                            : label === "Twitch"
+                            : key === "twitch"
                               ? "#9147ff"
-                              : label === "Garage61"
+                              : key === "garage61"
                                 ? "#e85d26"
-                                : label === "iRacing ID"
+                                : key === "iracing_id"
                                   ? "var(--text-dim)"
                                   : "var(--accent)",
                         textDecoration:
-                          label === "iRacing ID" || label === "Garage61"
+                          key === "iracing_id" || key === "garage61"
                             ? "underline"
                             : "none",
                       }}
                     >
                       {value}
-                      {label === "iRacing ID" || label === "Garage61"
+                      {key === "iracing_id" || key === "garage61"
                         ? " ↗"
                         : ""}
                     </a>
@@ -576,7 +570,7 @@ export default async function DriverDetail({ params, searchParams }) {
                   href="/change-password"
                   className="btn btn-secondary btn-sm"
                 >
-                  Changer mot de passe
+                  {t("changePassword")}
                 </Link>
               )}
               {(admin || currentDriver?.id === id) && (
@@ -584,7 +578,7 @@ export default async function DriverDetail({ params, searchParams }) {
                   href={`/pilotes/${id}/modifier`}
                   className="btn btn-secondary btn-sm"
                 >
-                  Modifier
+                  {t("edit")}
                 </Link>
               )}
             </div>

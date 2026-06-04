@@ -1,5 +1,6 @@
 "use client";
 import React, { useEffect, useState } from "react";
+import { useTranslations } from "next-intl";
 
 const SESSION_LABELS = { 1: "P", 2: "Q", 3: "R" };
 
@@ -11,11 +12,11 @@ const CATEGORY_LABELS = {
 };
 const CATEGORY_ORDER = ["road", "oval", "dirt_road", "dirt_oval"];
 
-const SORT_OPTIONS = [
-  { key: "laps",    label: "Tours",       fn: (a, b) => b.totalLaps - a.totalLaps },
-  { key: "clean",   label: "% Propres",   fn: (a, b) => b.cleanPct - a.cleanPct },
-  { key: "time",    label: "Temps piste", fn: (a, b) => b.timeOnTrack - a.timeOnTrack },
-  { key: "name",    label: "Circuit",     fn: (a, b) => a.name.localeCompare(b.name) },
+const SORT_OPTION_KEYS = [
+  { key: "laps",  tKey: "sortLaps",  fn: (a, b) => b.totalLaps - a.totalLaps },
+  { key: "clean", tKey: "sortClean", fn: (a, b) => b.cleanPct - a.cleanPct },
+  { key: "time",  tKey: "sortTime",  fn: (a, b) => b.timeOnTrack - a.timeOnTrack },
+  { key: "name",  tKey: "sortName",  fn: (a, b) => a.name.localeCompare(b.name) },
 ];
 
 function formatTime(seconds) {
@@ -34,6 +35,7 @@ function formatLapTime(seconds) {
 }
 
 export default function Garage61StatsTab({ slug }) {
+  const t = useTranslations("garage61Stats");
   const [state, setState] = useState("idle");
   const [circuits, setCircuits] = useState([]);
   const [error, setError] = useState(null);
@@ -47,7 +49,7 @@ export default function Garage61StatsTab({ slug }) {
   useEffect(() => {
     try {
       const saved = localStorage.getItem("kronos_g61_sort");
-      if (saved && SORT_OPTIONS.some((o) => o.key === saved)) setSortKey(saved);
+      if (saved && SORT_OPTION_KEYS.some((o) => o.key === saved)) setSortKey(saved);
     } catch {}
   }, []);
 
@@ -93,7 +95,7 @@ export default function Garage61StatsTab({ slug }) {
   if (state === "idle" || state === "loading") {
     return (
       <div style={{ color: "var(--text-dim)", fontSize: "0.85rem", padding: "1rem 0" }}>
-        Chargement des données Garage61…
+        {t("loading")}
       </div>
     );
   }
@@ -101,7 +103,7 @@ export default function Garage61StatsTab({ slug }) {
   if (state === "not_linked") {
     return (
       <div className="card" style={{ color: "var(--text-dim)", fontSize: "0.85rem" }}>
-        Aucun compte Garage61 lié à votre profil. Liez votre compte pour voir les statistiques de préparation.
+        {t("notLinked")}
       </div>
     );
   }
@@ -109,7 +111,7 @@ export default function Garage61StatsTab({ slug }) {
   if (state === "error") {
     return (
       <div className="card" style={{ color: "var(--danger)", fontSize: "0.85rem" }}>
-        Impossible de charger les données Garage61 ({error}).
+        {t("error", { error })}
       </div>
     );
   }
@@ -117,7 +119,7 @@ export default function Garage61StatsTab({ slug }) {
   if (circuits.length === 0) {
     return (
       <div className="card">
-        <div className="empty">Aucune donnée de préparation disponible pour ce pilote sur Garage61.</div>
+        <div className="empty">{t("empty")}</div>
       </div>
     );
   }
@@ -126,7 +128,7 @@ export default function Garage61StatsTab({ slug }) {
   const allSessionTypes = [...new Set(circuits.flatMap((c) => c.sessionTypes))].sort();
   const hasCategories = circuits.some((c) => c.category);
 
-  const sortFn = SORT_OPTIONS.find((o) => o.key === sortKey)?.fn ?? SORT_OPTIONS[0].fn;
+  const sortFn = SORT_OPTION_KEYS.find((o) => o.key === sortKey)?.fn ?? SORT_OPTION_KEYS[0].fn;
   const filtered = circuits
     .filter((c) => sessionFilter === null || c.sessionTypes.includes(sessionFilter))
     .filter((c) => !hasCategories || selectedCats.length === 0 || selectedCats.includes(c.category))
@@ -214,10 +216,10 @@ export default function Garage61StatsTab({ slug }) {
       <div style={{ display: "flex", gap: "1rem", flexWrap: "wrap", alignItems: "center" }}>
         {/* Sort */}
         <div style={{ display: "flex", gap: "0.35rem", alignItems: "center", flexWrap: "wrap" }}>
-          <span style={{ fontSize: "0.7rem", color: "var(--text-dim)", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase" }}>Tri</span>
-          {SORT_OPTIONS.map((o) => (
+          <span style={{ fontSize: "0.7rem", color: "var(--text-dim)", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase" }}>{t("sortLabel")}</span>
+          {SORT_OPTION_KEYS.map((o) => (
             <button key={o.key} style={pillStyle(sortKey === o.key)} onClick={() => setSortKey(o.key)}>
-              {o.label}
+              {t(o.tKey)}
             </button>
           ))}
         </div>
@@ -225,8 +227,8 @@ export default function Garage61StatsTab({ slug }) {
         {/* Session type filter — only if multiple types present */}
         {allSessionTypes.length > 1 && (
           <div style={{ display: "flex", gap: "0.35rem", alignItems: "center", flexWrap: "wrap" }}>
-            <span style={{ fontSize: "0.7rem", color: "var(--text-dim)", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase" }}>Session</span>
-            <button style={pillStyle(sessionFilter === null)} onClick={() => setSessionFilter(null)}>Tous</button>
+            <span style={{ fontSize: "0.7rem", color: "var(--text-dim)", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase" }}>{t("sessionLabel")}</span>
+            <button style={pillStyle(sessionFilter === null)} onClick={() => setSessionFilter(null)}>{t("sessionAll")}</button>
             {allSessionTypes.map((s) => (
               <button key={s} style={pillStyle(sessionFilter === s)} onClick={() => setSessionFilter(sessionFilter === s ? null : s)}>
                 {SESSION_LABELS[s] ?? s}
@@ -238,7 +240,7 @@ export default function Garage61StatsTab({ slug }) {
         {/* Category filter — multi-select, all active by default */}
         {hasCategories && (
           <div style={{ display: "flex", gap: "0.4rem", flexWrap: "wrap", alignItems: "center" }}>
-            <span style={{ fontSize: "0.7rem", color: "var(--text-dim)", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase" }}>Catégorie</span>
+            <span style={{ fontSize: "0.7rem", color: "var(--text-dim)", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase" }}>{t("categoryLabel")}</span>
             {CATEGORY_ORDER
               .filter((cat) => circuits.some((c) => c.category === cat))
               .map((cat) => (
@@ -263,11 +265,11 @@ export default function Garage61StatsTab({ slug }) {
         <table style={{ width: "100%", borderCollapse: "collapse", minWidth: "420px" }}>
           <thead>
             <tr>
-              <th style={thSort("name")} onClick={() => setSortKey("name")}>Circuit</th>
-              <th style={{ ...thSort("laps", "right") }} onClick={() => setSortKey("laps")}>Tours</th>
-              <th style={{ ...thSort("clean", "right") }} onClick={() => setSortKey("clean")}>Propres</th>
-              <th style={{ ...thSort("time", "right") }} onClick={() => setSortKey("time")}>Temps piste</th>
-              <th style={TH}>Sessions</th>
+              <th style={thSort("name")} onClick={() => setSortKey("name")}>{t("colCircuit")}</th>
+              <th style={{ ...thSort("laps", "right") }} onClick={() => setSortKey("laps")}>{t("colLaps")}</th>
+              <th style={{ ...thSort("clean", "right") }} onClick={() => setSortKey("clean")}>{t("colClean")}</th>
+              <th style={{ ...thSort("time", "right") }} onClick={() => setSortKey("time")}>{t("colTime")}</th>
+              <th style={TH}>{t("colSessions")}</th>
               <th style={TH}></th>
             </tr>
           </thead>
@@ -317,7 +319,7 @@ export default function Garage61StatsTab({ slug }) {
                       </td>
                       <td style={{ ...TD, textAlign: "right" }}>
                         <a href={`https://garage61.net/app/laps/${c.trackId}/0;g=2;d=1`} target="_blank" rel="noopener noreferrer" className="btn btn-secondary btn-sm" style={{ fontSize: "0.72rem", whiteSpace: "nowrap" }} onClick={(e) => e.stopPropagation()}>
-                          ↗ Garage61
+                          {t("linkGarage61")}
                         </a>
                       </td>
                     </tr>
@@ -325,20 +327,20 @@ export default function Garage61StatsTab({ slug }) {
                       <tr>
                         <td colSpan={6} style={{ padding: "0.5rem 1.5rem 0.6rem", background: "var(--surface-2)", borderBottom: "1px solid var(--border)" }}>
                           {lapCache[c.trackId]?.status === "loading" && (
-                            <span style={{ color: "var(--text-dim)", fontSize: "0.78rem" }}>Chargement…</span>
+                            <span style={{ color: "var(--text-dim)", fontSize: "0.78rem" }}>{t("rowLoading")}</span>
                           )}
                           {lapCache[c.trackId]?.status === "error" && (
-                            <span style={{ color: "var(--danger)", fontSize: "0.78rem" }}>Erreur de chargement</span>
+                            <span style={{ color: "var(--danger)", fontSize: "0.78rem" }}>{t("rowError")}</span>
                           )}
                           {lapCache[c.trackId]?.status === "done" && !lapCache[c.trackId].lap && (
-                            <span style={{ color: "var(--text-dim)", fontSize: "0.78rem" }}>Aucun tour enregistré sur Garage61</span>
+                            <span style={{ color: "var(--text-dim)", fontSize: "0.78rem" }}>{t("rowNoData")}</span>
                           )}
                           {lapCache[c.trackId]?.status === "done" && lapCache[c.trackId].lap && (() => {
                             const { lapTime, car, sessionType, clean, wet, date } = lapCache[c.trackId].lap;
                             return (
                               <div style={{ display: "flex", gap: "1.25rem", alignItems: "center", flexWrap: "wrap" }}>
                                 <div>
-                                  <span style={{ fontSize: "0.65rem", color: "var(--text-dim)", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", marginRight: "0.5rem" }}>Meilleur tour</span>
+                                  <span style={{ fontSize: "0.65rem", color: "var(--text-dim)", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", marginRight: "0.5rem" }}>{t("bestLapLabel")}</span>
                                   <span style={{ fontFamily: "var(--font-mono), monospace", fontWeight: 700, fontSize: "0.95rem", color: "var(--accent)" }}>{formatLapTime(lapTime)}</span>
                                 </div>
                                 {car && <span style={{ fontSize: "0.78rem", color: "var(--text-dim)" }}>{car}</span>}
@@ -349,11 +351,11 @@ export default function Garage61StatsTab({ slug }) {
                                     </span>
                                   )}
                                   {wet && <span style={{ fontSize: "0.72rem", color: "#4a9fd4" }}>💧</span>}
-                                  {clean && <span style={{ fontSize: "0.72rem", color: "#2eb460" }}>✓ propre</span>}
+                                  {clean && <span style={{ fontSize: "0.72rem", color: "#2eb460" }}>{t("cleanLap")}</span>}
                                 </div>
                                 {date && <span style={{ fontSize: "0.72rem", color: "var(--text-dim)" }}>{new Date(date).toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit", year: "2-digit" })}</span>}
                                 <a href={`https://garage61.net/app/laps/${c.trackId}/0;d=1`} target="_blank" rel="noopener noreferrer" className="btn btn-secondary btn-sm" style={{ fontSize: "0.72rem", whiteSpace: "nowrap", marginLeft: "auto" }}>
-                                  ↗ Meilleur tour
+                                  {t("linkBestLap")}
                                 </a>
                               </div>
                             );
@@ -370,7 +372,7 @@ export default function Garage61StatsTab({ slug }) {
       </div>
 
       <div style={{ fontSize: "0.72rem", color: "var(--text-dim)" }}>
-        Données agrégées depuis Garage61 · {filtered.reduce((s, c) => s + c.totalLaps, 0)}{sessionFilter !== null ? ` / ${circuits.reduce((s, c) => s + c.totalLaps, 0)}` : ""} tours au total
+        {t("footerPrefix")} {filtered.reduce((s, c) => s + c.totalLaps, 0)}{sessionFilter !== null ? ` / ${circuits.reduce((s, c) => s + c.totalLaps, 0)}` : ""} {t("footerSuffix")}
       </div>
     </div>
   );

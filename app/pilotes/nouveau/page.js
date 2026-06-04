@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { supabaseBrowser as supabase } from "../../../lib/supabase-browser";
+import { useTranslations } from "next-intl";
 
 const emptyForm = {
   name: "",
@@ -15,6 +16,7 @@ const emptyForm = {
 
 export default function NouveauPilote() {
   const router = useRouter();
+  const t = useTranslations("driverForm");
   const [form, setForm] = useState(emptyForm);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -51,7 +53,7 @@ export default function NouveauPilote() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!form.name.trim()) {
-      setError("Le nom est obligatoire.");
+      setError(t("errorNameRequired"));
       return;
     }
 
@@ -65,7 +67,7 @@ export default function NouveauPilote() {
       .ilike("name", form.name.trim())
       .single();
     if (sameName) {
-      setError(`Un pilote nommé "${form.name.trim()}" existe déjà.`);
+      setError(t("errorNameDuplicate", { name: form.name.trim() }));
       setLoading(false);
       return;
     }
@@ -78,7 +80,7 @@ export default function NouveauPilote() {
         .eq("iracing_id", form.iracing_id.trim())
         .single();
       if (sameId) {
-        setError(`Cet iRacing ID est déjà utilisé par ${sameId.name}.`);
+        setError(t("errorIRacingIdDuplicate", { name: sameId.name }));
         setLoading(false);
         return;
       }
@@ -109,58 +111,58 @@ export default function NouveauPilote() {
   if (!authChecked)
     return (
       <div className="page">
-        <p style={{ color: "var(--text-dim)" }}>Vérification des droits…</p>
+        <p style={{ color: "var(--text-dim)" }}>{t("checkingAuth")}</p>
       </div>
     );
   return (
     <div className="page">
       <div className="page-header">
         <div>
-          <h1>Nouveau pilote</h1>
+          <h1>{t("titleNew")}</h1>
           <div className="accent-line" />
         </div>
         <Link href="/pilotes" className="btn btn-secondary">
-          ← Retour
+          {t("back")}
         </Link>
       </div>
 
       <form onSubmit={handleSubmit}>
         <div className="card" style={{ marginBottom: "1.5rem" }}>
           <h3 style={{ marginBottom: "1.25rem", color: "var(--text-dim)" }}>
-            Informations générales
+            {t("sectionGeneral")}
           </h3>
           <div className="form-grid">
             <div className="form-group" style={{ gridColumn: "1 / -1" }}>
-              <label htmlFor="name">Nom *</label>
+              <label htmlFor="name">{t("labelName")}</label>
               <input
                 id="name"
                 type="text"
                 value={form.name}
                 onChange={set("name")}
-                placeholder="Prénom Nom"
+                placeholder={t("placeholderName")}
                 required
               />
             </div>
 
             <div className="form-group">
-              <label htmlFor="iracing_id">iRacing ID</label>
+              <label htmlFor="iracing_id">{t("labelIRacingId")}</label>
               <input
                 id="iracing_id"
                 type="text"
                 value={form.iracing_id}
                 onChange={set("iracing_id")}
-                placeholder="ex : 123456"
+                placeholder={t("placeholderIRacingId")}
               />
             </div>
 
             <div className="form-group">
-              <label htmlFor="irating">iRating</label>
+              <label htmlFor="irating">{t("labelIRating")}</label>
               <input
                 id="irating"
                 type="number"
                 value={form.irating}
                 onChange={set("irating")}
-                placeholder="ex : 2450"
+                placeholder={t("placeholderIRating")}
                 min="0"
                 max="9999"
               />
@@ -170,39 +172,39 @@ export default function NouveauPilote() {
 
         <div className="card" style={{ marginBottom: "1.5rem" }}>
           <h3 style={{ marginBottom: "1.25rem", color: "var(--text-dim)" }}>
-            Réseaux sociaux
+            {t("sectionSocial")}
           </h3>
           <div className="form-grid">
             <div className="form-group">
-              <label htmlFor="discord">Discord</label>
+              <label htmlFor="discord">{t("labelDiscord")}</label>
               <input
                 id="discord"
                 type="text"
                 value={form.discord}
                 onChange={set("discord")}
-                placeholder="ex : pilote#1234"
+                placeholder={t("placeholderDiscord")}
               />
             </div>
 
             <div className="form-group">
-              <label htmlFor="twitch">Twitch</label>
+              <label htmlFor="twitch">{t("labelTwitch")}</label>
               <input
                 id="twitch"
                 type="text"
                 value={form.twitch}
                 onChange={set("twitch")}
-                placeholder="nom d'utilisateur Twitch"
+                placeholder={t("placeholderTwitch")}
               />
             </div>
 
             <div className="form-group">
-              <label htmlFor="instagram">Instagram</label>
+              <label htmlFor="instagram">{t("labelInstagram")}</label>
               <input
                 id="instagram"
                 type="text"
                 value={form.instagram}
                 onChange={set("instagram")}
-                placeholder="@compte"
+                placeholder={t("placeholderInstagram")}
               />
             </div>
           </div>
@@ -215,10 +217,10 @@ export default function NouveauPilote() {
         )}
         <div style={{ display: "flex", gap: "0.75rem" }}>
           <button type="submit" className="btn btn-primary" disabled={loading}>
-            {loading ? "Enregistrement…" : "✓ Enregistrer le pilote"}
+            {loading ? t("saving") : t("submitNew")}
           </button>
           <Link href="/pilotes" className="btn btn-secondary">
-            Annuler
+            {t("cancel")}
           </Link>
         </div>
       </form>

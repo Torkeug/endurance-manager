@@ -1,13 +1,15 @@
 "use client";
 import { useState } from "react";
-
-const TABS = [
-  { id: "engagements", label: "Engagements" },
-  { id: "statistiques", label: "Statistiques" },
-];
+import { useTranslations } from "next-intl";
 
 export default function DriverPageTabs({ engagementsContent, statsContent }) {
+  const t = useTranslations("driverPageTabs");
   const [activeTab, setActiveTab] = useState("engagements");
+
+  const TABS = [
+    { id: "engagements", label: t("engagements") },
+    { id: "statistiques", label: t("stats") },
+  ];
 
   return (
     <div>

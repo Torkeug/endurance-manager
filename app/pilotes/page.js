@@ -1,11 +1,14 @@
 import { supabaseServer as supabase } from "../../lib/supabase-server";
 import Link from "next/link";
 import { getSessionAndDriver, isAdmin } from "../../lib/auth";
+import { getTranslations } from "next-intl/server";
 
 export default async function PilotesPage() {
   const { driver: currentDriver } = await getSessionAndDriver();
   const admin = isAdmin(currentDriver);
   const isExternal = currentDriver?.role === "external";
+  const t = await getTranslations("driverList");
+
   // Test accounts are always hidden from the pilot list — admin-only visibility
   // is handled in DriversManager.js instead.
   // Hide test accounts in production — set NEXT_PUBLIC_SHOW_TEST_ACCOUNTS=true in .env.local to show them
@@ -27,38 +30,36 @@ export default async function PilotesPage() {
     <div className="page">
       <div className="page-header">
         <div>
-          <h1>Pilotes</h1>
+          <h1>{t("title")}</h1>
           <div className="accent-line" />
         </div>
         {admin && (
           <Link href="/pilotes/nouveau" className="btn btn-primary">
-            + Ajouter un pilote
+            {t("addDriver")}
           </Link>
         )}
       </div>
 
       {error && (
-        <div className="alert alert-error">Erreur : {error.message}</div>
+        <div className="alert alert-error">{t("error", { message: error.message })}</div>
       )}
 
       {!pilotes || pilotes.length === 0 ? (
         <div className="table-wrap">
-          <div className="empty">
-            Aucun pilote enregistré. Commencez par en ajouter un.
-          </div>
+          <div className="empty">{t("empty")}</div>
         </div>
       ) : (
         <div className="table-wrap" style={{ overflowX: "auto" }}>
           <table style={{ minWidth: "900px" }}>
             <thead>
               <tr>
-                <th>Nom</th>
-                <th>iRacing ID</th>
-                <th>iRating</th>
-                <th>Discord</th>
-                <th>Twitch</th>
-                <th>Instagram</th>
-                <th>Rôle</th>
+                <th>{t("colName")}</th>
+                <th>{t("colIRacingId")}</th>
+                <th>{t("colIRating")}</th>
+                <th>{t("colDiscord")}</th>
+                <th>{t("colTwitch")}</th>
+                <th>{t("colInstagram")}</th>
+                <th>{t("colRole")}</th>
                 <th></th>
               </tr>
             </thead>
@@ -82,7 +83,7 @@ export default async function PilotesPage() {
                             whiteSpace: "nowrap",
                           }}
                         >
-                          Inactif
+                          {t("badgeInactive")}
                         </span>
                       )}
                       {/* Staleness badge — shown to admins and to the driver themselves, but not for engineers */}
@@ -92,7 +93,7 @@ export default async function PilotesPage() {
                           Date.now() - new Date(p.last_driver_sync_at).getTime() >
                             100 * 24 * 60 * 60 * 1000) && (
                           <span
-                            title="Données iRacing non synchronisées depuis plus de 100 jours"
+                            title={t("staleTitle")}
                             style={{
                               fontSize: "0.68rem",
                               fontWeight: 700,
@@ -104,7 +105,7 @@ export default async function PilotesPage() {
                               whiteSpace: "nowrap",
                             }}
                           >
-                            ⚠️ Sync requise
+                            {t("staleBadge")}
                           </span>
                         )}
                     </span>
@@ -187,14 +188,14 @@ export default async function PilotesPage() {
                       }}
                     >
                       {p.role === "super_admin"
-                        ? "Super Admin"
+                        ? t("roleSuperAdmin")
                         : p.role === "admin"
-                          ? "Admin"
+                          ? t("roleAdmin")
                           : p.role === "external"
-                            ? "Externe"
+                            ? t("roleExternal")
                             : p.role === "engineer"
-                              ? "Ingénieur"
-                              : "Pilote"}
+                              ? t("roleEngineer")
+                              : t("roleDriver")}
                     </span>
                   </td>
                   <td>
@@ -211,14 +212,14 @@ export default async function PilotesPage() {
                           href={`/pilotes/${p.id}/modifier`}
                           className="btn btn-secondary btn-sm"
                         >
-                          Modifier
+                          {t("edit")}
                         </Link>
                       )}
                       <Link
                         href={`/pilotes/${p.id}`}
                         className="btn btn-primary btn-sm"
                       >
-                        Voir
+                        {t("view")}
                       </Link>
                     </div>
                   </td>
@@ -236,7 +237,7 @@ export default async function PilotesPage() {
           fontSize: "0.8rem",
         }}
       >
-        {pilotes?.length ?? 0} pilote{(pilotes?.length ?? 0) !== 1 ? "s" : ""}
+        {t("count", { count: pilotes?.length ?? 0 })}
       </div>
     </div>
   );

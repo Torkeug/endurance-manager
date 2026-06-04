@@ -2,6 +2,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { formatInZone } from "../../../lib/timezone";
+import { useTranslations } from "next-intl";
 
 function formatDuration(minutes) {
   if (!minutes) return "—";
@@ -22,6 +23,7 @@ function isEventPast(signup) {
 
 // ── Signup card ───────────────────────────────────────────────────────────────
 function SignupCard({ signup, availMap, stintsMap, carsMap = {} }) {
+  const t = useTranslations("driverEngagements");
   const event = signup.events;
   const teamEntry = signup.team_entries;
   const avail = teamEntry ? availMap[teamEntry.id] : null;
@@ -77,7 +79,7 @@ function SignupCard({ signup, availMap, stintsMap, carsMap = {} }) {
                   color: "var(--danger)",
                 }}
               >
-                Archivé
+                {t("badgeArchived")}
               </span>
             )}
           </div>
@@ -92,7 +94,7 @@ function SignupCard({ signup, availMap, stintsMap, carsMap = {} }) {
                   earliest.irl_start,
                   signup.events?.timezone || "Europe/Paris",
                 )
-              : "Date à confirmer"}
+              : t("dateUnknown")}
             {event?.circuits?.name && ` · ${event.circuits.name}`}
             {event?.format && ` · ${event.format}`}
             {event?.duration_minutes &&
@@ -103,7 +105,7 @@ function SignupCard({ signup, availMap, stintsMap, carsMap = {} }) {
           href={`/evenements/${event?.id}`}
           className="btn btn-secondary btn-sm"
         >
-          Voir l&apos;événement →
+          {t("viewEvent")}
         </Link>
       </div>
 
@@ -136,7 +138,7 @@ function SignupCard({ signup, availMap, stintsMap, carsMap = {} }) {
                 marginBottom: "0.35rem",
               }}
             >
-              Équipe
+              {t("sectionTeam")}
             </div>
             {teamEntry ? (
               <>
@@ -165,7 +167,7 @@ function SignupCard({ signup, availMap, stintsMap, carsMap = {} }) {
               </>
             ) : (
               <div style={{ color: "var(--text-dim)", fontSize: "0.85rem" }}>
-                Non assigné
+                {t("noTeam")}
               </div>
             )}
           </div>
@@ -175,7 +177,7 @@ function SignupCard({ signup, availMap, stintsMap, carsMap = {} }) {
                 href={`/evenements/${event?.id}/equipages/${teamEntry.id}`}
                 className="btn btn-primary btn-sm"
               >
-                Équipage →
+                {t("viewEntry")}
               </Link>
             </div>
           )}
@@ -199,12 +201,12 @@ function SignupCard({ signup, availMap, stintsMap, carsMap = {} }) {
               marginBottom: "0.35rem",
             }}
           >
-            Préférences
+            {t("sectionPrefs")}
           </div>
           {(signup.preferred_class || []).length > 0 && (
             <div style={{ fontSize: "0.82rem", marginBottom: "0.25rem" }}>
               <span style={{ color: "var(--text-dim)", fontSize: "0.72rem" }}>
-                Classes :{" "}
+                {t("prefClasses")}{" "}
               </span>
               {signup.preferred_class.join(", ")}
             </div>
@@ -222,7 +224,7 @@ function SignupCard({ signup, availMap, stintsMap, carsMap = {} }) {
             return (
               <div style={{ fontSize: "0.82rem", marginBottom: "0.25rem" }}>
                 <span style={{ color: "var(--text-dim)", fontSize: "0.72rem" }}>
-                  Voitures :{" "}
+                  {t("prefCars")}{" "}
                 </span>
                 {carNames.join(", ")}
               </div>
@@ -231,7 +233,7 @@ function SignupCard({ signup, availMap, stintsMap, carsMap = {} }) {
           {prefStartLabels.length > 0 && (
             <div style={{ fontSize: "0.82rem", marginBottom: "0.25rem" }}>
               <span style={{ color: "var(--text-dim)", fontSize: "0.72rem" }}>
-                Créneaux :{" "}
+                {t("prefSlots")}{" "}
               </span>
               {prefStartLabels.join(", ")}
             </div>
@@ -264,7 +266,7 @@ function SignupCard({ signup, availMap, stintsMap, carsMap = {} }) {
                 marginBottom: "0.35rem",
               }}
             >
-              Disponibilités
+              {t("sectionAvail")}
             </div>
             {avail ? (
               <>
@@ -272,7 +274,7 @@ function SignupCard({ signup, availMap, stintsMap, carsMap = {} }) {
                   <span style={{ color: "#2eb460", fontWeight: 600 }}>
                     {avail.available}
                   </span>
-                  <span style={{ color: "var(--text-dim)" }}> disponibles</span>
+                  <span style={{ color: "var(--text-dim)" }}> {t("availSlotsUnit")}</span>
                   {avail.tentative > 0 && (
                     <>
                       <span style={{ color: "var(--text-dim)" }}> · </span>
@@ -280,14 +282,13 @@ function SignupCard({ signup, availMap, stintsMap, carsMap = {} }) {
                         {avail.tentative}
                       </span>
                       <span style={{ color: "var(--text-dim)" }}>
-                        {" "}
-                        incertains
+                        {" "}{t("availTentativeUnit")}
                       </span>
                     </>
                   )}
                   <span style={{ color: "var(--text-dim)" }}> · </span>
                   <span style={{ fontWeight: 600 }}>{avail.filled}</span>
-                  <span style={{ color: "var(--text-dim)" }}> renseignés</span>
+                  <span style={{ color: "var(--text-dim)" }}> {t("availFilledUnit")}</span>
                 </div>
                 {/* Bar: green = available, amber = tentative, rest = unavailable */}
                 <div
@@ -328,7 +329,7 @@ function SignupCard({ signup, availMap, stintsMap, carsMap = {} }) {
               </>
             ) : (
               <div style={{ color: "var(--text-dim)", fontSize: "0.85rem" }}>
-                Non renseignée
+                {t("availNone")}
               </div>
             )}
           </div>
@@ -357,7 +358,7 @@ function SignupCard({ signup, availMap, stintsMap, carsMap = {} }) {
                   marginBottom: "0.35rem",
                 }}
               >
-                Relais assignés
+                {t("sectionStints")}
               </div>
               {myStints.length > 0 ? (
                 <div
@@ -379,7 +380,7 @@ function SignupCard({ signup, availMap, stintsMap, carsMap = {} }) {
                       }}
                     >
                       <span style={{ color: "var(--accent)" }}>
-                        Relais #{stint.stint_number}
+                        {t("stintLabel", { number: stint.stint_number })}
                       </span>
                       {stint.irl_start && (
                         <span style={{ color: "var(--text-dim)" }}>
@@ -397,7 +398,7 @@ function SignupCard({ signup, availMap, stintsMap, carsMap = {} }) {
                 </div>
               ) : (
                 <div style={{ color: "var(--text-dim)", fontSize: "0.85rem" }}>
-                  Aucun relais assigné
+                  {t("noStints")}
                 </div>
               )}
             </div>
@@ -406,7 +407,7 @@ function SignupCard({ signup, availMap, stintsMap, carsMap = {} }) {
                 href={`/evenements/${event?.id}/equipages/${teamEntry.id}`}
                 className="btn btn-primary btn-sm"
               >
-                Voir les relais →
+                {t("viewStints")}
               </Link>
             </div>
           </div>
@@ -425,7 +426,7 @@ function SignupCard({ signup, availMap, stintsMap, carsMap = {} }) {
           }}
         >
           <span style={{ fontWeight: 700, color: "var(--text)" }}>
-            Notes :{" "}
+            {t("notesLabel")}{" "}
           </span>
           {signup.notes}
         </div>
@@ -442,6 +443,7 @@ export default function EngagementsTab({
   stintsMap,
   carsMap = {},
 }) {
+  const t = useTranslations("driverEngagements");
   const upcoming = sortedSignups.filter((s) => !isEventPast(s));
   const past = sortedSignups.filter((s) => isEventPast(s));
 
@@ -451,7 +453,7 @@ export default function EngagementsTab({
   return (
     <div>
       <h2 style={{ marginBottom: "1rem" }}>
-        Engagements
+        {t("title")}
         <span
           style={{
             fontSize: "0.85rem",
@@ -460,16 +462,13 @@ export default function EngagementsTab({
             marginLeft: "0.75rem",
           }}
         >
-          {sortedSignups.length} événement
-          {sortedSignups.length !== 1 ? "s" : ""}
+          {t("eventCount", { count: sortedSignups.length })}
         </span>
       </h2>
 
       {sortedSignups.length === 0 ? (
         <div className="card">
-          <div className="empty">
-            Ce pilote n&apos;est inscrit à aucun événement.
-          </div>
+          <div className="empty">{t("empty")}</div>
         </div>
       ) : (
         <div
@@ -488,7 +487,7 @@ export default function EngagementsTab({
                   marginBottom: "0.75rem",
                 }}
               >
-                À venir ({upcoming.length})
+                {t("upcoming", { count: upcoming.length })}
               </div>
               <div
                 style={{
@@ -532,7 +531,7 @@ export default function EngagementsTab({
                 }}
               >
                 <span>{showPast ? "▲" : "▼"}</span>
-                Passés ({past.length})
+                {t("past", { count: past.length })}
               </button>
               {showPast && (
                 <div
@@ -560,9 +559,7 @@ export default function EngagementsTab({
           {/* Edge case: all events are upcoming, none past */}
           {upcoming.length === 0 && past.length === 0 && (
             <div className="card">
-              <div className="empty">
-                Ce pilote n&apos;est inscrit à aucun événement.
-              </div>
+              <div className="empty">{t("empty")}</div>
             </div>
           )}
         </div>
