@@ -1,6 +1,6 @@
 import { supabaseServer as supabase } from "../../../lib/supabase-server";
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { getSessionAndDriver, isAdmin } from "../../../lib/auth";
 import DriverPageTabs from "./DriverPageTabs";
 import DriverStats from "./DriverStats";
@@ -26,6 +26,12 @@ export default async function DriverDetail({ params, searchParams }) {
     .single();
 
   if (error || !driver) notFound();
+
+  // Externals can only view their own profile
+  if (currentDriver?.role === "external" && currentDriver?.id !== id) redirect("/pilotes");
+
+  // Non-admins cannot view inactive driver profiles
+  if (!admin && !driver.active && currentDriver?.id !== id) redirect("/pilotes");
 
   // Backfill garage61_slug for drivers who linked before slug-saving was added
   if (driver.garage61_access_token && !driver.garage61_slug) {
