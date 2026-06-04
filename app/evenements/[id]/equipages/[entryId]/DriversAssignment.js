@@ -2,6 +2,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabaseBrowser as supabase } from "../../../../../lib/supabase-browser";
+import { useTranslations } from "next-intl";
 
 // Mirror of AvailabilityGrid's generateSlots — used to pre-populate
 // availability slots when a driver is assigned to a team entry.
@@ -35,6 +36,7 @@ function PreferenceBadge({
   teamStartTimeId,
   startTimesMap,
 }) {
+  const t = useTranslations("driversTab");
   const prefCarIds = signup.preferred_car_ids || [];
   const prefClasses = signup.preferred_class || [];
   const prefStartTimeIds = signup.preferred_start_time_ids || [];
@@ -46,8 +48,8 @@ function PreferenceBadge({
     prefClasses.length > 0 && entryClass && !prefClasses.includes(entryClass);
   if (classConflict) {
     conflicts.push({
-      label: "classe",
-      tooltip: `Classe équipe : ${entryClass} — pilote préfère : ${prefClasses.join(", ")}`,
+      label: t("conflictClass"),
+      tooltip: t("tooltipClass", { entryClass, preferred: prefClasses.join(", ") }),
       hard: true,
     });
   }
@@ -61,8 +63,8 @@ function PreferenceBadge({
   if (carConflict) {
     const prefCarNames = prefCarIds.map((id) => carsMap?.[id] || id).join(", ");
     conflicts.push({
-      label: "voiture",
-      tooltip: `Voiture équipe : ${entryCarName || entryCarId} — pilote préfère : ${prefCarNames}\nLa classe correspond (${entryClass}).`,
+      label: t("conflictCar"),
+      tooltip: t("tooltipCar", { entryCar: entryCarName || entryCarId, preferred: prefCarNames, entryClass }),
       hard: false,
     });
   }
@@ -84,8 +86,8 @@ function PreferenceBadge({
       .map((id) => startTimesMap[id])
       .join(", ");
     conflicts.push({
-      label: "horaire",
-      tooltip: `Horaire équipe : ${teamLabel} — pilote préfère : ${prefLabels}`,
+      label: t("conflictSchedule"),
+      tooltip: t("tooltipSchedule", { teamSlot: teamLabel, preferred: prefLabels }),
       hard: false,
     });
   }
@@ -129,15 +131,14 @@ function PreferenceBadge({
 // Shown on assign (offer to add team start time to driver prefs) and on
 // unassign (offer to remove it, only when it wasn't in the pre-assignment snapshot).
 function StartTimeModal({ modal, onConfirm, onDecline, onClose }) {
+  const t = useTranslations("driversTab");
   if (!modal) return null;
 
   const isAssign = modal.type === "assign";
-  const title = isAssign
-    ? "Préférence d'horaire"
-    : "Retirer la préférence d'horaire";
+  const title = isAssign ? t("assignTitle") : t("unassignTitle");
   const message = isAssign
-    ? `Cet équipage démarre le ${modal.startTimeLabel}. Souhaitez-vous ajouter ce créneau aux préférences du pilote ?`
-    : `Ce pilote avait été assigné au créneau ${modal.startTimeLabel}. Souhaitez-vous retirer ce créneau de ses préférences ?`;
+    ? t("assignMessage", { slot: modal.startTimeLabel })
+    : t("unassignMessage", { slot: modal.startTimeLabel });
 
   return (
     <div
@@ -154,28 +155,18 @@ function StartTimeModal({ modal, onConfirm, onDecline, onClose }) {
     >
       <div className="card" style={{ maxWidth: "420px", width: "100%" }}>
         <h3 style={{ marginBottom: "0.75rem" }}>{title}</h3>
-        <p
-          style={{
-            fontSize: "0.9rem",
-            color: "var(--text-dim)",
-            marginBottom: "1.5rem",
-          }}
-        >
+        <p style={{ fontSize: "0.9rem", color: "var(--text-dim)", marginBottom: "1.5rem" }}>
           {message}
         </p>
-        <div
-          style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}
-        >
+        <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
           <button onClick={onConfirm} className="btn btn-primary">
-            {isAssign ? "Oui, ajouter le créneau" : "Oui, retirer le créneau"}
+            {isAssign ? t("assignConfirm") : t("unassignConfirm")}
           </button>
           <button onClick={onDecline} className="btn btn-secondary">
-            {isAssign
-              ? "Non, laisser les préférences inchangées"
-              : "Non, conserver les préférences"}
+            {isAssign ? t("assignDecline") : t("unassignDecline")}
           </button>
           <button onClick={onClose} className="btn btn-danger btn-sm">
-            Annuler
+            {t("cancel")}
           </button>
         </div>
       </div>
@@ -187,6 +178,7 @@ function StartTimeModal({ modal, onConfirm, onDecline, onClose }) {
 // Shown when a driver being reassigned to a team has empty stint slots that
 // previously belonged to them. Offers to restore their driver_id on those slots.
 function RestoreStintsModal({ modal, onConfirm, onDecline }) {
+  const t = useTranslations("driversTab");
   if (!modal) return null;
   return (
     <div
@@ -202,40 +194,16 @@ function RestoreStintsModal({ modal, onConfirm, onDecline }) {
       }}
     >
       <div className="card" style={{ maxWidth: "420px", width: "100%" }}>
-        <h3 style={{ marginBottom: "0.75rem" }}>Relais précédents</h3>
-        <p
-          style={{
-            fontSize: "0.9rem",
-            color: "var(--text-dim)",
-            marginBottom: "1.5rem",
-          }}
-        >
-          Ce pilote avait{" "}
-          <strong style={{ color: "var(--text)" }}>
-            {modal.stintCount} relais
-          </strong>{" "}
-          assignés dans cet équipage avant d&apos;en être retiré. Souhaitez-vous
-          restaurer ces relais ?
+        <h3 style={{ marginBottom: "0.75rem" }}>{t("restoreTitle")}</h3>
+        <p style={{ fontSize: "0.9rem", color: "var(--text-dim)", marginBottom: "1.5rem" }}>
+          {t("restoreMessage", { count: modal.stintCount })}
         </p>
-        <p
-          style={{
-            fontSize: "0.82rem",
-            color: "var(--text-dim)",
-            marginBottom: "1.5rem",
-          }}
-        >
-          Les données des relais (tours, notes) ont été effacées — seul
-          l&apos;emplacement dans le planning sera restauré.
+        <p style={{ fontSize: "0.82rem", color: "var(--text-dim)", marginBottom: "1.5rem" }}>
+          {t("restoreNote")}
         </p>
-        <div
-          style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}
-        >
-          <button onClick={onConfirm} className="btn btn-primary">
-            Oui, restaurer les relais
-          </button>
-          <button onClick={onDecline} className="btn btn-secondary">
-            Non, laisser les relais vides
-          </button>
+        <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+          <button onClick={onConfirm} className="btn btn-primary">{t("restoreConfirm")}</button>
+          <button onClick={onDecline} className="btn btn-secondary">{t("restoreDecline")}</button>
         </div>
       </div>
     </div>
@@ -261,6 +229,7 @@ export default function DriversAssignment({
   durationMinutes = 0,
 }) {
   const router = useRouter();
+  const t = useTranslations("driversTab");
   const [assigned, setAssigned] = useState(assignedDrivers);
   const [unassigned, setUnassigned] = useState(unassignedDrivers);
   const [error, setError] = useState(null);
@@ -349,7 +318,7 @@ export default function DriversAssignment({
       .select();
 
     if (err || !data || data.length === 0) {
-      setError(err?.message || "Update failed (RLS ou contrainte)");
+      setError(err?.message || "Update failed");
       setAssigning(null);
       return;
     }
@@ -664,7 +633,7 @@ export default function DriversAssignment({
       {assigned.length === 0 ? (
         <div className="card" style={{ marginBottom: "1rem" }}>
           <div className="empty" style={{ padding: "1.5rem" }}>
-            Aucun pilote assigné à cette équipe.
+            {t("noDriversAssigned")}
           </div>
         </div>
       ) : (
@@ -672,10 +641,10 @@ export default function DriversAssignment({
           <table>
             <thead>
               <tr>
-                <th>Pilote</th>
-                <th>iRating</th>
-                <th>Préférences</th>
-                <th>Tags</th>
+                <th>{t("colDriver")}</th>
+                <th>{t("colIRating")}</th>
+                <th>{t("colPreferences")}</th>
+                <th>{t("colTags")}</th>
                 {!archived && <th></th>}
               </tr>
             </thead>
@@ -731,9 +700,9 @@ export default function DriversAssignment({
                           <button
                             onClick={() => unassign(s)}
                             className="btn btn-secondary btn-sm"
-                            title="Pilote concerné ou admin uniquement"
+                            title={t("removeTooltip")}
                           >
-                            Retirer
+                            {t("remove")}
                           </button>
                         )}
                     </td>
@@ -759,8 +728,8 @@ export default function DriversAssignment({
             }}
           >
             {isAdmin || isInTeam
-              ? "Pilotes inscrits sans équipe"
-              : "Rejoindre cet équipage"}
+              ? t("unassignedSectionAdmin")
+              : t("unassignedSectionSelf")}
           </div>
           <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem" }}>
             {visibleUnassigned.map((s) => {
@@ -771,9 +740,7 @@ export default function DriversAssignment({
                   onClick={() => assign(s)}
                   className="btn btn-secondary"
                   disabled={!!assigning}
-                  title={
-                    mismatch ? "Préférence différente de cette équipe" : ""
-                  }
+                  title={mismatch ? t("mismatchTooltip") : ""}
                   style={{
                     display: "flex",
                     flexDirection: "column",
