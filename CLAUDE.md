@@ -228,5 +228,5 @@ GARAGE61_CLIENT_SECRET         # Garage61 OAuth client secret (server only)
 RESEND_IRACING_BRIDGE_API_KEY                 # Resend email API key (server only)
 IRACING_BRIDGE_API_KEY                        # Bearer token for iRacing webhook endpoints
 CRON_SECRET                    # Bearer token for Vercel cron endpoints
-NEXT_PUBLIC_SHOW_TEST_ACCOUNTS # Set to "true" to show test accounts in driver lists
+NEXT_PUBLIC_SHOW_TEST_ACCOUNTS # Set to "true" to show test accounts in driver lists — local-only, not set in Vercel (absent = hidden in production)
 ```

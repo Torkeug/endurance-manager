@@ -37,6 +37,8 @@ NEXT_PUBLIC_SHOW_TEST_ACCOUNTS=true
 
 `SUPABASE_SERVICE_ROLE_KEY`, `GARAGE61_CLIENT_SECRET`, `RESEND_API_KEY`, `IRACING_BRIDGE_API_KEY`, and `CRON_SECRET` are server-side only (never exposed to the client). `NEXT_PUBLIC_APP_URL` must match the registered OAuth redirect URIs. iRacing OAuth uses a hardcoded public client ID and PKCE — no server-side secret required.
 
+> **Note:** `NEXT_PUBLIC_SHOW_TEST_ACCOUNTS=true` and `NEXT_PUBLIC_APP_URL=http://localhost:3000` are local-only overrides — they are not set in Vercel. After running `vercel env pull` these two lines will be removed from `.env.local` and must be re-added manually.
+
 ### Install and run
 
 ```bash
