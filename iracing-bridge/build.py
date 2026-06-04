@@ -2,10 +2,11 @@
 Build script for Kronos iRacing Bridge.
 Produces a single Windows executable: dist/KronosBridge.exe
 
-Uses the iracing_coach venv which already has all required dependencies.
+Run from the iracing-bridge directory using whichever Python has the
+required dependencies installed (irsdk, requests, pystray, Pillow,
+PyInstaller):
 
-Usage (from anywhere):
-    D:/Documents/Coaching/iracing_coach/venv/Scripts/python.exe build.py
+    python build.py
 """
 
 import subprocess
@@ -14,7 +15,6 @@ from pathlib import Path
 
 from PIL import Image
 
-VENV_PYTHON = Path(r"D:\Documents\Coaching\iracing_coach\venv\Scripts\python.exe")
 BRIDGE_DIR = Path(__file__).parent
 LOGO_PNG = BRIDGE_DIR.parent / "public" / "kronos-logo.png"
 GENERATED_ICO = BRIDGE_DIR / "KronosBridge.ico"
@@ -40,30 +40,23 @@ def generate_icon() -> Path:
 
 def build() -> None:
     icon = generate_icon()
-    python = str(VENV_PYTHON) if VENV_PYTHON.exists() else sys.executable
 
     cmd = [
-        python,
+        sys.executable,
         "-m",
         "PyInstaller",
         "--onefile",
-        "--windowed",  # no console window
-        "--name",
-        "KronosBridge",
-        "--icon",
-        str(icon),
-        "--hidden-import",
-        "pystray._win32",  # pystray Windows backend
-        "--hidden-import",
-        "PIL._imagingtk",
+        "--windowed",                          # no console window
+        "--name", "KronosBridge",
+        "--icon", str(icon),
+        "--hidden-import", "pystray._win32",   # pystray Windows backend
+        "--hidden-import", "PIL._imagingtk",
         str(BRIDGE_DIR / "kronos_bridge.py"),
     ]
-    print(f"Building KronosBridge.exe using {python}...")
+    print(f"Building KronosBridge.exe using {sys.executable}...")
     result = subprocess.run(cmd, cwd=str(BRIDGE_DIR), check=False)
     if result.returncode == 0:
-        print(
-            f"\nDone — {BRIDGE_DIR / 'dist' / 'KronosBridge.exe'} is ready to distribute."
-        )
+        print(f"\nDone — {BRIDGE_DIR / 'dist' / 'KronosBridge.exe'} is ready to distribute.")
     else:
         print("\nBuild failed.")
         sys.exit(result.returncode)

@@ -18,6 +18,12 @@ Built with Next.js 16 + React 19, backed by Supabase.
 
 - Node.js 18+
 - A Supabase project
+- An iRacing OAuth client ID — register your app via the [iRacing Developer Program](https://members.iracing.com/member/dev.do)
+- A Garage61 OAuth client ID — register at [garage61.net](https://garage61.net) (optional; only needed if you want Garage61 lap import)
+
+### Language
+
+The UI is entirely in French. There is no i18n layer — localising it requires editing the component source directly.
 
 ### Environment variables
 
@@ -28,14 +34,17 @@ NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
 SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
 NEXT_PUBLIC_APP_URL=http://localhost:3000
+NEXT_PUBLIC_IRACING_CLIENT_ID=your-iracing-oauth-client-id
+NEXT_PUBLIC_GARAGE61_CLIENT_ID=your-garage61-oauth-client-id
 GARAGE61_CLIENT_SECRET=your-garage61-client-secret
 RESEND_API_KEY=your-resend-api-key
+EMAIL_FROM=App Name <noreply@yourdomain.com>
 IRACING_BRIDGE_API_KEY=your-iracing-webhook-secret
 CRON_SECRET=your-cron-secret
 NEXT_PUBLIC_SHOW_TEST_ACCOUNTS=true
 ```
 
-`SUPABASE_SERVICE_ROLE_KEY`, `GARAGE61_CLIENT_SECRET`, `RESEND_API_KEY`, `IRACING_BRIDGE_API_KEY`, and `CRON_SECRET` are server-side only (never exposed to the client). `NEXT_PUBLIC_APP_URL` must match the registered OAuth redirect URIs. iRacing OAuth uses a hardcoded public client ID and PKCE — no server-side secret required.
+`SUPABASE_SERVICE_ROLE_KEY`, `GARAGE61_CLIENT_SECRET`, `RESEND_API_KEY`, `IRACING_BRIDGE_API_KEY`, and `CRON_SECRET` are server-side only (never exposed to the client). `NEXT_PUBLIC_APP_URL` must match the registered OAuth redirect URIs. `NEXT_PUBLIC_IRACING_CLIENT_ID` and `NEXT_PUBLIC_GARAGE61_CLIENT_ID` are public OAuth client IDs — no server-side secret is required for either (both use PKCE).
 
 > **Note:** `NEXT_PUBLIC_SHOW_TEST_ACCOUNTS=true` and `NEXT_PUBLIC_APP_URL=http://localhost:3000` are local-only overrides — they are not set in Vercel. After running `vercel env pull` these two lines will be removed from `.env.local` and must be re-added manually.
 
