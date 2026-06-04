@@ -1,5 +1,6 @@
 "use client";
 import { useState, useEffect, useCallback, useRef } from "react";
+import { useTranslations } from "next-intl";
 import { supabaseBrowser as supabase } from "../../../../../lib/supabase-browser";
 
 // markerFromTier — superscript character for a given fallback tier.
@@ -12,6 +13,7 @@ function markerFromTier(tier) {
 }
 
 function ConfirmModal({ modal, onConfirm, onCancel }) {
+  const t = useTranslations("raceMode");
   if (!modal) return null;
   return (
     <div
@@ -41,10 +43,10 @@ function ConfirmModal({ modal, onConfirm, onCancel }) {
           style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}
         >
           <button onClick={onConfirm} className="btn btn-danger">
-            {modal.confirmLabel || "Confirmer"}
+            {modal.confirmLabel || t("confirm")}
           </button>
           <button onClick={onCancel} className="btn btn-secondary">
-            Annuler
+            {t("cancel")}
           </button>
         </div>
       </div>
@@ -64,7 +66,7 @@ function formatTime(date) {
   });
 }
 
-function formatCountdown(sec) {
+function formatCountdown(sec, dayUnit = "j") {
   if (sec === null || sec === undefined) return "—";
   const absS = Math.abs(sec);
   const d = Math.floor(absS / 86400);
@@ -73,7 +75,7 @@ function formatCountdown(sec) {
   const s = absS % 60;
   const sign = sec < 0 ? "+" : ""; // negative remaining time = overtime, displayed as positive
   if (d > 0)
-    return `${sign}${d}j ${String(h).padStart(2, "0")}h ${String(m).padStart(2, "0")}min ${String(s).padStart(2, "0")}s`;
+    return `${sign}${d}${dayUnit} ${String(h).padStart(2, "0")}h ${String(m).padStart(2, "0")}min ${String(s).padStart(2, "0")}s`;
   if (h > 0)
     return `${sign}${h}h ${String(m).padStart(2, "0")}min ${String(s).padStart(2, "0")}s`;
   return `${sign}${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
@@ -310,6 +312,8 @@ export default function RaceMode({
   // [{ id, type, data }] where type: 'conditions_wet'|'conditions_dry'|'driver_mismatch'
   const [eventBanners, setEventBanners] = useState([]);
 
+  const t = useTranslations("raceMode");
+
   // Dev-only state override
   const [devState, setDevState] = useState(null);
 
@@ -489,8 +493,8 @@ export default function RaceMode({
 
       // Check if the driver who exited is the one planned for this stint
       if (nextStint.driver_id && event.driver_id && nextStint.driver_id !== event.driver_id) {
-        const actualName = currentDriverMap[event.driver_id] || "Pilote inconnu";
-        const plannedName = currentDriverMap[nextStint.driver_id] || "Pilote inconnu";
+        const actualName = currentDriverMap[event.driver_id] || t("unknownDriver");
+        const plannedName = currentDriverMap[nextStint.driver_id] || t("unknownDriver");
         setEventBanners((prev) => [
           ...prev,
           {
@@ -849,9 +853,9 @@ export default function RaceMode({
     const last = [...stints].reverse().find((s) => s.irl_end_actual);
     if (!last) return;
     setConfirmModal({
-      title: "Annuler le dernier arrêt",
-      message: "L'arrêt au stand sera annulé et le relais repassera en cours.",
-      confirmLabel: "Annuler l'arrêt",
+      title: t("undoLastStop"),
+      message: t("undoStopDesc"),
+      confirmLabel: t("undoStopBtn"),
       onConfirm: async () => {
         setConfirmModal(null);
         setSaving(true);
@@ -906,8 +910,7 @@ export default function RaceMode({
     return (
       <div className="card">
         <div className="empty">
-          Aucune stratégie active — définissez une stratégie comme active dans
-          l&apos;onglet Relais.
+          {t("noStrategy")}
         </div>
       </div>
     );
@@ -916,7 +919,7 @@ export default function RaceMode({
   if (loading) {
     return (
       <div className="card">
-        <div className="empty">Chargement…</div>
+        <div className="empty">{t("loading")}</div>
       </div>
     );
   }
@@ -925,7 +928,7 @@ export default function RaceMode({
     return (
       <div className="card">
         <div className="empty">
-          Aucun relais planifié — configurez les relais d&apos;abord.
+          {t("noStints")}
         </div>
       </div>
     );
@@ -950,16 +953,16 @@ export default function RaceMode({
             marginBottom: "0.35rem",
           }}
         >
-          <span>Progression de la course</span>
+          <span>{t("raceProgress")}</span>
           <span className="mono">
             {isPreRace
               ? preRaceCountdownSec !== null
-                ? `Départ dans ${formatCountdown(preRaceCountdownSec)}`
+                ? `${t("startsIn")} ${formatCountdown(preRaceCountdownSec, t("dayAbbr"))}`
                 : "—"
               : isFinished
-                ? "Course terminée"
+                ? t("raceFinished")
                 : raceRemainingSec !== null
-                  ? `−${formatCountdown(raceRemainingSec)}`
+                  ? `−${formatCountdown(raceRemainingSec, t("dayAbbr"))}`
                   : "—"}
           </span>
         </div>
@@ -996,7 +999,7 @@ export default function RaceMode({
             className="mono"
             style={{ color: "var(--accent)", fontSize: "0.8rem" }}
           >
-            {isPreRace ? "Avant départ" : `${Math.round(raceProgressPct)}%`}
+            {isPreRace ? t("beforeStart") : `${Math.round(raceProgressPct)}%`}
           </span>
           <span>{raceEnd ? formatTime(raceEnd) : "—"}</span>
         </div>
@@ -1011,7 +1014,7 @@ export default function RaceMode({
           return (
             <div
               key={s.id}
-              title={`Relais ${s.stint_number} — ${driverMap[s.driver_id] || "À définir"}`}
+              title={t("stintTooltip", { number: s.stint_number, driver: driverMap[s.driver_id] || t("tbd") })}
               style={{
                 flex: 1,
                 minWidth: "24px",
@@ -1058,16 +1061,16 @@ export default function RaceMode({
               >
                 <span style={{ fontSize: "0.85rem", color: "var(--text)", flex: 1 }}>
                   {banner.type === "conditions_wet" && (
-                    <>🌧 Piste mouillée — appliquer au prochain relais&nbsp;?</>
+                    <>{t("wetAlert")}</>
                   )}
                   {banner.type === "conditions_dry" && (
-                    <>☀️ Piste qui sèche — appliquer au prochain relais&nbsp;?</>
+                    <>{t("dryAlert")}</>
                   )}
                   {banner.type === "driver_mismatch" && (
                     <>
                       ⚠️{" "}
-                      <strong>{banner.data.actualName}</strong> en piste —{" "}
-                      <strong>{banner.data.plannedName}</strong> prévu pour le relais{" "}
+                      <strong>{banner.data.actualName}</strong>{" "}{t("onTrack")}{" "}
+                      <strong>{banner.data.plannedName}</strong>{" "}{t("plannedForStint")}{" "}
                       {banner.data.stintNumber}
                     </>
                   )}
@@ -1087,7 +1090,7 @@ export default function RaceMode({
                         cursor: "pointer",
                       }}
                     >
-                      Appliquer
+                      {t("apply")}
                     </button>
                   )}
                   {banner.type === "driver_mismatch" && (
@@ -1104,7 +1107,7 @@ export default function RaceMode({
                         cursor: "pointer",
                       }}
                     >
-                      Changer
+                      {t("change")}
                     </button>
                   )}
                   <button
@@ -1119,7 +1122,7 @@ export default function RaceMode({
                       cursor: "pointer",
                     }}
                   >
-                    Ignorer
+                    {t("ignore")}
                   </button>
                 </div>
               </div>
@@ -1171,14 +1174,14 @@ export default function RaceMode({
           }}
         >
           {isFinished
-            ? "🏁 Course terminée"
+            ? t("raceFinishedBadge")
             : isPreRace
-              ? "⏳ Avant course"
+              ? t("beforeRace")
               : isOvertime
-                ? `⚠️ Dépassement — Relais ${activeStint?.stint_number ?? "?"} / ${stints.length}`
+                ? `${t("overtime")} ${activeStint?.stint_number ?? "?"} / ${stints.length}`
                 : inPitWindow
-                  ? `🟡 Fenêtre de stand — Relais ${activeStint?.stint_number ?? "?"} / ${stints.length}`
-                  : `🟢 En course — Relais ${activeStint?.stint_number ?? "?"} / ${stints.length}`}
+                  ? `${t("pitWindow")} ${activeStint?.stint_number ?? "?"} / ${stints.length}`
+                  : `${t("inRace")} ${activeStint?.stint_number ?? "?"} / ${stints.length}`}
         </div>
 
         {/* Driver name */}
@@ -1193,14 +1196,14 @@ export default function RaceMode({
           }}
         >
           {isFinished
-            ? `${completedStints.length} relais complétés`
+            ? `${completedStints.length} ${t("stintsCompleted")}`
             : isPreRace
               ? driverMap[stints[0]?.driver_id] || (
-                  <span style={{ color: "var(--text-dim)" }}>À définir</span>
+                  <span style={{ color: "var(--text-dim)" }}>{t("tbd")}</span>
                 )
               : driverMap[activeStint?.driver_id] ||
                 activeStint?.driver_name_snapshot || (
-                  <span style={{ color: "var(--text-dim)" }}>À définir</span>
+                  <span style={{ color: "var(--text-dim)" }}>{t("tbd")}</span>
                 )}
         </div>
 
@@ -1217,13 +1220,13 @@ export default function RaceMode({
             {isPreRace ? (
               <>
                 <div>
-                  <div style={labelStyle}>Départ course</div>
+                  <div style={labelStyle}>{t("raceStart")}</div>
                   <div className="mono" style={{ fontSize: "0.95rem" }}>
                     {raceStart ? formatTime(raceStart) : "—"}
                   </div>
                 </div>
                 <div>
-                  <div style={labelStyle}>Départ dans</div>
+                  <div style={labelStyle}>{t("startsIn")}</div>
                   <div
                     className="mono"
                     style={{
@@ -1233,7 +1236,7 @@ export default function RaceMode({
                     }}
                   >
                     {preRaceCountdownSec !== null
-                      ? formatCountdown(preRaceCountdownSec)
+                      ? formatCountdown(preRaceCountdownSec, t("dayAbbr"))
                       : "—"}
                   </div>
                 </div>
@@ -1241,20 +1244,20 @@ export default function RaceMode({
             ) : (
               <>
                 <div>
-                  <div style={labelStyle}>Départ relais</div>
+                  <div style={labelStyle}>{t("stintStart")}</div>
                   <div className="mono" style={{ fontSize: "0.95rem" }}>
                     {activeStintStart ? formatTime(activeStintStart) : "—"}
                   </div>
                 </div>
                 <div>
-                  <div style={labelStyle}>Fin prévue</div>
+                  <div style={labelStyle}>{t("plannedEnd")}</div>
                   <div className="mono" style={{ fontSize: "0.95rem" }}>
                     {plannedEnd ? formatTime(plannedEnd) : "—"}
                   </div>
                 </div>
                 <div>
                   <div style={labelStyle}>
-                    {isOvertime ? "Dépassement" : "Temps restant"}
+                    {isOvertime ? t("overtimeLabel") : t("timeRemaining")}
                   </div>
                   <div
                     className="mono"
@@ -1270,20 +1273,20 @@ export default function RaceMode({
                     }}
                   >
                     {stintRemainingSec !== null
-                      ? formatCountdown(stintRemainingSec)
+                      ? formatCountdown(stintRemainingSec, t("dayAbbr"))
                       : "—"}
                   </div>
                 </div>
                 {/* Fuel to add at next pit stop */}
                 {fuelToAdd !== null && (
                   <div>
-                    <div style={labelStyle}>Carburant prochain arrêt</div>
+                    <div style={labelStyle}>{t("nextPitFuel")}</div>
                     <div
                       className="mono"
                       style={{ fontSize: "0.95rem", color: "var(--accent)" }}
                     >
                       {liveAdjustedFuelToAdd !== null
-                        ? <>{liveAdjustedFuelToAdd.toFixed(1)}L <span style={{ fontSize: "0.75rem", color: "var(--text-dim)" }}>/ {fuelToAdd.toFixed(1)}L prévu</span></>
+                        ? <>{liveAdjustedFuelToAdd.toFixed(1)}L <span style={{ fontSize: "0.75rem", color: "var(--text-dim)" }}>{t("fuelPlanned", { amount: fuelToAdd.toFixed(1) })}</span></>
                         : <>~{fuelToAdd.toFixed(1)}L</>
                       }
                     </div>
@@ -1292,7 +1295,7 @@ export default function RaceMode({
                 {/* Live fuel deviation from bridge */}
                 {liveFuelPerLap != null && activePlannedFuelPerLap != null && (
                   <div>
-                    <div style={labelStyle}>Conso actuelle</div>
+                    <div style={labelStyle}>{t("currentConsumption")}</div>
                     <div className="mono" style={{ fontSize: "0.95rem" }}>
                       {liveFuelPerLap.value.toFixed(2)} L/tr
                       {liveFuelDelta !== null && (
@@ -1316,7 +1319,7 @@ export default function RaceMode({
                           marginTop: "0.1rem",
                         }}
                       >
-                        {liveLapsDelta > 0 ? `+${liveLapsDelta}` : liveLapsDelta} tours
+                        {liveLapsDelta > 0 ? `+${liveLapsDelta}` : liveLapsDelta} {t("laps")}
                       </div>
                     )}
                   </div>
@@ -1335,7 +1338,7 @@ export default function RaceMode({
               disabled={saving}
               style={{ fontSize: "0.78rem" }}
             >
-              ↩ Annuler dernier arrêt
+              {t("undoLastStopBtn")}
             </button>
           </div>
         )}
@@ -1384,12 +1387,12 @@ export default function RaceMode({
               }}
             >
               {saving
-                ? "Enregistrement…"
+                ? t("saving")
                 : isFinished
-                  ? "Course terminée"
+                  ? t("raceFinished")
                   : isPreRace
-                    ? "Course non démarrée"
-                    : "⏱ Marquer arrêt au stand"}
+                    ? t("raceNotStarted")
+                    : t("markPitStop")}
             </button>
 
             {/* Secondary button — only shown when a previous stint was never stamped.
@@ -1416,7 +1419,7 @@ export default function RaceMode({
                   transition: "all 0.15s",
                 }}
               >
-                ⏱ Marquer fin relais précédent
+                {t("markPrevStintEnd")}
               </button>
             )}
           </div>
@@ -1429,7 +1432,7 @@ export default function RaceMode({
           style={{ opacity: 0.75, borderColor: "var(--border)" }}
         >
           <div style={{ ...labelStyle, marginBottom: "0.5rem" }}>
-            Prochain — Relais {nextStint.stint_number}
+            {t("nextStint")} {nextStint.stint_number}
           </div>
           <div
             style={{
@@ -1441,7 +1444,7 @@ export default function RaceMode({
           >
             {driverMap[nextStint.driver_id] ||
               nextStint?.driver_name_snapshot || (
-                <span style={{ color: "var(--text-dim)" }}>À définir</span>
+                <span style={{ color: "var(--text-dim)" }}>{t("tbd")}</span>
               )}
           </div>
           {(nextStint.irl_start_actual ?? nextStint.irl_start) && (
@@ -1453,7 +1456,7 @@ export default function RaceMode({
                 marginTop: "0.25rem",
               }}
             >
-              Départ {nextStint.irl_start_actual ? "réel" : "prévu"} : {formatTime(nextStint.irl_start_actual ?? nextStint.irl_start)}
+              {t("startLabel")} {nextStint.irl_start_actual ? t("actual") : t("plannedLabel")} : {formatTime(nextStint.irl_start_actual ?? nextStint.irl_start)}
             </div>
           )}
           {(nextStint.rain || nextStint.tyre_change) && (
@@ -1471,7 +1474,7 @@ export default function RaceMode({
                     color: "#4a9fd4",
                   }}
                 >
-                  💧 Pluie
+                  {t("rain")}
                 </span>
               )}
               {nextStint.tyre_change && (
@@ -1485,7 +1488,7 @@ export default function RaceMode({
                     color: "var(--accent)",
                   }}
                 >
-                  🛞 Chgt pneus
+                  {t("tyreChange")}
                 </span>
               )}
             </div>
@@ -1527,7 +1530,7 @@ export default function RaceMode({
                   color: "var(--accent)",
                 }}
               >
-                ↻ Recalculer la stratégie
+                {t("recalculate")}
               </div>
               <div
                 style={{
@@ -1536,8 +1539,7 @@ export default function RaceMode({
                   marginTop: "0.1rem",
                 }}
               >
-                {completedStints.length} relais complétés · voir l&apos;onglet
-                Relais
+                {completedStints.length} {t("completedSeeTab")}
               </div>
             </div>
             <span style={{ color: "var(--accent)", fontSize: "0.85rem" }}>
@@ -1556,7 +1558,7 @@ export default function RaceMode({
               marginBottom: "0.75rem",
             }}
           >
-            <div style={labelStyle}>Bilan carburant</div>
+            <div style={labelStyle}>{t("fuelSummary")}</div>
             {cumulativeDrift !== null && (
               <span
                 style={{
@@ -1586,7 +1588,7 @@ export default function RaceMode({
                         : "#2eb460",
                 }}
               >
-                Écart total : {cumulativeDrift > 0 ? "+" : ""}
+                {t("totalDrift")} {cumulativeDrift > 0 ? "+" : ""}
                 {cumulativeDrift.toFixed(1)}L
               </span>
             )}
@@ -1654,7 +1656,7 @@ export default function RaceMode({
                       className="mono"
                       style={{ color: "var(--text-dim)", fontSize: "0.75rem" }}
                     >
-                      {f.actualLaps !== null ? `${f.actualLaps} tours` : "—"}
+                      {f.actualLaps !== null ? t("lapsCount", { count: f.actualLaps }) : "—"}
                     </span>
 
                     {/* Fuel actual / planned */}
@@ -1666,8 +1668,7 @@ export default function RaceMode({
                           </span>
                           {f.plannedFuel !== null && (
                             <span style={{ color: "var(--text-dim)" }}>
-                              {" / "}
-                              {f.plannedFuel.toFixed(1)}L prévu
+                              {" "}{t("fuelPlanned", { amount: f.plannedFuel.toFixed(1) })}
                             </span>
                           )}
                         </>
@@ -1687,7 +1688,7 @@ export default function RaceMode({
                       }}
                     >
                       {isEstimated
-                        ? <span style={{ fontSize: "0.68rem", fontWeight: 400, fontStyle: "italic" }}>estimé</span>
+                        ? <span style={{ fontSize: "0.68rem", fontWeight: 400, fontStyle: "italic" }}>{t("estimatedLabel")}</span>
                         : f.drift !== null
                           ? `${f.drift > 0 ? "+" : ""}${f.drift.toFixed(1)}L`
                           : "—"}
@@ -1704,13 +1705,13 @@ export default function RaceMode({
                           title={
                             f.maxTier === 4
                               ? f.maxSubTier >= 3
-                                ? "Estimé via moyenne équipe sans modificateur configuré — fiabilité faible"
+                                ? t("tierTeamNoMod")
                                 : f.maxSubTier === 2
-                                  ? "Estimé via moyenne équipe + modificateur"
-                                  : "Estimé via moyenne équipe"
+                                  ? t("tierTeamMod")
+                                  : t("tierTeamAvg")
                               : f.maxTier === 3
-                                ? "Estimé — modificateur non configuré"
-                                : "Estimé via modificateur équipage"
+                                ? t("tierModNoConfig")
+                                : t("tierMod")
                           }
                         >
                           {markerFromTier(f.maxTier)}
@@ -1720,7 +1721,7 @@ export default function RaceMode({
                         </sup>
                       ) : !f.hasPerfData ? (
                         <span
-                          title="Données de performance manquantes"
+                          title={t("noPerfData")}
                           style={{ fontSize: "0.75rem" }}
                         >
                           ⚠️
@@ -1737,7 +1738,7 @@ export default function RaceMode({
       {completedStints.length > 0 && (
         <div className="card" style={{ padding: "0.75rem 1rem" }}>
           <div style={{ ...labelStyle, marginBottom: "0.5rem" }}>
-            Relais complétés ({completedStints.length})
+            {t("completedStints")} ({completedStints.length})
           </div>
           <div
             style={{
@@ -1774,7 +1775,7 @@ export default function RaceMode({
                       marginLeft: "0.3rem",
                     }}
                   >
-                    {s.irl_end_actual ? "réel" : "prévu"}
+                    {s.irl_end_actual ? t("actual") : t("plannedLabel")}
                   </span>
                 </span>
               </div>
@@ -1808,10 +1809,10 @@ export default function RaceMode({
             DEV
           </span>
           {[
-            { key: null, label: "Réel" },
-            { key: "PRE_RACE", label: "Avant course" },
-            { key: "IN_RACE", label: "En course" },
-            { key: "FINISHED", label: "Terminée" },
+            { key: null, label: t("statusActual") },
+            { key: "PRE_RACE", label: t("statusBefore") },
+            { key: "IN_RACE", label: t("statusInRace") },
+            { key: "FINISHED", label: t("statusFinished") },
           ].map(({ key, label }) => (
             <button
               key={String(key)}

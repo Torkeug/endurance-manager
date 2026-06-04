@@ -3,6 +3,7 @@ import { useState, useEffect, useRef, useMemo } from "react";
 import { supabaseBrowser as supabase } from "../../../../../lib/supabase-browser";
 import ActualEndInput from "./ActualEndInput";
 import PlanningTab from "./PlanningTab";
+import { useTranslations } from "next-intl";
 
 // ─── Display helpers ────────────────────────────────────────────────────────
 
@@ -726,6 +727,7 @@ function hasConflict(calc, otherStints) {
 // Forces them to pick a replacement before deletion proceeds —
 // avoids leaving Race Mode without an active strategy.
 function ActivateBeforeDeleteModal({ modal, strategies, onConfirm, onCancel }) {
+  const t = useTranslations("stintGrid");
   const [chosenId, setChosenId] = useState(modal?.defaultId || "");
 
   // Reset selection if modal changes (e.g. re-opened for a different strategy)
@@ -750,49 +752,21 @@ function ActivateBeforeDeleteModal({ modal, strategies, onConfirm, onCancel }) {
     >
       <div className="card" style={{ maxWidth: "440px", width: "100%" }}>
         <h3 style={{ marginBottom: "0.5rem" }}>
-          Supprimer {modal.strategyName}
+          {t("deleteConfirmTitle", { name: modal.strategyName })}
         </h3>
-        <p
-          style={{
-            fontSize: "0.85rem",
-            color: "var(--text-dim)",
-            marginBottom: "1.25rem",
-          }}
-        >
-          Cette stratégie est{" "}
-          <strong style={{ color: "#c9a84c" }}>active</strong> — Race Mode
-          l&apos;utilise actuellement. Choisissez une stratégie de remplacement
-          avant de la supprimer.
+        <p style={{ fontSize: "0.85rem", color: "var(--text-dim)", marginBottom: "1.25rem" }}>
+          {t("deleteActiveDesc")}
         </p>
-        {/* Replacement strategy selector */}
         <div style={{ marginBottom: "1.25rem" }}>
-          <label
-            style={{
-              fontSize: "0.72rem",
-              fontWeight: 700,
-              letterSpacing: "0.08em",
-              textTransform: "uppercase",
-              color: "var(--text-dim)",
-              display: "block",
-              marginBottom: "0.4rem",
-            }}
-          >
-            Nouvelle stratégie active
+          <label style={{ fontSize: "0.72rem", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "var(--text-dim)", display: "block", marginBottom: "0.4rem" }}>
+            {t("replacementStrategyLabel")}
           </label>
           <select
             value={chosenId}
             onChange={(e) => setChosenId(e.target.value)}
-            style={{
-              width: "100%",
-              background: "var(--surface)",
-              border: "1px solid var(--border)",
-              borderRadius: "3px",
-              color: "var(--text)",
-              fontSize: "0.85rem",
-              padding: "0.4rem 0.6rem",
-            }}
+            style={{ width: "100%", background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "3px", color: "var(--text)", fontSize: "0.85rem", padding: "0.4rem 0.6rem" }}
           >
-            <option value="">— Sélectionner —</option>
+            <option value="">{t("selectPlaceholder")}</option>
             {strategies
               .filter((s) => s.id !== modal.strategyId)
               .map((s) => (
@@ -806,16 +780,10 @@ function ActivateBeforeDeleteModal({ modal, strategies, onConfirm, onCancel }) {
         <div
           style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}
         >
-          <button
-            onClick={() => chosenId && onConfirm(chosenId)}
-            className="btn btn-danger"
-            disabled={!chosenId}
-          >
-            Supprimer et activer la sélection
+          <button onClick={() => chosenId && onConfirm(chosenId)} className="btn btn-danger" disabled={!chosenId}>
+            {t("deleteAndActivate")}
           </button>
-          <button onClick={onCancel} className="btn btn-secondary">
-            Annuler
-          </button>
+          <button onClick={onCancel} className="btn btn-secondary">{t("cancel")}</button>
         </div>
       </div>
     </div>
@@ -826,6 +794,7 @@ function ActivateBeforeDeleteModal({ modal, strategies, onConfirm, onCancel }) {
 // Shown before clearing all eligible stints for a specific driver.
 // Replaces native confirm() for consistency with the rest of the app.
 function ClearDriverStintsModal({ modal, onConfirm, onCancel }) {
+  const t = useTranslations("stintGrid");
   if (!modal) return null;
   return (
     <div
@@ -842,34 +811,14 @@ function ClearDriverStintsModal({ modal, onConfirm, onCancel }) {
     >
       <div className="card" style={{ maxWidth: "420px", width: "100%" }}>
         <h3 style={{ marginBottom: "0.75rem" }}>
-          Libérer les relais de {modal.driverName}
+          {t("releaseDriverTitle", { name: modal.driverName })}
         </h3>
-        <p
-          style={{
-            fontSize: "0.9rem",
-            color: "var(--text-dim)",
-            marginBottom: "1.5rem",
-          }}
-        >
-          Les{" "}
-          <strong style={{ color: "var(--text)" }}>
-            {modal.stintCount} relais éligibles
-          </strong>{" "}
-          de{" "}
-          <strong style={{ color: "var(--text)" }}>{modal.driverName}</strong>{" "}
-          seront vidés. Les données (tours) seront effacées mais les
-          créneaux resteront dans le planning. Le pilote pourra être restauré
-          lors d&apos;une réassignation.
+        <p style={{ fontSize: "0.9rem", color: "var(--text-dim)", marginBottom: "1.5rem" }}>
+          {t("releaseDriverDesc", { count: modal.stintCount, name: modal.driverName })}
         </p>
-        <div
-          style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}
-        >
-          <button onClick={onConfirm} className="btn btn-primary">
-            Confirmer
-          </button>
-          <button onClick={onCancel} className="btn btn-secondary">
-            Annuler
-          </button>
+        <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+          <button onClick={onConfirm} className="btn btn-primary">{t("confirm")}</button>
+          <button onClick={onCancel} className="btn btn-secondary">{t("cancel")}</button>
         </div>
       </div>
     </div>
@@ -880,6 +829,7 @@ function ClearDriverStintsModal({ modal, onConfirm, onCancel }) {
 // Reusable yes/no modal — replaces native confirm() for clearAllStints
 // and deleteStint, consistent with the rest of the app's modal pattern.
 function ConfirmModal({ modal, onConfirm, onCancel }) {
+  const t = useTranslations("stintGrid");
   if (!modal) return null;
   return (
     <div
@@ -909,10 +859,10 @@ function ConfirmModal({ modal, onConfirm, onCancel }) {
           style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}
         >
           <button onClick={onConfirm} className="btn btn-danger">
-            {modal.confirmLabel || "Confirmer"}
+            {modal.confirmLabel || t("confirm")}
           </button>
           <button onClick={onCancel} className="btn btn-secondary">
-            Annuler
+            {t("cancel")}
           </button>
         </div>
       </div>
@@ -923,6 +873,7 @@ function ConfirmModal({ modal, onConfirm, onCancel }) {
 // ─── Recalc preview modal ────────────────────────────────────────────────────
 
 function RecalcModal({ diffs, raceEndDiff, onConfirm, onCancel, saving }) {
+  const t = useTranslations("stintGrid");
   const hasChanges = diffs.some((d) => d.newLaps !== d.oldLaps);
 
   return (
@@ -959,11 +910,10 @@ function RecalcModal({ diffs, raceEndDiff, onConfirm, onCancel, saving }) {
               marginBottom: "0.25rem",
             }}
           >
-            Révision de stratégie
+            {t("recalcTitle")}
           </h3>
           <p style={{ fontSize: "0.82rem", color: "var(--text-dim)" }}>
-            Basée sur les données réelles des relais complétés. Seuls les relais
-            restants sont modifiés.
+            {t("recalcDesc")}
           </p>
         </div>
 
@@ -978,8 +928,7 @@ function RecalcModal({ diffs, raceEndDiff, onConfirm, onCancel, saving }) {
               borderRadius: "3px",
             }}
           >
-            ✓ Aucun changement — la stratégie actuelle correspond aux données
-            réelles.
+            {t("recalcNoChanges")}
           </div>
         ) : (
           <div style={{ marginBottom: "1.25rem" }}>
@@ -993,7 +942,7 @@ function RecalcModal({ diffs, raceEndDiff, onConfirm, onCancel, saving }) {
             >
               <thead>
                 <tr>
-                  {["#", "Pilote", "Actuel", "Révisé", "Écart"].map((h) => (
+                  {[t("recalcColNum"), t("colDriver"), t("recalcColCurrent"), t("recalcColRevised"), t("recalcColDelta")].map((h) => (
                     <th
                       key={h}
                       style={{
@@ -1110,7 +1059,7 @@ function RecalcModal({ diffs, raceEndDiff, onConfirm, onCancel, saving }) {
                   alignItems: "center",
                 }}
               >
-                <span style={{ color: "var(--text-dim)" }}>Fin prévue :</span>
+                <span style={{ color: "var(--text-dim)" }}>{t("plannedEnd")} :</span>
                 <span
                   className="mono"
                   style={{
@@ -1143,20 +1092,12 @@ function RecalcModal({ diffs, raceEndDiff, onConfirm, onCancel, saving }) {
             justifyContent: "flex-end",
           }}
         >
-          <button
-            onClick={onCancel}
-            className="btn btn-secondary"
-            disabled={saving}
-          >
-            Annuler
+          <button onClick={onCancel} className="btn btn-secondary" disabled={saving}>
+            {t("cancel")}
           </button>
           {hasChanges && (
-            <button
-              onClick={onConfirm}
-              className="btn btn-primary"
-              disabled={saving}
-            >
-              {saving ? "Application…" : "✓ Appliquer"}
+            <button onClick={onConfirm} className="btn btn-primary" disabled={saving}>
+              {saving ? t("applying") : t("applyBtn")}
             </button>
           )}
         </div>
@@ -1179,6 +1120,7 @@ export default function StintGrid({
   isActive = false,
 }) {
   // Strategy state — strategies fetched from DB, selectedStrategyId is the viewed tab
+  const t = useTranslations("stintGrid");
   const [strategies, setStrategies] = useState([]);
   const [selectedStrategyId, setSelectedStrategyId] = useState(null);
   // Local edit fields for selected strategy metadata — synced via useEffect on strategy switch
@@ -1376,7 +1318,7 @@ export default function StintGrid({
             .from("strategies")
             .insert({
               team_entry_id: teamEntryId,
-              name: "Stratégie 1",
+              name: t("defaultStrategyName"),
               sort_order: 1,
               is_active: true,
               actual_start_offset_minutes:
@@ -1803,10 +1745,9 @@ export default function StintGrid({
 
     // Non-active strategy — standard confirm modal
     setConfirmModal({
-      title: `Supprimer ${strat?.name || "cette stratégie"}`,
-      message:
-        "Tous les relais de cette stratégie seront supprimés définitivement. Cette action est irréversible.",
-      confirmLabel: "Supprimer",
+      title: `${t("deleteStrategy")} ${strat?.name || ""}`.trim(),
+      message: t("deleteStrategyMsg"),
+      confirmLabel: t("deleteStrategy"),
       onConfirm: async () => {
         setConfirmModal(null);
         // Cascade on FK deletes all stints for this strategy automatically
@@ -1848,9 +1789,9 @@ export default function StintGrid({
     if (archived) return;
     const strat = strategies.find((s) => s.id === id);
     setConfirmModal({
-      title: "Changer la stratégie active",
-      message: `Race Mode utilisera désormais "${strat?.name || "cette stratégie"}".`,
-      confirmLabel: "Confirmer",
+      title: t("setActiveConfirmTitle"),
+      message: t("setActiveMsg", { name: strat?.name || "" }),
+      confirmLabel: t("confirm"),
       onConfirm: async () => {
         setConfirmModal(null);
         // Deactivate all, then activate the chosen one
@@ -1926,10 +1867,9 @@ export default function StintGrid({
   const deleteStint = (stintId) => {
     if (archived) return;
     setConfirmModal({
-      title: "Supprimer ce relais",
-      message:
-        "Ce relais sera supprimé définitivement. Cette action est irréversible.",
-      confirmLabel: "Supprimer",
+      title: t("deleteStintTitle"),
+      message: t("deleteStintMsg"),
+      confirmLabel: t("deleteStrategy"),
       onConfirm: async () => {
         setConfirmModal(null);
         await supabase.from("stints").delete().eq("id", stintId);
@@ -1954,10 +1894,9 @@ export default function StintGrid({
   const resetStint = (stintId) => {
     if (archived) return;
     setConfirmModal({
-      title: "Réinitialiser ce relais",
-      message:
-        "Le pilote, les tours et les options de ce relais seront effacés. Le créneau restera dans le planning.",
-      confirmLabel: "Réinitialiser",
+      title: t("resetStintTitle"),
+      message: t("resetStintMsg"),
+      confirmLabel: t("resetStintLabel"),
       onConfirm: async () => {
         setConfirmModal(null);
         const payload = {
@@ -1981,10 +1920,9 @@ export default function StintGrid({
   const clearAllStints = () => {
     if (archived) return;
     setConfirmModal({
-      title: "Supprimer tous les relais",
-      message:
-        "Tous les relais de cet équipage seront supprimés définitivement. Cette action est irréversible.",
-      confirmLabel: "Tout supprimer",
+      title: t("clearAllTitle"),
+      message: t("clearAllMsg"),
+      confirmLabel: t("clearAllLabel"),
       onConfirm: async () => {
         setConfirmModal(null);
         // Delete stints for the current strategy only — other strategies unaffected
@@ -2144,21 +2082,21 @@ export default function StintGrid({
   if (!teamEntry?.event_start_times?.irl_start)
     return (
       <div className="card">
-        <div className="empty">Aucun horaire de départ configuré.</div>
+        <div className="empty">{t("noStartTimes")}</div>
       </div>
     );
   if (assignedDrivers.length === 0)
     return (
       <div className="card">
         <div className="empty">
-          Aucun pilote assigné — assignez des pilotes d&apos;abord.
+          {t("noDrivers")}
         </div>
       </div>
     );
   if (loading)
     return (
       <div className="card">
-        <div className="empty">Chargement…</div>
+        <div className="empty">{t("loading")}</div>
       </div>
     );
 
@@ -2228,7 +2166,7 @@ export default function StintGrid({
             {/* ★ marks the strategy used by Race Mode */}
             {s.is_active && (
               <span
-                title="Stratégie active — utilisée par Race Mode"
+                title={t("activeStrategyTitle")}
                 style={{ color: "#c9a84c", fontSize: "0.75rem" }}
               >
                 ★
@@ -2255,9 +2193,9 @@ export default function StintGrid({
               whiteSpace: "nowrap",
               flexShrink: 0,
             }}
-            title="Ajouter une stratégie (max 5)"
+            title={t("addStrategyTitle")}
           >
-            + Nouvelle
+            {t("addStrategy")}
           </button>
         )}
       </div>
@@ -2295,7 +2233,7 @@ export default function StintGrid({
                 color: "var(--text-dim)",
               }}
             >
-              Nom
+              {t("strategyName")}
             </label>
             <input
               type="text"
@@ -2342,11 +2280,11 @@ export default function StintGrid({
                 color: "var(--text-dim)",
               }}
             >
-              Description
+              {t("strategyDesc")}
             </label>
             <input
               type="text"
-              placeholder="ex : Plan nominal — météo sèche"
+              placeholder={t("strategyDescExample")}
               value={strategyDesc}
               onChange={(e) => setStrategyDesc(e.target.value)}
               onBlur={() =>
@@ -2377,9 +2315,9 @@ export default function StintGrid({
                 textTransform: "uppercase",
                 color: "var(--text-dim)",
               }}
-              title="Minutes entre l'heure officielle de départ et le drapeau vert effectif"
+              title={t("startOffsetTitle")}
             >
-              Décalage départ
+              {t("startOffset")}
             </label>
             <div
               style={{ display: "flex", alignItems: "center", gap: "0.4rem" }}
@@ -2409,7 +2347,7 @@ export default function StintGrid({
                 }}
               />
               <span style={{ fontSize: "0.82rem", color: "var(--text-dim)" }}>
-                min
+                {t("minutes")}
               </span>
             </div>
           </div>
@@ -2430,7 +2368,7 @@ export default function StintGrid({
                   whiteSpace: "nowrap",
                 }}
               >
-                ★ Active
+                {t("setActive")}
               </span>
             ) : (
               <button
@@ -2441,18 +2379,18 @@ export default function StintGrid({
                   color: "#d4904a",
                   whiteSpace: "nowrap",
                 }}
-                title="Définir comme stratégie utilisée par Race Mode"
+                title={t("setActiveTitle")}
               >
-                ★ Définir comme active
+                {t("setActiveBtn")}
               </button>
             )}
             {strategies.length > 1 && (
               <button
                 onClick={() => handleDeleteStrategy(currentStrategy.id)}
                 className="btn btn-danger btn-sm"
-                title="Supprimer cette stratégie et tous ses relais"
+                title={t("deleteStrategyTitle")}
               >
-                Supprimer
+                {t("deleteStrategy")}
               </button>
             )}
           </div>
@@ -2484,19 +2422,18 @@ export default function StintGrid({
       >
         {[
           {
-            label: "Départ",
-            // Show effective start (with offset) so displayed time matches the engine
+            label: t("startLabel"),
             value: formatDatetime(
               effectiveStartTime || teamEntry.event_start_times?.irl_start,
             ),
           },
           {
-            label: "Fin course",
+            label: t("raceEnd"),
             value: raceEndTime ? formatDatetime(raceEndTime) : "—",
           },
-          { label: "Relais", value: stints.length },
+          { label: t("stint"), value: stints.length },
           {
-            label: "Fin prévue",
+            label: t("plannedEnd"),
             value: projectedFinish ? formatDatetime(projectedFinish) : "—",
             color:
               raceEndTime && projectedFinish
@@ -2586,8 +2523,8 @@ export default function StintGrid({
                   marginBottom: "0.5rem",
                 }}
               >
-                Fair Share — minimum {fairShareMin} tours (
-                {Math.round(equalShare)} part égale)
+                {t("fairShare")} {fairShareMin} {t("laps")} (
+                {Math.round(equalShare)} {t("fairSharePart")}
               </div>
               <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem" }}>
                 {assignedDrivers.map((d) => {
@@ -2665,7 +2602,7 @@ export default function StintGrid({
                   marginBottom: "0.6rem",
                 }}
               >
-                Libérer les relais d&apos;un pilote
+                {t("releaseStints")}
               </div>
               <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
                 {driversWithEligibleStints.map((d) => {
@@ -2724,13 +2661,13 @@ export default function StintGrid({
             onChange={(e) => setShowAvailability(e.target.checked)}
             style={{ cursor: "pointer" }}
           />
-          Dispo
+          {t("availCol")}
         </label>
         {showAvailability && [
-          { color: "#2eb460", label: "Disponible" },
-          { color: "#c9a84c", label: "Partielle" },
-          { color: "#e05555", label: "Indisponible" },
-          { color: "#4a4a6a", label: "Incertain" },
+          { color: "#2eb460", label: t("legendAvailable") },
+          { color: "#c9a84c", label: t("legendPartial") },
+          { color: "#e05555", label: t("legendUnavailable") },
+          { color: "#4a4a6a", label: t("legendUncertain") },
         ].map(({ color, label }) => (
           <span
             key={label}
@@ -2749,9 +2686,7 @@ export default function StintGrid({
             {label}
           </span>
         ))}
-        <span style={{ marginLeft: "0.5rem" }}>
-          🛞 = Chgt pneus · 💧 = Pluie
-        </span>
+        <span style={{ marginLeft: "0.5rem" }}>{t("legendIcons")}</span>
       </div>
       {/* Legend — line 2: data estimation tiers, with border-tint swatch for each */}
       <div
@@ -2765,15 +2700,11 @@ export default function StintGrid({
           alignItems: "center",
         }}
       >
-        <span style={{ fontWeight: 700, color: "var(--text)" }}>Données :</span>
+        <span style={{ fontWeight: 700, color: "var(--text)" }}>{t("dataSourceShort")}</span>
         {[
-          { color: "#c9a84c", marker: "*", label: "modificateur équipage" },
-          {
-            color: "#a07830",
-            marker: "~",
-            label: "sans modificateur configuré",
-          },
-          { color: "#4a9fd4", marker: "†", label: "moyenne équipe" },
+          { color: "#c9a84c", marker: "*", label: t("teamModifier") },
+          { color: "#a07830", marker: "~", label: t("noModifier") },
+          { color: "#4a9fd4", marker: "†", label: t("teamAverage") },
         ].map(({ color, marker, label }) => (
           <span
             key={marker}
@@ -2803,13 +2734,13 @@ export default function StintGrid({
           color: "var(--text-dim)",
         }}
       >
-        Temps chgt pneus : {teamEntry?.tyre_change_time_seconds || 0}s
+        {t("tyreChangeTime")} {teamEntry?.tyre_change_time_seconds || 0}s
         {teamEntry?.cars?.car_classes?.refuel_litres_per_second
-          ? ` — Ravitaillement : ${teamEntry.cars.car_classes.refuel_litres_per_second} L/s (variable)`
-          : ` — Ravitaillement : ${teamEntry?.refuel_time_seconds || 0}s (fixe)`}
+          ? ` — ${t("fuelRate")} ${teamEntry.cars.car_classes.refuel_litres_per_second} ${t("fuelRateVar")}`
+          : ` — ${t("fuelRate")} ${teamEntry?.refuel_time_seconds || 0}${t("fuelRateFix")}`}
         {!archived &&
           !teamEntry?.cars?.car_classes?.refuel_litres_per_second &&
-          " (configurable dans Modifier l'équipage)"}
+          ` ${t("fuelRateConfig")}`}
       </div>
 
       {/* ── Recalc banner — visible when completed stints exist ──────────── */}
@@ -2847,7 +2778,7 @@ export default function StintGrid({
                   color: "var(--accent)",
                 }}
               >
-                ↻ Recalculer la stratégie
+                {t("recalculate")}
               </div>
               <div
                 style={{
@@ -2856,7 +2787,7 @@ export default function StintGrid({
                   marginTop: "0.1rem",
                 }}
               >
-                {calculated.filter(isStintCompleted).length} relais complétés ·
+                {calculated.filter(isStintCompleted).length} {t("realDataAvailable")}
                 données réelles disponibles
               </div>
             </div>
@@ -2907,30 +2838,30 @@ export default function StintGrid({
                   })()}
                 </th>
               ))}
-              <th style={{ ...TH, ...GS, minWidth: "130px", textAlign: "left" }}>Pilote</th>
-              <th style={{ ...TH, ...GS, textAlign: "center" }}>Départ IRL</th>
-              <th style={{ ...TH, ...IS, textAlign: "center" }}>Fin IRL</th>
+              <th style={{ ...TH, ...GS, minWidth: "130px", textAlign: "left" }}>{t("colDriverHeader")}</th>
+              <th style={{ ...TH, ...GS, textAlign: "center" }}>{t("colStartIRL")}</th>
+              <th style={{ ...TH, ...IS, textAlign: "center" }}>{t("colEndIRL")}</th>
               {!archived && (
-                <th style={{ ...TH, ...IS, minWidth: "110px", textAlign: "center" }}>Fin réelle</th>
+                <th style={{ ...TH, ...IS, minWidth: "110px", textAlign: "center" }}>{t("colActualEnd")}</th>
               )}
-              <th style={{ ...TH, ...GS, minWidth: "68px" }}>Durée</th>
-              <th style={{ ...TH, ...IS, minWidth: "52px" }}>Tours</th>
-              <th style={{ ...TH, ...IS, minWidth: "60px" }}>Conso</th>
+              <th style={{ ...TH, ...GS, minWidth: "68px" }}>{t("colDuration")}</th>
+              <th style={{ ...TH, ...IS, minWidth: "52px" }}>{t("colLaps")}</th>
+              <th style={{ ...TH, ...IS, minWidth: "60px" }}>{t("colFuel")}</th>
               {/* Skip last pit — only shown when race is fully covered */}
               {raceCovered && (
                 <th
                   style={{ ...TH, ...IS, minWidth: "90px" }}
-                  title="Conso cible pour supprimer le dernier arrêt"
+                  title={t("skipEndTitle")}
                 >
-                  Skip fin
+                  {t("skipEnd")}
                 </th>
               )}
-              <th style={{ ...TH, ...GS, width: "52px" }}>IG</th>
+              <th style={{ ...TH, ...GS, width: "52px" }}>{t("inGame")}</th>
               <th style={{ ...TH, width: "24px" }}>⏱</th>
-              <th style={{ ...TH, ...GS, width: "24px" }} title="Pluie">
+              <th style={{ ...TH, ...GS, width: "24px" }} title={t("rainTitle")}>
                 💧
               </th>
-              <th style={{ ...TH, width: "24px" }} title="Changement de pneus">
+              <th style={{ ...TH, width: "24px" }} title={t("tyreChangeTitle")}>
                 🛞
               </th>
               {!archived && <th style={{ ...TH, ...GS, width: "36px" }}></th>}
@@ -2953,7 +2884,7 @@ export default function StintGrid({
                     padding: "2rem",
                   }}
                 >
-                  Aucun relais planifié.
+                  {t("noStints")}
                 </td>
               </tr>
             )}
@@ -3287,7 +3218,7 @@ export default function StintGrid({
                           (d) => d.drivers?.id === stint.previous_driver_id,
                         );
                         const prevName =
-                          prevDriver?.drivers?.name || "Pilote précédent";
+                          prevDriver?.drivers?.name || t("prevDriverFallback");
                         return (
                           <div
                             style={{
@@ -3299,7 +3230,7 @@ export default function StintGrid({
                               alignItems: "center",
                               gap: "0.25rem",
                             }}
-                            title={`Ce créneau appartenait à ${prevName} — réassignez ce pilote pour proposer une restauration`}
+                            title={t("prevDriverSlotTitle", { name: prevName })}
                           >
                             <span style={{ opacity: 0.5 }}>↩</span>
                             <span>{prevName}</span>
@@ -3443,7 +3374,7 @@ export default function StintGrid({
                           width: "80px",
                           opacity: archived ? 0.7 : 1,
                         }}
-                        title="Durée manuelle en minutes"
+                        title={t("tooltipDuration")}
                       />
                     )}
                   </td>
@@ -3470,8 +3401,8 @@ export default function StintGrid({
                       }}
                       title={
                         stint._calcLaps
-                          ? `Calculé : ${stint._calcLaps} tours`
-                          : "Saisissez les tours"
+                          ? t("tooltipCalculated", { laps: stint._calcLaps })
+                          : t("tooltipEnterLaps")
                       }
                     />
                     {/* Tier marker — only when laps are calculated (not manually set) and estimated.
@@ -3489,20 +3420,20 @@ export default function StintGrid({
                           title={
                             stint._lapTimeTier === 4
                               ? stint._lapTimeSubTier >= 3
-                                ? "Tours calculés via moyenne équipe estimée sans modificateur configuré — fiabilité faible"
+                                ? t("tooltipLapsTeamNoMod")
                                 : stint._lapTimeSubTier === 2
-                                  ? "Tours calculés via moyenne équipe estimée via modificateur"
-                                  : "Tours calculés via moyenne équipe — données pilote manquantes"
+                                  ? t("tooltipLapsTeamMod")
+                                  : t("tooltipLapsTeamNoData")
                               : stint._lapTimeTier === 3
-                                ? "Tours calculés via modificateur non configuré — fiabilité faible"
-                                : "Tours calculés via modificateur équipage"
+                                ? t("tooltipLapsModNoConfig")
+                                : t("tooltipLapsMod")
                           }
                         >
                           {markerFromTier(stint._lapTimeTier)}
                           {stint._lapTimeSubTier >= 2
                             ? markerFromTier(stint._lapTimeSubTier)
                             : ""}{" "}
-                          estimé
+                          {t("estimated")}
                         </div>
                       )}
                     {stint._isLastStint &&
@@ -3548,17 +3479,17 @@ export default function StintGrid({
                             }}
                             title={
                               exceedsTank
-                                ? "Tours saisis au-delà de la capacité du réservoir"
+                                ? t("tooltipFuelOverTank")
                                 : stint._fuelTier === 4
                                   ? stint._fuelSubTier >= 3
-                                    ? "Consommation calculée via moyenne équipe estimée sans modificateur configuré — fiabilité faible"
+                                    ? t("tooltipFuelTeamNoMod")
                                     : stint._fuelSubTier === 2
-                                      ? "Consommation calculée via moyenne équipe estimée via modificateur"
-                                      : "Consommation calculée via moyenne équipe — données pilote manquantes"
+                                      ? t("tooltipFuelTeamMod")
+                                      : t("tooltipFuelTeamNoData")
                                   : stint._fuelTier === 3
-                                    ? "Consommation calculée via modificateur non configuré — fiabilité faible"
+                                    ? t("tooltipFuelModNoConfig")
                                     : stint._fuelTier === 2
-                                      ? "Consommation calculée via modificateur équipage"
+                                      ? t("tooltipFuelMod")
                                       : undefined
                             }
                           >
@@ -3587,7 +3518,7 @@ export default function StintGrid({
                                 marginTop: "0.1rem",
                               }}
                             >
-                              ⚠ dépasse réservoir
+                              {t("exceedsTankShort")}
                             </div>
                           )}
                         </>
@@ -3668,7 +3599,7 @@ export default function StintGrid({
                                       marginLeft: "2px",
                                       color: "#4a9fd4",
                                     }}
-                                    title="Données pilote manquantes pour certains relais — moyenne équipe utilisée"
+                                    title={t("tooltipMissingData")}
                                   >
                                     †
                                   </sup>
@@ -3758,7 +3689,7 @@ export default function StintGrid({
                                   padding: "0.1rem 0.3rem",
                                   lineHeight: 1,
                                 }}
-                                title="Remonter"
+                                title={t("moveUp")}
                               >
                                 ↑
                               </button>
@@ -3778,7 +3709,7 @@ export default function StintGrid({
                                     padding: "0.1rem 0.3rem",
                                     lineHeight: 1,
                                   }}
-                                  title="Descendre"
+                                  title={t("moveDown")}
                                 >
                                   ↓
                                 </button>
@@ -3789,7 +3720,7 @@ export default function StintGrid({
                           onClick={() => resetStint(stint.id)}
                           className="btn btn-secondary btn-sm"
                           style={{ padding: "0.15rem 0.4rem" }}
-                          title="Réinitialiser ce relais"
+                          title={t("resetStintTitle")}
                         >
                           ↺
                         </button>
@@ -3797,7 +3728,7 @@ export default function StintGrid({
                           onClick={() => deleteStint(stint.id)}
                           className="btn btn-danger btn-sm"
                           style={{ padding: "0.15rem 0.4rem" }}
-                          title="Supprimer ce relais"
+                          title={t("deleteStintTitle")}
                         >
                           ×
                         </button>
@@ -3827,7 +3758,7 @@ export default function StintGrid({
                 borderRadius: "3px",
               }}
             >
-              ⚠️ La course est déjà couverte par les relais planifiés.
+              {t("raceCoveredWarning")}
             </div>
           )}
           <div
@@ -3839,14 +3770,14 @@ export default function StintGrid({
             }}
           >
             <button onClick={addStint} className="btn btn-secondary">
-              + Ajouter un relais
+              {t("addStint")}
             </button>
             {stints.length > 0 && (
               <button
                 onClick={clearAllStints}
                 className="btn btn-danger btn-sm"
               >
-                Tout supprimer
+                {t("clearAllLabel")}
               </button>
             )}
           </div>
