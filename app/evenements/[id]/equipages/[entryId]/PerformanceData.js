@@ -2,6 +2,7 @@
 import { useState, useEffect } from "react";
 import { usePathname } from "next/navigation";
 import { supabaseBrowser as supabase } from "../../../../../lib/supabase-browser";
+import { useTranslations } from "next-intl";
 
 // ── Lap time helpers ───────────────────────────────────────
 
@@ -25,9 +26,9 @@ function displayToSec(str) {
 
 // Format an ISO timestamp to a human-readable French date+time string
 // e.g. "12 avril 2026 à 14:32"
-function formatUpdatedAt(isoStr) {
+function formatUpdatedAt(isoStr, locale = "fr-FR") {
   if (!isoStr) return null;
-  return new Date(isoStr).toLocaleString("fr-FR", {
+  return new Date(isoStr).toLocaleString(locale, {
     day: "numeric",
     month: "long",
     year: "numeric",
@@ -196,6 +197,7 @@ const tdStyle = { padding: "0.6rem 1rem" };
 // Renders a lap time or fuel value resolved via the fallback chain.
 // Color and marker convey the confidence tier. Returns "—" when nothing resolved.
 function ResolvedCell({ resolved, formatter, baseColor = "var(--text)" }) {
+  const t = useTranslations("performanceData");
   if (!resolved) return <span style={{ color: "var(--text-dim)" }}>—</span>;
   return (
     <span
@@ -203,9 +205,9 @@ function ResolvedCell({ resolved, formatter, baseColor = "var(--text)" }) {
       style={{ color: tierColor(resolved.tier, baseColor) }}
       title={
         resolved.tier === 2
-          ? "Estimé via modificateur — pas de données spécifiques pour cette condition"
+          ? t("estimatedModifier")
           : resolved.tier === 3
-            ? "Estimé — modificateur non configuré (fiabilité faible)"
+            ? t("estimatedNoModifier")
             : undefined
       }
     >
@@ -245,6 +247,7 @@ function DriverRow({
   g61Linked,
 }) {
   const driver = signup.drivers;
+  const t = useTranslations("performanceData");
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
@@ -490,7 +493,7 @@ function DriverRow({
                   marginTop: "0.2rem",
                 }}
               >
-                Mis à jour le {formatUpdatedAt(initialData.updated_at)}
+                {t("updatedOn")} {formatUpdatedAt(initialData.updated_at, typeof window !== "undefined" ? navigator.language : "fr-FR")}
               </div>
             )}
           </td>
@@ -549,7 +552,7 @@ function DriverRow({
                   onClick={() => setEditing(true)}
                   className="btn btn-secondary btn-sm"
                 >
-                  Modifier
+                  {t("edit")}
                 </button>
                 {iracingTrackId && g61Linked &&
                   (driver.id === currentDriverId || !!driver.garage61_slug) && (
@@ -559,7 +562,7 @@ function DriverRow({
                     style={{ fontSize: "0.72rem" }}
                     disabled={g61Loading}
                   >
-                    {g61Loading ? "…" : "📥 Garage61"}
+                    {g61Loading ? "…" : t("importGarage61")}
                   </button>
                 )}
               </div>
@@ -577,7 +580,7 @@ function DriverRow({
               fontStyle: "italic",
             }}
           >
-            🌙 Nuit
+            {t("night")}
           </td>
           {/* Night dry lap — resolves ND chain (shows fallback with marker if needed) */}
           <td style={{ ...tdStyle, padding: "0.4rem 1rem" }}>
@@ -719,11 +722,11 @@ function DriverRow({
                 marginBottom: "0.75rem",
               }}
             >
-              ☀️ Sec
+              {t("dry")}
             </div>
             <div className="form-grid">
               <div className="form-group">
-                <label>Chrono (MM:SS.mmm)</label>
+                <label>{t("lapTimePlaceholder")}</label>
                 <input
                   type="text"
                   value={form.lap_time_dry}
@@ -732,36 +735,36 @@ function DriverRow({
                     setLapDryError(false);
                   }}
                   onBlur={makeLapBlur("lap_time_dry", setLapDryError)}
-                  placeholder="ex : 1:52.345"
+                  placeholder={t("lapTimeExample")}
                   style={{
                     borderColor: lapDryError ? "var(--danger)" : undefined,
                   }}
                 />
                 {lapDryError && (
                   <span style={{ fontSize: "0.75rem", color: "var(--danger)" }}>
-                    Format invalide — M:SS.mmm
+                    {t("lapTimeInvalid")}
                   </span>
                 )}
               </div>
               <div className="form-group">
-                <label>Conso (L/tour)</label>
+                <label>{t("fuelPerLap")}</label>
                 <input
                   type="number"
                   value={form.fuel_dry}
                   onChange={set("fuel_dry")}
-                  placeholder="ex : 3.250"
+                  placeholder={t("fuelExample")}
                   min="0"
                   max="20"
                   step="0.001"
                 />
               </div>
               <div className="form-group" style={{ gridColumn: "1 / -1" }}>
-                <label>Réglages sec</label>
+                <label>{t("settingsDry")}</label>
                 <input
                   type="text"
                   value={form.setup_notes_dry}
                   onChange={set("setup_notes_dry")}
-                  placeholder="ex : BB 52.5 — TC 3"
+                  placeholder={t("settingsExample")}
                 />
               </div>
             </div>
@@ -778,11 +781,11 @@ function DriverRow({
                 marginBottom: "0.75rem",
               }}
             >
-              💧 Pluie
+              {t("wet")}
             </div>
             <div className="form-grid">
               <div className="form-group">
-                <label>Chrono (MM:SS.mmm)</label>
+                <label>{t("lapTimePlaceholder")}</label>
                 <input
                   type="text"
                   value={form.lap_time_wet}
@@ -791,36 +794,36 @@ function DriverRow({
                     setLapWetError(false);
                   }}
                   onBlur={makeLapBlur("lap_time_wet", setLapWetError)}
-                  placeholder="ex : 2:05.123"
+                  placeholder={t("wetLapExample")}
                   style={{
                     borderColor: lapWetError ? "var(--danger)" : undefined,
                   }}
                 />
                 {lapWetError && (
                   <span style={{ fontSize: "0.75rem", color: "var(--danger)" }}>
-                    Format invalide — M:SS.mmm
+                    {t("lapTimeInvalid")}
                   </span>
                 )}
               </div>
               <div className="form-group">
-                <label>Conso (L/tour)</label>
+                <label>{t("fuelPerLap")}</label>
                 <input
                   type="number"
                   value={form.fuel_wet}
                   onChange={set("fuel_wet")}
-                  placeholder="ex : 3.100"
+                  placeholder={t("wetFuelExample")}
                   min="0"
                   max="20"
                   step="0.001"
                 />
               </div>
               <div className="form-group" style={{ gridColumn: "1 / -1" }}>
-                <label>Réglages pluie</label>
+                <label>{t("settingsWet")}</label>
                 <input
                   type="text"
                   value={form.setup_notes_wet}
                   onChange={set("setup_notes_wet")}
-                  placeholder="ex : BB 50.0 — TC 5"
+                  placeholder={t("settingsWetExample")}
                 />
               </div>
             </div>
@@ -845,7 +848,7 @@ function DriverRow({
               marginBottom: "0.75rem",
             }}
           >
-            🌙 Nuit — données spécifiques (optionnel)
+            {t("nightSection")}
           </div>
           <div
             style={{
@@ -863,11 +866,11 @@ function DriverRow({
                   marginBottom: "0.5rem",
                 }}
               >
-                🌙☀️ Nuit sec
+                {t("nightDry")}
               </div>
               <div className="form-grid">
                 <div className="form-group">
-                  <label>Chrono (MM:SS.mmm)</label>
+                  <label>{t("lapTimePlaceholder")}</label>
                   <input
                     type="text"
                     value={form.lap_time_night_dry}
@@ -879,7 +882,7 @@ function DriverRow({
                       "lap_time_night_dry",
                       setLapNightDryError,
                     )}
-                    placeholder="ex : 1:55.000"
+                    placeholder={t("nightDryLapExample")}
                     style={{
                       borderColor: lapNightDryError
                         ? "var(--danger)"
@@ -890,29 +893,29 @@ function DriverRow({
                     <span
                       style={{ fontSize: "0.75rem", color: "var(--danger)" }}
                     >
-                      Format invalide — M:SS.mmm
+                      {t("lapTimeInvalid")}
                     </span>
                   )}
                 </div>
                 <div className="form-group">
-                  <label>Conso (L/tour)</label>
+                  <label>{t("fuelPerLap")}</label>
                   <input
                     type="number"
                     value={form.fuel_night_dry}
                     onChange={set("fuel_night_dry")}
-                    placeholder="ex : 3.200"
+                    placeholder={t("nightDryFuelExample")}
                     min="0"
                     max="20"
                     step="0.001"
                   />
                 </div>
                 <div className="form-group" style={{ gridColumn: "1 / -1" }}>
-                  <label>Réglages nuit sec</label>
+                  <label>{t("settingsNightDry")}</label>
                   <input
                     type="text"
                     value={form.setup_notes_night_dry}
                     onChange={set("setup_notes_night_dry")}
-                    placeholder="ex : BB 52.0 — TC 3"
+                    placeholder={t("settingsNightDryExample")}
                   />
                 </div>
               </div>
@@ -927,11 +930,11 @@ function DriverRow({
                   marginBottom: "0.5rem",
                 }}
               >
-                🌙💧 Nuit pluie
+                {t("nightWet")}
               </div>
               <div className="form-grid">
                 <div className="form-group">
-                  <label>Chrono (MM:SS.mmm)</label>
+                  <label>{t("lapTimePlaceholder")}</label>
                   <input
                     type="text"
                     value={form.lap_time_night_wet}
@@ -943,7 +946,7 @@ function DriverRow({
                       "lap_time_night_wet",
                       setLapNightWetError,
                     )}
-                    placeholder="ex : 2:10.000"
+                    placeholder={t("nightWetLapExample")}
                     style={{
                       borderColor: lapNightWetError
                         ? "var(--danger)"
@@ -954,29 +957,29 @@ function DriverRow({
                     <span
                       style={{ fontSize: "0.75rem", color: "var(--danger)" }}
                     >
-                      Format invalide — M:SS.mmm
+                      {t("lapTimeInvalid")}
                     </span>
                   )}
                 </div>
                 <div className="form-group">
-                  <label>Conso (L/tour)</label>
+                  <label>{t("fuelPerLap")}</label>
                   <input
                     type="number"
                     value={form.fuel_night_wet}
                     onChange={set("fuel_night_wet")}
-                    placeholder="ex : 3.050"
+                    placeholder={t("nightWetFuelExample")}
                     min="0"
                     max="20"
                     step="0.001"
                   />
                 </div>
                 <div className="form-group" style={{ gridColumn: "1 / -1" }}>
-                  <label>Réglages nuit pluie</label>
+                  <label>{t("settingsNightWet")}</label>
                   <input
                     type="text"
                     value={form.setup_notes_night_wet}
                     onChange={set("setup_notes_night_wet")}
-                    placeholder="ex : BB 49.5 — TC 6"
+                    placeholder={t("settingsNightWetExample")}
                   />
                 </div>
               </div>
@@ -989,10 +992,10 @@ function DriverRow({
           <div style={{ borderTop: "1px solid var(--border)", paddingTop: "1rem", marginBottom: "1.25rem" }}>
             <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", marginBottom: "0.75rem", flexWrap: "wrap" }}>
               <span style={{ fontSize: "0.72rem", fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--text-dim)" }}>
-                📥 Importer depuis Garage61
+                {t("importFromGarage61")}
               </span>
               <button type="button" onClick={() => fetchG61Laps(g61Laps !== null)} className="btn btn-secondary btn-sm" disabled={g61Loading}>
-                {g61Loading ? "Chargement…" : g61Laps !== null ? "🔄 Actualiser" : "Charger les chronos"}
+                {g61Loading ? t("loading") : g61Laps !== null ? t("refresh") : t("loadLaps")}
               </button>
               {g61Track && (
                 <span style={{ fontSize: "0.75rem", color: "var(--text-dim)" }}>
@@ -1003,9 +1006,9 @@ function DriverRow({
 
             {g61Error && (
               <div style={{ fontSize: "0.8rem", color: "var(--danger)", marginBottom: "0.75rem" }}>
-                {g61Error === "not_linked" && "Compte Garage61 non lié — le pilote doit connecter son compte sur son profil."}
-                {g61Error === "track_not_found" && "Circuit introuvable sur Garage61."}
-                {g61Error === "token_expired" && "Session Garage61 expirée — re-liez le compte sur le profil pilote."}
+                {g61Error === "not_linked" && t("noGarage61")}
+                {g61Error === "track_not_found" && t("noCircuit")}
+                {g61Error === "token_expired" && t("sessionExpired")}
                 {!["not_linked", "track_not_found", "token_expired"].includes(g61Error) && `Erreur : ${g61Error}`}
               </div>
             )}
@@ -1017,13 +1020,13 @@ function DriverRow({
                   <div style={{ display: "flex", gap: "0.75rem", alignItems: "center", flexWrap: "wrap" }}>
                     {/* Condition */}
                     <div style={{ display: "flex", gap: "0.25rem" }}>
-                      {[["all", "Tous"], ["dry", "☀️ Sec"], ["wet", "💧 Pluie"]].map(([v, label]) => (
+                      {[["all", t("filterAll")], ["dry", t("filterDry")], ["wet", t("filterWet")]].map(([v, label]) => (
                         <button key={v} type="button" onClick={() => setG61Filter(v)} className="btn btn-sm" style={fBtnStyle(g61Filter === v)}>{label}</button>
                       ))}
                     </div>
                     {/* Session */}
                     <div style={{ display: "flex", gap: "0.25rem" }}>
-                      {[["all", "Tous"], ["1", "P"], ["2", "Q"], ["3", "R"]].map(([v, label]) => (
+                      {[["all", t("filterAll")], ["1", t("filterP")], ["2", t("filterQ")], ["3", t("filterR")]].map(([v, label]) => (
                         <button key={v} type="button" className="btn btn-sm"
                           style={fBtnStyle(v === "all" ? g61SessionFilter.length === 0 : g61SessionFilter.includes(v))}
                           onClick={() => {
@@ -1036,7 +1039,7 @@ function DriverRow({
                       ))}
                     </div>
                     <span style={{ fontSize: "0.72rem", color: "var(--text-dim)", marginLeft: "auto" }}>
-                      {filteredLaps.length}/{g61Laps.length} chrono{g61Laps.length !== 1 ? "s" : ""}
+                      {filteredLaps.length}/{g61Laps.length} {t("colLapTime")}
                     </span>
                   </div>
                   <div style={{ display: "flex", gap: "0.4rem", alignItems: "center", flexWrap: "wrap" }}>
@@ -1051,37 +1054,37 @@ function DriverRow({
                             <div style={grpStyle}>
                               <label style={{ display: "flex", alignItems: "center", gap: "0.3rem", color: "var(--text-dim)", cursor: "pointer" }}>
                                 <input type="checkbox" checked={g61SameCarOnly} onChange={(e) => setG61SameCarOnly(e.target.checked)} />
-                                Même voiture
+                                {t("sameCar")}
                               </label>
                             </div>
                           )}
                           <div style={grpStyle}>
-                            <span style={lbl}>Réservoir</span>
-                            <input type="number" value={g61MinFuel} onChange={(e) => setG61MinFuel(e.target.value)} placeholder="min L" min="0" step="1" style={inStyle("74px")} />
+                            <span style={lbl}>{t("fuelRange")}</span>
+                            <input type="number" value={g61MinFuel} onChange={(e) => setG61MinFuel(e.target.value)} placeholder={t("fuelMin")} min="0" step="1" style={inStyle("74px")} />
                             {sep}
-                            <input type="number" value={g61MaxFuel} onChange={(e) => setG61MaxFuel(e.target.value)} placeholder="max L" min="0" step="1" style={inStyle("74px")} />
+                            <input type="number" value={g61MaxFuel} onChange={(e) => setG61MaxFuel(e.target.value)} placeholder={t("fuelMax")} min="0" step="1" style={inStyle("74px")} />
                           </div>
                           <div style={grpStyle}>
-                            <span style={lbl}>T. piste</span>
-                            <input type="number" value={g61MinTemp} onChange={(e) => setG61MinTemp(e.target.value)} placeholder="min °C" min="0" step="1" style={inStyle("78px")} />
+                            <span style={lbl}>{t("trackTemp")}</span>
+                            <input type="number" value={g61MinTemp} onChange={(e) => setG61MinTemp(e.target.value)} placeholder={t("trackTempMin")} min="0" step="1" style={inStyle("78px")} />
                             {sep}
-                            <input type="number" value={g61MaxTemp} onChange={(e) => setG61MaxTemp(e.target.value)} placeholder="max °C" min="0" step="1" style={inStyle("78px")} />
+                            <input type="number" value={g61MaxTemp} onChange={(e) => setG61MaxTemp(e.target.value)} placeholder={t("trackTempMax")} min="0" step="1" style={inStyle("78px")} />
                           </div>
                           <div style={grpStyle}>
-                            <span style={lbl}>Humidité piste</span>
-                            <input type="number" value={g61MinWetness} onChange={(e) => setG61MinWetness(e.target.value)} placeholder="min" min="0" step="1" style={inStyle("62px")} />
+                            <span style={lbl}>{t("humidity")}</span>
+                            <input type="number" value={g61MinWetness} onChange={(e) => setG61MinWetness(e.target.value)} placeholder={t("humidityMin")} min="0" step="1" style={inStyle("62px")} />
                             {sep}
-                            <input type="number" value={g61MaxWetness} onChange={(e) => setG61MaxWetness(e.target.value)} placeholder="max" min="0" step="1" style={inStyle("62px")} />
+                            <input type="number" value={g61MaxWetness} onChange={(e) => setG61MaxWetness(e.target.value)} placeholder={t("humidityMax")} min="0" step="1" style={inStyle("62px")} />
                           </div>
                           <div style={grpStyle}>
                             <div style={{ display: "flex", gap: "0.25rem" }}>
-                              {[["", "Tout"], ["7d", "7j"], ["30d", "30j"], ["90d", "3 mois"]].map(([v, label]) => (
+                              {[["", t("dateAll")], ["7d", t("date7d")], ["30d", t("date30d")], ["90d", t("date3m")]].map(([v, label]) => (
                                 <button key={v} type="button" onClick={() => applyPreset(v)} className="btn btn-sm" style={fBtnStyle(g61DatePreset === v)}>{label}</button>
                               ))}
                             </div>
-                            <span style={{ color: "var(--text-dim)" }}>De</span>
+                            <span style={{ color: "var(--text-dim)" }}>{t("dateFrom")}</span>
                             <input type="date" value={g61DateFrom} onChange={(e) => { setG61DateFrom(e.target.value); setG61DatePreset(""); }} style={{ fontSize: "0.72rem", padding: "0.1rem 0.3rem", background: "var(--surface-2)", border: "1px solid var(--border)", borderRadius: "3px", color: "var(--text)" }} />
-                            <span style={{ color: "var(--text-dim)" }}>à</span>
+                            <span style={{ color: "var(--text-dim)" }}>{t("dateTo")}</span>
                             <input type="date" value={g61DateTo} onChange={(e) => { setG61DateTo(e.target.value); setG61DatePreset(""); }} style={{ fontSize: "0.72rem", padding: "0.1rem 0.3rem", background: "var(--surface-2)", border: "1px solid var(--border)", borderRadius: "3px", color: "var(--text)" }} />
                           </div>
                         </>
@@ -1091,35 +1094,35 @@ function DriverRow({
                 </div>
 
                 {g61Laps.length === 0 ? (
-                  <div style={{ fontSize: "0.8rem", color: "var(--text-dim)" }}>Aucun chrono enregistré sur ce circuit.</div>
+                  <div style={{ fontSize: "0.8rem", color: "var(--text-dim)" }}>{t("noLaps")}</div>
                 ) : filteredLaps.length === 0 ? (
-                  <div style={{ fontSize: "0.8rem", color: "var(--text-dim)" }}>Aucun résultat pour ces filtres.</div>
+                  <div style={{ fontSize: "0.8rem", color: "var(--text-dim)" }}>{t("noLapsFilter")}</div>
                 ) : (
                   <>
                     <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", flexWrap: "wrap", marginBottom: "0.5rem", padding: "0.4rem 0.75rem", background: "var(--surface)", border: "1px solid var(--border)", borderLeft: "3px solid var(--accent)", borderRadius: "4px" }}>
                       <span style={{ fontSize: "0.7rem", fontWeight: 700, color: "var(--text-dim)", textTransform: "uppercase", letterSpacing: "0.06em", whiteSpace: "nowrap" }}>
-                        Moy. {filteredLaps.length} tour{filteredLaps.length !== 1 ? "s" : ""}
+                        {t("avgLap")} {filteredLaps.length}
                       </span>
                       <div style={{ display: "flex", gap: "0.6rem", alignItems: "center", flexWrap: "wrap", fontSize: "0.78rem" }}>
                         <span className="mono" style={{ color: "var(--text)", fontWeight: 600 }}>{secToDisplay(avgLapTime)}</span>
                         {avgFuelUsed != null && (
                           <span style={{ color: "var(--text-dim)" }}>
-                            Conso <span className="mono" style={{ color: "var(--accent)" }}>{parseFloat(avgFuelUsed.toFixed(3))} L</span>
+                            {t("colFuel")} <span className="mono" style={{ color: "var(--accent)" }}>{parseFloat(avgFuelUsed.toFixed(3))} L</span>
                           </span>
                         )}
                         {avgFuelLevel != null && (
                           <span style={{ color: "var(--text-dim)" }}>
-                            Réservoir <span className="mono" style={{ color: "var(--text)" }}>{parseFloat(avgFuelLevel.toFixed(1))} L</span>
+                            {t("colTank")} <span className="mono" style={{ color: "var(--text)" }}>{parseFloat(avgFuelLevel.toFixed(1))} L</span>
                           </span>
                         )}
                         {avgTrackTemp != null && (
                           <span style={{ color: "var(--text-dim)" }}>
-                            T. piste <span className="mono" style={{ color: "var(--text)" }}>{Math.round(avgTrackTemp)}°</span>
+                            {t("colTrackTemp")} <span className="mono" style={{ color: "var(--text)" }}>{Math.round(avgTrackTemp)}°</span>
                           </span>
                         )}
                         {avgTrackWetness != null && (
                           <span style={{ color: "var(--text-dim)" }}>
-                            Humidité <span className="mono" style={{ color: "var(--text)" }}>{parseFloat(avgTrackWetness.toFixed(1))}</span>
+                            {t("colHumidity")} <span className="mono" style={{ color: "var(--text)" }}>{parseFloat(avgTrackWetness.toFixed(1))}</span>
                           </span>
                         )}
                       </div>
@@ -1144,7 +1147,7 @@ function DriverRow({
 
                       <thead>
                         <tr>
-                          {["", "Chrono", "Conso", "Réservoir", "T. Piste", "Humidité piste", "Date", "Voiture", "Session", ""].map((h, i) => (
+                          {["", t("colLapTime"), t("colFuel"), t("colTank"), t("colTrackTemp"), t("colHumidity"), "Date", "Car", "Session", ""].map((h, i) => (
                             <th key={i} style={{ ...thStyle, fontSize: "0.65rem", padding: "0.35rem 0.6rem", position: "sticky", top: 0, zIndex: 1 }}>{h}</th>
                           ))}
                         </tr>
@@ -1212,10 +1215,10 @@ function DriverRow({
             className="btn btn-primary"
             disabled={saving}
           >
-            {saving ? "Enregistrement…" : "✓ Enregistrer"}
+            {saving ? t("saving") : t("save")}
           </button>
           <button onClick={handleCancel} className="btn btn-secondary">
-            Annuler
+            {t("cancel")}
           </button>
         </div>
       </td>
@@ -1235,6 +1238,7 @@ export default function PerformanceData({
   g61Linked = false,
 }) {
   const pathname = usePathname();
+  const t = useTranslations("performanceData");
   const [perfData, setPerfData] = useState({});
   const [loading, setLoading] = useState(true);
   const [nightDryAdd, setNightDryAdd] = useState(0);
@@ -1296,13 +1300,13 @@ export default function PerformanceData({
   if (assignedDrivers.length === 0)
     return (
       <div className="card">
-        <div className="empty">Aucun pilote assigné à cet équipage.</div>
+        <div className="empty">{t("noDrivers")}</div>
       </div>
     );
   if (loading)
     return (
       <div className="card">
-        <div className="empty">Chargement…</div>
+        <div className="empty">{t("loading")}</div>
       </div>
     );
 
@@ -1321,7 +1325,7 @@ export default function PerformanceData({
               marginBottom: "0.5rem",
             }}
           >
-            Modificateurs équipage (secondes)
+            {t("teamModifiers")}
           </div>
           <p
             style={{
@@ -1330,9 +1334,7 @@ export default function PerformanceData({
               marginBottom: "0.75rem",
             }}
           >
-            Appliqués en fallback quand le pilote n&apos;a pas de données
-            spécifiques pour cette condition. Valeurs négatives autorisées. Les
-            chronos affichés avec * utilisent ces modificateurs.
+            {t("teamModifiersDesc")}
           </p>
           <div
             style={{
@@ -1353,7 +1355,7 @@ export default function PerformanceData({
                   whiteSpace: "nowrap",
                 }}
               >
-                💧 Pluie jour
+                {t("wetDay")}
               </label>
               <input
                 type="number"
@@ -1370,7 +1372,7 @@ export default function PerformanceData({
                 disabled={nightSaving}
               />
               <span style={{ fontSize: "0.82rem", color: "var(--text-dim)" }}>
-                s
+                {t("seconds")}
               </span>
             </div>
 
@@ -1385,7 +1387,7 @@ export default function PerformanceData({
                   whiteSpace: "nowrap",
                 }}
               >
-                🌙☀️ Nuit sec
+                {t("nightDryShort")}
               </label>
               <input
                 type="number"
@@ -1404,7 +1406,7 @@ export default function PerformanceData({
                 disabled={nightSaving}
               />
               <span style={{ fontSize: "0.82rem", color: "var(--text-dim)" }}>
-                s
+                {t("seconds")}
               </span>
             </div>
 
@@ -1419,7 +1421,7 @@ export default function PerformanceData({
                   whiteSpace: "nowrap",
                 }}
               >
-                🌙💧 Nuit pluie
+                {t("nightWetShort")}
               </label>
               <input
                 type="number"
@@ -1438,13 +1440,13 @@ export default function PerformanceData({
                 disabled={nightSaving}
               />
               <span style={{ fontSize: "0.82rem", color: "var(--text-dim)" }}>
-                s
+                {t("seconds")}
               </span>
             </div>
 
             {nightSaving && (
               <span style={{ fontSize: "0.78rem", color: "var(--text-dim)" }}>
-                Enregistrement…
+                {t("saving")}
               </span>
             )}
           </div>
@@ -1454,8 +1456,8 @@ export default function PerformanceData({
       {/* Garage61 not linked notice — only when the track has a Garage61 ID */}
       {iracingTrackId && !g61Linked && !archived && (
         <div style={{ fontSize: "0.8rem", color: "var(--text-dim)", marginBottom: "0.75rem" }}>
-          <a href={`/auth/garage61?returnTo=${pathname}`} style={{ color: "var(--accent)" }}>Liez votre compte Garage61</a>
-          {" "}pour importer des chronos depuis vos sessions d&apos;entraînement.
+          <a href={`/auth/garage61?returnTo=${pathname}`} style={{ color: "var(--accent)" }}>{t("linkGarage61")}</a>
+          {" "}{t("linkGarage61Desc")}
         </div>
       )}
 
@@ -1464,13 +1466,13 @@ export default function PerformanceData({
         <table style={{ width: "100%", borderCollapse: "collapse" }}>
           <thead>
             <tr>
-              <th style={thStyle}>Pilote</th>
-              <th style={thStyle}>Chrono ☀️</th>
-              <th style={thStyle}>Chrono 💧</th>
-              <th style={thStyle}>Conso ☀️</th>
-              <th style={thStyle}>Conso 💧</th>
-              <th style={thStyle}>Réglages ☀️</th>
-              <th style={thStyle}>Réglages 💧</th>
+              <th style={thStyle}>{t("colDriver")}</th>
+              <th style={thStyle}>{t("colDryLap")}</th>
+              <th style={thStyle}>{t("colWetLap")}</th>
+              <th style={thStyle}>{t("colDryFuel")}</th>
+              <th style={thStyle}>{t("colWetFuel")}</th>
+              <th style={thStyle}>{t("colDrySetup")}</th>
+              <th style={thStyle}>{t("colWetSetup")}</th>
               <th style={thStyle}></th>
             </tr>
           </thead>
@@ -1508,12 +1510,8 @@ export default function PerformanceData({
         }}
       >
         {[
-          { color: "#c9a84c", marker: "*", label: "modificateur équipage" },
-          {
-            color: "#a07830",
-            marker: "~",
-            label: "sans modificateur configuré",
-          },
+          { color: "#c9a84c", marker: "*", label: t("teamModifier") },
+          { color: "#a07830", marker: "~", label: t("noModifier") },
         ].map(({ color, marker, label }) => (
           <span
             key={marker}
