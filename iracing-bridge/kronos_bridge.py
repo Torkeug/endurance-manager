@@ -225,9 +225,9 @@ class KronosBridge:
     # ------------------------------------------------------------------
 
     def _read_session(self) -> None:
-        wi = self._ir["WeekendInfo"]
-        di = self._ir["DriverInfo"]
-        si = self._ir["SessionInfo"]
+        wi: dict = self._ir["WeekendInfo"]  # type: ignore[index]
+        di: dict = self._ir["DriverInfo"]   # type: ignore[index]
+        si: dict = self._ir["SessionInfo"]  # type: ignore[index]
         if not wi or not di:
             print("[bridge] session YAML not ready yet")
             return

@@ -27,7 +27,7 @@ ICO_SIZES = [16, 32, 48, 64, 128, 256]
 def generate_icon() -> Path:
     """Generate a multi-size .ico from kronos-logo.png."""
     src = Image.open(LOGO_PNG).convert("RGBA")
-    frames = [src.resize((s, s), Image.LANCZOS) for s in ICO_SIZES]
+    frames = [src.resize((s, s), Image.Resampling.LANCZOS) for s in ICO_SIZES]
     frames[0].save(
         GENERATED_ICO,
         format="ICO",
@@ -43,19 +43,27 @@ def build() -> None:
     python = str(VENV_PYTHON) if VENV_PYTHON.exists() else sys.executable
 
     cmd = [
-        python, "-m", "PyInstaller",
+        python,
+        "-m",
+        "PyInstaller",
         "--onefile",
-        "--windowed",                          # no console window
-        "--name", "KronosBridge",
-        "--icon", str(icon),
-        "--hidden-import", "pystray._win32",   # pystray Windows backend
-        "--hidden-import", "PIL._imagingtk",
+        "--windowed",  # no console window
+        "--name",
+        "KronosBridge",
+        "--icon",
+        str(icon),
+        "--hidden-import",
+        "pystray._win32",  # pystray Windows backend
+        "--hidden-import",
+        "PIL._imagingtk",
         str(BRIDGE_DIR / "kronos_bridge.py"),
     ]
     print(f"Building KronosBridge.exe using {python}...")
     result = subprocess.run(cmd, cwd=str(BRIDGE_DIR), check=False)
     if result.returncode == 0:
-        print(f"\nDone — {BRIDGE_DIR / 'dist' / 'KronosBridge.exe'} is ready to distribute.")
+        print(
+            f"\nDone — {BRIDGE_DIR / 'dist' / 'KronosBridge.exe'} is ready to distribute."
+        )
     else:
         print("\nBuild failed.")
         sys.exit(result.returncode)
