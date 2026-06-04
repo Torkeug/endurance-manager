@@ -38,12 +38,18 @@ export default async function AdminPage() {
     supabase.from("car_classes").select("*").order("sort_order"),
     supabase.from("event_types").select("*").order("sort_order"),
     supabase.from("event_type_cars").select("event_type_id, car_id"),
-    supabase
-      .from("drivers")
-      .select(
-        "id, name, email, role, approved, refused, iracing_id, discord, discord_id, active, membership_ok, test_driver, iracing_synced_at",
-      )
-      .order("name"),
+    (() => {
+      let q = supabase
+        .from("drivers")
+        .select(
+          "id, name, email, role, approved, refused, iracing_id, discord, discord_id, active, membership_ok, test_driver, is_test_account, iracing_synced_at",
+        )
+        .order("name");
+      if (process.env.NEXT_PUBLIC_SHOW_TEST_ACCOUNTS !== "true") {
+        q = q.eq("is_test_account", false);
+      }
+      return q;
+    })(),
     supabase.from("settings").select("key, value"),
     supabase.from("event_duration_presets").select("*").order("minutes"),
     supabase
