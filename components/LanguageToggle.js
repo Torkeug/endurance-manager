@@ -10,14 +10,19 @@ export default function LanguageToggle() {
     window.location.reload();
   }
 
+  const flag = locale === "fr" ? "🇫🇷" : "🇬🇧";
+  const label = locale === "fr" ? "FR" : "EN";
+  const switchTitle = locale === "fr" ? "Switch to English" : "Passer en français";
+
   return (
     <button
       onClick={switchLocale}
       className="btn btn-secondary btn-sm"
-      title={locale === "fr" ? "Switch to English" : "Passer en français"}
-      style={{ fontWeight: 700, letterSpacing: "0.04em", minWidth: "2.5rem" }}
+      title={switchTitle}
+      style={{ fontWeight: 700, letterSpacing: "0.04em", display: "flex", alignItems: "center", gap: "0.3rem" }}
     >
-      {locale === "fr" ? "EN" : "FR"}
+      <span style={{ fontSize: "1rem", lineHeight: 1 }}>{flag}</span>
+      <span>{label}</span>
     </button>
   );
 }
