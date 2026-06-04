@@ -30,12 +30,12 @@ SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
 NEXT_PUBLIC_APP_URL=http://localhost:3000
 GARAGE61_CLIENT_SECRET=your-garage61-client-secret
 RESEND_API_KEY=your-resend-api-key
-API_KEY=your-iracing-webhook-secret
+IRACING_BRIDGE_API_KEY=your-iracing-webhook-secret
 CRON_SECRET=your-cron-secret
 NEXT_PUBLIC_SHOW_TEST_ACCOUNTS=true
 ```
 
-`SUPABASE_SERVICE_ROLE_KEY`, `GARAGE61_CLIENT_SECRET`, `RESEND_API_KEY`, `API_KEY`, and `CRON_SECRET` are server-side only (never exposed to the client). `NEXT_PUBLIC_APP_URL` must match the registered OAuth redirect URIs. iRacing OAuth uses a hardcoded public client ID and PKCE — no server-side secret required.
+`SUPABASE_SERVICE_ROLE_KEY`, `GARAGE61_CLIENT_SECRET`, `RESEND_API_KEY`, `IRACING_BRIDGE_API_KEY`, and `CRON_SECRET` are server-side only (never exposed to the client). `NEXT_PUBLIC_APP_URL` must match the registered OAuth redirect URIs. iRacing OAuth uses a hardcoded public client ID and PKCE — no server-side secret required.
 
 ### Install and run
 
@@ -65,8 +65,8 @@ app/
     register-driver/        # Server-side driver record insert during registration (bypasses RLS — user has no session yet)
   api/
     iracing/
-      event/                # Webhook: receives iRacing session events from the bridge (auth: Bearer API_KEY)
-      lap/                  # Webhook: receives lap telemetry from the bridge (auth: Bearer API_KEY)
+      event/                # Webhook: receives iRacing session events from the bridge (auth: Bearer IRACING_BRIDGE_API_KEY)
+      lap/                  # Webhook: receives lap telemetry from the bridge (auth: Bearer IRACING_BRIDGE_API_KEY)
     cron/
       check-stale-syncs/    # Finds drivers with >100-day stale iRacing sync, sends email (cooldown: 30d per driver)
       cleanup-iracing-laps/ # Deletes iRacing laps older than 7 days
@@ -162,9 +162,10 @@ API responses are cached server-side: track catalogue 1 h, team statistics and l
 
 A separate external codebase (not in this repo) that reads directly from the database to send stint handoff alerts. It uses:
 
-- `signups.discord_notifications_override` — whether to send alerts for a driver on a given entry
-- `signups.discord_alert_minutes_override` — per-entry timing override
-- `drivers.discord_alert_minutes` — per-driver default timing
+- `signups.discord_alert_enabled_override` — boolean, whether to send alerts for this driver on this entry
+- `signups.discord_alert_minutes_override` — int, per-entry timing override
+- `drivers.discord_alert_enabled` — boolean, per-driver default on/off
+- `drivers.discord_alert_minutes` — int, per-driver default timing (minutes before stint end)
 
 Resolution order: signup override → driver default → disabled.
 
@@ -175,7 +176,7 @@ An external bridge sends session and lap telemetry to this app in real time:
 - `POST /api/iracing/event` — session events (start, end, etc.)
 - `POST /api/iracing/lap` — per-lap telemetry (lap time, fuel, conditions, weather)
 
-Both endpoints require `Authorization: Bearer $API_KEY`.
+Both endpoints require `Authorization: Bearer $IRACING_BRIDGE_API_KEY`.
 
 ## Cron jobs
 
