@@ -707,7 +707,7 @@ export default function EventPageTabs({
                                 color: crewColorsMap[ds.team_entries?.crew_name],
                                 isActive: ds.id === s.id,
                               }))
-                              .filter((t) => t.name)
+                              .filter((driver) => driver.name)
                               .sort((a, b) => (a.name || "").localeCompare(b.name || ""))
                           : undefined;
                         result.push(renderRow(s, {

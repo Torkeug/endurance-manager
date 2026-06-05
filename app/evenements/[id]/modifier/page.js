@@ -349,8 +349,8 @@ export default function ModifierEvenement({ params }) {
     // IDs with no match → will be dropped
     const survivingOldIds = new Set(
       (oldStartTimes || [])
-        .filter((t) => newIrlStarts.has(new Date(t.irl_start).toISOString()))
-        .map((t) => t.id),
+        .filter((slot) => newIrlStarts.has(new Date(slot.irl_start).toISOString()))
+        .map((slot) => slot.id),
     );
 
     // Fetch signups that have at least one preferred start time set
@@ -467,7 +467,7 @@ export default function ModifierEvenement({ params }) {
       if (oldStartTimes?.length > 0 && newStartTimes?.length > 0) {
         // Build irl_start (as ISO string) → new_id lookup
         const newByIrlStart = Object.fromEntries(
-          newStartTimes.map((t) => [new Date(t.irl_start).toISOString(), t.id]),
+          newStartTimes.map((slot) => [new Date(slot.irl_start).toISOString(), slot.id]),
         );
         // Build old_id → new_id map via matching irl_start
         const idRemap = Object.fromEntries(

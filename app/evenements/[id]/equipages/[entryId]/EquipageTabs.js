@@ -81,7 +81,7 @@ export default function EquipageTabs({
   };
 
   const visibleTabs = limitedToAssignment
-    ? TABS.filter((t) => t.id === "pilotes")
+    ? TABS.filter((tab) => tab.id === "pilotes")
     : TABS;
 
   return (

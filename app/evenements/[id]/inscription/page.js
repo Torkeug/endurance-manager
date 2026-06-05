@@ -176,7 +176,7 @@ function SignupForm({
     );
   const toggleTag = (name) =>
     setSelectedTags((prev) =>
-      prev.includes(name) ? prev.filter((t) => t !== name) : [...prev, name],
+      prev.includes(name) ? prev.filter((tag) => tag !== name) : [...prev, name],
     );
 
   // Returns an array of conflict descriptors matching the PreferenceBadge
