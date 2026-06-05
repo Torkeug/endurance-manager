@@ -2,8 +2,10 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabaseBrowser as supabase } from "../../../lib/supabase-browser";
+import { useTranslations } from "next-intl";
 
 function ConfirmModal({ modal, onConfirm, onCancel }) {
+  const t = useTranslations("deleteEvent");
   if (!modal) return null;
   return (
     <div
@@ -33,10 +35,10 @@ function ConfirmModal({ modal, onConfirm, onCancel }) {
           style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}
         >
           <button onClick={onConfirm} className="btn btn-danger">
-            {modal.confirmLabel || "Confirmer"}
+            {modal.confirmLabel || t("confirm")}
           </button>
           <button onClick={onCancel} className="btn btn-secondary">
-            Annuler
+            {t("cancel")}
           </button>
         </div>
       </div>
@@ -45,16 +47,16 @@ function ConfirmModal({ modal, onConfirm, onCancel }) {
 }
 
 export default function DeleteEventButton({ eventId }) {
+  const t = useTranslations("deleteEvent");
   const [loading, setLoading] = useState(false);
   const [confirmModal, setConfirmModal] = useState(null);
   const router = useRouter();
 
   const handleDelete = () => {
     setConfirmModal({
-      title: "Supprimer cet événement",
-      message:
-        "Cet événement et toutes ses données associées seront supprimés définitivement. Cette action est irréversible.",
-      confirmLabel: "Supprimer définitivement",
+      title: t("deleteTitle"),
+      message: t("deleteMsg"),
+      confirmLabel: t("deleteConfirm"),
       onConfirm: async () => {
         setConfirmModal(null);
         setLoading(true);
@@ -84,7 +86,7 @@ export default function DeleteEventButton({ eventId }) {
         disabled={loading}
         className="btn btn-danger"
       >
-        {loading ? "…" : "🗑 Supprimer"}
+        {loading ? t("deleting") : t("deleteBtn")}
       </button>
     </>
   );

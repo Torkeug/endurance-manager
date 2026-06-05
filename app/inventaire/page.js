@@ -2,6 +2,7 @@ import { supabaseServer as supabase } from "../../lib/supabase-server";
 import { getSessionAndDriver } from "../../lib/auth";
 import { redirect } from "next/navigation";
 import InventoryMatrix from "../../components/InventoryMatrix";
+import { getTranslations } from "next-intl/server";
 
 export default async function InventairePage({ searchParams }) {
   const { driver: currentDriver } = await getSessionAndDriver();
@@ -61,27 +62,26 @@ export default async function InventairePage({ searchParams }) {
   // Check the session driver directly rather than the active-filtered list,
   // so the sync button stays visible even if the driver's active flag is cleared.
   const currentDriverHasIracingId = !!currentDriver?.iracing_id;
+  const t = await getTranslations("inventoryMatrix");
 
   return (
     <div className="page">
       {/* Re-sync success banner */}
       {iracing_synced === "true" && (
         <div className="alert alert-success" style={{ marginBottom: "1rem" }}>
-          ✓ Synchronisation réussie — inventaire mis à jour.
+          {t("syncSuccess")}
         </div>
       )}
       {/* Sync error banner */}
       {syncError && (
         <div className="alert alert-error" style={{ marginBottom: "1rem" }}>
-          {syncError === "iracing_sync_failed"
-            ? "Erreur lors de la synchronisation iRacing. Vos données n'ont pas été modifiées."
-            : "Une erreur iRacing est survenue. Veuillez réessayer."}
+          {syncError === "iracing_sync_failed" ? t("syncFailed") : t("syncError")}
         </div>
       )}
 
       <div className="page-header">
         <div>
-          <h1>Inventaire</h1>
+          <h1>{t("pageTitle")}</h1>
           <div className="accent-line" />
           <p
             style={{
@@ -90,7 +90,7 @@ export default async function InventairePage({ searchParams }) {
               fontSize: "0.85rem",
             }}
           >
-            Aperçu des voitures et circuits possédés par les pilotes
+            {t("pageSubtitle")}
           </p>
         </div>
         {/* Sync button — only shown when current driver has a linked iRacing account */}
@@ -99,7 +99,7 @@ export default async function InventairePage({ searchParams }) {
             href="/auth/iracing?mode=driver&returnTo=/inventaire"
             className="btn btn-secondary btn-sm"
           >
-            🔄 Mettre à jour mon inventaire
+            {t("syncBtn")}
           </a>
         )}
       </div>

@@ -3,9 +3,11 @@ import { useState, useEffect, use } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { supabaseBrowser as supabase } from "../../../../lib/supabase-browser";
+import { useTranslations } from "next-intl";
 
 // Reusable confirm modal — replaces native confirm() for archive and delete actions
 function ConfirmModal({ modal, onConfirm, onCancel }) {
+  const t = useTranslations("championshipEdit");
   if (!modal) return null;
   return (
     <div
@@ -35,10 +37,10 @@ function ConfirmModal({ modal, onConfirm, onCancel }) {
           style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}
         >
           <button onClick={onConfirm} className="btn btn-danger">
-            {modal.confirmLabel || "Confirmer"}
+            {modal.confirmLabel || t("confirm")}
           </button>
           <button onClick={onCancel} className="btn btn-secondary">
-            Annuler
+            {t("cancel")}
           </button>
         </div>
       </div>
@@ -47,6 +49,7 @@ function ConfirmModal({ modal, onConfirm, onCancel }) {
 }
 
 export default function ModifierChampionnat({ params }) {
+  const t = useTranslations("championshipEdit");
   const router = useRouter();
   const { id } = use(params);
 
@@ -91,7 +94,7 @@ export default function ModifierChampionnat({ params }) {
       .single()
       .then(({ data, error: err }) => {
         if (err || !data) {
-          setError("Championnat introuvable.");
+          setError(t("notFound"));
           setFetching(false);
           return;
         }
@@ -110,7 +113,7 @@ export default function ModifierChampionnat({ params }) {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!form.name.trim()) {
-      setError("Le nom est obligatoire.");
+      setError(t("errorName"));
       return;
     }
     setLoading(true);
@@ -136,13 +139,9 @@ export default function ModifierChampionnat({ params }) {
   const handleArchiveToggle = () => {
     const isArchived = form.archived;
     setConfirmModal({
-      title: isArchived
-        ? "Désarchiver le championnat"
-        : "Archiver le championnat",
-      message: isArchived
-        ? "Ce championnat sera à nouveau visible dans la liste active."
-        : "Ce championnat sera masqué de la liste active. Les manches restent accessibles.",
-      confirmLabel: isArchived ? "Désarchiver" : "Archiver",
+      title: isArchived ? t("unarchiveTitle") : t("archiveTitle"),
+      message: isArchived ? t("unarchiveMsg") : t("archiveMsg"),
+      confirmLabel: isArchived ? t("unarchiveConfirm") : t("archiveConfirm"),
       onConfirm: async () => {
         setConfirmModal(null);
         const { error: err } = await supabase
@@ -161,10 +160,9 @@ export default function ModifierChampionnat({ params }) {
 
   const handleDelete = () => {
     setConfirmModal({
-      title: "Supprimer le championnat",
-      message:
-        "Ce championnat et toutes ses manches seront supprimés définitivement. Cette action est irréversible.",
-      confirmLabel: "Supprimer définitivement",
+      title: t("deleteTitle"),
+      message: t("deleteMsg"),
+      confirmLabel: t("deleteConfirm"),
       onConfirm: async () => {
         setConfirmModal(null);
         // Delete all rounds first — FK constraint prevents deleting a championship
@@ -194,13 +192,13 @@ export default function ModifierChampionnat({ params }) {
   if (fetching)
     return (
       <div className="page">
-        <p style={{ color: "var(--text-dim)" }}>Chargement…</p>
+        <p style={{ color: "var(--text-dim)" }}>{t("loading")}</p>
       </div>
     );
   if (!authChecked)
     return (
       <div className="page">
-        <p style={{ color: "var(--text-dim)" }}>Vérification des droits…</p>
+        <p style={{ color: "var(--text-dim)" }}>{t("checkingAuth")}</p>
       </div>
     );
 
@@ -214,22 +212,22 @@ export default function ModifierChampionnat({ params }) {
 
       <div className="page-header">
         <div>
-          <h1>Modifier le championnat</h1>
+          <h1>{t("titleEdit")}</h1>
           <div className="accent-line" />
         </div>
         <Link href="/evenements" className="btn btn-secondary">
-          ← Retour
+          {t("back")}
         </Link>
       </div>
 
       <form onSubmit={handleSubmit}>
         <div className="card" style={{ marginBottom: "1.25rem" }}>
           <h3 style={{ marginBottom: "1.25rem", color: "var(--text-dim)" }}>
-            Informations
+            {t("sectionGeneral")}
           </h3>
           <div className="form-grid">
             <div className="form-group" style={{ gridColumn: "1 / -1" }}>
-              <label htmlFor="name">Nom du championnat *</label>
+              <label htmlFor="name">{t("labelName")}</label>
               <input
                 id="name"
                 type="text"
@@ -239,13 +237,13 @@ export default function ModifierChampionnat({ params }) {
               />
             </div>
             <div className="form-group">
-              <label htmlFor="season">Saison</label>
+              <label htmlFor="season">{t("labelSeason")}</label>
               <input
                 id="season"
                 type="text"
                 value={form.season}
                 onChange={set("season")}
-                placeholder="ex : 2026 Saison 1"
+                placeholder={t("placeholderSeason")}
               />
             </div>
           </div>
@@ -270,10 +268,10 @@ export default function ModifierChampionnat({ params }) {
               className="btn btn-primary"
               disabled={loading}
             >
-              {loading ? "Enregistrement…" : "✓ Enregistrer"}
+              {loading ? t("saving") : t("submitSave")}
             </button>
             <Link href="/evenements" className="btn btn-secondary">
-              Annuler
+              {t("cancel")}
             </Link>
           </div>
           <div style={{ display: "flex", gap: "0.75rem" }}>
@@ -282,14 +280,14 @@ export default function ModifierChampionnat({ params }) {
               className="btn btn-secondary"
               onClick={handleArchiveToggle}
             >
-              {form.archived ? "↩ Désarchiver" : "📦 Archiver"}
+              {form.archived ? t("unarchiveBtn") : t("archiveBtn")}
             </button>
             <button
               type="button"
               className="btn btn-danger"
               onClick={handleDelete}
             >
-              Supprimer
+              {t("deleteBtn")}
             </button>
           </div>
         </div>

@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { supabaseBrowser as supabase } from "../../../../../lib/supabase-browser";
 import { formatTimeInZone } from "../../../../../lib/timezone";
+import { useTranslations } from "next-intl";
 
 // Used to pre-populate availability slots on driver assignment at team creation.
 // Mirrors AvailabilityGrid's generateSlots — 30-min slots, 1h buffer each side.
@@ -62,6 +63,7 @@ const emptyForm = {
 };
 
 export default function NouvelEquipage({ params }) {
+  const t = useTranslations("entryForm");
   const [eventTimezone, setEventTimezone] = useState("Europe/Paris");
   const router = useRouter();
   const { id } = use(params);
@@ -286,15 +288,15 @@ export default function NouvelEquipage({ params }) {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!form.crew_name) {
-      setError("Le nom d'équipage est obligatoire.");
+      setError(t("errorCrewName"));
       return;
     }
     if (!form.class) {
-      setError("La classe est obligatoire.");
+      setError(t("errorClass"));
       return;
     }
     if (!form.start_time_id) {
-      setError("L'horaire de départ est obligatoire.");
+      setError(t("errorStartTime"));
       return;
     }
 
@@ -311,9 +313,7 @@ export default function NouvelEquipage({ params }) {
         .eq("car_number", parseInt(form.car_number))
         .maybeSingle();
       if (existing) {
-        setError(
-          `Le numéro #${form.car_number} est déjà utilisé par un autre équipage pour ce créneau de départ.`,
-        );
+        setError(t("errorCarNumberDuplicate", { number: form.car_number }));
         setLoading(false);
         return;
       }
@@ -353,8 +353,8 @@ export default function NouvelEquipage({ params }) {
       setError(
         err.code === "23505"
           ? err.message.includes("car_number")
-            ? `Le numéro de course est déjà utilisé par un autre équipage pour cet événement.`
-            : "Cet équipage est déjà inscrit pour ce créneau de départ."
+            ? t("errorDuplicateNumber")
+            : t("errorDuplicateSlot")
           : err.message,
       );
       setLoading(false);
@@ -509,9 +509,7 @@ export default function NouvelEquipage({ params }) {
           }}
         >
           <div className="card" style={{ maxWidth: "480px", width: "100%" }}>
-            <h3 style={{ marginBottom: "0.75rem" }}>
-              Préférence d&apos;horaire
-            </h3>
+            <h3 style={{ marginBottom: "0.75rem" }}>{t("slotPrefTitle")}</h3>
             <p
               style={{
                 fontSize: "0.9rem",
@@ -520,12 +518,11 @@ export default function NouvelEquipage({ params }) {
               }}
             >
               <strong style={{ color: "var(--text)" }}>
-                {pendingAssignment.affectedSignups.length} pilote
-                {pendingAssignment.affectedSignups.length > 1 ? "s" : ""}
+                {pendingAssignment.affectedSignups.length}
               </strong>{" "}
-              {pendingAssignment.affectedSignups.length > 1
-                ? "n'ont pas ce créneau dans leurs préférences"
-                : "n'a pas ce créneau dans ses préférences"}{" "}
+              {t("slotPrefNoPreference", {
+                count: pendingAssignment.affectedSignups.length,
+              })}{" "}
               :
             </p>
             <ul
@@ -550,11 +547,11 @@ export default function NouvelEquipage({ params }) {
                 marginBottom: "1.5rem",
               }}
             >
-              Souhaitez-vous ajouter le créneau{" "}
+              {t("slotPrefAdd")}{" "}
               <strong style={{ color: "var(--text)" }}>
                 {pendingAssignment.startTimeLabel}
               </strong>{" "}
-              à leurs préférences ?
+              {t("slotPrefAddSuffix")}
             </p>
             <div
               style={{
@@ -567,13 +564,13 @@ export default function NouvelEquipage({ params }) {
                 onClick={() => commitAssignments(true)}
                 className="btn btn-primary"
               >
-                Oui, ajouter le créneau
+                {t("slotPrefConfirm")}
               </button>
               <button
                 onClick={() => commitAssignments(false)}
                 className="btn btn-secondary"
               >
-                Non, laisser les préférences inchangées
+                {t("slotPrefDecline")}
               </button>
             </div>
           </div>
@@ -581,7 +578,7 @@ export default function NouvelEquipage({ params }) {
       )}
       <div className="page-header">
         <div>
-          <h1>Nouvel équipage</h1>
+          <h1>{t("titleNew")}</h1>
           <div className="accent-line" />
           {eventName && (
             <div
@@ -596,18 +593,18 @@ export default function NouvelEquipage({ params }) {
           )}
         </div>
         <Link href={`/evenements/${id}`} className="btn btn-secondary">
-          ← Retour
+          {t("back")}
         </Link>
       </div>
 
       {startTimes.length === 0 && (
         <div className="alert alert-error" style={{ marginBottom: "1.5rem" }}>
-          Aucun horaire de départ configuré pour cet événement.{" "}
+          {t("noStartTimesConfigured")}{" "}
           <Link
             href={`/evenements/${id}?tab=horaires`}
             style={{ color: "inherit", fontWeight: 700 }}
           >
-            Ajoutez-en un d&apos;abord →
+            {t("addStartTimeHint")}
           </Link>
         </div>
       )}
@@ -616,18 +613,18 @@ export default function NouvelEquipage({ params }) {
         {/* ── Équipage & voiture ── */}
         <div className="card" style={{ marginBottom: "1.25rem" }}>
           <h3 style={{ marginBottom: "1.25rem", color: "var(--text-dim)" }}>
-            Équipage &amp; voiture
+            {t("sectionEntryInfo")}
           </h3>
           <div className="form-grid">
             <div className="form-group">
-              <label htmlFor="crew_name">Nom d&apos;équipage *</label>
+              <label htmlFor="crew_name">{t("labelCrewName")}</label>
               <select
                 id="crew_name"
                 value={form.crew_name}
                 onChange={set("crew_name")}
                 required
               >
-                <option value="">— Sélectionner —</option>
+                <option value="">{t("selectPlaceholder")}</option>
                 {crewNames.map((n) => (
                   <option key={n} value={n}>
                     {n}
@@ -637,9 +634,9 @@ export default function NouvelEquipage({ params }) {
             </div>
 
             <div className="form-group">
-              <label htmlFor="car_id">Voiture *</label>
+              <label htmlFor="car_id">{t("labelCar")}</label>
               <select id="car_id" value={form.car_id} onChange={set("car_id")}>
-                <option value="">— Sélectionner —</option>
+                <option value="">{t("selectPlaceholder")}</option>
                 {Object.entries(carsByClass).map(([cls, carsInClass]) => (
                   <optgroup key={cls} label={cls}>
                     {carsInClass.map((c) => (
@@ -654,7 +651,7 @@ export default function NouvelEquipage({ params }) {
 
             {selectedCar && (
               <div className="form-group">
-                <label>Réservoir (auto-rempli)</label>
+                <label>{t("labelTank")}</label>
                 <div
                   style={{
                     background: "var(--surface-2)",
@@ -672,7 +669,7 @@ export default function NouvelEquipage({ params }) {
             )}
 
             <div className="form-group">
-              <label htmlFor="class">Classe *</label>
+              <label htmlFor="class">{t("labelClass")}</label>
               {selectedCar ? (
                 <div
                   style={{
@@ -694,7 +691,7 @@ export default function NouvelEquipage({ params }) {
                   onChange={set("class")}
                   required
                 >
-                  <option value="">— Sélectionner —</option>
+                  <option value="">{t("selectPlaceholder")}</option>
                   {availableClasses.map((c) => (
                     <option key={c} value={c}>
                       {c}
@@ -706,7 +703,7 @@ export default function NouvelEquipage({ params }) {
             {/* ── Numéro de course — only shown for championship events ── */}
             {isChampionship && (
               <div className="form-group">
-                <label htmlFor="car_number">Numéro de course</label>
+                <label htmlFor="car_number">{t("labelCarNumber")}</label>
                 <input
                   id="car_number"
                   type="number"
@@ -714,7 +711,7 @@ export default function NouvelEquipage({ params }) {
                   max={999}
                   value={form.car_number}
                   onChange={set("car_number")}
-                  placeholder="—"
+                  placeholder={t("placeholderCarNumber")}
                 />
               </div>
             )}
@@ -724,12 +721,11 @@ export default function NouvelEquipage({ params }) {
         {/* ── Horaire de départ ── */}
         <div className="card" style={{ marginBottom: "1.25rem" }}>
           <h3 style={{ marginBottom: "1.25rem", color: "var(--text-dim)" }}>
-            Horaire de départ *
+            {t("labelStartTime")}
           </h3>
           {startTimes.length === 0 ? (
             <p style={{ color: "var(--text-dim)", fontSize: "0.9rem" }}>
-              Aucun créneau disponible — configurez les horaires depuis la page
-              de l&apos;événement.
+              {t("noStartSlots")}
             </p>
           ) : (
             <div
@@ -781,7 +777,7 @@ export default function NouvelEquipage({ params }) {
                         marginTop: "0.1rem",
                       }}
                     >
-                      Départ à {formatTimeInZone(st.irl_start, eventTimezone)}
+                      {t("startAt")} {formatTimeInZone(st.irl_start, eventTimezone)}
                     </div>
                   </div>
                 </label>
@@ -793,7 +789,7 @@ export default function NouvelEquipage({ params }) {
         {/* ── Pilotes ── */}
         <div className="card" style={{ marginBottom: "1.25rem" }}>
           <h3 style={{ marginBottom: "1.25rem", color: "var(--text-dim)" }}>
-            Pilotes{" "}
+            {t("sectionDrivers")}{" "}
             {selectedSignupIds.length > 0 && (
               <span
                 style={{
@@ -803,14 +799,13 @@ export default function NouvelEquipage({ params }) {
                   marginLeft: "0.5rem",
                 }}
               >
-                {selectedSignupIds.length} sélectionné
-                {selectedSignupIds.length > 1 ? "s" : ""}
+                {t("driversSelected", { count: selectedSignupIds.length })}
               </span>
             )}
           </h3>
           {eventSignups.length === 0 ? (
             <p style={{ color: "var(--text-dim)", fontSize: "0.9rem" }}>
-              Aucun pilote sans équipe pour cet événement.
+              {t("noDriversAvailable")}
             </p>
           ) : (
             <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem" }}>
@@ -903,7 +898,7 @@ export default function NouvelEquipage({ params }) {
         {/* ── Twitch streams ── */}
         <div className="card" style={{ marginBottom: "1.25rem" }}>
           <h3 style={{ marginBottom: "1.25rem", color: "var(--text-dim)" }}>
-            Streams Twitch
+            {t("sectionStreams")}
           </h3>
           {/* Added streams as removable pills */}
           {twitchUsernames.length > 0 && (
@@ -1044,7 +1039,7 @@ export default function NouvelEquipage({ params }) {
                     addTwitchUsername(twitchInput);
                   }
                 }}
-                placeholder="nom_de_chaine"
+                placeholder={t("streamPlaceholder")}
                 style={{
                   flex: 1,
                   background: "var(--surface-2)",
@@ -1066,7 +1061,7 @@ export default function NouvelEquipage({ params }) {
               className="btn btn-secondary"
               style={{ whiteSpace: "nowrap" }}
             >
-              + Ajouter
+              {t("addStream")}
             </button>
           </div>
         </div>
@@ -1074,11 +1069,11 @@ export default function NouvelEquipage({ params }) {
         {/* ── Paramètres stratégie ── */}
         <div className="card" style={{ marginBottom: "1.25rem" }}>
           <h3 style={{ marginBottom: "1.25rem", color: "var(--text-dim)" }}>
-            Paramètres stratégie
+            {t("sectionStrategy")}
           </h3>
           <div className="form-grid">
             <div className="form-group">
-              <label htmlFor="bop_power_percent">BOP Puissance (%)</label>
+              <label htmlFor="bop_power_percent">{t("labelBopPower")}</label>
               <input
                 id="bop_power_percent"
                 type="number"
@@ -1090,7 +1085,7 @@ export default function NouvelEquipage({ params }) {
               />
             </div>
             <div className="form-group">
-              <label htmlFor="bop_weight_kg">BOP Poids (kg)</label>
+              <label htmlFor="bop_weight_kg">{t("labelBopWeight")}</label>
               <input
                 id="bop_weight_kg"
                 type="number"
@@ -1102,7 +1097,7 @@ export default function NouvelEquipage({ params }) {
               />
             </div>
             <div className="form-group">
-              <label htmlFor="bop_tank_size_percent">BOP Réservoir (%)</label>
+              <label htmlFor="bop_tank_size_percent">{t("labelBopTank")}</label>
               <input
                 id="bop_tank_size_percent"
                 type="number"
@@ -1115,9 +1110,7 @@ export default function NouvelEquipage({ params }) {
               />
             </div>
             <div className="form-group">
-              <label htmlFor="refuel_time_seconds">
-                Temps ravitaillement (sec)
-              </label>
+              <label htmlFor="refuel_time_seconds">{t("labelRefuelTime")}</label>
               <input
                 id="refuel_time_seconds"
                 type="number"
@@ -1128,9 +1121,7 @@ export default function NouvelEquipage({ params }) {
               />
             </div>
             <div className="form-group">
-              <label htmlFor="tyre_change_time_seconds">
-                Temps changement pneus (sec)
-              </label>
+              <label htmlFor="tyre_change_time_seconds">{t("labelTyreTime")}</label>
               <input
                 id="tyre_change_time_seconds"
                 type="number"
@@ -1150,10 +1141,10 @@ export default function NouvelEquipage({ params }) {
         )}
         <div style={{ display: "flex", gap: "0.75rem" }}>
           <button type="submit" className="btn btn-primary" disabled={loading}>
-            {loading ? "Enregistrement…" : "✓ Ajouter l'équipage"}
+            {loading ? t("saving") : t("submitNew")}
           </button>
           <Link href={`/evenements/${id}`} className="btn btn-secondary">
-            Annuler
+            {t("cancel")}
           </Link>
         </div>
       </form>

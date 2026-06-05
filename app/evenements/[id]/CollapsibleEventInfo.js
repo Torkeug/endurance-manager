@@ -1,6 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
 import ReactMarkdown from "react-markdown";
+import { useTranslations } from "next-intl";
 import remarkGfm from "remark-gfm";
 import remarkBreaks from "remark-breaks";
 
@@ -86,6 +87,7 @@ const markdownComponents = {
 // (Circuit · Format · Durée · Départ IG) so key facts are always visible.
 // Collapse state is persisted per event in localStorage.
 export default function CollapsibleEventInfo({ eventId, items, notes }) {
+  const t = useTranslations("eventInfo");
   const [collapsed, setCollapsed] = useState(false);
   const [notesExpanded, setNotesExpanded] = useState(false);
 
@@ -146,7 +148,7 @@ export default function CollapsibleEventInfo({ eventId, items, notes }) {
             flexShrink: 0,
           }}
         >
-          Informations
+          {t("infoTitle")}
         </span>
         {/* Condensed summary — only visible when collapsed */}
         {collapsed && condensed && (
@@ -224,7 +226,7 @@ export default function CollapsibleEventInfo({ eventId, items, notes }) {
                       color: "var(--text-dim)",
                     }}
                   >
-                    Notes
+                    {t("notesTitle")}
                   </div>
                   {isLong && (
                     <button
@@ -238,7 +240,7 @@ export default function CollapsibleEventInfo({ eventId, items, notes }) {
                         padding: "0 0.25rem",
                       }}
                     >
-                      {notesExpanded ? "Voir moins" : "Voir plus"}
+                      {notesExpanded ? t("showLess") : t("showMore")}
                     </button>
                   )}
                 </div>

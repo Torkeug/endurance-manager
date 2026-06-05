@@ -5,6 +5,7 @@ import Link from "next/link";
 import { supabaseBrowser as supabase } from "../../../lib/supabase-browser";
 import { TIMEZONES, localToUTC } from "../../../lib/timezone";
 import { DateTime } from "luxon";
+import { useTranslations } from "next-intl";
 
 function formatDuration(minutes) {
   const h = Math.floor(minutes / 60);
@@ -50,6 +51,7 @@ const emptyForm = {
 };
 
 export default function NouvelEvenement() {
+  const t = useTranslations("eventForm");
   const router = useRouter();
   const [form, setForm] = useState(emptyForm);
   const [circuits, setCircuits] = useState([]);
@@ -113,7 +115,7 @@ export default function NouvelEvenement() {
       .select("iracing_track_id, track_name")
       .then(({ data }) => {
         const map = {};
-        for (const t of data || []) map[t.iracing_track_id] = t.track_name;
+        for (const track of data || []) map[track.iracing_track_id] = track.track_name;
         setTrackNameById(map);
       });
   }, []);
@@ -134,7 +136,7 @@ export default function NouvelEvenement() {
       .from("event_types")
       .select("name")
       .order("sort_order")
-      .then(({ data }) => setEventTypes(data?.map((t) => t.name) || []));
+      .then(({ data }) => setEventTypes(data?.map((et) => et.name) || []));
   }, []);
 
   useEffect(() => {
@@ -212,11 +214,11 @@ export default function NouvelEvenement() {
 
   const handleAddStartTime = () => {
     if (!newStartDate) {
-      setStartTimeError("La date est obligatoire.");
+      setStartTimeError(t("errorDate"));
       return;
     }
     if (!newStartTime) {
-      setStartTimeError("L'heure est obligatoire.");
+      setStartTimeError(t("errorTime"));
       return;
     }
     setStartTimeEntries((prev) => [
@@ -243,40 +245,34 @@ export default function NouvelEvenement() {
     e.preventDefault();
     // Validate in-game time fields — mobile Safari ignores type="time" constraints
     if (!isValidTime(form.ig_start_time)) {
-      setError(
-        "L'heure de départ IG est invalide — format attendu : HH:MM (ex : 13:00).",
-      );
+      setError(t("errorIGStart"));
       return;
     }
     if (!isValidTime(form.ig_sunrise)) {
-      setError(
-        "L'heure de lever de soleil IG est invalide — format attendu : HH:MM (ex : 06:30).",
-      );
+      setError(t("errorIGSunrise"));
       return;
     }
     if (!isValidTime(form.ig_sunset)) {
-      setError(
-        "L'heure de coucher de soleil IG est invalide — format attendu : HH:MM (ex : 20:00).",
-      );
+      setError(t("errorIGSunset"));
       return;
     }
     if (!form.name.trim()) {
-      setError("Le nom est obligatoire.");
+      setError(t("errorName"));
       return;
     }
     if (!form.duration_minutes) {
-      setError("La durée est obligatoire.");
+      setError(t("errorDuration"));
       return;
     }
     if (!form.circuit_id) {
-      setError("Le circuit est obligatoire.");
+      setError(t("errorCircuit"));
       return;
     }
     // Special event weekend date must be a Friday
     if (isSpecial && weekendStartDate) {
       const day = new Date(weekendStartDate + "T00:00:00").getDay();
       if (day !== 5) {
-        setError("La date du weekend doit être un vendredi.");
+        setError(t("errorFriday"));
         return;
       }
     }
@@ -390,7 +386,7 @@ export default function NouvelEvenement() {
   if (!authChecked)
     return (
       <div className="page">
-        <p style={{ color: "var(--text-dim)" }}>Vérification des droits…</p>
+        <p style={{ color: "var(--text-dim)" }}>{t("checkingAuth")}</p>
       </div>
     );
 
@@ -398,11 +394,11 @@ export default function NouvelEvenement() {
     <div className="page">
       <div className="page-header">
         <div>
-          <h1>Nouvel événement</h1>
+          <h1>{t("titleNew")}</h1>
           <div className="accent-line" />
         </div>
         <Link href="/evenements" className="btn btn-secondary">
-          ← Retour
+          {t("back")}
         </Link>
       </div>
 
@@ -410,17 +406,17 @@ export default function NouvelEvenement() {
         {/* ── Informations générales ── */}
         <div className="card" style={{ marginBottom: "1.25rem" }}>
           <h3 style={{ marginBottom: "1.25rem", color: "var(--text-dim)" }}>
-            Informations générales
+            {t("sectionGeneral")}
           </h3>
           <div className="form-grid">
             <div className="form-group" style={{ gridColumn: "1 / -1" }}>
-              <label htmlFor="name">Nom de l&apos;événement *</label>
+              <label htmlFor="name">{t("labelName")}</label>
               <input
                 id="name"
                 type="text"
                 value={form.name}
                 onChange={set("name")}
-                placeholder="ex : Nürburgring 24h 2025"
+                placeholder={t("placeholderName")}
                 required
               />
             </div>
@@ -443,14 +439,14 @@ export default function NouvelEvenement() {
                     height: "16px",
                   }}
                 />
-                <span>Événement spécial (horaires de départ prédéfinis)</span>
+                <span>{t("labelSpecial")}</span>
               </label>
             </div>
 
             {isSpecial && (
               <div className="form-group">
                 <label htmlFor="weekend_start_date">
-                  Date du weekend (vendredi) *
+                  {t("labelWeekendDate")}
                 </label>
                 <input
                   id="weekend_start_date"
@@ -465,8 +461,7 @@ export default function NouvelEvenement() {
                     marginTop: "0.4rem",
                   }}
                 >
-                  💡 La date doit être un vendredi — les horaires du samedi et
-                  dimanche sont générés automatiquement.
+                  {t("fridayHint")}
                 </p>
                 {specialStartTimes.length === 0 && (
                   <div
@@ -476,8 +471,7 @@ export default function NouvelEvenement() {
                       marginTop: "0.5rem",
                     }}
                   >
-                    Aucun horaire prédéfini configuré — ajoutez-en dans Admin →
-                    Paramètres.
+                    {t("noSpecialSlots")}
                   </div>
                 )}
                 {weekendStartDate && specialStartTimes.length > 0 && (
@@ -488,8 +482,7 @@ export default function NouvelEvenement() {
                       color: "var(--text-dim)",
                     }}
                   >
-                    Les créneaux suivants seront générés automatiquement après
-                    création :
+                    {t("specialSlotsPreview")}
                     {specialStartTimes.map((st) => {
                       const dayOffset =
                         { vendredi: 0, samedi: 1, dimanche: 2 }[
@@ -521,9 +514,9 @@ export default function NouvelEvenement() {
             )}
 
             <div className="form-group">
-              <label htmlFor="format">Format</label>
+              <label htmlFor="format">{t("labelFormat")}</label>
               <select id="format" value={form.format} onChange={set("format")}>
-                <option value="">— Sélectionner —</option>
+                <option value="">{t("selectPlaceholder")}</option>
                 {eventTypes.map((f) => (
                   <option key={f} value={f}>
                     {f}
@@ -534,7 +527,7 @@ export default function NouvelEvenement() {
 
             {/* Duration */}
             <div className="form-group" style={{ gridColumn: "1 / -1" }}>
-              <label>Durée *</label>
+              <label>{t("labelDuration")}</label>
               <div
                 style={{
                   display: "flex",
@@ -567,7 +560,7 @@ export default function NouvelEvenement() {
                 }}
               >
                 <span style={{ fontSize: "0.8rem", color: "var(--text-dim)" }}>
-                  Autre :
+                  {t("durationOther")}
                 </span>
                 <input
                   type="number"
@@ -595,7 +588,7 @@ export default function NouvelEvenement() {
                     fontSize: "0.9rem",
                   }}
                 />
-                <span style={{ color: "var(--text-dim)" }}>h</span>
+                <span style={{ color: "var(--text-dim)" }}>{t("durationH")}</span>
                 <input
                   type="number"
                   min="0"
@@ -622,7 +615,7 @@ export default function NouvelEvenement() {
                     fontSize: "0.9rem",
                   }}
                 />
-                <span style={{ color: "var(--text-dim)" }}>min</span>
+                <span style={{ color: "var(--text-dim)" }}>{t("durationMin")}</span>
                 {!isPreset && form.duration_minutes > 0 && (
                   <span
                     style={{
@@ -639,7 +632,7 @@ export default function NouvelEvenement() {
             </div>
 
             <div className="form-group">
-              <label htmlFor="timezone">Fuseau horaire</label>
+              <label htmlFor="timezone">{t("labelTimezone")}</label>
               <select
                 id="timezone"
                 value={form.timezone}
@@ -654,13 +647,13 @@ export default function NouvelEvenement() {
             </div>
 
             <div className="form-group" style={{ gridColumn: "1 / -1" }}>
-              <label htmlFor="notes">Notes</label>
+              <label htmlFor="notes">{t("labelNotes")}</label>
               <textarea
                 id="notes"
                 value={form.notes}
                 onChange={set("notes")}
                 rows={2}
-                placeholder="Infos complémentaires…"
+                placeholder={t("placeholderNotes")}
               />
             </div>
           </div>
@@ -669,11 +662,11 @@ export default function NouvelEvenement() {
         {/* ── Circuit ── */}
         <div className="card" style={{ marginBottom: "1.25rem" }}>
           <h3 style={{ marginBottom: "1.25rem", color: "var(--text-dim)" }}>
-            Circuit
+            {t("sectionCircuit")}
           </h3>
           <div className="form-grid">
             <div className="form-group" style={{ gridColumn: "1 / -1" }}>
-              <label>Circuit *</label>
+              <label>{t("labelCircuit")}</label>
               <div
                 style={{
                   display: "flex",
@@ -689,14 +682,14 @@ export default function NouvelEvenement() {
                     setForm((prev) => ({ ...prev, circuit_id: "" }));
                   }}
                 >
-                  <option value="">— Sélectionner un circuit —</option>
+                  <option value="">{t("selectCircuit")}</option>
                   {circuitGroups.sorted.map(([baseName]) => (
                     <option key={baseName} value={baseName}>
                       {baseName}
                     </option>
                   ))}
                   {circuitGroups.unlinked.length > 0 && (
-                    <optgroup label="— Autres —">
+                    <optgroup label={t("circuitGroupOther")}>
                       {circuitGroups.unlinked.map((c) => (
                         <option key={c.id} value={`__direct__${c.id}`}>
                           {c.name}
@@ -729,7 +722,7 @@ export default function NouvelEvenement() {
                         value={form.circuit_id}
                         onChange={set("circuit_id")}
                       >
-                        <option value="">— Sélectionner un layout —</option>
+                        <option value="">{t("selectLayout")}</option>
                         {layouts.map((c) => (
                           <option key={c.id} value={c.id}>
                             {c.name}
@@ -754,7 +747,7 @@ export default function NouvelEvenement() {
               </div>
             </div>
             <div className="form-group">
-              <label>Temps pit lane (auto-rempli)</label>
+              <label>{t("labelPitLane")}</label>
               <div
                 style={{
                   background: "var(--surface-2)",
@@ -766,7 +759,7 @@ export default function NouvelEvenement() {
                   color: pitTime ? "var(--accent)" : "var(--text-dim)",
                 }}
               >
-                {pitTime ? `${pitTime}s` : "— sélectionnez un circuit"}
+                {pitTime ? `${pitTime}s` : t("selectCircuitFirst")}
               </div>
             </div>
           </div>
@@ -776,7 +769,7 @@ export default function NouvelEvenement() {
         {!isSpecial && (
           <div className="card" style={{ marginBottom: "1.25rem" }}>
             <h3 style={{ marginBottom: "0.25rem", color: "var(--text-dim)" }}>
-              Horaires de départ IRL
+              {t("sectionStartTimes")}
             </h3>
             <p
               style={{
@@ -785,7 +778,7 @@ export default function NouvelEvenement() {
                 marginBottom: "1.25rem",
               }}
             >
-              Optionnel — peut aussi être configuré après création.
+              {t("startTimesOptional")}
             </p>
 
             {sortedStartTimeEntries.length > 0 && (
@@ -793,7 +786,7 @@ export default function NouvelEvenement() {
                 <table>
                   <thead>
                     <tr>
-                      <th>Créneau de départ</th>
+                      <th>{t("colStartSlot")}</th>
                       <th></th>
                     </tr>
                   </thead>
@@ -817,7 +810,7 @@ export default function NouvelEvenement() {
                               marginTop: "0.1rem",
                             }}
                           >
-                            Départ à {entry.time}
+                            {t("startAt", { time: entry.time })}
                           </div>
                         </td>
                         <td style={{ textAlign: "right" }}>
@@ -826,7 +819,7 @@ export default function NouvelEvenement() {
                             onClick={() => removeStartTime(entry.id)}
                             className="btn btn-danger btn-sm"
                           >
-                            Supprimer
+                            {t("removeSlot")}
                           </button>
                         </td>
                       </tr>
@@ -840,14 +833,14 @@ export default function NouvelEvenement() {
             {addingStartTime ? (
               <div className="card">
                 <h3 style={{ marginBottom: "1rem", color: "var(--text-dim)" }}>
-                  Nouveau créneau
+                  {t("newSlotTitle")}
                 </h3>
                 <div
                   style={{ padding: "1rem", background: "var(--surface-2)" }}
                 >
                   <div className="form-grid" style={{ marginBottom: "1rem" }}>
                     <div className="form-group">
-                      <label>Date IRL</label>
+                      <label>{t("labelIRLDate")}</label>
                       <input
                         type="date"
                         value={newStartDate}
@@ -855,7 +848,7 @@ export default function NouvelEvenement() {
                       />
                     </div>
                     <div className="form-group">
-                      <label>Heure IRL (24h)</label>
+                      <label>{t("labelIRLTime")}</label>
                       <input
                         type="time"
                         value={newStartTime}
@@ -877,14 +870,14 @@ export default function NouvelEvenement() {
                       onClick={handleAddStartTime}
                       className="btn btn-primary"
                     >
-                      ✓ Ajouter
+                      {t("addSlot")}
                     </button>
                     <button
                       type="button"
                       onClick={resetStartTimeForm}
                       className="btn btn-secondary"
                     >
-                      Annuler
+                      {t("cancelSlot")}
                     </button>
                   </div>
                 </div>
@@ -898,7 +891,7 @@ export default function NouvelEvenement() {
                 }}
                 className="btn btn-secondary"
               >
-                + Ajouter un créneau de départ
+                {t("addSlotBtn")}
               </button>
             )}
           </div>
@@ -907,7 +900,7 @@ export default function NouvelEvenement() {
         {/* ── Horaires in-game ── */}
         <div className="card" style={{ marginBottom: "1.25rem" }}>
           <h3 style={{ marginBottom: "0.5rem", color: "var(--text-dim)" }}>
-            Horaires in-game
+            {t("sectionIGTimes")}
           </h3>
           <p
             style={{
@@ -916,14 +909,14 @@ export default function NouvelEvenement() {
               marginBottom: "1.25rem",
             }}
           >
-            Communs à tous les équipages. Heures en format 24h.
+            {t("igTimesHint")}
           </p>
           <div className="form-grid">
             {/* Offset between the scheduled IRL start time and the actual green flag.
                 Pre-fills the default strategy offset when a new strategy is created. */}
             <div className="form-group">
               <label htmlFor="green_flag_offset_minutes">
-                Décalage drapeau vert (min)
+                {t("labelGreenFlagOffset")}
               </label>
               <input
                 id="green_flag_offset_minutes"
@@ -942,13 +935,11 @@ export default function NouvelEvenement() {
                   marginTop: "0.4rem",
                 }}
               >
-                Minutes entre l&apos;heure officielle de départ et le drapeau
-                vert effectif (ex : 14 pour 3min prac + 8min qualif + 3min
-                grid). Utilisé comme décalage par défaut dans les stratégies.
+                {t("greenFlagOffsetHint")}
               </p>
             </div>
             <div className="form-group">
-              <label htmlFor="ig_start_time">Heure de départ IG (HH:MM)</label>
+              <label htmlFor="ig_start_time">{t("labelIGStart")}</label>
               <input
                 id="ig_start_time"
                 type="time"
@@ -957,7 +948,7 @@ export default function NouvelEvenement() {
               />
             </div>
             <div className="form-group">
-              <label htmlFor="ig_sunrise">Lever de soleil IG (HH:MM)</label>
+              <label htmlFor="ig_sunrise">{t("labelIGSunrise")}</label>
               <input
                 id="ig_sunrise"
                 type="time"
@@ -966,7 +957,7 @@ export default function NouvelEvenement() {
               />
             </div>
             <div className="form-group">
-              <label htmlFor="ig_sunset">Coucher de soleil IG (HH:MM)</label>
+              <label htmlFor="ig_sunset">{t("labelIGSunset")}</label>
               <input
                 id="ig_sunset"
                 type="time"
@@ -984,10 +975,10 @@ export default function NouvelEvenement() {
         )}
         <div style={{ display: "flex", gap: "0.75rem" }}>
           <button type="submit" className="btn btn-primary" disabled={loading}>
-            {loading ? "Enregistrement…" : "✓ Créer l'événement"}
+            {loading ? t("saving") : t("submitCreate")}
           </button>
           <Link href="/evenements" className="btn btn-secondary">
-            Annuler
+            {t("cancel")}
           </Link>
         </div>
       </form>

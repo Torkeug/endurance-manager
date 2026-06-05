@@ -2,8 +2,10 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabaseBrowser as supabase } from "../../../lib/supabase-browser";
+import { useTranslations } from "next-intl";
 
 function ConfirmModal({ modal, onConfirm, onCancel }) {
+  const t = useTranslations("archiveToggle");
   if (!modal) return null;
   return (
     <div
@@ -33,10 +35,10 @@ function ConfirmModal({ modal, onConfirm, onCancel }) {
           style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}
         >
           <button onClick={onConfirm} className="btn btn-primary">
-            {modal.confirmLabel || "Confirmer"}
+            {modal.confirmLabel || t("confirm")}
           </button>
           <button onClick={onCancel} className="btn btn-secondary">
-            Annuler
+            {t("cancel")}
           </button>
         </div>
       </div>
@@ -45,6 +47,7 @@ function ConfirmModal({ modal, onConfirm, onCancel }) {
 }
 
 export default function ArchiveToggle({ eventId, archived }) {
+  const t = useTranslations("archiveToggle");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [confirmModal, setConfirmModal] = useState(null);
@@ -52,17 +55,12 @@ export default function ArchiveToggle({ eventId, archived }) {
 
   const handleToggle = () => {
     if (!archived) {
-      // Archiving — call Postgres function directly, no confirm needed
-      // (the archive operation is significant enough to not need an extra step
-      // since it's clearly labeled and reversible via unarchive)
       commitToggle();
     } else {
-      // Unarchiving — confirm first
       setConfirmModal({
-        title: "Désarchiver cet événement",
-        message:
-          "Cet événement sera à nouveau visible et modifiable par tous les pilotes.",
-        confirmLabel: "Désarchiver",
+        title: t("unarchiveTitle"),
+        message: t("unarchiveMsg"),
+        confirmLabel: t("unarchiveConfirm"),
         onConfirm: () => {
           setConfirmModal(null);
           commitToggle();
@@ -80,7 +78,7 @@ export default function ArchiveToggle({ eventId, archived }) {
         event_id: eventId,
       });
       if (rpcErr) {
-        setError(`Erreur lors de l'archivage : ${rpcErr.message}`);
+        setError(t("errorArchive", { error: rpcErr.message }));
         setLoading(false);
         return;
       }
@@ -90,7 +88,7 @@ export default function ArchiveToggle({ eventId, archived }) {
         .update({ archived: false })
         .eq("id", eventId);
       if (updateErr) {
-        setError(`Erreur lors du désarchivage : ${updateErr.message}`);
+        setError(t("errorUnarchive", { error: updateErr.message }));
         setLoading(false);
         return;
       }
@@ -123,11 +121,11 @@ export default function ArchiveToggle({ eventId, archived }) {
       >
         {loading
           ? archived
-            ? "Désarchivage…"
-            : "Archivage…"
+            ? t("unarchiving")
+            : t("archiving")
           : archived
-            ? "↩ Désarchiver"
-            : "📦 Archiver"}
+            ? t("unarchiveBtn")
+            : t("archiveBtn")}
       </button>
     </div>
   );

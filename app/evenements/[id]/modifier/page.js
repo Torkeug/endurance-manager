@@ -4,8 +4,10 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { supabaseBrowser as supabase } from "../../../../lib/supabase-browser";
 import { TIMEZONES } from "../../../../lib/timezone";
+import { useTranslations } from "next-intl";
 
 function ConfirmModal({ modal, onConfirm, onCancel }) {
+  const t = useTranslations("eventForm");
   if (!modal) return null;
   return (
     <div
@@ -35,10 +37,10 @@ function ConfirmModal({ modal, onConfirm, onCancel }) {
           style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}
         >
           <button onClick={onConfirm} className="btn btn-danger">
-            {modal.confirmLabel || "Confirmer"}
+            {modal.confirmLabel || t("confirm")}
           </button>
           <button onClick={onCancel} className="btn btn-secondary">
-            Annuler
+            {t("cancel")}
           </button>
         </div>
       </div>
@@ -65,6 +67,7 @@ function isValidTime(str) {
 }
 
 export default function ModifierEvenement({ params }) {
+  const t = useTranslations("eventForm");
   const router = useRouter();
   const { id } = use(params);
   const [eventTypes, setEventTypes] = useState([]);
@@ -121,7 +124,7 @@ export default function ModifierEvenement({ params }) {
     ]).then(([{ data: circuitsData }, { data: event, error: eventError }]) => {
       setCircuits(circuitsData || []);
       if (eventError || !event) {
-        setError("Événement introuvable.");
+        setError(t("notFound"));
         setFetching(false);
         return;
       }
@@ -173,7 +176,7 @@ export default function ModifierEvenement({ params }) {
       .select("iracing_track_id, track_name")
       .then(({ data }) => {
         const map = {};
-        for (const t of data || []) map[t.iracing_track_id] = t.track_name;
+        for (const track of data || []) map[track.iracing_track_id] = track.track_name;
         setTrackNameById(map);
       });
   }, []);
@@ -201,7 +204,7 @@ export default function ModifierEvenement({ params }) {
       .from("event_types")
       .select("name")
       .order("sort_order")
-      .then(({ data }) => setEventTypes(data?.map((t) => t.name) || []));
+      .then(({ data }) => setEventTypes(data?.map((et) => et.name) || []));
   }, []);
 
   useEffect(() => {
@@ -234,40 +237,34 @@ export default function ModifierEvenement({ params }) {
     e.preventDefault();
     // Validate in-game time fields — mobile Safari ignores type="time" constraints
     if (!isValidTime(form.ig_start_time)) {
-      setError(
-        "L'heure de départ IG est invalide — format attendu : HH:MM (ex : 13:00).",
-      );
+      setError(t("errorIGStart"));
       return;
     }
     if (!isValidTime(form.ig_sunrise)) {
-      setError(
-        "L'heure de lever de soleil IG est invalide — format attendu : HH:MM (ex : 06:30).",
-      );
+      setError(t("errorIGSunrise"));
       return;
     }
     if (!isValidTime(form.ig_sunset)) {
-      setError(
-        "L'heure de coucher de soleil IG est invalide — format attendu : HH:MM (ex : 20:00).",
-      );
+      setError(t("errorIGSunset"));
       return;
     }
     if (!form.name.trim()) {
-      setError("Le nom est obligatoire.");
+      setError(t("errorName"));
       return;
     }
     if (!form.duration_minutes) {
-      setError("La durée est obligatoire.");
+      setError(t("errorDuration"));
       return;
     }
     if (!form.circuit_id) {
-      setError("Le circuit est obligatoire.");
+      setError(t("errorCircuit"));
       return;
     }
     // Special event weekend date must be a Friday
     if (isSpecial && weekendStartDate) {
       const day = new Date(weekendStartDate + "T00:00:00").getDay();
       if (day !== 5) {
-        setError("La date du weekend doit être un vendredi.");
+        setError(t("errorFriday"));
         return;
       }
     }
@@ -436,7 +433,7 @@ export default function ModifierEvenement({ params }) {
         .delete()
         .eq("event_id", id);
       if (deleteErr) {
-        setError(`Erreur suppression horaires: ${deleteErr.message}`);
+        setError(t("errorDeleteSlots", { error: deleteErr.message }));
         setLoading(false);
         return;
       }
@@ -534,10 +531,9 @@ export default function ModifierEvenement({ params }) {
   // Distinct from archiving which preserves the data with a snapshot.
   const handleDelete = () => {
     setConfirmModal({
-      title: "Supprimer l'événement",
-      message:
-        "Supprimer cet événement ? Toutes les données associées seront supprimées.",
-      confirmLabel: "Supprimer",
+      title: t("deleteEventTitle"),
+      message: t("deleteEventMsg"),
+      confirmLabel: t("deleteEventConfirm"),
       onConfirm: async () => {
         setConfirmModal(null);
 
@@ -597,7 +593,7 @@ export default function ModifierEvenement({ params }) {
   if (fetching)
     return (
       <div className="page">
-        <p style={{ color: "var(--text-dim)" }}>Chargement…</p>
+        <p style={{ color: "var(--text-dim)" }}>{t("loading")}</p>
       </div>
     );
   if (!form)
@@ -605,7 +601,7 @@ export default function ModifierEvenement({ params }) {
       <div className="page">
         <div className="alert alert-error">{error}</div>
         <Link href="/evenements" className="btn btn-secondary">
-          ← Retour
+          {t("back")}
         </Link>
       </div>
     );
@@ -613,7 +609,7 @@ export default function ModifierEvenement({ params }) {
   if (!authChecked)
     return (
       <div className="page">
-        <p style={{ color: "var(--text-dim)" }}>Vérification des droits…</p>
+        <p style={{ color: "var(--text-dim)" }}>{t("checkingAuth")}</p>
       </div>
     );
   return (
@@ -625,22 +621,22 @@ export default function ModifierEvenement({ params }) {
       />
       <div className="page-header">
         <div>
-          <h1>Modifier l&apos;événement</h1>
+          <h1>{t("titleEdit")}</h1>
           <div className="accent-line" />
         </div>
         <Link href={`/evenements/${id}`} className="btn btn-secondary">
-          ← Retour
+          {t("back")}
         </Link>
       </div>
 
       <form onSubmit={handleSubmit}>
         <div className="card" style={{ marginBottom: "1.25rem" }}>
           <h3 style={{ marginBottom: "1.25rem", color: "var(--text-dim)" }}>
-            Informations générales
+            {t("sectionGeneral")}
           </h3>
           <div className="form-grid">
             <div className="form-group" style={{ gridColumn: "1 / -1" }}>
-              <label htmlFor="name">Nom *</label>
+              <label htmlFor="name">{t("labelNameShort")}</label>
               <input
                 id="name"
                 type="text"
@@ -668,14 +664,14 @@ export default function ModifierEvenement({ params }) {
                     height: "16px",
                   }}
                 />
-                <span>Événement spécial (horaires de départ prédéfinis)</span>
+                <span>{t("labelSpecial")}</span>
               </label>
             </div>
 
             {isSpecial && (
               <div className="form-group">
                 <label htmlFor="weekend_start_date">
-                  Date du weekend (vendredi) *
+                  {t("labelWeekendDate")}
                 </label>
                 <input
                   id="weekend_start_date"
@@ -690,15 +686,14 @@ export default function ModifierEvenement({ params }) {
                     marginTop: "0.4rem",
                   }}
                 >
-                  💡 La date doit être un vendredi — les horaires du samedi et
-                  dimanche sont générés automatiquement.
+                  {t("fridayHint")}
                 </p>
               </div>
             )}
             <div className="form-group">
-              <label htmlFor="format">Format</label>
+              <label htmlFor="format">{t("labelFormat")}</label>
               <select id="format" value={form.format} onChange={set("format")}>
-                <option value="">— Sélectionner —</option>
+                <option value="">{t("selectPlaceholder")}</option>
                 {eventTypes.map((f) => (
                   <option key={f} value={f}>
                     {f}
@@ -707,7 +702,7 @@ export default function ModifierEvenement({ params }) {
               </select>
             </div>
             <div className="form-group" style={{ gridColumn: "1 / -1" }}>
-              <label>Durée *</label>
+              <label>{t("labelDuration")}</label>
               <div
                 style={{
                   display: "flex",
@@ -740,7 +735,7 @@ export default function ModifierEvenement({ params }) {
                 }}
               >
                 <span style={{ fontSize: "0.8rem", color: "var(--text-dim)" }}>
-                  Autre :
+                  {t("durationOther")}
                 </span>
                 <input
                   type="number"
@@ -767,7 +762,7 @@ export default function ModifierEvenement({ params }) {
                     fontSize: "0.9rem",
                   }}
                 />
-                <span style={{ color: "var(--text-dim)" }}>h</span>
+                <span style={{ color: "var(--text-dim)" }}>{t("durationH")}</span>
                 <input
                   type="number"
                   min="0"
@@ -793,7 +788,7 @@ export default function ModifierEvenement({ params }) {
                     fontSize: "0.9rem",
                   }}
                 />
-                <span style={{ color: "var(--text-dim)" }}>min</span>
+                <span style={{ color: "var(--text-dim)" }}>{t("durationMin")}</span>
                 {!isPreset && form.duration_minutes > 0 && (
                   <span
                     style={{
@@ -809,7 +804,7 @@ export default function ModifierEvenement({ params }) {
               </div>
             </div>
             <div className="form-group">
-              <label htmlFor="timezone">Fuseau horaire</label>
+              <label htmlFor="timezone">{t("labelTimezone")}</label>
               <select
                 id="timezone"
                 value={form.timezone}
@@ -823,7 +818,7 @@ export default function ModifierEvenement({ params }) {
               </select>
             </div>
             <div className="form-group" style={{ gridColumn: "1 / -1" }}>
-              <label htmlFor="notes">Notes</label>
+              <label htmlFor="notes">{t("labelNotes")}</label>
               <textarea
                 id="notes"
                 value={form.notes}
@@ -836,11 +831,11 @@ export default function ModifierEvenement({ params }) {
 
         <div className="card" style={{ marginBottom: "1.25rem" }}>
           <h3 style={{ marginBottom: "1.25rem", color: "var(--text-dim)" }}>
-            Circuit
+            {t("sectionCircuit")}
           </h3>
           <div className="form-grid">
             <div className="form-group" style={{ gridColumn: "1 / -1" }}>
-              <label>Circuit *</label>
+              <label>{t("labelCircuit")}</label>
               <div
                 style={{
                   display: "flex",
@@ -857,14 +852,14 @@ export default function ModifierEvenement({ params }) {
                     setForm((prev) => ({ ...prev, circuit_id: "" }));
                   }}
                 >
-                  <option value="">— Sélectionner un circuit —</option>
+                  <option value="">{t("selectCircuit")}</option>
                   {circuitGroups.sorted.map(([baseName]) => (
                     <option key={baseName} value={baseName}>
                       {baseName}
                     </option>
                   ))}
                   {circuitGroups.unlinked.length > 0 && (
-                    <optgroup label="— Autres —">
+                    <optgroup label={t("circuitGroupOther")}>
                       {circuitGroups.unlinked.map((c) => (
                         <option key={c.id} value={`__direct__${c.id}`}>
                           {c.name}
@@ -898,7 +893,7 @@ export default function ModifierEvenement({ params }) {
                         value={form.circuit_id}
                         onChange={set("circuit_id")}
                       >
-                        <option value="">— Sélectionner un layout —</option>
+                        <option value="">{t("selectLayout")}</option>
                         {layouts.map((c) => (
                           <option key={c.id} value={c.id}>
                             {c.name}
@@ -927,7 +922,7 @@ export default function ModifierEvenement({ params }) {
 
         <div className="card" style={{ marginBottom: "1.25rem" }}>
           <h3 style={{ marginBottom: "0.5rem", color: "var(--text-dim)" }}>
-            Horaires in-game
+            {t("sectionIGTimes")}
           </h3>
           <p
             style={{
@@ -936,15 +931,14 @@ export default function ModifierEvenement({ params }) {
               marginBottom: "1.25rem",
             }}
           >
-            Les horaires IRL se gèrent depuis la page de l&apos;événement.
-            Heures en format 24h.
+            {t("startTimesEditHint")}
           </p>
           <div className="form-grid">
             {/* Offset between the scheduled IRL start time and the actual green flag.
                 Pre-fills the default strategy offset when a new strategy is created. */}
             <div className="form-group">
               <label htmlFor="green_flag_offset_minutes">
-                Décalage drapeau vert (min)
+                {t("labelGreenFlagOffset")}
               </label>
               <input
                 id="green_flag_offset_minutes"
@@ -963,13 +957,11 @@ export default function ModifierEvenement({ params }) {
                   marginTop: "0.4rem",
                 }}
               >
-                Minutes entre l&apos;heure officielle de départ et le drapeau
-                vert effectif. Utilisé comme décalage par défaut dans les
-                stratégies.
+                {t("greenFlagOffsetHintShort")}
               </p>
             </div>
             <div className="form-group">
-              <label htmlFor="ig_start_time">Heure de départ IG (HH:MM)</label>
+              <label htmlFor="ig_start_time">{t("labelIGStart")}</label>
               <input
                 id="ig_start_time"
                 type="time"
@@ -978,7 +970,7 @@ export default function ModifierEvenement({ params }) {
               />
             </div>
             <div className="form-group">
-              <label htmlFor="ig_sunrise">Lever de soleil IG (HH:MM)</label>
+              <label htmlFor="ig_sunrise">{t("labelIGSunrise")}</label>
               <input
                 id="ig_sunrise"
                 type="time"
@@ -987,7 +979,7 @@ export default function ModifierEvenement({ params }) {
               />
             </div>
             <div className="form-group">
-              <label htmlFor="ig_sunset">Coucher de soleil IG (HH:MM)</label>
+              <label htmlFor="ig_sunset">{t("labelIGSunset")}</label>
               <input
                 id="ig_sunset"
                 type="time"
@@ -1017,10 +1009,10 @@ export default function ModifierEvenement({ params }) {
               className="btn btn-primary"
               disabled={loading}
             >
-              {loading ? "Enregistrement…" : "✓ Enregistrer"}
+              {loading ? t("saving") : t("submitSave")}
             </button>
             <Link href={`/evenements/${id}`} className="btn btn-secondary">
-              Annuler
+              {t("cancel")}
             </Link>
           </div>
           <button
@@ -1028,7 +1020,7 @@ export default function ModifierEvenement({ params }) {
             className="btn btn-danger"
             onClick={handleDelete}
           >
-            Supprimer l&apos;événement
+            {t("deleteEventBtn")}
           </button>
         </div>
       </form>
@@ -1049,7 +1041,7 @@ export default function ModifierEvenement({ params }) {
             {!previewStep ? (
               /* ── Step 1: ask whether to regenerate ── */
               <>
-                <h3 style={{ marginBottom: "0.75rem" }}>Horaires de départ</h3>
+                <h3 style={{ marginBottom: "0.75rem" }}>{t("sectionRegenerate")}</h3>
                 <p
                   style={{
                     fontSize: "0.9rem",
@@ -1057,8 +1049,7 @@ export default function ModifierEvenement({ params }) {
                     marginBottom: "1.5rem",
                   }}
                 >
-                  Souhaitez-vous régénérer les horaires de départ à partir des
-                  horaires prédéfinis ? Les horaires existants seront supprimés.
+                  {t("regenerateQuestion")}
                 </p>
                 <div
                   style={{
@@ -1072,7 +1063,7 @@ export default function ModifierEvenement({ params }) {
                     className="btn btn-primary"
                     disabled={loading}
                   >
-                    {loading ? "Analyse en cours…" : "Régénérer les horaires"}
+                    {loading ? t("regenerateAnalyzing") : t("regenerateBtn")}
                   </button>
                   <button
                     onClick={() => {
@@ -1083,7 +1074,7 @@ export default function ModifierEvenement({ params }) {
                     }}
                     className="btn btn-secondary"
                   >
-                    Enregistrer sans régénérer
+                    {t("saveWithoutRegenerate")}
                   </button>
                   <button
                     onClick={() => {
@@ -1092,7 +1083,7 @@ export default function ModifierEvenement({ params }) {
                     }}
                     className="btn btn-danger btn-sm"
                   >
-                    Annuler
+                    {t("cancelRegenerate")}
                   </button>
                 </div>
               </>
@@ -1100,7 +1091,7 @@ export default function ModifierEvenement({ params }) {
               /* ── Step 2: preview losses, ask for confirmation ── */
               <>
                 <h3 style={{ marginBottom: "0.75rem" }}>
-                  Confirmer la régénération
+                  {t("confirmRegenerateTitle")}
                 </h3>
 
                 {previewLosses.length === 0 &&
@@ -1112,8 +1103,7 @@ export default function ModifierEvenement({ params }) {
                       marginBottom: "1.5rem",
                     }}
                   >
-                    ✅ Aucune préférence d&apos;horaire ne sera perdue — tous les
-                    créneaux existants correspondent aux nouveaux horaires.
+                    {t("regenerateNoLoss")}
                   </p>
                 ) : (
                   /* Some drivers will lose their preferred start times */
@@ -1126,13 +1116,7 @@ export default function ModifierEvenement({ params }) {
                       }}
                     >
                       ⚠️{" "}
-                      <strong style={{ color: "var(--text)" }}>
-                        {previewLosses.length} pilote
-                        {previewLosses.length > 1 ? "s" : ""}
-                      </strong>{" "}
-                      {previewLosses.length > 1 ? "perdront" : "perdra"} leur
-                      préférence d&apos;horaire car leur créneau n&apos;existe plus dans
-                      les nouveaux horaires :
+                      {t("regenerateDriverLoss", { count: previewLosses.length })}
                     </p>
                     <ul
                       style={{
@@ -1156,8 +1140,7 @@ export default function ModifierEvenement({ params }) {
                         marginTop: "0.75rem",
                       }}
                     >
-                      Ces pilotes devront re-sélectionner leur horaire préféré
-                      lors de leur prochaine inscription.
+                      {t("regenerateDriverWarning")}
                     </p>
                   </div>
                 )}
@@ -1172,13 +1155,7 @@ export default function ModifierEvenement({ params }) {
                       }}
                     >
                       ⚠️{" "}
-                      <strong style={{ color: "var(--text)" }}>
-                        {previewTeamLosses.length} équipage
-                        {previewTeamLosses.length > 1 ? "s" : ""}
-                      </strong>{" "}
-                      {previewTeamLosses.length > 1 ? "perdront" : "perdra"}{" "}
-                      leur créneau de départ assigné car il n&apos;existe plus dans
-                      les nouveaux horaires :
+                      {t("regenerateEntryLoss", { count: previewTeamLosses.length })}
                     </p>
                     <ul
                       style={{
@@ -1202,8 +1179,7 @@ export default function ModifierEvenement({ params }) {
                         marginTop: "0.75rem",
                       }}
                     >
-                      Ces équipages devront être réassignés à un nouveau créneau
-                      de départ.
+                      {t("regenerateEntryWarning")}
                     </p>
                   </div>
                 )}
@@ -1220,7 +1196,7 @@ export default function ModifierEvenement({ params }) {
                     className="btn btn-primary"
                     disabled={loading}
                   >
-                    {loading ? "Régénération…" : "✓ Confirmer la régénération"}
+                    {loading ? t("regenerateSaving") : t("regenerateConfirm")}
                   </button>
                   <button
                     onClick={() => {
@@ -1228,7 +1204,7 @@ export default function ModifierEvenement({ params }) {
                     }}
                     className="btn btn-secondary"
                   >
-                    ← Retour
+                    {t("back")}
                   </button>
                 </div>
               </>

@@ -95,7 +95,10 @@ export function FreeSubscriptionBadge() {
 
 // Render above any inventory table to explain badge meanings.
 // Uses compact badges so the legend itself is compact.
+import { useTranslations } from "next-intl";
+
 export function BadgeLegend() {
+  const t = useTranslations("inventoryBadges");
   return (
     <div
       style={{
@@ -119,18 +122,18 @@ export function BadgeLegend() {
           textTransform: "uppercase",
         }}
       >
-        Légende
+        {t("legendTitle")}
       </span>
       <span style={{ display: "flex", alignItems: "center", gap: "0.4rem" }}>
         <KBadge />
         <span style={{ fontSize: "0.75rem", color: "var(--text-dim)" }}>
-          Kronos
+          {t("kronosLabel")}
         </span>
       </span>
       <span style={{ display: "flex", alignItems: "center", gap: "0.4rem" }}>
         <FreeBadge />
         <span style={{ fontSize: "0.75rem", color: "var(--text-dim)" }}>
-          Inclus abonnement iRacing
+          {t("freeLabel")}
         </span>
       </span>
     </div>

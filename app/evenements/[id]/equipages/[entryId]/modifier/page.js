@@ -4,8 +4,10 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { supabaseBrowser as supabase } from "../../../../../../lib/supabase-browser";
 import { formatTimeInZone } from "../../../../../../lib/timezone";
+import { useTranslations } from "next-intl";
 
 function ConfirmModal({ modal, onConfirm, onCancel }) {
+  const t = useTranslations("entryForm");
   if (!modal) return null;
   return (
     <div
@@ -35,10 +37,10 @@ function ConfirmModal({ modal, onConfirm, onCancel }) {
           style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}
         >
           <button onClick={onConfirm} className="btn btn-danger">
-            {modal.confirmLabel || "Confirmer"}
+            {modal.confirmLabel || t("confirm")}
           </button>
           <button onClick={onCancel} className="btn btn-secondary">
-            Annuler
+            {t("cancel")}
           </button>
         </div>
       </div>
@@ -54,6 +56,7 @@ function extractTwitchUsername(url) {
 }
 
 export default function ModifierEquipage({ params }) {
+  const t = useTranslations("entryForm");
   const [eventTimezone, setEventTimezone] = useState("Europe/Paris");
   const router = useRouter();
   const { id, entryId } = use(params);
@@ -110,7 +113,7 @@ export default function ModifierEquipage({ params }) {
         { data: crewData },
       ]) => {
         if (entryError || !entry) {
-          setError("Voiture introuvable.");
+          setError(t("notFound"));
           setFetching(false);
           return;
         }
@@ -236,15 +239,15 @@ export default function ModifierEquipage({ params }) {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!form.crew_name) {
-      setError("Le nom d'équipage est obligatoire.");
+      setError(t("errorCrewName"));
       return;
     }
     if (!form.class) {
-      setError("La classe est obligatoire.");
+      setError(t("errorClass"));
       return;
     }
     if (!form.start_time_id) {
-      setError("L'horaire de départ est obligatoire.");
+      setError(t("errorStartTime"));
       return;
     }
 
@@ -264,7 +267,10 @@ export default function ModifierEquipage({ params }) {
         .maybeSingle();
       if (existing) {
         setError(
-          `Le numéro #${form.car_number} est déjà utilisé par ${existing.crew_name} pour ce créneau de départ.`,
+          t("errorCarNumberDuplicateNamed", {
+            number: form.car_number,
+            name: existing.crew_name,
+          }),
         );
         setLoading(false);
         return;
@@ -301,8 +307,8 @@ export default function ModifierEquipage({ params }) {
       setError(
         err.code === "23505"
           ? err.message.includes("car_number")
-            ? `Le numéro de course est déjà utilisé par un autre équipage pour ce créneau de départ.`
-            : "Cet équipage est déjà inscrit pour ce créneau de départ."
+            ? t("errorDuplicateNumber")
+            : t("errorDuplicateSlot")
           : err.message,
       );
       setLoading(false);
@@ -314,10 +320,9 @@ export default function ModifierEquipage({ params }) {
 
   const handleDelete = () => {
     setConfirmModal({
-      title: "Supprimer l'équipage",
-      message:
-        "Supprimer cet équipage ? Toutes les données associées (relais, disponibilités) seront supprimées.",
-      confirmLabel: "Supprimer",
+      title: t("deleteTitle"),
+      message: t("deleteMsg"),
+      confirmLabel: t("deleteConfirm"),
       onConfirm: async () => {
         setConfirmModal(null);
 
@@ -350,7 +355,7 @@ export default function ModifierEquipage({ params }) {
   if (fetching)
     return (
       <div className="page">
-        <p style={{ color: "var(--text-dim)" }}>Chargement…</p>
+        <p style={{ color: "var(--text-dim)" }}>{t("loading")}</p>
       </div>
     );
   if (!form)
@@ -358,7 +363,7 @@ export default function ModifierEquipage({ params }) {
       <div className="page">
         <div className="alert alert-error">{error}</div>
         <Link href={`/evenements/${id}`} className="btn btn-secondary">
-          ← Retour
+          {t("back")}
         </Link>
       </div>
     );
@@ -372,14 +377,14 @@ export default function ModifierEquipage({ params }) {
       />
       <div className="page-header">
         <div>
-          <h1>Modifier l&apos;équipage</h1>
+          <h1>{t("titleEdit")}</h1>
           <div className="accent-line" />
         </div>
         <Link
           href={`/evenements/${id}/equipages/${entryId}`}
           className="btn btn-secondary"
         >
-          ← Retour
+          {t("back")}
         </Link>
       </div>
 
@@ -387,18 +392,18 @@ export default function ModifierEquipage({ params }) {
         {/* ── Équipage & voiture ── */}
         <div className="card" style={{ marginBottom: "1.25rem" }}>
           <h3 style={{ marginBottom: "1.25rem", color: "var(--text-dim)" }}>
-            Équipage &amp; voiture
+            {t("sectionEntryInfo")}
           </h3>
           <div className="form-grid">
             <div className="form-group">
-              <label htmlFor="crew_name">Nom d&apos;équipage *</label>
+              <label htmlFor="crew_name">{t("labelCrewName")}</label>
               <select
                 id="crew_name"
                 value={form.crew_name}
                 onChange={set("crew_name")}
                 required
               >
-                <option value="">— Sélectionner —</option>
+                <option value="">{t("selectPlaceholder")}</option>
                 {crewNames.map((n) => (
                   <option key={n} value={n}>
                     {n}
@@ -408,9 +413,9 @@ export default function ModifierEquipage({ params }) {
             </div>
 
             <div className="form-group">
-              <label htmlFor="car_id">Voiture *</label>
+              <label htmlFor="car_id">{t("labelCar")}</label>
               <select id="car_id" value={form.car_id} onChange={set("car_id")}>
-                <option value="">— Sélectionner —</option>
+                <option value="">{t("selectPlaceholder")}</option>
                 {Object.entries(carsByClass).map(([cls, carsInClass]) => (
                   <optgroup key={cls} label={cls}>
                     {carsInClass.map((c) => (
@@ -425,7 +430,7 @@ export default function ModifierEquipage({ params }) {
 
             {selectedCar && (
               <div className="form-group">
-                <label>Réservoir (auto-rempli)</label>
+                <label>{t("labelTank")}</label>
                 <div
                   style={{
                     background: "var(--surface-2)",
@@ -443,7 +448,7 @@ export default function ModifierEquipage({ params }) {
             )}
 
             <div className="form-group">
-              <label htmlFor="class">Classe *</label>
+              <label htmlFor="class">{t("labelClass")}</label>
               {selectedCar ? (
                 <div
                   style={{
@@ -465,7 +470,7 @@ export default function ModifierEquipage({ params }) {
                   onChange={set("class")}
                   required
                 >
-                  <option value="">— Sélectionner —</option>
+                  <option value="">{t("selectPlaceholder")}</option>
                   {availableClasses.map((c) => (
                     <option key={c} value={c}>
                       {c}
@@ -477,7 +482,7 @@ export default function ModifierEquipage({ params }) {
             {/* ── Numéro de course — only shown for championship events ── */}
             {isChampionship && (
               <div className="form-group">
-                <label htmlFor="car_number">Numéro de course</label>
+                <label htmlFor="car_number">{t("labelCarNumber")}</label>
                 <input
                   id="car_number"
                   type="number"
@@ -485,7 +490,7 @@ export default function ModifierEquipage({ params }) {
                   max={999}
                   value={form.car_number}
                   onChange={set("car_number")}
-                  placeholder="—"
+                  placeholder={t("placeholderCarNumber")}
                 />
               </div>
             )}
@@ -495,11 +500,11 @@ export default function ModifierEquipage({ params }) {
         {/* ── Horaire de départ ── */}
         <div className="card" style={{ marginBottom: "1.25rem" }}>
           <h3 style={{ marginBottom: "1.25rem", color: "var(--text-dim)" }}>
-            Horaire de départ *
+            {t("labelStartTime")}
           </h3>
           {startTimes.length === 0 ? (
             <p style={{ color: "var(--text-dim)", fontSize: "0.9rem" }}>
-              Aucun créneau disponible.
+              {t("noStartSlotsShort")}
             </p>
           ) : (
             <div
@@ -551,7 +556,7 @@ export default function ModifierEquipage({ params }) {
                         marginTop: "0.1rem",
                       }}
                     >
-                      Départ à {formatTimeInZone(st.irl_start, eventTimezone)}
+                      {t("startAt")} {formatTimeInZone(st.irl_start, eventTimezone)}
                     </div>
                   </div>
                 </label>
@@ -563,7 +568,7 @@ export default function ModifierEquipage({ params }) {
         {/* ── Twitch streams ── */}
         <div className="card" style={{ marginBottom: "1.25rem" }}>
           <h3 style={{ marginBottom: "1.25rem", color: "var(--text-dim)" }}>
-            Streams Twitch
+            {t("sectionStreams")}
           </h3>
           {/* Added streams as removable pills */}
           {twitchUsernames.length > 0 && (
@@ -692,7 +697,7 @@ export default function ModifierEquipage({ params }) {
                     addTwitchUsername(twitchInput);
                   }
                 }}
-                placeholder="nom_de_chaine"
+                placeholder={t("streamPlaceholder")}
                 style={{
                   flex: 1,
                   background: "var(--surface-2)",
@@ -714,7 +719,7 @@ export default function ModifierEquipage({ params }) {
               className="btn btn-secondary"
               style={{ whiteSpace: "nowrap" }}
             >
-              + Ajouter
+              {t("addStream")}
             </button>
           </div>
         </div>
@@ -722,11 +727,11 @@ export default function ModifierEquipage({ params }) {
         {/* ── Paramètres stratégie ── */}
         <div className="card" style={{ marginBottom: "1.25rem" }}>
           <h3 style={{ marginBottom: "1.25rem", color: "var(--text-dim)" }}>
-            Paramètres stratégie
+            {t("sectionStrategy")}
           </h3>
           <div className="form-grid">
             <div className="form-group">
-              <label htmlFor="bop_power_percent">BOP Puissance (%)</label>
+              <label htmlFor="bop_power_percent">{t("labelBopPower")}</label>
               <input
                 id="bop_power_percent"
                 type="number"
@@ -738,7 +743,7 @@ export default function ModifierEquipage({ params }) {
               />
             </div>
             <div className="form-group">
-              <label htmlFor="bop_weight_kg">BOP Poids (kg)</label>
+              <label htmlFor="bop_weight_kg">{t("labelBopWeight")}</label>
               <input
                 id="bop_weight_kg"
                 type="number"
@@ -750,7 +755,7 @@ export default function ModifierEquipage({ params }) {
               />
             </div>
             <div className="form-group">
-              <label htmlFor="bop_tank_size_percent">BOP Réservoir (%)</label>
+              <label htmlFor="bop_tank_size_percent">{t("labelBopTank")}</label>
               <input
                 id="bop_tank_size_percent"
                 type="number"
@@ -763,9 +768,7 @@ export default function ModifierEquipage({ params }) {
               />
             </div>
             <div className="form-group">
-              <label htmlFor="refuel_time_seconds">
-                Temps ravitaillement (sec)
-              </label>
+              <label htmlFor="refuel_time_seconds">{t("labelRefuelTime")}</label>
               <input
                 id="refuel_time_seconds"
                 type="number"
@@ -776,9 +779,7 @@ export default function ModifierEquipage({ params }) {
               />
             </div>
             <div className="form-group">
-              <label htmlFor="tyre_change_time_seconds">
-                Temps changement pneus (sec)
-              </label>
+              <label htmlFor="tyre_change_time_seconds">{t("labelTyreTime")}</label>
               <input
                 id="tyre_change_time_seconds"
                 type="number"
@@ -810,13 +811,13 @@ export default function ModifierEquipage({ params }) {
               className="btn btn-primary"
               disabled={loading}
             >
-              {loading ? "Enregistrement…" : "✓ Enregistrer"}
+              {loading ? t("saving") : t("submitSave")}
             </button>
             <Link
               href={`/evenements/${id}/equipages/${entryId}`}
               className="btn btn-secondary"
             >
-              Annuler
+              {t("cancel")}
             </Link>
           </div>
           {currentIsAdmin && (
@@ -825,7 +826,7 @@ export default function ModifierEquipage({ params }) {
               className="btn btn-danger"
               onClick={handleDelete}
             >
-              Supprimer l&apos;équipage
+              {t("deleteBtn")}
             </button>
           )}
         </div>

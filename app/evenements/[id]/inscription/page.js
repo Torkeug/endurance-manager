@@ -5,8 +5,10 @@ import Link from "next/link";
 import { supabaseBrowser as supabase } from "../../../../lib/supabase-browser";
 import { formatTimeInZone } from "../../../../lib/timezone";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 
 function ConfirmModal({ modal, onConfirm, onCancel }) {
+  const t = useTranslations("inscription");
   if (!modal) return null;
   return (
     <div
@@ -36,10 +38,10 @@ function ConfirmModal({ modal, onConfirm, onCancel }) {
           style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}
         >
           <button onClick={onConfirm} className="btn btn-danger">
-            {modal.confirmLabel || "Confirmer"}
+            {modal.confirmLabel || t("confirm")}
           </button>
           <button onClick={onCancel} className="btn btn-secondary">
-            Annuler
+            {t("cancel")}
           </button>
         </div>
       </div>
@@ -144,6 +146,7 @@ function SignupForm({
   onDelete,
   readOnly = false, // when true: all inputs disabled, only a "Fermer" button shown
 }) {
+  const t = useTranslations("inscription");
   const [preferredClasses, setPreferredClasses] = useState(
     signup?.preferred_class || [],
   );
@@ -197,7 +200,10 @@ function SignupForm({
     if (classConflict) {
       conflicts.push({
         hard: true,
-        message: `La classe de cette équipe (${entryClass}) ne correspond pas à vos préférences (${preferredClasses.join(", ")}).`,
+        message: t("classMismatch", {
+          entryClass,
+          preferred: preferredClasses.join(", "),
+        }),
       });
     }
 
@@ -214,7 +220,11 @@ function SignupForm({
         .join(", ");
       conflicts.push({
         hard: false,
-        message: `La voiture de cette équipe (${entryCarName}) ne correspond pas à vos préférences (${prefCarNames}). La classe correspond (${entryClass}).`,
+        message: t("carMismatch", {
+          entryCar: entryCarName,
+          preferred: prefCarNames,
+          entryClass,
+        }),
       });
     }
 
@@ -246,7 +256,7 @@ function SignupForm({
     }
     if (err) {
       if (err.code === "23505") {
-        setError("Vous êtes déjà inscrit pour cette équipe.");
+        setError(t("alreadySignedUp"));
       } else {
         setError(err.message);
       }
@@ -263,9 +273,9 @@ function SignupForm({
       return;
     }
     setConfirmModal({
-      title: "Se désinscrire",
-      message: "Cette inscription sera supprimée définitivement.",
-      confirmLabel: "Se désinscrire",
+      title: t("unsubscribeTitle"),
+      message: t("unsubscribeMsg"),
+      confirmLabel: t("unsubscribeConfirm"),
       onConfirm: async () => {
         setConfirmModal(null);
         const { error: err } = await supabase
@@ -300,7 +310,7 @@ function SignupForm({
       {startTimes.length > 0 && (
         <div className="card" style={{ marginBottom: "1.25rem" }}>
           <h3 style={{ marginBottom: "1rem", color: "var(--text-dim)" }}>
-            Créneaux de départ préférés
+            {t("sectionStartTimes")}
           </h3>
           <p
             style={{
@@ -309,7 +319,7 @@ function SignupForm({
               marginBottom: "1rem",
             }}
           >
-            Optionnel — cochez les créneaux auxquels vous souhaitez participer.
+            {t("startTimesNote")}
           </p>
           <div
             style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}
@@ -350,7 +360,7 @@ function SignupForm({
                       marginTop: "0.1rem",
                     }}
                   >
-                    Départ à {formatTimeInZone(st.irl_start, eventTimezone)}
+                    {t("startAt")} {formatTimeInZone(st.irl_start, eventTimezone)}
                   </div>
                 </div>
               </label>
@@ -362,7 +372,7 @@ function SignupForm({
       {/* Team */}
       <div className="card" style={{ marginBottom: "1.25rem" }}>
         <h3 style={{ marginBottom: "0.5rem", color: "var(--text-dim)" }}>
-          Équipe
+          {t("sectionTeam")}
         </h3>
         <p
           style={{
@@ -371,11 +381,11 @@ function SignupForm({
             marginBottom: "1.25rem",
           }}
         >
-          Optionnel — sélectionnez l&apos;équipe que vous souhaitez rejoindre.
+          {t("teamNote")}
         </p>
         {carEntries.length === 0 ? (
           <p style={{ color: "var(--text-dim)", fontSize: "0.9rem" }}>
-            Aucune équipe engagée pour cet événement.
+            {t("noTeams")}
           </p>
         ) : (
           <>
@@ -414,7 +424,7 @@ function SignupForm({
                   style={{ accentColor: "var(--accent)" }}
                 />
                 <span style={{ color: "var(--text-dim)", fontSize: "0.9rem" }}>
-                  Pas de préférence
+                  {t("noPreference")}
                 </span>
               </label>
               {carEntries.map((entry) => {
@@ -467,7 +477,7 @@ function SignupForm({
                             marginTop: "0.15rem",
                           }}
                         >
-                          {st.label} · Départ à{" "}
+                          {st.label} · {t("startAt")}{" "}
                           {formatTimeInZone(st.irl_start, eventTimezone)}
                         </div>
                       )}
@@ -486,7 +496,7 @@ function SignupForm({
       {/* Preferred classes */}
       <div className="card" style={{ marginBottom: "1.25rem" }}>
         <h3 style={{ marginBottom: "0.5rem", color: "var(--text-dim)" }}>
-          Classes préférées
+          {t("sectionClasses")}
         </h3>
         <p
           style={{
@@ -495,7 +505,7 @@ function SignupForm({
             marginBottom: "1.25rem",
           }}
         >
-          Optionnel — sélectionnez une ou plusieurs classes.
+          {t("classesNote")}
         </p>
         <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem" }}>
           {[...new Set(cars.map((c) => c.class))]
@@ -515,7 +525,7 @@ function SignupForm({
       {/* Preferred cars */}
       <div className="card" style={{ marginBottom: "1.25rem" }}>
         <h3 style={{ marginBottom: "0.5rem", color: "var(--text-dim)" }}>
-          Voitures préférées
+          {t("sectionCars")}
         </h3>
         <p
           style={{
@@ -524,11 +534,11 @@ function SignupForm({
             marginBottom: "1.25rem",
           }}
         >
-          Optionnel — sélectionnez une ou plusieurs voitures spécifiques.
+          {t("carsNote")}
         </p>
         {Object.keys(carsByClass).length === 0 ? (
           <p style={{ color: "var(--text-dim)", fontSize: "0.85rem" }}>
-            Aucune voiture disponible.
+            {t("noCars")}
           </p>
         ) : (
           <div
@@ -570,10 +580,10 @@ function SignupForm({
       {availableTags.length > 0 && (
         <div className="card" style={{ marginBottom: "1.25rem" }}>
           <h3 style={{ marginBottom: "0.5rem", color: "var(--text-dim)" }}>
-            Tags
+            {t("sectionTags")}
           </h3>
           <p style={{ fontSize: "0.8rem", color: "var(--text-dim)", marginBottom: "1rem" }}>
-            Optionnel — sélectionnez un ou plusieurs tags pour décrire votre profil de pilote.
+            {t("tagsNote")}
           </p>
           <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem" }}>
             {availableTags.map((tag) => {
@@ -612,7 +622,7 @@ function SignupForm({
       {/* Read-only mode (external drivers): only show a close button */}
       {readOnly ? (
         <button type="button" className="btn btn-secondary" onClick={onCancel}>
-          Fermer
+          {t("close")}
         </button>
       ) : (
         <div
@@ -630,17 +640,17 @@ function SignupForm({
               disabled={loading}
             >
               {loading
-                ? "Enregistrement…"
+                ? t("saving")
                 : signup?.id
-                  ? "✓ Mettre à jour"
-                  : "✓ S'inscrire"}
+                  ? t("updateBtn")
+                  : t("signupBtn")}
             </button>
             <button
               type="button"
               className="btn btn-secondary"
               onClick={onCancel}
             >
-              Annuler
+              {t("cancel")}
             </button>
           </div>
           {signup?.id && (
@@ -649,7 +659,7 @@ function SignupForm({
               className="btn btn-danger"
               onClick={handleDelete}
             >
-              Se désinscrire
+              {t("unsubscribeBtn")}
             </button>
           )}
         </div>
@@ -659,6 +669,7 @@ function SignupForm({
 }
 
 function InscriptionPage({ params }) {
+  const t = useTranslations("inscription");
   const searchParams = useSearchParams();
   const { id } = use(params);
   const router = useRouter();
@@ -673,7 +684,6 @@ function InscriptionPage({ params }) {
   const [driverId, setDriverId] = useState("");
   const [existingSignups, setExistingSignups] = useState([]);
   const [editingSignup, setEditingSignup] = useState(null);
-  const [error, setError] = useState(null);
   const [currentUserRole, setCurrentUserRole] = useState(null);
   const [currentUserId, setCurrentUserId] = useState(null);
   const isExternal = currentUserRole === "external";
@@ -831,7 +841,7 @@ function InscriptionPage({ params }) {
   if (fetching)
     return (
       <div className="page">
-        <p style={{ color: "var(--text-dim)" }}>Chargement…</p>
+        <p style={{ color: "var(--text-dim)" }}>{t("loading")}</p>
       </div>
     );
 
@@ -839,7 +849,7 @@ function InscriptionPage({ params }) {
     <div className="page">
       <div className="page-header">
         <div>
-          <h1>Inscription</h1>
+          <h1>{t("pageTitle")}</h1>
           <div className="accent-line" />
           {eventName && (
             <div
@@ -854,7 +864,7 @@ function InscriptionPage({ params }) {
           )}
         </div>
         <Link href={`/evenements/${id}`} className="btn btn-secondary">
-          ← Retour
+          {t("back")}
         </Link>
       </div>
 
@@ -862,10 +872,10 @@ function InscriptionPage({ params }) {
       {currentUserRole !== null && !isExternal && (
         <div className="card" style={{ marginBottom: "1.25rem" }}>
           <h3 style={{ marginBottom: "1.25rem", color: "var(--text-dim)" }}>
-            Qui êtes-vous ?
+            {t("sectionWho")}
           </h3>
           <div className="form-group">
-            <label htmlFor="driver_id">Votre nom *</label>
+            <label htmlFor="driver_id">{t("labelName")}</label>
             <select
               id="driver_id"
               value={driverId}
@@ -874,7 +884,7 @@ function InscriptionPage({ params }) {
                 setEditingSignup(null);
               }}
             >
-              <option value="">— Sélectionnez votre nom —</option>
+              <option value="">{t("selectName")}</option>
               {drivers
                 // Admins see everyone
                 // Non-admins see non-external drivers + themselves (in case they are external)
@@ -905,7 +915,7 @@ function InscriptionPage({ params }) {
                 marginBottom: "1rem",
               }}
             >
-              Vous pouvez vous inscrire pour plusieurs équipes séparément.
+              {t("multipleNote")}
             </p>
           )}
 
@@ -913,7 +923,7 @@ function InscriptionPage({ params }) {
           {existingSignups.length > 0 && (
             <div style={{ marginBottom: "1.25rem" }}>
               <h3 style={{ marginBottom: "0.75rem" }}>
-                Inscriptions existantes
+                {t("existingTitle")}
               </h3>
               <div
                 style={{
@@ -932,8 +942,8 @@ function InscriptionPage({ params }) {
                             color: "var(--text-dim)",
                           }}
                         >
-                          {isExternal ? "Voir — " : "Modifier — "}
-                          {signup.team_entries?.crew_name || "Sans équipe"}
+                          {isExternal ? t("viewPrefix") : t("editPrefix")}
+                          {signup.team_entries?.crew_name || t("noTeam")}
                         </h3>
                         <SignupForm
                           signup={signup}
@@ -964,7 +974,7 @@ function InscriptionPage({ params }) {
                         <div>
                           <div style={{ fontWeight: 600 }}>
                             {signup.team_entries?.crew_name ||
-                              "Sans équipe assignée"}
+                              t("noTeam")}
                           </div>
                           {(() => {
                             const entry = carEntries.find(
@@ -985,7 +995,7 @@ function InscriptionPage({ params }) {
                                     marginTop: "0.15rem",
                                   }}
                                 >
-                                  {st.label} · Départ à{" "}
+                                  {st.label} · {t("startAt")}{" "}
                                   {formatTimeInZone(
                                     st.irl_start,
                                     eventTimezone,
@@ -1011,7 +1021,7 @@ function InscriptionPage({ params }) {
                                       color: "var(--accent)",
                                     }}
                                   >
-                                    {s.label} · Départ à{" "}
+                                    {s.label} · {t("startAt")}{" "}
                                     {formatTimeInZone(
                                       s.irl_start,
                                       eventTimezone,
@@ -1040,14 +1050,14 @@ function InscriptionPage({ params }) {
                             onClick={() => setEditingSignup(signup)}
                             className="btn btn-secondary btn-sm"
                           >
-                            Voir
+                            {t("viewBtn")}
                           </button>
                         ) : (
                           <button
                             onClick={() => setEditingSignup(signup)}
                             className="btn btn-secondary btn-sm"
                           >
-                            Modifier
+                            {t("editBtn")}
                           </button>
                         )}
                       </div>
@@ -1062,7 +1072,7 @@ function InscriptionPage({ params }) {
           {!isExternal && editingSignup === "new" ? (
             <div className="card" style={{ marginBottom: "1.25rem" }}>
               <h3 style={{ marginBottom: "1rem", color: "var(--text-dim)" }}>
-                Nouvelle inscription
+                {t("newSignupTitle")}
               </h3>
               <SignupForm
                 signup={null}
@@ -1087,8 +1097,8 @@ function InscriptionPage({ params }) {
               >
                 +{" "}
                 {existingSignups.length > 0
-                  ? "S'inscrire pour une autre équipe"
-                  : "S'inscrire"}
+                  ? t("anotherTeamBtn")
+                  : t("signupBtn")}
               </button>
             )
           )}
