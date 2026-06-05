@@ -5,7 +5,7 @@ import Link from "next/link";
 import { supabaseBrowser as supabase } from "../../../lib/supabase-browser";
 import { TIMEZONES, localToUTC } from "../../../lib/timezone";
 import { DateTime } from "luxon";
-import { useTranslations } from "next-intl";
+import { useTranslations, useLocale } from "next-intl";
 
 function formatDuration(minutes) {
   const h = Math.floor(minutes / 60);
@@ -52,6 +52,7 @@ const emptyForm = {
 
 export default function NouvelEvenement() {
   const t = useTranslations("eventForm");
+  const locale = useLocale();
   const router = useRouter();
   const [form, setForm] = useState(emptyForm);
   const [circuits, setCircuits] = useState([]);
@@ -324,7 +325,7 @@ export default function NouvelEvenement() {
         });
         return {
           event_id: data.id,
-          label: dt.setLocale("fr").toFormat("EEEE d MMMM yyyy").replace(/^\w/, (c) => c.toUpperCase()),
+          label: dt.setLocale(locale).toFormat("EEEE d MMMM yyyy").replace(/^\w/, (c) => c.toUpperCase()),
           irl_start: dt.toUTC().toISO(),
         };
       });

@@ -3,11 +3,11 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabaseBrowser as supabase } from "../../lib/supabase-browser";
 import React from "react";
+import { useLocale } from "next-intl";
 
 // Fixed sort order for days of the week — used to sort special start times
 // chronologically across the weekend (friday → saturday → sunday)
 const DAY_ORDER = { friday: 0, saturday: 1, sunday: 2 };
-const DAY_LABELS = { friday: "Vendredi", saturday: "Samedi", sunday: "Dimanche" };
 
 function formatDuration(minutes) {
   if (!minutes) return "—";
@@ -63,6 +63,14 @@ export default function SettingsManager({
   initialSpecialStartTimes,
   initialSignupTags,
 }) {
+  const locale = useLocale();
+  const _fmt = new Intl.DateTimeFormat(locale, { weekday: "long" });
+  const _cap = (s) => s.charAt(0).toUpperCase() + s.slice(1);
+  const DAY_LABELS = {
+    friday: _cap(_fmt.format(new Date(2024, 0, 5))),
+    saturday: _cap(_fmt.format(new Date(2024, 0, 6))),
+    sunday: _cap(_fmt.format(new Date(2024, 0, 7))),
+  };
   const router = useRouter();
   const [presets, setPresets] = useState(initialPresets || []);
   const [saving, setSaving] = useState(null);
@@ -579,9 +587,9 @@ export default function SettingsManager({
                   fontSize: "0.9rem",
                 }}
               >
-                <option value="friday">Vendredi</option>
-                <option value="saturday">Samedi</option>
-                <option value="sunday">Dimanche</option>
+                <option value="friday">{DAY_LABELS.friday}</option>
+                <option value="saturday">{DAY_LABELS.saturday}</option>
+                <option value="sunday">{DAY_LABELS.sunday}</option>
               </select>
               <span style={{ color: "var(--text-dim)" }}>à</span>
               <input
@@ -741,9 +749,9 @@ export default function SettingsManager({
                                   fontSize: "0.9rem",
                                 }}
                               >
-                                <option value="friday">Vendredi</option>
-                                <option value="saturday">Samedi</option>
-                                <option value="sunday">Dimanche</option>
+                                <option value="friday">{DAY_LABELS.friday}</option>
+                                <option value="saturday">{DAY_LABELS.saturday}</option>
+                                <option value="sunday">{DAY_LABELS.sunday}</option>
                               </select>
                               <span style={{ color: "var(--text-dim)" }}>
                                 à

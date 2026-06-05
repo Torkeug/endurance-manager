@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { supabaseBrowser as supabase } from "../../../../lib/supabase-browser";
 import { TIMEZONES } from "../../../../lib/timezone";
-import { useTranslations } from "next-intl";
+import { useTranslations, useLocale } from "next-intl";
 
 function ConfirmModal({ modal, onConfirm, onCancel }) {
   const t = useTranslations("eventForm");
@@ -68,6 +68,7 @@ function isValidTime(str) {
 
 export default function ModifierEvenement({ params }) {
   const t = useTranslations("eventForm");
+  const locale = useLocale();
   const router = useRouter();
   const { id } = use(params);
   const [eventTypes, setEventTypes] = useState([]);
@@ -451,7 +452,7 @@ export default function ModifierEvenement({ params }) {
           .set({ hour: st.hour, minute: st.minute, second: 0, millisecond: 0 });
         return {
           event_id: id,
-          label: dt.setLocale("fr").toFormat("EEEE d MMMM yyyy").replace(/^\w/, (c) => c.toUpperCase()),
+          label: dt.setLocale(locale).toFormat("EEEE d MMMM yyyy").replace(/^\w/, (c) => c.toUpperCase()),
           irl_start: dt.toUTC().toISO(),
         };
       });
