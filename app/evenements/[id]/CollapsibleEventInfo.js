@@ -1,14 +1,13 @@
 "use client";
 import { useState, useEffect } from "react";
 import ReactMarkdown from "react-markdown";
-import { useTranslations } from "next-intl";
+import { useTranslations, useLocale } from "next-intl";
 import remarkGfm from "remark-gfm";
 import remarkBreaks from "remark-breaks";
 
-function resolveDiscordTimestamps(text) {
+function resolveDiscordTimestamps(text, locale) {
   return text.replace(/<t:(\d+):([tTdDfFR])>/g, (match, ts, format) => {
     const date = new Date(parseInt(ts, 10) * 1000);
-    const locale = "fr-FR";
     switch (format) {
       case "t":
         return date.toLocaleTimeString(locale, { hour: "2-digit", minute: "2-digit" });
@@ -88,6 +87,7 @@ const markdownComponents = {
 // Collapse state is persisted per event in localStorage.
 export default function CollapsibleEventInfo({ eventId, items, notes }) {
   const t = useTranslations("eventInfo");
+  const locale = useLocale();
   const [collapsed, setCollapsed] = useState(false);
   const [notesExpanded, setNotesExpanded] = useState(false);
 
@@ -263,7 +263,7 @@ export default function CollapsibleEventInfo({ eventId, items, notes }) {
                     remarkPlugins={[remarkGfm, remarkBreaks]}
                     components={markdownComponents}
                   >
-                    {resolveDiscordTimestamps(notes)}
+                    {resolveDiscordTimestamps(notes, locale)}
                   </ReactMarkdown>
                 </div>
               </div>

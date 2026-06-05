@@ -491,7 +491,7 @@ export default function NouvelEvenement() {
                         ] || 0;
                       const date = new Date(weekendStartDate);
                       date.setDate(date.getDate() + dayOffset);
-                      const dateStr = date.toLocaleDateString("fr-FR", {
+                      const dateStr = date.toLocaleDateString(locale, {
                         weekday: "long",
                         day: "numeric",
                         month: "long",

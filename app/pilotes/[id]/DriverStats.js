@@ -1,6 +1,6 @@
 "use client";
 import { useState } from "react";
-import { useTranslations } from "next-intl";
+import { useTranslations, useLocale } from "next-intl";
 import Garage61StatsTab from "./Garage61StatsTab";
 import {
   LineChart,
@@ -192,6 +192,7 @@ function SectionHeader({ title }) {
 
 function IRatingTooltip({ active, payload }) {
   if (!active || !payload?.length) return null;
+  const locale = useLocale();
   const { irating, recorded_at } = payload[0].payload;
   return (
     <div
@@ -210,7 +211,7 @@ function IRatingTooltip({ active, payload }) {
         {irating} iR
       </div>
       <div style={{ color: "var(--text-dim)", marginTop: "0.1rem" }}>
-        {new Date(recorded_at).toLocaleDateString("fr-FR", {
+        {new Date(recorded_at).toLocaleDateString(locale, {
           day: "2-digit",
           month: "2-digit",
           year: "numeric",
@@ -233,6 +234,7 @@ export default function DriverStats({
   garage61Slug = null,
 }) {
   const t = useTranslations("driverStats");
+  const locale = useLocale();
   const [showAllTeammates, setShowAllTeammates] = useState(false);
   const [statsSubTab, setStatsSubTab] = useState("app");
 
@@ -617,7 +619,7 @@ export default function DriverStats({
                     <XAxis
                       dataKey="recorded_at"
                       tickFormatter={(val) =>
-                        new Date(val).toLocaleDateString("fr-FR", {
+                        new Date(val).toLocaleDateString(locale, {
                           day: "2-digit",
                           month: "2-digit",
                           year: "2-digit",
@@ -769,13 +771,13 @@ export default function DriverStats({
                     }}
                   >
                     {new Date(chartData[0].recorded_at).toLocaleDateString(
-                      "fr-FR",
+                      locale,
                       { day: "2-digit", month: "2-digit", year: "numeric" },
                     )}{" "}
                     →{" "}
                     {new Date(
                       chartData[chartData.length - 1].recorded_at,
-                    ).toLocaleDateString("fr-FR", {
+                    ).toLocaleDateString(locale, {
                       day: "2-digit",
                       month: "2-digit",
                       year: "numeric",

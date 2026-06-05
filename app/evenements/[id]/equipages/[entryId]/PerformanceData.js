@@ -2,7 +2,7 @@
 import { useState, useEffect } from "react";
 import { usePathname } from "next/navigation";
 import { supabaseBrowser as supabase } from "../../../../../lib/supabase-browser";
-import { useTranslations } from "next-intl";
+import { useTranslations, useLocale } from "next-intl";
 
 // ── Lap time helpers ───────────────────────────────────────
 
@@ -24,9 +24,9 @@ function displayToSec(str) {
   );
 }
 
-// Format an ISO timestamp to a human-readable French date+time string
+// Format an ISO timestamp to a human-readable date+time string
 // e.g. "12 avril 2026 à 14:32"
-function formatUpdatedAt(isoStr, locale = "fr-FR") {
+function formatUpdatedAt(isoStr, locale = "fr") {
   if (!isoStr) return null;
   return new Date(isoStr).toLocaleString(locale, {
     day: "numeric",
@@ -248,6 +248,7 @@ function DriverRow({
 }) {
   const driver = signup.drivers;
   const t = useTranslations("performanceData");
+  const locale = useLocale();
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
@@ -493,7 +494,7 @@ function DriverRow({
                   marginTop: "0.2rem",
                 }}
               >
-                {t("updatedOn")} {formatUpdatedAt(initialData.updated_at, typeof window !== "undefined" ? navigator.language : "fr-FR")}
+                {t("updatedOn")} {formatUpdatedAt(initialData.updated_at, locale)}
               </div>
             )}
           </td>
@@ -1172,7 +1173,7 @@ function DriverRow({
                               {lap.trackWetness ?? 0}
                             </td>
                             <td style={{ padding: "0.3rem 0.6rem", color: "var(--text-dim)", whiteSpace: "nowrap" }}>
-                              {new Date(lap.startTime).toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit", year: "2-digit" })}
+                              {new Date(lap.startTime).toLocaleDateString(locale, { day: "2-digit", month: "2-digit", year: "2-digit" })}
                             </td>
                             <td style={{ padding: "0.3rem 0.6rem", color: "var(--text-dim)", maxWidth: "140px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                               {lap.car ?? "—"}

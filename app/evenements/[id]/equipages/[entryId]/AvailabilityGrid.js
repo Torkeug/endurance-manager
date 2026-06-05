@@ -2,7 +2,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { supabaseBrowser as supabase } from "../../../../../lib/supabase-browser";
 import React from "react";
-import { useTranslations } from "next-intl";
+import { useTranslations, useLocale } from "next-intl";
 
 // ── Time helpers ───────────────────────────────────────────────────────────────
 
@@ -51,16 +51,16 @@ function getPhase(igTime, sunriseStr, sunsetStr) {
   }
 }
 
-function formatTime(date) {
-  return date.toLocaleTimeString("fr-FR", {
+function _formatTime(date, locale) {
+  return date.toLocaleTimeString(locale, {
     hour: "2-digit",
     minute: "2-digit",
     hour12: false,
   });
 }
 
-function formatDate(date) {
-  return date.toLocaleDateString("fr-FR", {
+function _formatDate(date, locale) {
+  return date.toLocaleDateString(locale, {
     weekday: "long",
     day: "2-digit",
     month: "2-digit",
@@ -159,6 +159,9 @@ export default function AvailabilityGrid({
   isExternalUser = false,
 }) {
   const t = useTranslations("availabilityGrid");
+  const locale = useLocale();
+  const formatTime = (d) => _formatTime(d, locale);
+  const formatDate = (d) => _formatDate(d, locale);
   const [selectedDriverId, setSelectedDriverId] = useState("");
   const [availabilities, setAvailabilities] = useState({});
   const [loading, setLoading] = useState(true);

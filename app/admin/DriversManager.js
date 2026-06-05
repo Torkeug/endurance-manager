@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { useLocale } from "next-intl";
 import { supabaseBrowser as supabase } from "../../lib/supabase-browser";
 
 const ROLE_LABELS = {
@@ -216,6 +217,7 @@ function DeleteDriverModal({ modal, onConfirm, onCancel }) {
 }
 
 export default function DriversManager({ initialDrivers, currentDriver }) {
+  const locale = useLocale();
   const router = useRouter();
   const searchParams = useSearchParams();
   // Number of drivers synced in the last sync-all run (from redirect param)
@@ -1028,7 +1030,7 @@ export default function DriversManager({ initialDrivers, currentDriver }) {
                             }}
                           >
                             {new Date(d.iracing_synced_at).toLocaleDateString(
-                              "fr-FR",
+                              locale,
                               {
                                 day: "2-digit",
                                 month: "2-digit",

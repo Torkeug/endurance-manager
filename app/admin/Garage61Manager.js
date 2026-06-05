@@ -1,5 +1,6 @@
 "use client";
 import { useState, useEffect } from "react";
+import { useLocale } from "next-intl";
 import { supabaseBrowser as supabase } from "../../lib/supabase-browser";
 
 const CACHE_KEY = "garage61_detected_drivers";
@@ -96,6 +97,7 @@ const thStyle = {
 const tdStyle = { padding: "0.55rem 1rem", borderBottom: "1px solid var(--border)", fontSize: "0.85rem" };
 
 export default function Garage61Manager({ currentDriver }) {
+  const locale = useLocale();
   const [dbDrivers, setDbDrivers] = useState([]);
   const [g61Drivers, setG61Drivers] = useState(null); // null = not yet loaded
   const [lastUpdated, setLastUpdated] = useState(null);
@@ -233,7 +235,7 @@ export default function Garage61Manager({ currentDriver }) {
         </button>
         {lastUpdated && !loading && (
           <span style={{ fontSize: "0.78rem", color: "var(--text-dim)" }}>
-            Dernière détection : {new Date(lastUpdated).toLocaleString("fr-FR")}
+            Dernière détection : {new Date(lastUpdated).toLocaleString(locale)}
           </span>
         )}
         {exactCount > 0 && (

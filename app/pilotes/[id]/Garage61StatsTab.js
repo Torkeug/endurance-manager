@@ -1,6 +1,6 @@
 "use client";
 import React, { useEffect, useState } from "react";
-import { useTranslations } from "next-intl";
+import { useTranslations, useLocale } from "next-intl";
 
 const SESSION_LABELS = { 1: "P", 2: "Q", 3: "R" };
 
@@ -36,6 +36,7 @@ function formatLapTime(seconds) {
 
 export default function Garage61StatsTab({ slug }) {
   const t = useTranslations("garage61Stats");
+  const locale = useLocale();
   const [state, setState] = useState("idle");
   const [circuits, setCircuits] = useState([]);
   const [error, setError] = useState(null);
@@ -353,7 +354,7 @@ export default function Garage61StatsTab({ slug }) {
                                   {wet && <span style={{ fontSize: "0.72rem", color: "#4a9fd4" }}>💧</span>}
                                   {clean && <span style={{ fontSize: "0.72rem", color: "#2eb460" }}>{t("cleanLap")}</span>}
                                 </div>
-                                {date && <span style={{ fontSize: "0.72rem", color: "var(--text-dim)" }}>{new Date(date).toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit", year: "2-digit" })}</span>}
+                                {date && <span style={{ fontSize: "0.72rem", color: "var(--text-dim)" }}>{new Date(date).toLocaleDateString(locale, { day: "2-digit", month: "2-digit", year: "2-digit" })}</span>}
                                 <a href={`https://garage61.net/app/laps/${c.trackId}/0;d=1`} target="_blank" rel="noopener noreferrer" className="btn btn-secondary btn-sm" style={{ fontSize: "0.72rem", whiteSpace: "nowrap", marginLeft: "auto" }}>
                                   {t("linkBestLap")}
                                 </a>

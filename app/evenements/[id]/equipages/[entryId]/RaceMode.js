@@ -1,6 +1,6 @@
 "use client";
 import { useState, useEffect, useCallback, useRef } from "react";
-import { useTranslations } from "next-intl";
+import { useTranslations, useLocale } from "next-intl";
 import { supabaseBrowser as supabase } from "../../../../../lib/supabase-browser";
 
 // markerFromTier — superscript character for a given fallback tier.
@@ -56,9 +56,9 @@ function ConfirmModal({ modal, onConfirm, onCancel }) {
 
 // ─── Formatting helpers ──────────────────────────────────────────────────────
 
-function formatTime(date) {
+function _formatTime(date, locale) {
   if (!date) return "—";
-  return new Date(date).toLocaleTimeString("fr-FR", {
+  return new Date(date).toLocaleTimeString(locale, {
     hour: "2-digit",
     minute: "2-digit",
     second: "2-digit",
@@ -313,6 +313,8 @@ export default function RaceMode({
   const [eventBanners, setEventBanners] = useState([]);
 
   const t = useTranslations("raceMode");
+  const locale = useLocale();
+  const formatTime = (d) => _formatTime(d, locale);
 
   // Dev-only state override
   const [devState, setDevState] = useState(null);

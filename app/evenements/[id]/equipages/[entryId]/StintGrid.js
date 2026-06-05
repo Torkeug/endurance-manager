@@ -3,22 +3,22 @@ import { useState, useEffect, useRef, useMemo } from "react";
 import { supabaseBrowser as supabase } from "../../../../../lib/supabase-browser";
 import ActualEndInput from "./ActualEndInput";
 import PlanningTab from "./PlanningTab";
-import { useTranslations } from "next-intl";
+import { useTranslations, useLocale } from "next-intl";
 
 // ─── Display helpers ────────────────────────────────────────────────────────
 
-function formatTime(date) {
+function _formatTime(date, locale) {
   if (!date) return "—";
-  return new Date(date).toLocaleTimeString("fr-FR", {
+  return new Date(date).toLocaleTimeString(locale, {
     hour: "2-digit",
     minute: "2-digit",
     hour12: false,
   });
 }
 
-function formatDatetime(date) {
+function _formatDatetime(date, locale) {
   if (!date) return "—";
-  return new Date(date).toLocaleString("fr-FR", {
+  return new Date(date).toLocaleString(locale, {
     day: "2-digit",
     month: "2-digit",
     hour: "2-digit",
@@ -1121,6 +1121,9 @@ export default function StintGrid({
 }) {
   // Strategy state — strategies fetched from DB, selectedStrategyId is the viewed tab
   const t = useTranslations("stintGrid");
+  const locale = useLocale();
+  const formatTime = (d) => _formatTime(d, locale);
+  const formatDatetime = (d) => _formatDatetime(d, locale);
   const [strategies, setStrategies] = useState([]);
   const [selectedStrategyId, setSelectedStrategyId] = useState(null);
   // Local edit fields for selected strategy metadata — synced via useEffect on strategy switch

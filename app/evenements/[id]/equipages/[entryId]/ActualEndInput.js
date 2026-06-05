@@ -1,6 +1,6 @@
 "use client";
 import { useState, useEffect } from "react";
-import { useTranslations } from "next-intl";
+import { useTranslations, useLocale } from "next-intl";
 
 export default function ActualEndInput({
   plannedEnd,
@@ -9,6 +9,7 @@ export default function ActualEndInput({
   saving,
   archived = false,
 }) {
+  const locale = useLocale();
   const planned = plannedEnd ? new Date(plannedEnd) : null;
 
   // Default date to planned end date so the user only needs to enter the time.
@@ -20,7 +21,7 @@ export default function ActualEndInput({
       : "";
 
   const initTime = actualEnd
-    ? new Date(actualEnd).toLocaleTimeString("fr-FR", {
+    ? new Date(actualEnd).toLocaleTimeString(locale, {
         hour: "2-digit",
         minute: "2-digit",
         hour12: false,

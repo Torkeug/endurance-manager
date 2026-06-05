@@ -1,7 +1,7 @@
 "use client";
 import { useState, useEffect, useRef } from "react";
 import { supabaseBrowser as supabase } from "../../../../../lib/supabase-browser";
-import { useTranslations } from "next-intl";
+import { useTranslations, useLocale } from "next-intl";
 
 // ─── Driver color palette ────────────────────────────────────────────────────
 // Cycles when there are more than 8 drivers.
@@ -18,9 +18,9 @@ const DRIVER_COLORS = [
 
 // ─── Display helpers ────────────────────────────────────────────────────────
 
-function formatTime(date) {
+function _formatTime(date, locale) {
   if (!date) return "—";
-  return new Date(date).toLocaleTimeString("fr-FR", {
+  return new Date(date).toLocaleTimeString(locale, {
     hour: "2-digit",
     minute: "2-digit",
     hour12: false,
@@ -49,6 +49,8 @@ export default function PlanningTab({
   strategyId = null,
 }) {
   const t = useTranslations("planningTab");
+  const locale = useLocale();
+  const formatTime = (d) => _formatTime(d, locale);
   const [stints, setStints] = useState([]);
   const [availabilities, setAvailabilities] = useState([]);
   const [strategyLabel, setStrategyLabel] = useState(null);
