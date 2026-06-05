@@ -1,8 +1,8 @@
 "use client";
 import { useState } from "react";
 import Link from "next/link";
-import { formatInZone } from "../../../lib/timezone";
-import { useTranslations } from "next-intl";
+import { formatInZone, formatDateLabelInZone } from "../../../lib/timezone";
+import { useTranslations, useLocale } from "next-intl";
 
 function formatDuration(minutes) {
   if (!minutes) return "—";
@@ -24,6 +24,7 @@ function isEventPast(signup) {
 // ── Signup card ───────────────────────────────────────────────────────────────
 function SignupCard({ signup, availMap, stintsMap, carsMap = {} }) {
   const t = useTranslations("driverEngagements");
+  const locale = useLocale();
   const event = signup.events;
   const teamEntry = signup.team_entries;
   const avail = teamEntry ? availMap[teamEntry.id] : null;
@@ -34,8 +35,12 @@ function SignupCard({ signup, availMap, stintsMap, carsMap = {} }) {
       ? startTimes.reduce((a, b) => (a.irl_start < b.irl_start ? a : b)) // ISO string comparison is lexicographic — valid because irl_start is UTC
       : null;
 
+  const tz = event?.timezone || "Europe/Paris";
   const prefStartLabels = (signup.preferred_start_time_ids || [])
-    .map((stId) => startTimes.find((st) => st.id === stId)?.label)
+    .map((stId) => {
+      const st = startTimes.find((s) => s.id === stId);
+      return st ? formatDateLabelInZone(st.irl_start, tz, locale) : null;
+    })
     .filter(Boolean);
 
   return (
@@ -161,7 +166,7 @@ function SignupCard({ signup, availMap, stintsMap, carsMap = {} }) {
                       marginTop: "0.2rem",
                     }}
                   >
-                    {teamEntry.event_start_times.label}
+                    {formatDateLabelInZone(teamEntry.event_start_times.irl_start, tz, locale)}
                   </div>
                 )}
               </>

@@ -7,15 +7,16 @@ import {
   isAdmin,
   isExternal as checkIsExternal,
 } from "../../../../../lib/auth";
-import { formatTimeInZone } from "../../../../../lib/timezone";
+import { formatTimeInZone, formatDateLabelInZone } from "../../../../../lib/timezone";
 import CollapsibleSummary from "./CollapsibleSummary";
-import { getTranslations } from "next-intl/server";
+import { getTranslations, getLocale } from "next-intl/server";
 
 export default async function EquipageDetail({ params }) {
   const { id, entryId } = await params;
 
   const { driver: currentDriver } = await getSessionAndDriver();
   const t = await getTranslations("entryDetail");
+  const locale = await getLocale();
   const isEngineer = currentDriver?.role === "engineer";
 
   const { data: entry, error } = await supabase
@@ -98,14 +99,14 @@ export default async function EquipageDetail({ params }) {
   // Pre-format labels with date + time so tooltips in DriversAssignment
   // are human-readable without needing timezone logic client-side.
   const startTimesMap = Object.fromEntries([
-    ...(regularStartTimes || []).map((t) => [
-      t.id,
-      `${t.label} à ${formatTimeInZone(t.irl_start, tz, "HH:mm")}`,
+    ...(regularStartTimes || []).map((st) => [
+      st.id,
+      t("labelAtTime", { label: formatDateLabelInZone(st.irl_start, tz, locale), time: formatTimeInZone(st.irl_start, tz, "HH:mm") }),
     ]),
-    ...(specialStartTimes || []).map((t) => [
-      t.id,
+    ...(specialStartTimes || []).map((st) => [
+      st.id,
       // special_event_start_times stores hour/minute directly — no UTC conversion needed
-      `${t.label} à ${String(t.hour).padStart(2, "0")}:${String(t.minute).padStart(2, "0")}`,
+      t("labelAtTime", { label: st.label, time: `${String(st.hour).padStart(2, "0")}:${String(st.minute).padStart(2, "0")}` }),
     ]),
   ]);
 

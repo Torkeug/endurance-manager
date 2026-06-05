@@ -3,8 +3,8 @@ import { useState, useEffect, use } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { supabaseBrowser as supabase } from "../../../../../lib/supabase-browser";
-import { formatTimeInZone } from "../../../../../lib/timezone";
-import { useTranslations } from "next-intl";
+import { formatTimeInZone, formatDateLabelInZone } from "../../../../../lib/timezone";
+import { useTranslations, useLocale } from "next-intl";
 
 // Used to pre-populate availability slots on driver assignment at team creation.
 // Mirrors AvailabilityGrid's generateSlots — 30-min slots, 1h buffer each side.
@@ -64,6 +64,8 @@ const emptyForm = {
 
 export default function NouvelEquipage({ params }) {
   const t = useTranslations("entryForm");
+  const tDrivers = useTranslations("driversTab");
+  const locale = useLocale();
   const [eventTimezone, setEventTimezone] = useState("Europe/Paris");
   const router = useRouter();
   const { id } = use(params);
@@ -240,8 +242,8 @@ export default function NouvelEquipage({ params }) {
       prefClasses.length > 0 && form.class && !prefClasses.includes(form.class);
     if (classConflict) {
       conflicts.push({
-        label: "classe",
-        tooltip: `Classe équipe : ${form.class} — pilote préfère : ${prefClasses.join(", ")}`,
+        label: tDrivers("conflictClass"),
+        tooltip: tDrivers("tooltipClass", { entryClass: form.class, preferred: prefClasses.join(", ") }),
         hard: true,
       });
     }
@@ -256,8 +258,8 @@ export default function NouvelEquipage({ params }) {
       const prefCarNames = prefCarIds.map((id) => carsMap[id] || id).join(", ");
       const teamCarName = carsMap[form.car_id] || form.car_id;
       conflicts.push({
-        label: "voiture",
-        tooltip: `Voiture équipe : ${teamCarName} — pilote préfère : ${prefCarNames}\nLa classe correspond (${form.class}).`,
+        label: tDrivers("conflictCar"),
+        tooltip: tDrivers("tooltipCar", { entryCar: teamCarName, preferred: prefCarNames, entryClass: form.class }),
         hard: false,
       });
     }
@@ -276,8 +278,8 @@ export default function NouvelEquipage({ params }) {
         .map((id) => startTimesMap[id])
         .join(", ");
       conflicts.push({
-        label: "horaire",
-        tooltip: `Horaire équipe : ${teamLabel} — pilote préfère : ${prefLabels}`,
+        label: tDrivers("conflictSchedule"),
+        tooltip: tDrivers("tooltipSchedule", { teamSlot: teamLabel, preferred: prefLabels }),
         hard: false,
       });
     }
@@ -383,7 +385,7 @@ export default function NouvelEquipage({ params }) {
             selectedSignups,
             affectedSignups: affected,
             startTimeLabel: startTime
-              ? `${startTime.label} à ${formatTimeInZone(startTime.irl_start, eventTimezone)}`
+              ? t("labelAtTime", { label: formatDateLabelInZone(startTime.irl_start, eventTimezone, locale), time: formatTimeInZone(startTime.irl_start, eventTimezone) })
               : form.start_time_id,
           });
           setLoading(false);

@@ -1299,7 +1299,7 @@ export default function RaceMode({
                   <div>
                     <div style={labelStyle}>{t("currentConsumption")}</div>
                     <div className="mono" style={{ fontSize: "0.95rem" }}>
-                      {liveFuelPerLap.value.toFixed(2)} L/tr
+                      {liveFuelPerLap.value.toFixed(2)} {t("lPerLap")}
                       {liveFuelDelta !== null && (
                         <span
                           style={{

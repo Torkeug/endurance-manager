@@ -2563,7 +2563,7 @@ export default function StintGrid({
                           color: "var(--text-dim)",
                         }}
                       >
-                        {laps} tours
+                        {laps} {t("laps")}
                       </span>
                     </div>
                   );
@@ -2618,7 +2618,7 @@ export default function StintGrid({
                       onClick={() => clearDriverStints(d.drivers?.id)}
                       className="btn btn-secondary btn-sm"
                       style={{ borderColor: "#a06020", color: "#d4904a" }}
-                      title={`Retirer ${d.drivers?.name} de ses ${eligibleCount} relais éligibles`}
+                      title={t("releaseTitle", { name: d.drivers?.name, count: eligibleCount })}
                     >
                       ✕ {d.drivers?.name}{" "}
                       <span
@@ -2791,7 +2791,6 @@ export default function StintGrid({
                 }}
               >
                 {calculated.filter(isStintCompleted).length} {t("realDataAvailable")}
-                données réelles disponibles
               </div>
             </div>
             <span style={{ color: "var(--accent)", fontSize: "0.85rem" }}>
@@ -3109,7 +3108,7 @@ export default function StintGrid({
                         return (
                           <span
                             style={{ fontSize: "0.75rem", cursor: "help" }}
-                            title={`Conflit avec ${conflict.team_entries?.crew_name || "?"} — ${conflict.team_entries?.events?.name || "?"}`}
+                            title={t("conflictWith", { crew: conflict.team_entries?.crew_name || "?", event: conflict.team_entries?.events?.name || "?" })}
                           >
                             ⚠️
                           </span>
@@ -3138,6 +3137,14 @@ export default function StintGrid({
                             : status === "tentative"
                               ? "#4a4a6a"
                               : "#3a3a5a";
+                    const availStatusLabels = {
+                      available: t("legendAvailable"),
+                      partial: t("legendPartial"),
+                      unavailable: t("legendUnavailable"),
+                      tentative: t("legendUncertain"),
+                    };
+                    const availStatusLabel = availStatusLabels[status] || t("statusUnknown");
+                    const assignedNote = isAssigned ? ` ${t("statusAssigned")}` : "";
                     return (
                       <td
                         key={driverId}
@@ -3160,7 +3167,7 @@ export default function StintGrid({
                               : "none",
                             outlineOffset: "2px",
                           }}
-                          title={`${d.drivers?.name} — ${status || "non renseigné"}${isAssigned ? " (assigné)" : ""}`}
+                          title={`${d.drivers?.name} — ${availStatusLabel}${assignedNote}`}
                         />
                       </td>
                     );
@@ -3284,7 +3291,7 @@ export default function StintGrid({
                             marginTop: "0.1rem",
                           }}
                         >
-                          opt: {formatDatetime(stint._optimalIrlEnd)}
+                          {t("labelOpt")} {formatDatetime(stint._optimalIrlEnd)}
                         </div>
                       )}
                   </td>
@@ -3328,7 +3335,7 @@ export default function StintGrid({
                             marginTop: "0.1rem",
                           }}
                         >
-                          réel
+                          {t("labelActual")}
                         </div>
                       </div>
                     ) : stint._isLastStint && stint._adjustedDurationSec ? (
@@ -3350,7 +3357,7 @@ export default function StintGrid({
                                 marginTop: "0.1rem",
                               }}
                             >
-                              opt: {formatDuration(stint._optimalDurationSec)}
+                              {t("labelOpt")} {formatDuration(stint._optimalDurationSec)}
                             </div>
                           )}
                       </div>
@@ -3451,7 +3458,7 @@ export default function StintGrid({
                             marginTop: "0.1rem",
                           }}
                         >
-                          opt: {stint._optimalLaps}
+                          {t("labelOpt")} {stint._optimalLaps}
                         </div>
                       )}
                   </td>
@@ -3563,7 +3570,7 @@ export default function StintGrid({
                               }}
                             >
                               {stint.target_consumption_skip_last.toFixed(2)}{" "}
-                              L/tr
+                              {t("lPerLap")}
                             </div>
                           ) : (
                             <span
@@ -3580,7 +3587,7 @@ export default function StintGrid({
                             {/* Target consumption to skip last pit */}
                             <div style={{ color: "var(--accent)" }}>
                               {skip.targetConsumption !== null
-                                ? `${skip.targetConsumption.toFixed(2)} L/tr`
+                                ? `${skip.targetConsumption.toFixed(2)} ${t("lPerLap")}`
                                 : "—"}
                             </div>
                             {/* Savings needed per lap vs current consumption —
@@ -3594,7 +3601,7 @@ export default function StintGrid({
                                   marginTop: "0.1rem",
                                 }}
                               >
-                                −{skip.savingsPerLap.toFixed(2)} L/tr
+                                −{skip.savingsPerLap.toFixed(2)} {t("lPerLap")}
                                 {skip.hasWarning && (
                                   <sup
                                     style={{

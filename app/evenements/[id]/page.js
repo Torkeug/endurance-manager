@@ -1,6 +1,7 @@
 import { supabaseServer as supabase } from "../../../lib/supabase-server";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { getTranslations } from "next-intl/server";
 import { getSessionAndDriver, isAdmin, isEngineer } from "../../../lib/auth";
 import { formatInZone } from "../../../lib/timezone";
 import ArchiveToggle from "./ArchiveToggle";
@@ -29,6 +30,7 @@ function getEarliestStart(startTimes) {
 
 export default async function EvenementDetail({ params }) {
   const { id } = await params;
+  const t = await getTranslations("events");
 
   const { driver: currentDriver } = await getSessionAndDriver();
   const admin = isAdmin(currentDriver);
@@ -89,33 +91,33 @@ export default async function EvenementDetail({ params }) {
   // Circuit · Format · Durée · Départ IG
   const infoItems = [
     {
-      label: "Circuit",
+      label: t("infoCircuit"),
       value: event.archived
         ? event.circuit_name_snapshot || event.circuits?.name || "—"
         : event.circuits?.name || "—",
     },
-    { label: "Format", value: event.format || "—" },
-    { label: "Durée", value: formatDuration(event.duration_minutes) },
-    { label: "Départ IG", value: event.ig_start_time || "—" },
+    { label: t("infoFormat"), value: event.format || "—" },
+    { label: t("infoDuration"), value: formatDuration(event.duration_minutes) },
+    { label: t("infoIGStart"), value: event.ig_start_time || "—" },
 
     // Hide counts for external users
     ...(!isExternal
       ? [
           {
-            label: "Pilotes inscrits",
+            label: t("infoSignedUp"),
             value: String(event.signups?.length ?? 0),
           },
           {
-            label: "Équipages",
+            label: t("equipagesLabel"),
             value: String(event.team_entries?.length ?? 0),
           },
         ]
       : []),
 
-    { label: "Lever soleil", value: event.ig_sunrise || "—" },
-    { label: "Coucher soleil", value: event.ig_sunset || "—" },
+    { label: t("infoSunrise"), value: event.ig_sunrise || "—" },
+    { label: t("infoSunset"), value: event.ig_sunset || "—" },
     {
-      label: "Pit lane",
+      label: t("infoPitLane"),
       value: event.circuits?.pit_lane_time_seconds
         ? `${event.circuits.pit_lane_time_seconds}s`
         : "—",
@@ -143,7 +145,7 @@ export default async function EvenementDetail({ params }) {
                   color: "var(--danger)",
                 }}
               >
-                Archivé
+                {t("badgeArchived")}
               </span>
             )}
           </h1>
@@ -157,7 +159,7 @@ export default async function EvenementDetail({ params }) {
               }}
             >
               {event.championships.name}
-              {event.round_number && ` · Manche ${event.round_number}`}
+              {event.round_number && ` · ${t("badgeRound", { number: event.round_number })}`}
             </div>
           )}
           <div
@@ -172,7 +174,7 @@ export default async function EvenementDetail({ params }) {
                   earliest.irl_start,
                   event.timezone || "Europe/Paris",
                 )
-              : "Date à confirmer"}
+              : t("dateUnknown")}
           </div>
         </div>
         <div style={{ display: "flex", gap: "0.75rem" }}>
@@ -181,13 +183,13 @@ export default async function EvenementDetail({ params }) {
               href={`/evenements/${id}/modifier`}
               className="btn btn-secondary"
             >
-              Modifier
+              {t("editEvent")}
             </Link>
           )}
           {admin && <ArchiveToggle eventId={id} archived={event.archived} />}
           {admin && event.archived && <DeleteEventButton eventId={id} />}
           <Link href="/evenements" className="btn btn-secondary">
-            ← Retour
+            {t("back")}
           </Link>
         </div>
       </div>

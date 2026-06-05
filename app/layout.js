@@ -3,7 +3,7 @@ import "./globals.css";
 import Nav from "../components/Nav";
 import PullToRefresh from "../components/PullToRefresh";
 import { NextIntlClientProvider } from "next-intl";
-import { getMessages, getLocale } from "next-intl/server";
+import { getMessages, getLocale, getTranslations } from "next-intl/server";
 
 const rajdhani = Rajdhani({
   subsets: ["latin"],
@@ -19,14 +19,17 @@ const dmMono = DM_Mono({
   display: "swap",
 });
 
-export const metadata = {
-  title: "Kronos Endurance Planner",
-  description: "Planification des courses d'endurance Kronos SimSports",
-  icons: {
-    icon: "/favicon.ico",
-    apple: "/apple-touch-icon.png",
-  },
-};
+export async function generateMetadata() {
+  const t = await getTranslations("meta");
+  return {
+    title: t("title"),
+    description: t("description"),
+    icons: {
+      icon: "/favicon.ico",
+      apple: "/apple-touch-icon.png",
+    },
+  };
+}
 
 export default async function RootLayout({ children }) {
   const locale = await getLocale();

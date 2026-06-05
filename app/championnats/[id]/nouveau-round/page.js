@@ -2,6 +2,7 @@
 import { useState, useEffect, useMemo, use } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { useTranslations, useLocale } from "next-intl";
 import { supabaseBrowser as supabase } from "../../../../lib/supabase-browser";
 import { TIMEZONES, localToUTC } from "../../../../lib/timezone";
 import { DateTime } from "luxon";
@@ -26,9 +27,9 @@ function isValidTime(str) {
 
 // Auto-generate a label from date + time in the event timezone.
 // Mirrors the same function in StartTimesManager to keep labels consistent.
-function generateLabel(date, time, tz) {
+function generateLabel(date, time, tz, locale) {
   const dt = DateTime.fromISO(`${date}T${time}:00`, { zone: tz }).setLocale(
-    "fr",
+    locale,
   );
   const dayName = dt.toFormat("EEEE");
   const dayNum = dt.toFormat("d");
@@ -52,6 +53,8 @@ const emptyForm = {
 export default function NouveauRound({ params }) {
   const { id } = use(params); // championship id
   const router = useRouter();
+  const t = useTranslations("eventForm");
+  const locale = useLocale();
   const [form, setForm] = useState(emptyForm);
   const [circuits, setCircuits] = useState([]);
   const [selectedBaseTrack, setSelectedBaseTrack] = useState("");
@@ -113,7 +116,7 @@ export default function NouveauRound({ params }) {
       .select("iracing_track_id, track_name")
       .then(({ data }) => {
         const map = {};
-        for (const t of data || []) map[t.iracing_track_id] = t.track_name;
+        for (const track of data || []) map[track.iracing_track_id] = track.track_name;
         setTrackNameById(map);
       });
   }, []);
@@ -134,7 +137,7 @@ export default function NouveauRound({ params }) {
       .from("event_types")
       .select("name")
       .order("sort_order")
-      .then(({ data }) => setEventTypes(data?.map((t) => t.name) || []));
+      .then(({ data }) => setEventTypes(data?.map((et) => et.name) || []));
   }, []);
 
   useEffect(() => {
@@ -189,7 +192,7 @@ export default function NouveauRound({ params }) {
       // auto-name
       setForm((prev) => ({
         ...prev,
-        name: `${champ?.name || ""} — Manche ${maxRound + 1}`,
+        name: t("defaultRoundName", { name: champ?.name || "", number: maxRound + 1 }),
       }));
     });
   }, [id]);
@@ -229,11 +232,11 @@ export default function NouveauRound({ params }) {
 
   const handleAddStartTime = () => {
     if (!newStartDate) {
-      setStartTimeError("La date est obligatoire.");
+      setStartTimeError(t("errorDate"));
       return;
     }
     if (!newStartTime) {
-      setStartTimeError("L'heure est obligatoire.");
+      setStartTimeError(t("errorTime"));
       return;
     }
     setStartTimeEntries((prev) => [
@@ -260,33 +263,27 @@ export default function NouveauRound({ params }) {
     e.preventDefault();
     // Validate in-game time fields — mobile Safari ignores type="time" constraints
     if (!isValidTime(form.ig_start_time)) {
-      setError(
-        "L'heure de départ IG est invalide — format attendu : HH:MM (ex : 13:00).",
-      );
+      setError(t("errorIGStart"));
       return;
     }
     if (!isValidTime(form.ig_sunrise)) {
-      setError(
-        "L'heure de lever de soleil IG est invalide — format attendu : HH:MM (ex : 06:30).",
-      );
+      setError(t("errorIGSunrise"));
       return;
     }
     if (!isValidTime(form.ig_sunset)) {
-      setError(
-        "L'heure de coucher de soleil IG est invalide — format attendu : HH:MM (ex : 20:00).",
-      );
+      setError(t("errorIGSunset"));
       return;
     }
     if (!form.name.trim()) {
-      setError("Le nom est obligatoire.");
+      setError(t("errorName"));
       return;
     }
     if (!form.duration_minutes) {
-      setError("La durée est obligatoire.");
+      setError(t("errorDuration"));
       return;
     }
     if (!form.circuit_id) {
-      setError("Le circuit est obligatoire.");
+      setError(t("errorCircuit"));
       return;
     }
     setLoading(true);
@@ -323,7 +320,7 @@ export default function NouveauRound({ params }) {
     if (startTimeEntries.length > 0) {
       const rows = startTimeEntries.map((entry) => ({
         event_id: data.id,
-        label: generateLabel(entry.date, entry.time, form.timezone),
+        label: generateLabel(entry.date, entry.time, form.timezone, locale),
         irl_start: localToUTC(entry.date, entry.time, form.timezone),
       }));
       await supabase.from("event_start_times").insert(rows);
@@ -374,7 +371,7 @@ export default function NouveauRound({ params }) {
   if (!authChecked)
     return (
       <div className="page">
-        <p style={{ color: "var(--text-dim)" }}>Vérification des droits…</p>
+        <p style={{ color: "var(--text-dim)" }}>{t("checkingAuth")}</p>
       </div>
     );
 
@@ -382,7 +379,7 @@ export default function NouveauRound({ params }) {
     <div className="page">
       <div className="page-header">
         <div>
-          <h1>Nouvelle manche</h1>
+          <h1>{t("titleNewRound")}</h1>
           <div className="accent-line" />
           {championship && (
             <div
@@ -398,7 +395,7 @@ export default function NouveauRound({ params }) {
           )}
         </div>
         <Link href="/evenements" className="btn btn-secondary">
-          ← Retour
+          {t("back")}
         </Link>
       </div>
 
@@ -406,25 +403,25 @@ export default function NouveauRound({ params }) {
         {/* ── Informations générales ── */}
         <div className="card" style={{ marginBottom: "1.25rem" }}>
           <h3 style={{ marginBottom: "1.25rem", color: "var(--text-dim)" }}>
-            Informations générales
+            {t("sectionGeneral")}
           </h3>
           <div className="form-grid">
             <div className="form-group" style={{ gridColumn: "1 / -1" }}>
-              <label htmlFor="name">Nom de l&apos;événement *</label>
+              <label htmlFor="name">{t("labelName")}</label>
               <input
                 id="name"
                 type="text"
                 value={form.name}
                 onChange={set("name")}
-                placeholder="ex : Nürburgring 24h 2025"
+                placeholder={t("placeholderName")}
                 required
               />
             </div>
 
             <div className="form-group">
-              <label htmlFor="format">Format</label>
+              <label htmlFor="format">{t("labelFormat")}</label>
               <select id="format" value={form.format} onChange={set("format")}>
-                <option value="">— Sélectionner —</option>
+                <option value="">{t("selectPlaceholder")}</option>
                 {eventTypes.map((f) => (
                   <option key={f} value={f}>
                     {f}
@@ -435,7 +432,7 @@ export default function NouveauRound({ params }) {
 
             {/* Duration */}
             <div className="form-group" style={{ gridColumn: "1 / -1" }}>
-              <label>Durée *</label>
+              <label>{t("labelDuration")}</label>
               <div
                 style={{
                   display: "flex",
@@ -468,7 +465,7 @@ export default function NouveauRound({ params }) {
                 }}
               >
                 <span style={{ fontSize: "0.8rem", color: "var(--text-dim)" }}>
-                  Autre :
+                  {t("durationOther")}
                 </span>
                 <input
                   type="number"
@@ -496,7 +493,7 @@ export default function NouveauRound({ params }) {
                     fontSize: "0.9rem",
                   }}
                 />
-                <span style={{ color: "var(--text-dim)" }}>h</span>
+                <span style={{ color: "var(--text-dim)" }}>{t("durationH")}</span>
                 <input
                   type="number"
                   min="0"
@@ -523,7 +520,7 @@ export default function NouveauRound({ params }) {
                     fontSize: "0.9rem",
                   }}
                 />
-                <span style={{ color: "var(--text-dim)" }}>min</span>
+                <span style={{ color: "var(--text-dim)" }}>{t("durationMin")}</span>
                 {!isPreset && form.duration_minutes > 0 && (
                   <span
                     style={{
@@ -540,7 +537,7 @@ export default function NouveauRound({ params }) {
             </div>
 
             <div className="form-group">
-              <label htmlFor="timezone">Fuseau horaire</label>
+              <label htmlFor="timezone">{t("labelTimezone")}</label>
               <select
                 id="timezone"
                 value={form.timezone}
@@ -555,13 +552,13 @@ export default function NouveauRound({ params }) {
             </div>
 
             <div className="form-group" style={{ gridColumn: "1 / -1" }}>
-              <label htmlFor="notes">Notes</label>
+              <label htmlFor="notes">{t("labelNotes")}</label>
               <textarea
                 id="notes"
                 value={form.notes}
                 onChange={set("notes")}
                 rows={2}
-                placeholder="Infos complémentaires…"
+                placeholder={t("placeholderNotes")}
               />
             </div>
           </div>
@@ -569,11 +566,11 @@ export default function NouveauRound({ params }) {
         {/* ── Circuit ── */}
         <div className="card" style={{ marginBottom: "1.25rem" }}>
           <h3 style={{ marginBottom: "1.25rem", color: "var(--text-dim)" }}>
-            Circuit
+            {t("sectionCircuit")}
           </h3>
           <div className="form-grid">
             <div className="form-group" style={{ gridColumn: "1 / -1" }}>
-              <label>Circuit *</label>
+              <label>{t("labelCircuit")}</label>
               <div
                 style={{
                   display: "flex",
@@ -589,14 +586,14 @@ export default function NouveauRound({ params }) {
                     setForm((prev) => ({ ...prev, circuit_id: "" }));
                   }}
                 >
-                  <option value="">— Sélectionner un circuit —</option>
+                  <option value="">{t("selectCircuit")}</option>
                   {circuitGroups.sorted.map(([baseName]) => (
                     <option key={baseName} value={baseName}>
                       {baseName}
                     </option>
                   ))}
                   {circuitGroups.unlinked.length > 0 && (
-                    <optgroup label="— Autres —">
+                    <optgroup label={t("circuitGroupOther")}>
                       {circuitGroups.unlinked.map((c) => (
                         <option key={c.id} value={`__direct__${c.id}`}>
                           {c.name}
@@ -629,7 +626,7 @@ export default function NouveauRound({ params }) {
                         value={form.circuit_id}
                         onChange={set("circuit_id")}
                       >
-                        <option value="">— Sélectionner un layout —</option>
+                        <option value="">{t("selectLayout")}</option>
                         {layouts.map((c) => (
                           <option key={c.id} value={c.id}>
                             {c.name}
@@ -654,7 +651,7 @@ export default function NouveauRound({ params }) {
               </div>
             </div>
             <div className="form-group">
-              <label>Temps pit lane (auto-rempli)</label>
+              <label>{t("labelPitLane")}</label>
               <div
                 style={{
                   background: "var(--surface-2)",
@@ -666,7 +663,7 @@ export default function NouveauRound({ params }) {
                   color: pitTime ? "var(--accent)" : "var(--text-dim)",
                 }}
               >
-                {pitTime ? `${pitTime}s` : "— sélectionnez un circuit"}
+                {pitTime ? `${pitTime}s` : t("selectCircuitFirst")}
               </div>
             </div>
           </div>
@@ -674,7 +671,7 @@ export default function NouveauRound({ params }) {
         {/* ── Horaires de départ IRL — hidden for special events (auto-generated) ── */}
         <div className="card" style={{ marginBottom: "1.25rem" }}>
           <h3 style={{ marginBottom: "0.25rem", color: "var(--text-dim)" }}>
-            Horaires de départ IRL
+            {t("sectionStartTimes")}
           </h3>
           <p
             style={{
@@ -683,7 +680,7 @@ export default function NouveauRound({ params }) {
               marginBottom: "1.25rem",
             }}
           >
-            Optionnel — peut aussi être configuré après création.
+            {t("startTimesOptional")}
           </p>
 
           {sortedStartTimeEntries.length > 0 && (
@@ -691,7 +688,7 @@ export default function NouveauRound({ params }) {
               <table>
                 <thead>
                   <tr>
-                    <th>Créneau de départ</th>
+                    <th>{t("colStartSlot")}</th>
                     <th></th>
                   </tr>
                 </thead>
@@ -701,7 +698,7 @@ export default function NouveauRound({ params }) {
                       <td>
                         {/* Preview label — same format as StartTimesManager */}
                         <div style={{ fontWeight: 600 }}>
-                          {generateLabel(entry.date, entry.time, form.timezone)}
+                          {generateLabel(entry.date, entry.time, form.timezone, locale)}
                         </div>
                         <div
                           className="mono"
@@ -711,7 +708,7 @@ export default function NouveauRound({ params }) {
                             marginTop: "0.1rem",
                           }}
                         >
-                          Départ à {entry.time}
+                          {t("startAt", { time: entry.time })}
                         </div>
                       </td>
                       <td style={{ textAlign: "right" }}>
@@ -720,7 +717,7 @@ export default function NouveauRound({ params }) {
                           onClick={() => removeStartTime(entry.id)}
                           className="btn btn-danger btn-sm"
                         >
-                          Supprimer
+                          {t("removeSlot")}
                         </button>
                       </td>
                     </tr>
@@ -734,12 +731,12 @@ export default function NouveauRound({ params }) {
           {addingStartTime ? (
             <div className="card">
               <h3 style={{ marginBottom: "1rem", color: "var(--text-dim)" }}>
-                Nouveau créneau
+                {t("newSlotTitle")}
               </h3>
               <div style={{ padding: "1rem", background: "var(--surface-2)" }}>
                 <div className="form-grid" style={{ marginBottom: "1rem" }}>
                   <div className="form-group">
-                    <label>Date IRL</label>
+                    <label>{t("labelIRLDate")}</label>
                     <input
                       type="date"
                       value={newStartDate}
@@ -747,7 +744,7 @@ export default function NouveauRound({ params }) {
                     />
                   </div>
                   <div className="form-group">
-                    <label>Heure IRL (24h)</label>
+                    <label>{t("labelIRLTime")}</label>
                     <input
                       type="time"
                       value={newStartTime}
@@ -769,14 +766,14 @@ export default function NouveauRound({ params }) {
                     onClick={handleAddStartTime}
                     className="btn btn-primary"
                   >
-                    ✓ Ajouter
+                    {t("addSlot")}
                   </button>
                   <button
                     type="button"
                     onClick={resetStartTimeForm}
                     className="btn btn-secondary"
                   >
-                    Annuler
+                    {t("cancelSlot")}
                   </button>
                 </div>
               </div>
@@ -790,14 +787,14 @@ export default function NouveauRound({ params }) {
               }}
               className="btn btn-secondary"
             >
-              + Ajouter un créneau de départ
+              {t("addSlotBtn")}
             </button>
           )}
         </div>
         {/* ── Horaires in-game ── */}
         <div className="card" style={{ marginBottom: "1.25rem" }}>
           <h3 style={{ marginBottom: "0.5rem", color: "var(--text-dim)" }}>
-            Horaires in-game
+            {t("sectionIGTimes")}
           </h3>
           <p
             style={{
@@ -806,14 +803,14 @@ export default function NouveauRound({ params }) {
               marginBottom: "1.25rem",
             }}
           >
-            Communs à tous les équipages. Heures en format 24h.
+            {t("igTimesHint")}
           </p>
           <div className="form-grid">
             {/* Offset between the scheduled IRL start time and the actual green flag.
                 Pre-fills the default strategy offset when a new strategy is created. */}
             <div className="form-group">
               <label htmlFor="green_flag_offset_minutes">
-                Décalage drapeau vert (min)
+                {t("labelGreenFlagOffset")}
               </label>
               <input
                 id="green_flag_offset_minutes"
@@ -832,13 +829,11 @@ export default function NouveauRound({ params }) {
                   marginTop: "0.4rem",
                 }}
               >
-                Minutes entre l&apos;heure officielle de départ et le drapeau
-                vert effectif. Utilisé comme décalage par défaut dans les
-                stratégies.
+                {t("greenFlagOffsetHintShort")}
               </p>
             </div>
             <div className="form-group">
-              <label htmlFor="ig_start_time">Heure de départ IG (HH:MM)</label>
+              <label htmlFor="ig_start_time">{t("labelIGStart")}</label>
               <input
                 id="ig_start_time"
                 type="time"
@@ -847,7 +842,7 @@ export default function NouveauRound({ params }) {
               />
             </div>
             <div className="form-group">
-              <label htmlFor="ig_sunrise">Lever de soleil IG (HH:MM)</label>
+              <label htmlFor="ig_sunrise">{t("labelIGSunrise")}</label>
               <input
                 id="ig_sunrise"
                 type="time"
@@ -856,7 +851,7 @@ export default function NouveauRound({ params }) {
               />
             </div>
             <div className="form-group">
-              <label htmlFor="ig_sunset">Coucher de soleil IG (HH:MM)</label>
+              <label htmlFor="ig_sunset">{t("labelIGSunset")}</label>
               <input
                 id="ig_sunset"
                 type="time"
@@ -873,10 +868,10 @@ export default function NouveauRound({ params }) {
         )}
         <div style={{ display: "flex", gap: "0.75rem" }}>
           <button type="submit" className="btn btn-primary" disabled={loading}>
-            {loading ? "Enregistrement…" : "✓ Créer l'événement"}
+            {loading ? t("saving") : t("submitCreateRound")}
           </button>
           <Link href="/evenements" className="btn btn-secondary">
-            Annuler
+            {t("cancel")}
           </Link>
         </div>
       </form>

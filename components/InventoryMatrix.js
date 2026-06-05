@@ -1,5 +1,6 @@
 "use client";
 import { useState, useEffect, useMemo, Fragment } from "react";
+import { useTranslations } from "next-intl";
 import { isLegacyContent } from "../lib/car-types";
 import { KBadge, FreeBadge, BadgeLegend } from "./InventoryBadges";
 import { supabaseBrowser as supabase } from "../lib/supabase-browser";
@@ -11,7 +12,7 @@ const CAR_CATEGORY_LABELS = {
   oval: "Oval",
   dirt_oval: "Dirt Oval",
   dirt_road: "Dirt Road",
-  other: "Autre",
+  other: null,
 };
 
 const TRACK_CATEGORY_LABELS = {
@@ -19,7 +20,7 @@ const TRACK_CATEGORY_LABELS = {
   oval: "Oval",
   dirt_oval: "Dirt Oval",
   dirt_road: "Dirt Road",
-  other: "Autre",
+  other: null,
 };
 
 // Format driver name as "Prénom N." — first name(s) + surname initial.
@@ -130,6 +131,7 @@ export default function InventoryMatrix({
   kronosCircuitNames,
   currentDriverId = null,
 }) {
+  const t = useTranslations("inventoryMatrix");
   const [subTab, setSubTab] = useState("cars");
   const [loaded, setLoaded] = useState(false);
 
@@ -276,7 +278,7 @@ export default function InventoryMatrix({
         );
       } catch (err) {
         console.error("InventoryMatrix fetch error:", err);
-        setFetchError("Erreur lors du chargement des données d'inventaire.");
+        setFetchError(t("error"));
       }
     };
 
@@ -330,7 +332,7 @@ export default function InventoryMatrix({
       k?.car_type_label?.toUpperCase() ||
       k?.class ||
       (iracingLabelById || {})[car.iracing_car_id]?.toUpperCase() ||
-      "Autre"
+      t("categoryOther")
     );
   };
 
@@ -635,7 +637,7 @@ export default function InventoryMatrix({
     !loaded ||
     (allCars.length === 0 && allTracks.length === 0 && !fetchError)
   ) {
-    return <div className="empty">Chargement...</div>;
+    return <div className="empty">{t("loading")}</div>;
   }
 
   if (fetchError) {
@@ -727,8 +729,8 @@ export default function InventoryMatrix({
         }}
       >
         {[
-          { id: "cars", label: "Voitures" },
-          { id: "tracks", label: "Circuits" },
+          { id: "cars", label: t("tabCars") },
+          { id: "tracks", label: t("tabTracks") },
         ].map((tab) => (
           <button
             key={tab.id}
@@ -771,13 +773,13 @@ export default function InventoryMatrix({
                 marginBottom: "0.4rem",
               }}
             >
-              Catégorie
+              {t("filterCategory")}
             </div>
             <div style={{ display: "flex", gap: "0.4rem", flexWrap: "wrap" }}>
               {allCarCategories.map((cat) => (
                 <FilterPill
                   key={cat}
-                  label={CAR_CATEGORY_LABELS[cat] || cat}
+                  label={CAR_CATEGORY_LABELS[cat] || t("categoryOther")}
                   active={selectedCarCats.includes(cat)}
                   onToggle={() =>
                     toggleFilter(cat, selectedCarCats, setSelectedCarCats)
@@ -806,7 +808,7 @@ export default function InventoryMatrix({
                   textTransform: "uppercase",
                 }}
               >
-                Classe
+                {t("filterClass")}
               </span>
               {/* Quick-select buttons — Tout selects all visible classes, Aucune clears */}
               <button
@@ -814,14 +816,14 @@ export default function InventoryMatrix({
                 className="btn btn-secondary"
                 style={{ fontSize: "0.65rem", padding: "0.1rem 0.4rem" }}
               >
-                Tout
+                {t("filterAll")}
               </button>
               <button
                 onClick={() => setSelectedCarClasses([])}
                 className="btn btn-secondary"
                 style={{ fontSize: "0.65rem", padding: "0.1rem 0.4rem" }}
               >
-                Aucune
+                {t("filterNone")}
               </button>
             </div>
             <div style={{ display: "flex", gap: "0.4rem", flexWrap: "wrap" }}>
@@ -844,7 +846,7 @@ export default function InventoryMatrix({
           {carMatrixRows.length === 0 && (
             <div className="card">
               <div className="empty">
-                Aucune voiture correspondant aux filtres sélectionnés.
+                {t("noCarsMatch")}
               </div>
             </div>
           )}
@@ -898,7 +900,7 @@ export default function InventoryMatrix({
                         verticalAlign: "bottom",
                       }}
                     >
-                      Voiture{sortArrow(carSort, "name")}
+                      {t("colCar")}{sortArrow(carSort, "name")}
                     </th>
                     {/* Count header — sticky top+left, inset shadow for right border */}
                     <th
@@ -936,7 +938,7 @@ export default function InventoryMatrix({
                       <tr>
                         {/* Name cell sticky left, count cell sticky at NAME_COL_WIDTH */}
                         <td style={groupTdStyle(0)}>
-                          {CAR_CATEGORY_LABELS[category] || category}
+                          {CAR_CATEGORY_LABELS[category] || t("categoryOther")}
                         </td>
                         <td style={groupCountTdStyle(0)} />
                         {matrixDrivers.map((d) => (
@@ -1043,8 +1045,7 @@ export default function InventoryMatrix({
                         <Fragment key={`${category}|legacy|${legacyCls}`}>
                           <tr>
                             <td style={groupTdStyle(1, true)}>
-                              {legacyCls} — Legacy & Retraités (
-                              {legacyCars.length})
+                              {legacyCls} — {t("legacyGroup")} ({legacyCars.length})
                             </td>
                             <td style={groupCountTdStyle(1, true)} />
                             {matrixDrivers.map((d) => (
@@ -1163,13 +1164,13 @@ export default function InventoryMatrix({
                 marginBottom: "0.4rem",
               }}
             >
-              Catégorie
+              {t("filterCategory")}
             </div>
             <div style={{ display: "flex", gap: "0.4rem", flexWrap: "wrap" }}>
               {allTrackCategories.map((cat) => (
                 <FilterPill
                   key={cat}
-                  label={TRACK_CATEGORY_LABELS[cat] || cat}
+                  label={TRACK_CATEGORY_LABELS[cat] || t("categoryOther")}
                   active={selectedTrackCats.includes(cat)}
                   onToggle={() =>
                     toggleFilter(cat, selectedTrackCats, setSelectedTrackCats)
@@ -1185,7 +1186,7 @@ export default function InventoryMatrix({
           {trackMatrixRows.length === 0 && (
             <div className="card">
               <div className="empty">
-                Aucun circuit correspondant aux filtres sélectionnés.
+                {t("noTracksMatch")}
               </div>
             </div>
           )}
@@ -1240,7 +1241,7 @@ export default function InventoryMatrix({
                         verticalAlign: "bottom",
                       }}
                     >
-                      Circuit{sortArrow(trackSort, "name")}
+                      {t("colTrack")}{sortArrow(trackSort, "name")}
                     </th>
                     {/* Count header — sticky top+left, inset shadow for right border */}
                     <th
@@ -1279,7 +1280,7 @@ export default function InventoryMatrix({
                     <Fragment key={category}>
                       <tr>
                         <td style={groupTdStyle(0)}>
-                          {TRACK_CATEGORY_LABELS[category] || category}
+                          {TRACK_CATEGORY_LABELS[category] || t("categoryOther")}
                         </td>
                         <td style={groupCountTdStyle(0)} />
                         {matrixDrivers.map((d) => (
@@ -1365,7 +1366,7 @@ export default function InventoryMatrix({
                         <Fragment key={`${category}|legacy`}>
                           <tr>
                             <td style={groupTdStyle(1, true)}>
-                              Legacy & Retraités ({legacy.length})
+                              {t("legacyGroup")} ({legacy.length})
                             </td>
                             <td style={groupCountTdStyle(1, true)} />
                             {matrixDrivers.map((d) => (

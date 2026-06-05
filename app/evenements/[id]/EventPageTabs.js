@@ -3,9 +3,9 @@ import { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
 import StartTimesManager from "./StartTimesManager";
 import EventInventoryTab from "./EventInventoryTab";
-import { formatTimeInZone } from "../../../lib/timezone";
+import { formatTimeInZone, formatDateLabelInZone } from "../../../lib/timezone";
 import { useSearchParams } from "next/navigation";
-import { useTranslations } from "next-intl";
+import { useTranslations, useLocale } from "next-intl";
 
 // ── Crew name coloring ────────────────────────────────────────────────────────
 // Deterministic hash → one of 8 palette entries. Colors are chosen to be legible
@@ -104,6 +104,7 @@ export default function EventPageTabs({
   crewColorsMap = {},
 }) {
   const t = useTranslations("events");
+  const locale = useLocale();
   const [activeTab, setActiveTab] = useState("inscriptions");
   const searchParams = useSearchParams();
 
@@ -1059,7 +1060,7 @@ export default function EventPageTabs({
                           {entry.event_start_times ? (
                             <>
                               <div style={{ fontWeight: 600 }}>
-                                {entry.event_start_times.label}
+                                {formatDateLabelInZone(entry.event_start_times.irl_start, tz, locale)}
                               </div>
                               <div
                                 className="mono"

@@ -2,6 +2,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import { supabaseBrowser as supabase } from "../../../lib/supabase-browser";
 
 export default function NouveauChampionnat() {
@@ -11,6 +12,7 @@ export default function NouveauChampionnat() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [authChecked, setAuthChecked] = useState(false);
+  const t = useTranslations("championshipEdit");
 
   // Auth checked client-side — redirects non-admins before rendering the form.
   useEffect(() => {
@@ -41,7 +43,7 @@ export default function NouveauChampionnat() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!form.name.trim()) {
-      setError("Le nom est obligatoire.");
+      setError(t("errorName"));
       return;
     }
     setLoading(true);
@@ -65,7 +67,7 @@ export default function NouveauChampionnat() {
   if (!authChecked)
     return (
       <div className="page">
-        <p style={{ color: "var(--text-dim)" }}>Vérification des droits…</p>
+        <p style={{ color: "var(--text-dim)" }}>{t("checkingAuth")}</p>
       </div>
     );
 
@@ -73,39 +75,39 @@ export default function NouveauChampionnat() {
     <div className="page">
       <div className="page-header">
         <div>
-          <h1>Nouveau championnat</h1>
+          <h1>{t("titleNew")}</h1>
           <div className="accent-line" />
         </div>
         <Link href="/evenements" className="btn btn-secondary">
-          ← Retour
+          {t("back")}
         </Link>
       </div>
 
       <form onSubmit={handleSubmit}>
         <div className="card" style={{ marginBottom: "1.25rem" }}>
           <h3 style={{ marginBottom: "1.25rem", color: "var(--text-dim)" }}>
-            Informations
+            {t("sectionGeneral")}
           </h3>
           <div className="form-grid">
             <div className="form-group" style={{ gridColumn: "1 / -1" }}>
-              <label htmlFor="name">Nom du championnat *</label>
+              <label htmlFor="name">{t("labelName")}</label>
               <input
                 id="name"
                 type="text"
                 value={form.name}
                 onChange={set("name")}
-                placeholder="ex : NEC Endurance Series"
+                placeholder={t("placeholderName")}
                 required
               />
             </div>
             <div className="form-group">
-              <label htmlFor="season">Saison</label>
+              <label htmlFor="season">{t("labelSeason")}</label>
               <input
                 id="season"
                 type="text"
                 value={form.season}
                 onChange={set("season")}
-                placeholder="ex : 2026 Saison 1"
+                placeholder={t("placeholderSeason")}
               />
             </div>
           </div>
@@ -118,10 +120,10 @@ export default function NouveauChampionnat() {
         )}
         <div style={{ display: "flex", gap: "0.75rem" }}>
           <button type="submit" className="btn btn-primary" disabled={loading}>
-            {loading ? "Enregistrement…" : "✓ Créer le championnat"}
+            {loading ? t("saving") : t("submitCreate")}
           </button>
           <Link href="/evenements" className="btn btn-secondary">
-            Annuler
+            {t("cancel")}
           </Link>
         </div>
       </form>

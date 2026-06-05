@@ -1,4 +1,8 @@
 {
+  "meta": {
+    "title": "Kronos Endurance Planner",
+    "description": "Race planning for Kronos SimSports endurance events"
+  },
   "nav": {
     "home": "Home",
     "drivers": "Drivers",
@@ -239,6 +243,9 @@
     "colTank": "Tank",
     "colTrackTemp": "Track temp",
     "colHumidity": "Humidity",
+    "colDate": "Date",
+    "colCar": "Car",
+    "colSession": "Session",
     "saving": "Saving…",
     "save": "✓ Save",
     "cancel": "Cancel",
@@ -370,6 +377,10 @@
     "plannedEnd": "Planned end",
     "fairShare": "Fair Share — minimum",
     "laps": "laps",
+    "lPerLap": "L/lap",
+    "labelOpt": "opt:",
+    "labelActual": "actual",
+    "conflictWith": "Conflict with {crew} — {event}",
     "fairSharePart": "equal share)",
     "releaseStints": "Release a driver's stints",
     "releaseTitle": "Remove {name} from their {count} eligible stints",
@@ -378,6 +389,8 @@
     "legendPartial": "Partial",
     "legendUnavailable": "Unavailable",
     "legendUncertain": "Uncertain",
+    "statusUnknown": "unknown",
+    "statusAssigned": "(assigned)",
     "legendIcons": "🛞 = Tyre change · 💧 = Rain",
     "dataSource": "Data:",
     "teamModifier": "entry modifier",
@@ -402,6 +415,7 @@
     "inGame": "IG",
     "rainTitle": "Rain",
     "tyreChangeTitle": "Tyre change",
+    "tbd": "TBD",
     "noStints": "No stints planned.",
     "colDriverHeader": "Driver",
     "tooltipLapsTeamNoMod": "Laps calculated via estimated team average without configured modifier — low reliability",
@@ -552,7 +566,17 @@
     "colDrivers": "Drivers",
     "colSoF": "SoF",
     "colStart": "IRL start",
-    "colStream": "Stream"
+    "colStream": "Stream",
+    "back": "← Back",
+    "editEvent": "Edit",
+    "infoSignedUp": "Signed-up drivers",
+    "infoSunrise": "IG sunrise",
+    "infoSunset": "IG sunset",
+    "infoPitLane": "Pit lane",
+    "infoCircuit": "Circuit",
+    "infoFormat": "Format",
+    "infoDuration": "Duration",
+    "infoIGStart": "IG start"
   },
   "homeTabs": {
     "planning": "My schedule",
@@ -871,7 +895,8 @@
     "labelIGSunset": "IG sunset",
     "badgeArchived": "Archived",
     "carTbd": "Car TBD",
-    "editEntry": "Edit",
+    "labelAtTime": "{label} at {time}",
+    "editEntry":"Edit",
     "backToEvent": "Event"
   },
   "collapsibleSummary": {
@@ -943,7 +968,10 @@
     "syncBtn": "🔄 Update my inventory",
     "syncSuccess": "✓ Sync successful — inventory updated.",
     "syncFailed": "iRacing sync failed. Your data was not modified.",
-    "syncError": "An iRacing error occurred. Please try again."
+    "syncError": "An iRacing error occurred. Please try again.",
+    "noEventType": "No event type defined for this event.",
+    "noCarsForType": "No cars configured for type \"{format}\".",
+    "noDriversSigned": "No drivers signed up yet."
   },
   "eventForm": {
     "checkingAuth": "Checking permissions…",
@@ -1038,7 +1066,9 @@
     "slotInUse": "This slot is used by one or more entries and cannot be deleted.",
     "archivedNotice": "📦 This event is archived — all data is read-only.",
     "noStartTimes": "No start times configured.",
-    "editSlot": "Edit"
+    "editSlot": "Edit",
+    "defaultRoundName": "{name} — Round {number}",
+    "submitCreateRound": "✓ Create round"
   },
   "entryForm": {
     "loading": "Loading…",
@@ -1093,7 +1123,8 @@
     "slotPrefAdd": "Would you like to add the slot",
     "slotPrefAddSuffix": "to their preferences?",
     "slotPrefConfirm": "Yes, add the slot",
-    "slotPrefDecline": "No, leave preferences unchanged"
+    "labelAtTime": "{label} at {time}",
+    "slotPrefDecline":"No, leave preferences unchanged"
   },
   "inscription": {
     "loading": "Loading…",
@@ -1165,6 +1196,9 @@
     "deleteTitle": "Delete championship",
     "deleteMsg": "This championship and all its rounds will be permanently deleted. This action cannot be undone.",
     "deleteConfirm": "Delete permanently",
-    "deleteBtn": "Delete"
+    "deleteBtn": "Delete",
+    "titleNew": "New championship",
+    "submitCreate": "✓ Create championship",
+    "placeholderName": "e.g. NEC Endurance Series"
   }
 }

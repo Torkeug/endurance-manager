@@ -6,11 +6,12 @@ import {
   localToUTC,
   utcToInputValues,
   formatTimeInZone,
+  formatDateLabelInZone,
 } from "../../../lib/timezone";
-import { DateTime } from "luxon";
-import { useLocale } from "next-intl";
+import { useTranslations, useLocale } from "next-intl";
 
 function ConfirmModal({ modal, onConfirm, onCancel }) {
+  const t = useTranslations("eventForm");
   if (!modal) return null;
   return (
     <div
@@ -40,10 +41,10 @@ function ConfirmModal({ modal, onConfirm, onCancel }) {
           style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}
         >
           <button onClick={onConfirm} className="btn btn-danger">
-            {modal.confirmLabel || "Confirmer"}
+            {modal.confirmLabel || t("confirm")}
           </button>
           <button onClick={onCancel} className="btn btn-secondary">
-            Annuler
+            {t("cancel")}
           </button>
         </div>
       </div>
@@ -51,18 +52,6 @@ function ConfirmModal({ modal, onConfirm, onCancel }) {
   );
 }
 
-// Auto-generate a human-readable label from date + time in the event timezone.
-// Format: "Samedi 23 avril 2025" — no free text input to keep labels consistent.
-function generateLabel(date, time, tz, locale) {
-  const dt = DateTime.fromISO(`${date}T${time}:00`, { zone: tz }).setLocale(
-    locale,
-  );
-  const dayName = dt.toFormat("EEEE");
-  const dayNum = dt.toFormat("d");
-  const month = dt.toFormat("MMMM yyyy");
-  const label = `${dayName.charAt(0).toUpperCase() + dayName.slice(1)} ${dayNum} ${month}`;
-  return label;
-}
 
 export default function StartTimesManager({
   eventId,
@@ -72,6 +61,7 @@ export default function StartTimesManager({
   isAdmin,
   archived = false,
 }) {
+  const t = useTranslations("eventForm");
   const locale = useLocale();
   const router = useRouter();
   const [startTimes, setStartTimes] = useState(initialStartTimes);
@@ -104,11 +94,11 @@ export default function StartTimesManager({
 
   const handleAdd = async () => {
     if (!date) {
-      setError("La date est obligatoire.");
+      setError(t("errorDate"));
       return;
     }
     if (!time) {
-      setError("L'heure est obligatoire.");
+      setError(t("errorTime"));
       return;
     }
     setSaving(true);
@@ -118,7 +108,7 @@ export default function StartTimesManager({
       .insert([
         {
           event_id: eventId,
-          label: generateLabel(date, time, timezone, locale),
+          label: formatDateLabelInZone(localToUTC(date, time, timezone), timezone, locale),
           irl_start: localToUTC(date, time, timezone),
         },
       ])
@@ -137,11 +127,11 @@ export default function StartTimesManager({
 
   const handleSaveEdit = async () => {
     if (!date) {
-      setError("La date est obligatoire.");
+      setError(t("errorDate"));
       return;
     }
     if (!time) {
-      setError("L'heure est obligatoire.");
+      setError(t("errorTime"));
       return;
     }
     setSaving(true);
@@ -149,7 +139,7 @@ export default function StartTimesManager({
     const { data, error: err } = await supabase
       .from("event_start_times")
       .update({
-        label: generateLabel(date, time, timezone, locale),
+        label: formatDateLabelInZone(localToUTC(date, time, timezone), timezone, locale),
         irl_start: localToUTC(date, time, timezone),
       })
       .eq("id", editingId)
@@ -168,9 +158,9 @@ export default function StartTimesManager({
 
   const handleDelete = (stId) => {
     setConfirmModal({
-      title: "Supprimer le créneau",
-      message: "Supprimer ce créneau de départ ?",
-      confirmLabel: "Supprimer",
+      title: t("slotDeleteTitle"),
+      message: t("slotDeleteMsg"),
+      confirmLabel: t("slotDeleteConfirm"),
       onConfirm: async () => {
         const { error: err } = await supabase
           .from("event_start_times")
@@ -179,9 +169,7 @@ export default function StartTimesManager({
 
         if (err) {
           if (err.code === "23503") {
-            setError(
-              "Ce créneau est utilisé par un ou plusieurs équipages et ne peut pas être supprimé.",
-            );
+            setError(t("slotInUse"));
           } else {
             setError(err.message);
           }
@@ -207,7 +195,7 @@ export default function StartTimesManager({
     <div style={{ padding: "1rem", background: "var(--surface-2)" }}>
       <div className="form-grid" style={{ marginBottom: "1rem" }}>
         <div className="form-group">
-          <label>Date IRL</label>
+          <label>{t("labelIRLDate")}</label>
           <input
             type="date"
             value={date}
@@ -215,7 +203,7 @@ export default function StartTimesManager({
           />
         </div>
         <div className="form-group">
-          <label>Heure IRL (24h)</label>
+          <label>{t("labelIRLTime")}</label>
           <input
             type="time"
             value={time}
@@ -230,10 +218,10 @@ export default function StartTimesManager({
       )}
       <div style={{ display: "flex", gap: "0.75rem" }}>
         <button onClick={onSave} className="btn btn-primary" disabled={saving}>
-          {saving ? "Enregistrement…" : saveLabel}
+          {saving ? t("saving") : saveLabel}
         </button>
         <button onClick={onCancel} className="btn btn-secondary">
-          Annuler
+          {t("cancelSlot")}
         </button>
       </div>
     </div>
@@ -259,8 +247,7 @@ export default function StartTimesManager({
             color: "var(--danger)",
           }}
         >
-          📦 Cet événement est archivé — toutes les données sont en lecture
-          seule.
+          {t("archivedNotice")}
         </div>
       )}
       {error && !adding && !editingId && (
@@ -271,7 +258,7 @@ export default function StartTimesManager({
       {sorted.length === 0 && !adding && (
         <div className="card" style={{ marginBottom: "0.75rem" }}>
           <div className="empty" style={{ padding: "1.5rem" }}>
-            Aucun horaire de départ configuré.
+            {t("noStartTimes")}
           </div>
         </div>
       )}
@@ -281,7 +268,7 @@ export default function StartTimesManager({
           <table>
             <thead>
               <tr>
-                <th>Créneau de départ</th>
+                <th>{t("colStartSlot")}</th>
                 <th></th>
               </tr>
             </thead>
@@ -290,7 +277,9 @@ export default function StartTimesManager({
                 <React.Fragment key={st.id}>
                   <tr>
                     <td>
-                      <div style={{ fontWeight: 600 }}>{st.label}</div>
+                      <div style={{ fontWeight: 600 }}>
+                        {formatDateLabelInZone(st.irl_start, timezone, locale)}
+                      </div>
                       <div
                         className="mono"
                         style={{
@@ -299,7 +288,7 @@ export default function StartTimesManager({
                           marginTop: "0.1rem",
                         }}
                       >
-                        Départ à {formatTimeInZone(st.irl_start, timezone)}
+                        {t("startAt", { time: formatTimeInZone(st.irl_start, timezone) })}
                       </div>
                     </td>
                     <td style={{ textAlign: "right" }}>
@@ -317,13 +306,13 @@ export default function StartTimesManager({
                             onClick={() => startEdit(st)}
                             className="btn btn-secondary btn-sm"
                           >
-                            Modifier
+                            {t("editSlot")}
                           </button>
                           <button
                             onClick={() => handleDelete(st.id)}
                             className="btn btn-danger btn-sm"
                           >
-                            Supprimer
+                            {t("removeSlot")}
                           </button>
                         </div>
                       )}
@@ -332,7 +321,7 @@ export default function StartTimesManager({
                   {editingId === st.id && (
                     <tr>
                       <td colSpan={3} style={{ padding: 0 }}>
-                        {inlineForm(handleSaveEdit, resetForm, "✓ Enregistrer")}
+                        {inlineForm(handleSaveEdit, resetForm, t("submitSave"))}
                       </td>
                     </tr>
                   )}
@@ -346,9 +335,9 @@ export default function StartTimesManager({
       {adding ? (
         <div className="card">
           <h3 style={{ marginBottom: "1rem", color: "var(--text-dim)" }}>
-            Nouveau créneau
+            {t("newSlotTitle")}
           </h3>
-          {inlineForm(handleAdd, resetForm, "✓ Ajouter")}
+          {inlineForm(handleAdd, resetForm, t("addSlot"))}
         </div>
       ) : (
         !editingId &&
@@ -365,7 +354,7 @@ export default function StartTimesManager({
             }}
             className="btn btn-secondary"
           >
-            + Ajouter un créneau de départ
+            {t("addSlotBtn")}
           </button>
         )
       )}

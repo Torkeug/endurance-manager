@@ -221,7 +221,7 @@ export default function CollapsibleSummary({
                   fontSize: "0.82rem",
                 }}
               >
-                ▲ Réduire
+                {t("collapse")}
               </button>
             </div>
           )}

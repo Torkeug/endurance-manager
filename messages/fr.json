@@ -1,4 +1,8 @@
 {
+  "meta": {
+    "title": "Kronos Endurance Planner",
+    "description": "Planification des courses d'endurance Kronos SimSports"
+  },
   "nav": {
     "home": "Accueil",
     "drivers": "Pilotes",
@@ -220,6 +224,9 @@
     "colTank": "Réservoir",
     "colTrackTemp": "T. piste",
     "colHumidity": "Humidité",
+    "colDate": "Date",
+    "colCar": "Voiture",
+    "colSession": "Session",
     "saving": "Enregistrement…",
     "save": "✓ Enregistrer",
     "cancel": "Annuler",
@@ -351,6 +358,10 @@
     "plannedEnd": "Fin prévue",
     "fairShare": "Fair Share — minimum",
     "laps": "tours",
+    "lPerLap": "L/tr",
+    "labelOpt": "opt:",
+    "labelActual": "réel",
+    "conflictWith": "Conflit avec {crew} — {event}",
     "fairSharePart": "part égale)",
     "releaseStints": "Libérer les relais d'un pilote",
     "releaseTitle": "Retirer {name} de ses {count} relais éligibles",
@@ -359,6 +370,8 @@
     "legendPartial": "Partielle",
     "legendUnavailable": "Indisponible",
     "legendUncertain": "Incertain",
+    "statusUnknown": "non renseigné",
+    "statusAssigned": "(assigné)",
     "legendIcons": "🛞 = Chgt pneus · 💧 = Pluie",
     "dataSource": "Données :",
     "teamModifier": "modificateur équipage",
@@ -383,6 +396,7 @@
     "inGame": "IG",
     "rainTitle": "Pluie",
     "tyreChangeTitle": "Changement de pneus",
+    "tbd": "À définir",
     "noStints": "Aucun relais planifié.",
     "colDriverHeader": "Pilote",
     "tooltipLapsTeamNoMod": "Tours calculés via moyenne équipe estimée sans modificateur configuré — fiabilité faible",
@@ -533,7 +547,17 @@
     "colDrivers": "Pilotes",
     "colSoF": "SoF",
     "colStart": "Départ IRL",
-    "colStream": "Stream"
+    "colStream": "Stream",
+    "back": "← Retour",
+    "editEvent": "Modifier",
+    "infoSignedUp": "Pilotes inscrits",
+    "infoSunrise": "Lever soleil",
+    "infoSunset": "Coucher soleil",
+    "infoPitLane": "Pit lane",
+    "infoCircuit": "Circuit",
+    "infoFormat": "Format",
+    "infoDuration": "Durée",
+    "infoIGStart": "Départ IG"
   },
   "homeTabs": {
     "planning": "Mon planning",
@@ -871,7 +895,8 @@
     "labelIGSunset": "Coucher soleil IG",
     "badgeArchived": "Archivé",
     "carTbd": "Voiture à définir",
-    "editEntry": "Modifier",
+    "labelAtTime": "{label} à {time}",
+    "editEntry":"Modifier",
     "backToEvent": "Événement"
   },
   "collapsibleSummary": {
@@ -943,7 +968,10 @@
     "syncBtn": "🔄 Mettre à jour mon inventaire",
     "syncSuccess": "✓ Synchronisation réussie — inventaire mis à jour.",
     "syncFailed": "Erreur lors de la synchronisation iRacing. Vos données n'ont pas été modifiées.",
-    "syncError": "Une erreur iRacing est survenue. Veuillez réessayer."
+    "syncError": "Une erreur iRacing est survenue. Veuillez réessayer.",
+    "noEventType": "Aucun type d'événement défini pour cet événement.",
+    "noCarsForType": "Aucune voiture configurée pour le type « {format} ».",
+    "noDriversSigned": "Aucun pilote inscrit pour le moment."
   },
   "eventForm": {
     "checkingAuth": "Vérification des droits…",
@@ -1038,7 +1066,9 @@
     "slotInUse": "Ce créneau est utilisé par un ou plusieurs équipages et ne peut pas être supprimé.",
     "archivedNotice": "📦 Cet événement est archivé — toutes les données sont en lecture seule.",
     "noStartTimes": "Aucun horaire de départ configuré.",
-    "editSlot": "Modifier"
+    "editSlot": "Modifier",
+    "defaultRoundName": "{name} — Manche {number}",
+    "submitCreateRound": "✓ Créer la manche"
   },
   "entryForm": {
     "loading": "Chargement…",
@@ -1093,7 +1123,8 @@
     "slotPrefAdd": "Souhaitez-vous ajouter le créneau",
     "slotPrefAddSuffix": "à leurs préférences ?",
     "slotPrefConfirm": "Oui, ajouter le créneau",
-    "slotPrefDecline": "Non, laisser les préférences inchangées"
+    "labelAtTime": "{label} à {time}",
+    "slotPrefDecline":"Non, laisser les préférences inchangées"
   },
   "inscription": {
     "loading": "Chargement…",
@@ -1165,6 +1196,9 @@
     "deleteTitle": "Supprimer le championnat",
     "deleteMsg": "Ce championnat et toutes ses manches seront supprimés définitivement. Cette action est irréversible.",
     "deleteConfirm": "Supprimer définitivement",
-    "deleteBtn": "Supprimer"
+    "deleteBtn": "Supprimer",
+    "titleNew": "Nouveau championnat",
+    "submitCreate": "✓ Créer le championnat",
+    "placeholderName": "ex : NEC Endurance Series"
   }
 }

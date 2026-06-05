@@ -1,5 +1,6 @@
 "use client";
 import { useState, useEffect, useMemo, Fragment } from "react";
+import { useTranslations } from "next-intl";
 import { supabaseBrowser as supabase } from "../../../lib/supabase-browser";
 import {
   KBadge,
@@ -107,6 +108,7 @@ export default function EventInventoryTab({
   eventFormat,
   currentDriverId = null, // highlights the current user's column
 }) {
+  const t = useTranslations("inventoryMatrix");
   const [eventCars, setEventCars] = useState([]);
   const [carOwnershipSets, setCarOwnershipSets] = useState({});
   const [kronosCarsMap, setKronosCarsMap] = useState({});
@@ -291,31 +293,27 @@ export default function EventInventoryTab({
     // Recalculate when ownership data or sort changes
   }, [eventCars, sort, carOwnershipSets, matrixDrivers]);
 
-  if (!loaded) return <div className="empty">Chargement...</div>;
+  if (!loaded) return <div className="empty">{t("loading")}</div>;
   if (error) return <div className="alert alert-error">{error}</div>;
 
   if (!eventFormat) {
     return (
       <div className="table-wrap">
-        <div className="empty">
-          Aucun type d&apos;événement défini pour cet événement.
-        </div>
+        <div className="empty">{t("noEventType")}</div>
       </div>
     );
   }
   if (eventCars.length === 0) {
     return (
       <div className="table-wrap">
-        <div className="empty">
-          Aucune voiture configurée pour le type « {eventFormat} ».
-        </div>
+        <div className="empty">{t("noCarsForType", { format: eventFormat })}</div>
       </div>
     );
   }
   if (matrixDrivers.length === 0) {
     return (
       <div className="table-wrap">
-        <div className="empty">Aucun pilote inscrit pour le moment.</div>
+        <div className="empty">{t("noDriversSigned")}</div>
       </div>
     );
   }
@@ -360,7 +358,7 @@ export default function EventInventoryTab({
                   userSelect: "none",
                 }}
               >
-                Voiture{sortArrow("name")}
+                {t("colCar")}{sortArrow("name")}
               </th>
 
               {/* # — sortable by owner count, vertically aligned to match Voiture */}
@@ -442,7 +440,7 @@ export default function EventInventoryTab({
               <Fragment key={cls}>
                 <tr>
                   {/* Name cell sticky left, count cell sticky at NAME_COL_WIDTH */}
-                  <td style={groupTdStyle}>{cls}</td>
+                  <td style={groupTdStyle}>{cls === "Autre" ? t("categoryOther") : cls}</td>
                   <td style={groupCountTdStyle} />
                   {matrixDrivers.map((d) => (
                     <td

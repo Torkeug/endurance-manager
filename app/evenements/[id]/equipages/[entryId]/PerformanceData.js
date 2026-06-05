@@ -1148,7 +1148,7 @@ function DriverRow({
 
                       <thead>
                         <tr>
-                          {["", t("colLapTime"), t("colFuel"), t("colTank"), t("colTrackTemp"), t("colHumidity"), "Date", "Car", "Session", ""].map((h, i) => (
+                          {["", t("colLapTime"), t("colFuel"), t("colTank"), t("colTrackTemp"), t("colHumidity"), t("colDate"), t("colCar"), t("colSession"), ""].map((h, i) => (
                             <th key={i} style={{ ...thStyle, fontSize: "0.65rem", padding: "0.35rem 0.6rem", position: "sticky", top: 0, zIndex: 1 }}>{h}</th>
                           ))}
                         </tr>
