@@ -3181,7 +3181,7 @@ export default function StintGrid({
                         opacity: archived ? 0.7 : 1,
                       }}
                     >
-                      <option value="">— À définir —</option>
+                      <option value="">— {t("tbd")} —</option>
                       {assignedDrivers.map((d) => {
                         const driverId = d.drivers?.id;
                         const status = checkAvailability(

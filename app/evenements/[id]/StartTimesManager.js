@@ -8,6 +8,7 @@ import {
   formatTimeInZone,
 } from "../../../lib/timezone";
 import { DateTime } from "luxon";
+import { useLocale } from "next-intl";
 
 function ConfirmModal({ modal, onConfirm, onCancel }) {
   if (!modal) return null;
@@ -52,9 +53,9 @@ function ConfirmModal({ modal, onConfirm, onCancel }) {
 
 // Auto-generate a human-readable label from date + time in the event timezone.
 // Format: "Samedi 23 avril 2025" — no free text input to keep labels consistent.
-function generateLabel(date, time, tz) {
+function generateLabel(date, time, tz, locale) {
   const dt = DateTime.fromISO(`${date}T${time}:00`, { zone: tz }).setLocale(
-    "fr",
+    locale,
   );
   const dayName = dt.toFormat("EEEE");
   const dayNum = dt.toFormat("d");
@@ -71,6 +72,7 @@ export default function StartTimesManager({
   isAdmin,
   archived = false,
 }) {
+  const locale = useLocale();
   const router = useRouter();
   const [startTimes, setStartTimes] = useState(initialStartTimes);
   const [adding, setAdding] = useState(false);
@@ -116,7 +118,7 @@ export default function StartTimesManager({
       .insert([
         {
           event_id: eventId,
-          label: generateLabel(date, time, timezone),
+          label: generateLabel(date, time, timezone, locale),
           irl_start: localToUTC(date, time, timezone),
         },
       ])
@@ -147,7 +149,7 @@ export default function StartTimesManager({
     const { data, error: err } = await supabase
       .from("event_start_times")
       .update({
-        label: generateLabel(date, time, timezone),
+        label: generateLabel(date, time, timezone, locale),
         irl_start: localToUTC(date, time, timezone),
       })
       .eq("id", editingId)
