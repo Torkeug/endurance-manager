@@ -230,3 +230,31 @@ IRACING_BRIDGE_API_KEY                        # Bearer token for iRacing webhook
 CRON_SECRET                    # Bearer token for Vercel cron endpoints
 NEXT_PUBLIC_SHOW_TEST_ACCOUNTS # Set to "true" to show test accounts in driver lists — local-only, not set in Vercel (absent = hidden in production)
 ```
+
+## Git remotes
+
+Two remotes, one branch each:
+
+| Remote | Repo | Content |
+|--------|------|---------|
+| `origin` | private (Kronos-Team-Endurance-Manager) | full — includes Supabase project ref in CLAUDE.md |
+| `public` | public (endurance-manager) | stripped — project ref removed from CLAUDE.md |
+
+**Push workflow:**
+
+```bash
+# 1. Commit work on main, push to private
+git push origin main
+
+# 2. Rebase public branch onto main (replays the strip commit on top)
+git checkout public
+git rebase main
+
+# 3. Force-push to public remote (rebase rewrites history, force is always required)
+git push public public:main --force
+
+# 4. Return to main
+git checkout main
+```
+
+The `public` branch has one extra commit (`chore: strip team-specific data and add MIT license for public release`) that removes the Supabase project ref. The rebase replays it on top of every new `main` commit automatically.
