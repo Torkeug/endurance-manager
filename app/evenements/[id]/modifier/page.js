@@ -330,7 +330,7 @@ export default function ModifierEvenement({ params }) {
     const newIrlStarts = new Set(
       (specialStartTimes || []).map((st) => {
         const dayOffset =
-          { vendredi: 0, samedi: 1, dimanche: 2 }[st.day_of_week] || 0;
+          { friday: 0, saturday: 1, sunday: 2 }[st.day_of_week] || 0;
         return friday
           .plus({ days: dayOffset })
           .set({ hour: st.hour, minute: st.minute, second: 0, millisecond: 0 })
@@ -445,13 +445,13 @@ export default function ModifierEvenement({ params }) {
       });
       const startTimeRows = specialStartTimes.map((st) => {
         const dayOffset =
-          { vendredi: 0, samedi: 1, dimanche: 2 }[st.day_of_week] || 0;
+          { friday: 0, saturday: 1, sunday: 2 }[st.day_of_week] || 0;
         const dt = friday
           .plus({ days: dayOffset })
           .set({ hour: st.hour, minute: st.minute, second: 0, millisecond: 0 });
         return {
           event_id: id,
-          label: `${st.day_of_week.charAt(0).toUpperCase() + st.day_of_week.slice(1)} ${dt.toFormat("d MMMM yyyy", { locale: "fr" })}`,
+          label: dt.setLocale("fr").toFormat("EEEE d MMMM yyyy").replace(/^\w/, (c) => c.toUpperCase()),
           irl_start: dt.toUTC().toISO(),
         };
       });

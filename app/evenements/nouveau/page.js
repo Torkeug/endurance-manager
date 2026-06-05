@@ -312,10 +312,10 @@ export default function NouvelEvenement() {
       const friday = DateTime.fromISO(weekendStartDate, {
         zone: form.timezone,
       });
-      // vendredi = +0 days, samedi = +1, dimanche = +2
+      // friday = +0 days, saturday = +1, sunday = +2
       const startTimeRows = specialStartTimes.map((st) => {
         const dayOffset =
-          { vendredi: 0, samedi: 1, dimanche: 2 }[st.day_of_week] || 0;
+          { friday: 0, saturday: 1, sunday: 2 }[st.day_of_week] || 0;
         const dt = friday.plus({ days: dayOffset }).set({
           hour: st.hour,
           minute: st.minute,
@@ -324,7 +324,7 @@ export default function NouvelEvenement() {
         });
         return {
           event_id: data.id,
-          label: `${st.day_of_week.charAt(0).toUpperCase() + st.day_of_week.slice(1)} ${dt.toFormat("d MMMM yyyy", { locale: "fr" })}`,
+          label: dt.setLocale("fr").toFormat("EEEE d MMMM yyyy").replace(/^\w/, (c) => c.toUpperCase()),
           irl_start: dt.toUTC().toISO(),
         };
       });
@@ -485,7 +485,7 @@ export default function NouvelEvenement() {
                     {t("specialSlotsPreview")}
                     {specialStartTimes.map((st) => {
                       const dayOffset =
-                        { vendredi: 0, samedi: 1, dimanche: 2 }[
+                        { friday: 0, saturday: 1, sunday: 2 }[
                           st.day_of_week
                         ] || 0;
                       const date = new Date(weekendStartDate);

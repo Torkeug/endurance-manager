@@ -5,8 +5,9 @@ import { supabaseBrowser as supabase } from "../../lib/supabase-browser";
 import React from "react";
 
 // Fixed sort order for days of the week — used to sort special start times
-// chronologically across the weekend (vendredi → samedi → dimanche)
-const DAY_ORDER = { vendredi: 0, samedi: 1, dimanche: 2 };
+// chronologically across the weekend (friday → saturday → sunday)
+const DAY_ORDER = { friday: 0, saturday: 1, sunday: 2 };
+const DAY_LABELS = { friday: "Vendredi", saturday: "Samedi", sunday: "Dimanche" };
 
 function formatDuration(minutes) {
   if (!minutes) return "—";
@@ -79,12 +80,12 @@ export default function SettingsManager({
   const [addingSpecial, setAddingSpecial] = useState(false);
   const [newStH, setNewStH] = useState("");
   const [newStM, setNewStM] = useState("");
-  const [newStDay, setNewStDay] = useState("vendredi");
+  const [newStDay, setNewStDay] = useState("friday");
   const [savingSpecial, setSavingSpecial] = useState(null);
   const [editingSpecialId, setEditingSpecialId] = useState(null);
   const [editStH, setEditStH] = useState("");
   const [editStM, setEditStM] = useState("");
-  const [editStDay, setEditStDay] = useState("vendredi");
+  const [editStDay, setEditStDay] = useState("friday");
   const [confirmModal, setConfirmModal] = useState(null);
 
   // Signup tags state
@@ -238,7 +239,7 @@ export default function SettingsManager({
     setError(null);
     // Label is auto-generated from day + time — no free text input.
     // This keeps labels consistent and avoids manual entry errors.
-    const label = `${newStDay.charAt(0).toUpperCase() + newStDay.slice(1)} à ${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
+    const label = `${DAY_LABELS[newStDay]} à ${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
     const { data, error: err } = await supabase
       .from("special_event_start_times")
       .insert([{ label, hour: h, minute: m, day_of_week: newStDay }])
@@ -258,7 +259,7 @@ export default function SettingsManager({
     );
     setNewStH("");
     setNewStM("");
-    setNewStDay("vendredi");
+    setNewStDay("friday");
     setAddingSpecial(false);
     setSavingSpecial(null);
     router.refresh();
@@ -275,7 +276,7 @@ export default function SettingsManager({
     setError(null);
     // Label is auto-generated from day + time — no free text input.
     // This keeps labels consistent and avoids manual entry errors.
-    const label = `${editStDay.charAt(0).toUpperCase() + editStDay.slice(1)} à ${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
+    const label = `${DAY_LABELS[editStDay]} à ${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
     const { data, error: err } = await supabase
       .from("special_event_start_times")
       .update({ label, hour: h, minute: m, day_of_week: editStDay })
@@ -578,9 +579,9 @@ export default function SettingsManager({
                   fontSize: "0.9rem",
                 }}
               >
-                <option value="vendredi">Vendredi</option>
-                <option value="samedi">Samedi</option>
-                <option value="dimanche">Dimanche</option>
+                <option value="friday">Vendredi</option>
+                <option value="saturday">Samedi</option>
+                <option value="sunday">Dimanche</option>
               </select>
               <span style={{ color: "var(--text-dim)" }}>à</span>
               <input
@@ -635,7 +636,7 @@ export default function SettingsManager({
                   setAddingSpecial(false);
                   setNewStH("");
                   setNewStM("");
-                  setNewStDay("vendredi");
+                  setNewStDay("friday");
                   setError(null);
                 }}
                 className="btn btn-secondary"
@@ -677,8 +678,7 @@ export default function SettingsManager({
                         }}
                         className="mono"
                       >
-                        {st.day_of_week?.charAt(0).toUpperCase() +
-                          st.day_of_week?.slice(1)}{" "}
+                        {DAY_LABELS[st.day_of_week]}{" "}
                         à {String(st.hour).padStart(2, "0")}:
                         {String(st.minute).padStart(2, "0")}
                       </td>
@@ -695,7 +695,7 @@ export default function SettingsManager({
                               setEditingSpecialId(st.id);
                               setEditStH(String(st.hour));
                               setEditStM(String(st.minute));
-                              setEditStDay(st.day_of_week || "vendredi");
+                              setEditStDay(st.day_of_week || "friday");
                             }}
                             className="btn btn-secondary btn-sm"
                           >
@@ -741,9 +741,9 @@ export default function SettingsManager({
                                   fontSize: "0.9rem",
                                 }}
                               >
-                                <option value="vendredi">Vendredi</option>
-                                <option value="samedi">Samedi</option>
-                                <option value="dimanche">Dimanche</option>
+                                <option value="friday">Vendredi</option>
+                                <option value="saturday">Samedi</option>
+                                <option value="sunday">Dimanche</option>
                               </select>
                               <span style={{ color: "var(--text-dim)" }}>
                                 à
