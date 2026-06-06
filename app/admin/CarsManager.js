@@ -1,6 +1,7 @@
 "use client";
 import React, { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { supabaseBrowser as supabase } from "../../lib/supabase-browser";
 
 // ─── Shared styles ───────────────────────────────────────────────────────────
@@ -28,6 +29,7 @@ const TD = {
 // Shared between both tabs — shows iRacing car_types as selectable pills
 // plus a free-text input for manual override.
 function CarTypePicker({ carTypes, value, onChange }) {
+  const t = useTranslations("admin");
   return (
     <div>
       {carTypes?.length > 0 && (
@@ -82,7 +84,7 @@ function CarTypePicker({ carTypes, value, onChange }) {
             color: "var(--text-dim)",
           }}
         >
-          Groupé sous :{" "}
+          {t("carsGroupedUnder")}{" "}
           <span style={{ color: "var(--accent)", fontWeight: 700 }}>
             {value.toUpperCase()}
           </span>
@@ -95,7 +97,9 @@ function CarTypePicker({ carTypes, value, onChange }) {
 // Shown before deleting a car that has active preferred_car_ids references
 // in signups. Lists affected drivers so the admin can make an informed decision.
 function DeleteCarModal({ modal, onConfirm, onCancel }) {
+  const t = useTranslations("admin");
   if (!modal) return null;
+  const count = modal.affectedDrivers.length;
   return (
     <div
       style={{
@@ -110,8 +114,8 @@ function DeleteCarModal({ modal, onConfirm, onCancel }) {
       }}
     >
       <div className="card" style={{ maxWidth: "480px", width: "100%" }}>
-        <h3 style={{ marginBottom: "0.75rem" }}>Supprimer la voiture</h3>
-        {modal.affectedDrivers.length > 0 ? (
+        <h3 style={{ marginBottom: "0.75rem" }}>{t("carsDeleteTitle")}</h3>
+        {count > 0 ? (
           <>
             <p
               style={{
@@ -122,13 +126,9 @@ function DeleteCarModal({ modal, onConfirm, onCancel }) {
             >
               ⚠️{" "}
               <strong style={{ color: "var(--text)" }}>
-                {modal.affectedDrivers.length} pilote
-                {modal.affectedDrivers.length > 1 ? "s" : ""}
+                {t("carsAffectedCount", { count })}
               </strong>{" "}
-              {modal.affectedDrivers.length > 1 ? "ont" : "a"} cette voiture
-              dans leurs préférences et{" "}
-              {modal.affectedDrivers.length > 1 ? "perdront" : "perdra"}{" "}
-              silencieusement cette préférence :
+              {t("carsAffectedVerb", { count })}
             </p>
             <ul
               style={{
@@ -152,8 +152,7 @@ function DeleteCarModal({ modal, onConfirm, onCancel }) {
                 marginBottom: "1.5rem",
               }}
             >
-              Ces pilotes devront mettre à jour leurs préférences lors de leur
-              prochaine inscription.
+              {t("carsUpdatePrefsHint")}
             </p>
           </>
         ) : (
@@ -164,19 +163,17 @@ function DeleteCarModal({ modal, onConfirm, onCancel }) {
               marginBottom: "1.5rem",
             }}
           >
-            Confirmer la suppression de{" "}
-            <strong style={{ color: "var(--text)" }}>{modal.carName}</strong> ?
-            Cette action est irréversible.
+            {t("carsConfirmDelete", { name: modal.carName })}
           </p>
         )}
         <div
           style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}
         >
           <button onClick={onConfirm} className="btn btn-danger">
-            Supprimer définitivement
+            {t("deleteForever")}
           </button>
           <button onClick={onCancel} className="btn btn-secondary">
-            Annuler
+            {t("cancel")}
           </button>
         </div>
       </div>
@@ -187,6 +184,7 @@ function DeleteCarModal({ modal, onConfirm, onCancel }) {
 // ─── Kronos Endurance tab ─────────────────────────────────────────────────────
 // Manages cars used in events — linked to iRacing catalog, with tank size and class.
 function KronosEnduranceTab({ initialCars, iracingCars }) {
+  const t = useTranslations("admin");
   const router = useRouter();
   const [cars, setCars] = useState(initialCars);
   const [adding, setAdding] = useState(false);
@@ -407,7 +405,7 @@ function KronosEnduranceTab({ initialCars, iracingCars }) {
     <div style={{ padding: "1rem", background: "var(--surface-2)" }}>
       {/* iRacing catalog search */}
       <div className="form-group" style={{ marginBottom: "1rem" }}>
-        <label>Voiture iRacing</label>
+        <label>{t("carsIracingLabel")}</label>
         {!iracingCars?.length ? (
           <div
             style={{
@@ -416,8 +414,7 @@ function KronosEnduranceTab({ initialCars, iracingCars }) {
               padding: "0.5rem 0",
             }}
           >
-            ⚠️ Catalogue iRacing vide. Lancez une synchronisation iRacing
-            d&apos;abord.
+            {t("carsIracingEmpty")}
           </div>
         ) : selectedIracingCar ? (
           <div
@@ -431,7 +428,7 @@ function KronosEnduranceTab({ initialCars, iracingCars }) {
               onClick={clearIracingCarSelection}
               className="btn btn-secondary btn-sm"
             >
-              Changer
+              {t("change")}
             </button>
           </div>
         ) : (
@@ -440,7 +437,7 @@ function KronosEnduranceTab({ initialCars, iracingCars }) {
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Rechercher une voiture iRacing…"
+              placeholder={t("carsIracingSearch")}
               autoFocus={adding}
             />
             {filteredIracingCars.length > 0 && (
@@ -489,9 +486,9 @@ function KronosEnduranceTab({ initialCars, iracingCars }) {
       {selectedIracingCar && (
         <div className="form-group" style={{ marginBottom: "1rem" }}>
           <label>
-            Type de classe{" "}
+            {t("carsClassTypeLabel")}{" "}
             <span style={{ fontWeight: 400, color: "var(--text-dim)" }}>
-              — sélectionnez un tag ou saisissez manuellement (optionnel)
+              {t("carsClassTypeHint")}
             </span>
           </label>
           <CarTypePicker
@@ -506,12 +503,12 @@ function KronosEnduranceTab({ initialCars, iracingCars }) {
 
       {/* Tank size */}
       <div className="form-group" style={{ marginBottom: "1rem" }}>
-        <label>Réservoir (litres)</label>
+        <label>{t("carsTankLabel")}</label>
         <input
           type="number"
           value={form.tank_size_litres}
           onChange={set("tank_size_litres")}
-          placeholder="ex : 99"
+          placeholder={t("carsTankPlaceholder")}
           min="0"
           max="999"
           step="0.1"
@@ -521,7 +518,7 @@ function KronosEnduranceTab({ initialCars, iracingCars }) {
 
       {/* Per-car refuel rate override — only needed when different from class default */}
       <div className="form-group" style={{ marginBottom: "1rem" }}>
-        <label>Taux de ravitaillement (L/s)</label>
+        <label>{t("carsRefuelLabel")}</label>
         <input
           type="number"
           value={form.refuel_litres_per_second}
@@ -538,7 +535,7 @@ function KronosEnduranceTab({ initialCars, iracingCars }) {
             marginTop: "0.3rem",
           }}
         >
-          Laisser vide pour utiliser le taux de la classe.
+          {t("carsRefuelHint")}
         </div>
       </div>
 
@@ -549,8 +546,7 @@ function KronosEnduranceTab({ initialCars, iracingCars }) {
           marginBottom: "1rem",
         }}
       >
-        💡 La classe s&apos;assigne depuis l&apos;onglet{" "}
-        <strong>Classes</strong>.
+        {t("carsClassHint", { tab: t("tabClasses") })}
       </p>
 
       {error && (
@@ -564,10 +560,10 @@ function KronosEnduranceTab({ initialCars, iracingCars }) {
           className="btn btn-primary"
           disabled={saving}
         >
-          {saving ? "…" : editingId ? "✓ Enregistrer" : "✓ Ajouter"}
+          {saving ? t("saving") : editingId ? t("save") : t("add")}
         </button>
         <button onClick={reset} className="btn btn-secondary">
-          Annuler
+          {t("cancel")}
         </button>
       </div>
     </div>
@@ -591,7 +587,7 @@ function KronosEnduranceTab({ initialCars, iracingCars }) {
       {adding && (
         <div className="card" style={{ marginBottom: "0.75rem" }}>
           <h3 style={{ marginBottom: "1rem", color: "var(--text-dim)" }}>
-            Nouvelle voiture
+            {t("carsNewTitle")}
           </h3>
           {editForm}
         </div>
@@ -603,7 +599,7 @@ function KronosEnduranceTab({ initialCars, iracingCars }) {
           className="btn btn-primary"
           style={{ marginBottom: "0.75rem" }}
         >
-          + Ajouter une voiture
+          {t("carsAddBtn")}
         </button>
       )}
 
@@ -611,11 +607,11 @@ function KronosEnduranceTab({ initialCars, iracingCars }) {
         <table>
           <thead>
             <tr>
-              <th>Voiture</th>
-              <th>Classe</th>
-              <th>Type iRacing</th>
-              <th>Réservoir</th>
-              <th>Ravit.</th>
+              <th>{t("carsColCar")}</th>
+              <th>{t("carsColClass")}</th>
+              <th>{t("carsColType")}</th>
+              <th>{t("carsColTank")}</th>
+              <th>{t("carsColRefuel")}</th>
               <th />
             </tr>
           </thead>
@@ -676,7 +672,7 @@ function KronosEnduranceTab({ initialCars, iracingCars }) {
                           </span>
                         ) : (
                           <span style={{ color: "var(--text-dim)" }}>
-                            classe
+                            {t("carsFromClass")}
                           </span>
                         )}
                       </td>
@@ -692,13 +688,13 @@ function KronosEnduranceTab({ initialCars, iracingCars }) {
                             onClick={() => startEdit(car)}
                             className="btn btn-secondary btn-sm"
                           >
-                            Modifier
+                            {t("edit")}
                           </button>
                           <button
                             onClick={() => handleDelete(car.id, car.name)}
                             className="btn btn-danger btn-sm"
                           >
-                            Supprimer
+                            {t("delete")}
                           </button>
                         </div>
                       </td>
@@ -727,7 +723,7 @@ function KronosEnduranceTab({ initialCars, iracingCars }) {
                       padding: "0.4rem 1rem",
                     }}
                   >
-                    ⚠️ Non classées
+                    {t("carsUnclassedHeader")}
                   </td>
                 </tr>
                 {withoutClass.map((car) => (
@@ -741,7 +737,7 @@ function KronosEnduranceTab({ initialCars, iracingCars }) {
                             fontSize: "0.78rem",
                           }}
                         >
-                          Non classée
+                          {t("carsUnclassedLabel")}
                         </span>
                       </td>
                       <td>
@@ -776,7 +772,7 @@ function KronosEnduranceTab({ initialCars, iracingCars }) {
                           </span>
                         ) : (
                           <span style={{ color: "var(--text-dim)" }}>
-                            classe
+                            {t("carsFromClass")}
                           </span>
                         )}
                       </td>
@@ -792,13 +788,13 @@ function KronosEnduranceTab({ initialCars, iracingCars }) {
                             onClick={() => startEdit(car)}
                             className="btn btn-secondary btn-sm"
                           >
-                            Modifier
+                            {t("edit")}
                           </button>
                           <button
                             onClick={() => handleDelete(car.id, car.name)}
                             className="btn btn-danger btn-sm"
                           >
-                            Supprimer
+                            {t("delete")}
                           </button>
                         </div>
                       </td>
@@ -816,7 +812,7 @@ function KronosEnduranceTab({ initialCars, iracingCars }) {
             {cars.length === 0 && (
               <tr>
                 <td colSpan={6} className="empty">
-                  Aucune voiture.
+                  {t("carsEmpty")}
                 </td>
               </tr>
             )}
@@ -831,6 +827,7 @@ function KronosEnduranceTab({ initialCars, iracingCars }) {
 // Shows all iRacing cars — admin can set car_type_label for inventory grouping.
 // Has no impact on the endurance/event side.
 function IracingCatalogueTab({ iracingCars, setIracingCars }) {
+  const t = useTranslations("admin");
   const [searchQuery, setSearchQuery] = useState("");
   const [saving, setSaving] = useState(null);
   const [error, setError] = useState(null);
@@ -894,9 +891,7 @@ function IracingCatalogueTab({ iracingCars, setIracingCars }) {
           marginBottom: "1rem",
         }}
       >
-        Assignez un label de type à chaque voiture iRacing pour le regroupement
-        dans l&apos;inventaire des pilotes. Ces labels n&apos;affectent pas les
-        événements ou équipages.
+        {t("carsCatalogueHint")}
       </p>
 
       {/* Search */}
@@ -905,15 +900,14 @@ function IracingCatalogueTab({ iracingCars, setIracingCars }) {
           type="text"
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          placeholder="Rechercher dans le catalogue iRacing…"
+          placeholder={t("carsCatalogueSearch")}
         />
       </div>
 
       {iracingCars.length === 0 ? (
         <div className="card">
           <div className="empty">
-            Catalogue iRacing vide. Lancez une synchronisation iRacing depuis
-            votre profil.
+            {t("carsCatalogueEmpty")}
           </div>
         </div>
       ) : (
@@ -921,9 +915,9 @@ function IracingCatalogueTab({ iracingCars, setIracingCars }) {
           <table style={{ width: "100%", borderCollapse: "collapse" }}>
             <thead>
               <tr>
-                <th style={TH}>Voiture</th>
-                <th style={TH}>Tags iRacing</th>
-                <th style={TH}>Label inventaire</th>
+                <th style={TH}>{t("carsColIracingCar")}</th>
+                <th style={TH}>{t("carsColIracingTags")}</th>
+                <th style={TH}>{t("carsColInventoryLabel")}</th>
                 <th style={TH} />
               </tr>
             </thead>
@@ -1029,7 +1023,7 @@ function IracingCatalogueTab({ iracingCars, setIracingCars }) {
                           className="btn btn-secondary btn-sm"
                           disabled={!!saving}
                         >
-                          ✏️ Modifier
+                          {t("carsEditBtn")}
                         </button>
                       )}
                     </td>
@@ -1050,13 +1044,14 @@ export default function CarsManager({
   initialCars,
   iracingCars: initialIracingCars,
 }) {
+  const t = useTranslations("admin");
   const [activeTab, setActiveTab] = useState("kronos");
   // Lifted state — persists across tab switches within CarsManager
   const [iracingCars, setIracingCars] = useState(initialIracingCars);
 
   const tabs = [
-    { id: "kronos", label: "Kronos Endurance" },
-    { id: "catalogue", label: "Catalogue iRacing" },
+    { id: "kronos", label: t("carsTabKronos") },
+    { id: "catalogue", label: t("carsTabCatalogue") },
   ];
 
   return (

@@ -1,6 +1,7 @@
 "use client";
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { supabaseBrowser as supabase } from "../../lib/supabase-browser";
 
 // Returns true when a hex color is mid-range enough to be legible as text
@@ -33,6 +34,7 @@ const PALETTE_PRESETS = [
 ];
 
 function ConfirmModal({ modal, onConfirm, onCancel }) {
+  const t = useTranslations("admin");
   if (!modal) return null;
   return (
     <div
@@ -60,12 +62,11 @@ function ConfirmModal({ modal, onConfirm, onCancel }) {
                 marginBottom: "0.75rem",
               }}
             >
-              ⚠️ Ce nom est utilisé par{" "}
+              {t("crewUsedIntro")}{" "}
               <strong style={{ color: "var(--text)" }}>
-                {modal.affectedEvents.length} événement
-                {modal.affectedEvents.length > 1 ? "s" : ""}
+                {t("crewUsedCount", { count: modal.affectedEvents.length })}
               </strong>{" "}
-              existants :
+              {t("crewUsedSuffix")}
             </p>
             <ul
               style={{
@@ -89,8 +90,7 @@ function ConfirmModal({ modal, onConfirm, onCancel }) {
                 marginBottom: "1.5rem",
               }}
             >
-              Les équipages concernés conserveront leur nom actuel mais ne
-              seront plus liés à ce nom d&apos;équipage.
+              {t("crewUsedNote")}
             </p>
           </>
         ) : (
@@ -101,8 +101,7 @@ function ConfirmModal({ modal, onConfirm, onCancel }) {
               marginBottom: "1.5rem",
             }}
           >
-            Ce nom n&apos;est utilisé par aucun équipage. La suppression est
-            sans impact.
+            {t("crewNoImpact")}
           </p>
         )}
 
@@ -110,10 +109,10 @@ function ConfirmModal({ modal, onConfirm, onCancel }) {
           style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}
         >
           <button onClick={onConfirm} className="btn btn-danger">
-            {modal.confirmLabel || "Confirmer"}
+            {modal.confirmLabel || t("confirm")}
           </button>
           <button onClick={onCancel} className="btn btn-secondary">
-            Annuler
+            {t("cancel")}
           </button>
         </div>
       </div>
@@ -122,6 +121,7 @@ function ConfirmModal({ modal, onConfirm, onCancel }) {
 }
 
 export default function CrewNamesManager({ initialCrewNames }) {
+  const t = useTranslations("admin");
   const router = useRouter();
   const [items, setItems] = useState(initialCrewNames);
   const [adding, setAdding] = useState(false);
@@ -216,10 +216,10 @@ export default function CrewNamesManager({ initialCrewNames }) {
     ];
 
     setConfirmModal({
-      title: `Supprimer "${name}"`,
+      title: t("crewDeleteTitle", { name }),
       message: null,
       affectedEvents,
-      confirmLabel: "Supprimer définitivement",
+      confirmLabel: t("deleteForever"),
       onConfirm: async () => {
         setConfirmModal(null);
         const { error: err } = await supabase
@@ -247,7 +247,7 @@ export default function CrewNamesManager({ initialCrewNames }) {
   // Color picker section — native color input + preset swatches + clear button
   const colorPicker = (
     <div className="form-group" style={{ marginTop: "0.75rem" }}>
-      <label>Couleur de l&apos;équipage</label>
+      <label>{t("crewColorLabel")}</label>
       <div
         style={{
           display: "flex",
@@ -297,7 +297,7 @@ export default function CrewNamesManager({ initialCrewNames }) {
             onClick={() => setNewColor(null)}
             className="btn btn-secondary btn-sm"
           >
-            Effacer
+            {t("crewClearColor")}
           </button>
         )}
         {/* Live preview of the pill — uses same luminance logic as CrewPill */}
@@ -325,8 +325,7 @@ export default function CrewNamesManager({ initialCrewNames }) {
           marginTop: "0.35rem",
         }}
       >
-        Si aucune couleur n&apos;est définie, une couleur automatique est
-        attribuée.
+        {t("crewColorHint")}
       </div>
     </div>
   );
@@ -341,12 +340,12 @@ export default function CrewNamesManager({ initialCrewNames }) {
     >
       <div style={{ display: "flex", gap: "0.75rem", alignItems: "flex-end" }}>
         <div className="form-group" style={{ flex: 1 }}>
-          <label>{editingId ? "Nom" : "Nouveau nom d'équipage"}</label>
+          <label>{editingId ? t("crewNameEditLabel") : t("crewNameAddLabel")}</label>
           <input
             type="text"
             value={newName}
             onChange={(e) => setNewName(e.target.value)}
-            placeholder="ex : Kronos Platinum"
+            placeholder={t("crewNamePlaceholder")}
           />
         </div>
         <button
@@ -354,10 +353,10 @@ export default function CrewNamesManager({ initialCrewNames }) {
           className="btn btn-primary"
           disabled={saving}
         >
-          {saving ? "…" : editingId ? "✓ Enregistrer" : "✓ Ajouter"}
+          {saving ? t("saving") : editingId ? t("save") : t("add")}
         </button>
         <button onClick={reset} className="btn btn-secondary">
-          Annuler
+          {t("cancel")}
         </button>
       </div>
       {colorPicker}
@@ -390,7 +389,7 @@ export default function CrewNamesManager({ initialCrewNames }) {
           className="btn btn-primary"
           style={{ marginBottom: "0.75rem" }}
         >
-          + Ajouter un nom d&apos;équipage
+          {t("crewAddBtn")}
         </button>
       )}
 
@@ -398,8 +397,8 @@ export default function CrewNamesManager({ initialCrewNames }) {
         <table>
           <thead>
             <tr>
-              <th>Nom d&apos;équipage</th>
-              <th>Couleur</th>
+              <th>{t("crewColName")}</th>
+              <th>{t("crewColColor")}</th>
               <th></th>
             </tr>
           </thead>
@@ -466,7 +465,7 @@ export default function CrewNamesManager({ initialCrewNames }) {
                           fontSize: "0.82rem",
                         }}
                       >
-                        Auto
+                        {t("crewAutoColor")}
                       </span>
                     )}
                   </td>
@@ -482,13 +481,13 @@ export default function CrewNamesManager({ initialCrewNames }) {
                         onClick={() => startEdit(item)}
                         className="btn btn-secondary btn-sm"
                       >
-                        Modifier
+                        {t("edit")}
                       </button>
                       <button
                         onClick={() => handleDelete(item.id, item.name)}
                         className="btn btn-danger btn-sm"
                       >
-                        Supprimer
+                        {t("delete")}
                       </button>
                     </div>
                   </td>
@@ -503,7 +502,7 @@ export default function CrewNamesManager({ initialCrewNames }) {
             {items.length === 0 && (
               <tr>
                 <td colSpan={3} className="empty">
-                  Aucun nom d&apos;équipage.
+                  {t("crewEmpty")}
                 </td>
               </tr>
             )}

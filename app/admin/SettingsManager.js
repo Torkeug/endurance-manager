@@ -3,7 +3,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabaseBrowser as supabase } from "../../lib/supabase-browser";
 import React from "react";
-import { useLocale } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 
 // Fixed sort order for days of the week — used to sort special start times
 // chronologically across the weekend (friday → saturday → sunday)
@@ -17,6 +17,7 @@ function formatDuration(minutes) {
 }
 
 function ConfirmModal({ modal, onConfirm, onCancel }) {
+  const t = useTranslations("admin");
   if (!modal) return null;
   return (
     <div
@@ -46,10 +47,10 @@ function ConfirmModal({ modal, onConfirm, onCancel }) {
           style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}
         >
           <button onClick={onConfirm} className="btn btn-danger">
-            {modal.confirmLabel || "Confirmer"}
+            {modal.confirmLabel || t("confirm")}
           </button>
           <button onClick={onCancel} className="btn btn-secondary">
-            Annuler
+            {t("cancel")}
           </button>
         </div>
       </div>
@@ -63,6 +64,7 @@ export default function SettingsManager({
   initialSpecialStartTimes,
   initialSignupTags,
 }) {
+  const t = useTranslations("admin");
   const locale = useLocale();
   const _fmt = new Intl.DateTimeFormat(locale, { weekday: "long" });
   const _cap = (s) => s.charAt(0).toUpperCase() + s.slice(1);
@@ -107,7 +109,7 @@ export default function SettingsManager({
   const handleAddTag = async () => {
     const name = newTagName.trim();
     if (!name) { setError("Nom de tag requis."); return; }
-    if (signupTags.find((t) => t.name.toLowerCase() === name.toLowerCase())) {
+    if (signupTags.find((tag) => tag.name.toLowerCase() === name.toLowerCase())) {
       setError("Ce tag existe déjà.");
       return;
     }
@@ -128,16 +130,16 @@ export default function SettingsManager({
 
   const handleDeleteTag = (id) => {
     setConfirmModal({
-      title: "Supprimer ce tag",
-      message: "Ce tag sera supprimé. Les inscriptions existantes qui l'utilisaient conserveront le nom en texte.",
-      confirmLabel: "Supprimer",
+      title: t("settingsDeleteTagTitle"),
+      message: t("settingsDeleteTagMessage"),
+      confirmLabel: t("delete"),
       onConfirm: async () => {
         setConfirmModal(null);
         setSavingTag(id);
         setError(null);
         const { error: err } = await supabase.from("signup_tags").delete().eq("id", id);
         if (err) { setError(err.message); setSavingTag(null); return; }
-        setSignupTags((prev) => prev.filter((t) => t.id !== id));
+        setSignupTags((prev) => prev.filter((tag) => tag.id !== id));
         setSavingTag(null);
         router.refresh();
       },
@@ -189,9 +191,9 @@ export default function SettingsManager({
 
   const handleDelete = (id) => {
     setConfirmModal({
-      title: "Supprimer cette durée",
-      message: "Cette durée sera supprimée de la liste des préréglages.",
-      confirmLabel: "Supprimer",
+      title: t("settingsDeleteDurationTitle"),
+      message: t("settingsDeleteDurationMessage"),
+      confirmLabel: t("delete"),
       onConfirm: async () => {
         setConfirmModal(null);
         setSaving(id);
@@ -247,7 +249,7 @@ export default function SettingsManager({
     setError(null);
     // Label is auto-generated from day + time — no free text input.
     // This keeps labels consistent and avoids manual entry errors.
-    const label = `${DAY_LABELS[newStDay]} à ${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
+    const label = `${DAY_LABELS[newStDay]} ${t("settingsTimeAt")} ${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
     const { data, error: err } = await supabase
       .from("special_event_start_times")
       .insert([{ label, hour: h, minute: m, day_of_week: newStDay }])
@@ -284,7 +286,7 @@ export default function SettingsManager({
     setError(null);
     // Label is auto-generated from day + time — no free text input.
     // This keeps labels consistent and avoids manual entry errors.
-    const label = `${DAY_LABELS[editStDay]} à ${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
+    const label = `${DAY_LABELS[editStDay]} ${t("settingsTimeAt")} ${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
     const { data, error: err } = await supabase
       .from("special_event_start_times")
       .update({ label, hour: h, minute: m, day_of_week: editStDay })
@@ -312,9 +314,9 @@ export default function SettingsManager({
 
   const handleDeleteSpecialTime = (id) => {
     setConfirmModal({
-      title: "Supprimer cet horaire",
-      message: "Cet horaire prédéfini sera supprimé définitivement.",
-      confirmLabel: "Supprimer",
+      title: t("settingsDeleteScheduleTitle"),
+      message: t("settingsDeleteScheduleMessage"),
+      confirmLabel: t("delete"),
       onConfirm: async () => {
         setConfirmModal(null);
         setSavingSpecial(id);
@@ -353,7 +355,7 @@ export default function SettingsManager({
       {/* Duration presets */}
       <div className="card" style={{ marginBottom: "1.5rem" }}>
         <h3 style={{ marginBottom: "1.25rem", color: "var(--text-dim)" }}>
-          Durées disponibles à la création d&apos;événement
+          {t("settingsDurationsTitle")}
         </h3>
 
         {adding && (
@@ -428,7 +430,7 @@ export default function SettingsManager({
                 className="btn btn-primary"
                 disabled={saving === "new"}
               >
-                {saving === "new" ? "…" : "✓ Ajouter"}
+                {saving === "new" ? t("saving") : t("add")}
               </button>
               <button
                 onClick={() => {
@@ -439,7 +441,7 @@ export default function SettingsManager({
                 }}
                 className="btn btn-secondary"
               >
-                Annuler
+                {t("cancel")}
               </button>
             </div>
           </div>
@@ -451,7 +453,7 @@ export default function SettingsManager({
             className="btn btn-primary"
             style={{ marginBottom: "0.75rem" }}
           >
-            + Ajouter une durée
+            {t("settingsDurationsAddBtn")}
           </button>
         )}
 
@@ -459,8 +461,8 @@ export default function SettingsManager({
           <table style={{ width: "100%", borderCollapse: "collapse" }}>
             <thead>
               <tr>
-                <th style={TH}>Durée</th>
-                <th style={TH}>Minutes</th>
+                <th style={TH}>{t("settingsColDuration")}</th>
+                <th style={TH}>{t("settingsColMinutes")}</th>
                 <th style={TH}></th>
               </tr>
             </thead>
@@ -484,7 +486,7 @@ export default function SettingsManager({
                       className="btn btn-danger btn-sm"
                       disabled={saving === p.id}
                     >
-                      Supprimer
+                      {t("delete")}
                     </button>
                   </td>
                 </tr>
@@ -497,11 +499,11 @@ export default function SettingsManager({
       {/* Default duration */}
       <div className="card">
         <h3 style={{ marginBottom: "1.25rem", color: "var(--text-dim)" }}>
-          Durée par défaut
+          {t("settingsDefaultTitle")}
         </h3>
         {successDefault && (
           <div className="alert alert-success" style={{ marginBottom: "1rem" }}>
-            ✓ Durée par défaut enregistrée.
+            {t("settingsDefaultSaved")}
           </div>
         )}
         <div
@@ -548,13 +550,13 @@ export default function SettingsManager({
           className="btn btn-primary"
           disabled={savingDefault}
         >
-          {savingDefault ? "Enregistrement…" : "✓ Enregistrer"}
+          {savingDefault ? t("settingsSaving") : t("save")}
         </button>
       </div>
       {/* Special event start times */}
       <div className="card" style={{ marginTop: "1.5rem" }}>
         <h3 style={{ marginBottom: "1.25rem", color: "var(--text-dim)" }}>
-          Horaires prédéfinis (événements spéciaux)
+          {t("settingsSchedulesTitle")}
         </h3>
 
         {addingSpecial && (
@@ -591,7 +593,7 @@ export default function SettingsManager({
                 <option value="saturday">{DAY_LABELS.saturday}</option>
                 <option value="sunday">{DAY_LABELS.sunday}</option>
               </select>
-              <span style={{ color: "var(--text-dim)" }}>à</span>
+              <span style={{ color: "var(--text-dim)" }}>{t("settingsTimeAt")}</span>
               <input
                 type="number"
                 min="0"
@@ -637,7 +639,7 @@ export default function SettingsManager({
                 className="btn btn-primary"
                 disabled={savingSpecial === "new"}
               >
-                {savingSpecial === "new" ? "…" : "✓ Ajouter"}
+                {savingSpecial === "new" ? t("saving") : t("add")}
               </button>
               <button
                 onClick={() => {
@@ -649,7 +651,7 @@ export default function SettingsManager({
                 }}
                 className="btn btn-secondary"
               >
-                Annuler
+                {t("cancel")}
               </button>
             </div>
           </div>
@@ -661,7 +663,7 @@ export default function SettingsManager({
             className="btn btn-primary"
             style={{ marginBottom: "0.75rem" }}
           >
-            + Ajouter un horaire
+            {t("settingsSchedulesAddBtn")}
           </button>
         )}
 
@@ -670,7 +672,7 @@ export default function SettingsManager({
             <table style={{ width: "100%", borderCollapse: "collapse" }}>
               <thead>
                 <tr>
-                  <th style={TH}>Horaire</th>
+                  <th style={TH}>{t("settingsColSchedule")}</th>
                   <th style={TH}></th>
                 </tr>
               </thead>
@@ -687,7 +689,7 @@ export default function SettingsManager({
                         className="mono"
                       >
                         {DAY_LABELS[st.day_of_week]}{" "}
-                        à {String(st.hour).padStart(2, "0")}:
+                        {t("settingsTimeAt")} {String(st.hour).padStart(2, "0")}:
                         {String(st.minute).padStart(2, "0")}
                       </td>
                       <td style={{ ...TD, textAlign: "right" }}>
@@ -707,14 +709,14 @@ export default function SettingsManager({
                             }}
                             className="btn btn-secondary btn-sm"
                           >
-                            Modifier
+                            {t("edit")}
                           </button>
                           <button
                             onClick={() => handleDeleteSpecialTime(st.id)}
                             className="btn btn-danger btn-sm"
                             disabled={savingSpecial === st.id}
                           >
-                            Supprimer
+                            {t("delete")}
                           </button>
                         </div>
                       </td>
@@ -754,7 +756,7 @@ export default function SettingsManager({
                                 <option value="sunday">{DAY_LABELS.sunday}</option>
                               </select>
                               <span style={{ color: "var(--text-dim)" }}>
-                                à
+                                {t("settingsTimeAt")}
                               </span>
                               <input
                                 type="number"
@@ -803,14 +805,14 @@ export default function SettingsManager({
                                 disabled={savingSpecial === st.id}
                               >
                                 {savingSpecial === st.id
-                                  ? "…"
-                                  : "✓ Enregistrer"}
+                                  ? t("saving")
+                                  : t("save")}
                               </button>
                               <button
                                 onClick={() => setEditingSpecialId(null)}
                                 className="btn btn-secondary"
                               >
-                                Annuler
+                                {t("cancel")}
                               </button>
                             </div>
                           </div>
@@ -825,14 +827,14 @@ export default function SettingsManager({
         )}
 
         {specialTimes.length === 0 && !addingSpecial && (
-          <div className="empty">Aucun horaire prédéfini configuré.</div>
+          <div className="empty">{t("settingsSchedulesEmpty")}</div>
         )}
       </div>
 
       {/* Signup tags */}
       <div className="card" style={{ marginTop: "1.5rem" }}>
         <h3 style={{ marginBottom: "1.25rem", color: "var(--text-dim)" }}>
-          Tags d&apos;inscription
+          {t("settingsTagsTitle")}
         </h3>
 
         {addingTag && (
@@ -850,10 +852,10 @@ export default function SettingsManager({
             </div>
             <div style={{ display: "flex", gap: "0.5rem" }}>
               <button onClick={handleAddTag} className="btn btn-primary" disabled={savingTag === "new"}>
-                {savingTag === "new" ? "…" : "✓ Ajouter"}
+                {savingTag === "new" ? t("saving") : t("add")}
               </button>
               <button onClick={() => { setAddingTag(false); setNewTagName(""); setError(null); }} className="btn btn-secondary">
-                Annuler
+                {t("cancel")}
               </button>
             </div>
           </div>
@@ -861,7 +863,7 @@ export default function SettingsManager({
 
         {!addingTag && (
           <button onClick={() => setAddingTag(true)} className="btn btn-primary" style={{ marginBottom: "0.75rem" }}>
-            + Ajouter un tag
+            {t("settingsTagsAddBtn")}
           </button>
         )}
 
@@ -870,7 +872,7 @@ export default function SettingsManager({
             <table style={{ width: "100%", borderCollapse: "collapse" }}>
               <thead>
                 <tr>
-                  <th style={TH}>Tag</th>
+                  <th style={TH}>{t("settingsColTag")}</th>
                   <th style={TH}></th>
                 </tr>
               </thead>
@@ -884,7 +886,7 @@ export default function SettingsManager({
                     </td>
                     <td style={{ ...TD, textAlign: "right" }}>
                       <button onClick={() => handleDeleteTag(tag.id)} className="btn btn-danger btn-sm" disabled={savingTag === tag.id}>
-                        Supprimer
+                        {t("delete")}
                       </button>
                     </td>
                   </tr>
@@ -895,7 +897,7 @@ export default function SettingsManager({
         )}
 
         {signupTags.length === 0 && !addingTag && (
-          <div className="empty">Aucun tag configuré.</div>
+          <div className="empty">{t("settingsTagsEmpty")}</div>
         )}
       </div>
     </div>

@@ -1,9 +1,11 @@
 "use client";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { supabaseBrowser as supabase } from "../../lib/supabase-browser";
 
 function ConfirmModal({ modal, onConfirm, onCancel }) {
+  const t = useTranslations("admin");
   if (!modal) return null;
   return (
     <div
@@ -30,12 +32,11 @@ function ConfirmModal({ modal, onConfirm, onCancel }) {
                 marginBottom: "0.75rem",
               }}
             >
-              ⚠️ Ce type est utilisé par{" "}
+              {t("eventTypesActiveIntro")}{" "}
               <strong style={{ color: "var(--text)" }}>
-                {modal.activeEvents.length} événement
-                {modal.activeEvents.length > 1 ? "s" : ""} actifs
+                {t("eventTypesActiveCount", { count: modal.activeEvents.length })}
               </strong>{" "}
-              — leur format sera effacé :
+              {t("eventTypesActiveSuffix")}
             </p>
             <ul
               style={{
@@ -63,9 +64,7 @@ function ConfirmModal({ modal, onConfirm, onCancel }) {
               marginBottom: "0.75rem",
             }}
           >
-            ✓ {modal.archivedCount} événement
-            {modal.archivedCount > 1 ? "s archivés" : " archivé"} — non affecté
-            {modal.archivedCount > 1 ? "s" : ""}.
+            {t("eventTypesArchivedNote", { count: modal.archivedCount })}
           </p>
         )}
 
@@ -77,7 +76,7 @@ function ConfirmModal({ modal, onConfirm, onCancel }) {
               marginBottom: "1rem",
             }}
           >
-            Ce type n&apos;est utilisé par aucun événement actif.
+            {t("eventTypesNoImpact")}
           </p>
         )}
 
@@ -88,17 +87,17 @@ function ConfirmModal({ modal, onConfirm, onCancel }) {
             marginBottom: "1.5rem",
           }}
         >
-          Cette action est irréversible.
+          {t("irreversible")}
         </p>
 
         <div
           style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}
         >
           <button onClick={onConfirm} className="btn btn-danger">
-            {modal.confirmLabel || "Confirmer"}
+            {modal.confirmLabel || t("confirm")}
           </button>
           <button onClick={onCancel} className="btn btn-secondary">
-            Annuler
+            {t("cancel")}
           </button>
         </div>
       </div>
@@ -110,8 +109,8 @@ export default function EventTypesManager({
   initialEventTypes,
   initialEventTypeCars,
   cars,
-  carClasses,
 }) {
+  const t = useTranslations("admin");
   const router = useRouter();
   const [eventTypes, setEventTypes] = useState(initialEventTypes);
   const [eventTypeCars, setEventTypeCars] = useState(initialEventTypeCars);
@@ -186,14 +185,14 @@ export default function EventTypesManager({
       setSaving(false);
       return;
     }
-    setEventTypes((prev) => prev.map((t) => (t.id === editingId ? data : t)));
+    setEventTypes((prev) => prev.map((tp) => (tp.id === editingId ? data : tp)));
     reset();
     setSaving(false);
     router.refresh();
   };
 
   const handleDelete = async (id) => {
-    const et = eventTypes.find((t) => t.id === id);
+    const et = eventTypes.find((tp) => tp.id === id);
 
     const { data: affectedEventsData } = await supabase
       .from("events")
@@ -209,10 +208,10 @@ export default function EventTypesManager({
     ).length;
 
     setConfirmModal({
-      title: `Supprimer "${et?.name}"`,
+      title: t("eventTypesDeleteTitle", { name: et?.name }),
       activeEvents,
       archivedCount,
-      confirmLabel: "Supprimer",
+      confirmLabel: t("delete"),
       onConfirm: async () => {
         setConfirmModal(null);
         // Null out format on active events before deleting the type
@@ -231,7 +230,7 @@ export default function EventTypesManager({
           setError(err.message);
           return;
         }
-        setEventTypes((prev) => prev.filter((t) => t.id !== id));
+        setEventTypes((prev) => prev.filter((tp) => tp.id !== id));
         setEventTypeCars((prev) =>
           prev.filter((etc) => etc.event_type_id !== id),
         );
@@ -308,12 +307,12 @@ export default function EventTypesManager({
             style={{ display: "flex", gap: "0.75rem", alignItems: "flex-end" }}
           >
             <div className="form-group" style={{ flex: 1 }}>
-              <label>Nouveau type d&apos;événement</label>
+              <label>{t("eventTypesNewLabel")}</label>
               <input
                 type="text"
                 value={newName}
                 onChange={(e) => setNewName(e.target.value)}
-                placeholder="ex : Endurance Pro"
+                placeholder={t("eventTypesNewPlaceholder")}
                 autoFocus
               />
             </div>
@@ -322,10 +321,10 @@ export default function EventTypesManager({
               className="btn btn-primary"
               disabled={saving}
             >
-              {saving ? "…" : "✓ Ajouter"}
+              {saving ? t("saving") : t("add")}
             </button>
             <button onClick={reset} className="btn btn-secondary">
-              Annuler
+              {t("cancel")}
             </button>
           </div>
           {error && (
@@ -343,7 +342,7 @@ export default function EventTypesManager({
           className="btn btn-primary"
           style={{ marginBottom: "0.75rem" }}
         >
-          + Ajouter un type d&apos;événement
+          {t("eventTypesAddBtn")}
         </button>
       )}
 
@@ -388,8 +387,8 @@ export default function EventTypesManager({
                     }}
                   >
                     {allowedCarIds.length === 0
-                      ? "Toutes les voitures autorisées"
-                      : `${allowedCarIds.length} voiture${allowedCarIds.length > 1 ? "s" : ""} autorisée${allowedCarIds.length > 1 ? "s" : ""}`}
+                      ? t("eventTypesAllCars")
+                      : t("eventTypesCarsCount", { count: allowedCarIds.length })}
                   </div>
                 </div>
                 <div style={{ display: "flex", gap: "0.5rem" }}>
@@ -397,19 +396,19 @@ export default function EventTypesManager({
                     onClick={() => setExpandedId(isExpanded ? null : et.id)}
                     className="btn btn-secondary btn-sm"
                   >
-                    {isExpanded ? "▲ Voitures" : "▼ Voitures"}
+                    {t("eventTypesToggle", { expanded: isExpanded ? "true" : "false" })}
                   </button>
                   <button
                     onClick={() => startEdit(et)}
                     className="btn btn-secondary btn-sm"
                   >
-                    Modifier
+                    {t("edit")}
                   </button>
                   <button
                     onClick={() => handleDelete(et.id)}
                     className="btn btn-danger btn-sm"
                   >
-                    Supprimer
+                    {t("delete")}
                   </button>
                 </div>
               </div>
@@ -431,7 +430,7 @@ export default function EventTypesManager({
                     }}
                   >
                     <div className="form-group" style={{ flex: 1 }}>
-                      <label>Nom</label>
+                      <label>{t("eventTypesNameLabel")}</label>
                       <input
                         type="text"
                         value={newName}
@@ -444,10 +443,10 @@ export default function EventTypesManager({
                       className="btn btn-primary"
                       disabled={saving}
                     >
-                      {saving ? "…" : "✓ Enregistrer"}
+                      {saving ? t("saving") : t("save")}
                     </button>
                     <button onClick={reset} className="btn btn-secondary">
-                      Annuler
+                      {t("cancel")}
                     </button>
                   </div>
                   {error && (
@@ -477,8 +476,7 @@ export default function EventTypesManager({
                       marginBottom: "1rem",
                     }}
                   >
-                    Cochez les voitures autorisées pour ce type. Si aucune
-                    voiture n&apos;est cochée, toutes sont autorisées.
+                    {t("eventTypesCarsHint")}
                   </p>
                   {Object.entries(carsByClass).map(([cls, carsInClass]) => {
                     const allChecked = carsInClass.every((car) =>
@@ -600,7 +598,7 @@ export default function EventTypesManager({
 
         {eventTypes.length === 0 && (
           <div className="card">
-            <div className="empty">Aucun type d&apos;événement.</div>
+            <div className="empty">{t("eventTypesEmpty")}</div>
           </div>
         )}
       </div>

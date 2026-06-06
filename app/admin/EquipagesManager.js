@@ -1,16 +1,16 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import CrewNamesManager from "./CrewNamesManager";
 import ChampionshipTeamsManager from "./ChampionshipTeamsManager";
 
-// Sub-tab definitions for the Équipages admin section
-const TABS = [
-  { key: "numeros", label: "Équipages utilisés en championnats" },
-  { key: "noms", label: "Configuration" },
-];
-
 export default function EquipagesManager({ initialCrewNames }) {
+  const t = useTranslations("admin");
+  const TABS = [
+    { key: "numeros", label: t("entriesTabNumbers") },
+    { key: "noms", label: t("entriesTabConfig") },
+  ];
   const [activeTab, setActiveTab] = useState("numeros");
 
   return (

@@ -1,11 +1,13 @@
 "use client";
 import React, { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { supabaseBrowser as supabase } from "../../lib/supabase-browser";
 
 const emptyForm = { name: "", pit_lane_time_seconds: "" };
 
 function ConfirmModal({ modal, onConfirm, onCancel }) {
+  const t = useTranslations("admin");
   if (!modal) return null;
   return (
     <div
@@ -32,12 +34,11 @@ function ConfirmModal({ modal, onConfirm, onCancel }) {
                 marginBottom: "0.75rem",
               }}
             >
-              ⚠️ Ce circuit est utilisé par{" "}
+              {t("circuitsActiveWarningIntro")}{" "}
               <strong style={{ color: "var(--text)" }}>
-                {modal.activeEvents.length} événement
-                {modal.activeEvents.length > 1 ? "s" : ""} actifs
+                {t("circuitsActiveCount", { count: modal.activeEvents.length })}
               </strong>{" "}
-              qui perdront leur circuit :
+              {t("circuitsActiveSuffix")}
             </p>
             <ul
               style={{
@@ -65,10 +66,7 @@ function ConfirmModal({ modal, onConfirm, onCancel }) {
               marginBottom: "0.75rem",
             }}
           >
-            ✓ {modal.archivedCount} événement
-            {modal.archivedCount > 1 ? "s archivés" : " archivé"} — non affecté
-            {modal.archivedCount > 1 ? "s" : ""} (nom sauvegardé à
-            l&apos;archivage).
+            {t("circuitsArchivedNote", { count: modal.archivedCount })}
           </p>
         )}
 
@@ -80,7 +78,7 @@ function ConfirmModal({ modal, onConfirm, onCancel }) {
               marginBottom: "1rem",
             }}
           >
-            {modal.message || "Ce circuit n'est utilisé par aucun événement."}
+            {modal.message || t("circuitsNoEvents")}
           </p>
         )}
 
@@ -91,17 +89,17 @@ function ConfirmModal({ modal, onConfirm, onCancel }) {
             marginBottom: "1.5rem",
           }}
         >
-          Cette action est irréversible.
+          {t("irreversible")}
         </p>
 
         <div
           style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}
         >
           <button onClick={onConfirm} className="btn btn-danger">
-            {modal.confirmLabel || "Confirmer"}
+            {modal.confirmLabel || t("confirm")}
           </button>
           <button onClick={onCancel} className="btn btn-secondary">
-            Annuler
+            {t("cancel")}
           </button>
         </div>
       </div>
@@ -110,6 +108,7 @@ function ConfirmModal({ modal, onConfirm, onCancel }) {
 }
 
 export default function CircuitsManager({ initialCircuits, iracingTracks }) {
+  const t = useTranslations("admin");
   const router = useRouter();
   const [circuits, setCircuits] = useState(initialCircuits);
   const [adding, setAdding] = useState(false);
@@ -140,7 +139,7 @@ export default function CircuitsManager({ initialCircuits, iracingTracks }) {
   // Build a map of iracing_track_id → track_name for display grouping
   const trackNameById = useMemo(() => {
     const map = {};
-    for (const t of iracingTracks || []) map[t.iracing_track_id] = t.track_name;
+    for (const tr of iracingTracks || []) map[tr.iracing_track_id] = tr.track_name;
     return map;
   }, [iracingTracks]);
 
@@ -315,10 +314,10 @@ export default function CircuitsManager({ initialCircuits, iracingTracks }) {
     ).length;
 
     setConfirmModal({
-      title: "Supprimer ce circuit",
+      title: t("circuitsDeleteTitle"),
       activeEvents,
       archivedCount,
-      confirmLabel: "Supprimer",
+      confirmLabel: t("delete"),
       onConfirm: async () => {
         setConfirmModal(null);
         const { error: err } = await supabase
@@ -346,7 +345,7 @@ export default function CircuitsManager({ initialCircuits, iracingTracks }) {
     // Pre-load iRacing track if linked
     if (circuit.iracing_track_id) {
       const track = (iracingTracks || []).find(
-        (t) => t.iracing_track_id === circuit.iracing_track_id,
+        (tr) => tr.iracing_track_id === circuit.iracing_track_id,
       );
       if (track) {
         setSelectedIracingTrack(track);
@@ -362,9 +361,9 @@ export default function CircuitsManager({ initialCircuits, iracingTracks }) {
       {/* iRacing catalog search */}
       <div className="form-group" style={{ marginBottom: "1rem" }}>
         <label>
-          Circuit iRacing{" "}
+          {t("circuitsIracingLabel")}{" "}
           <span style={{ fontWeight: 400, color: "var(--text-dim)" }}>
-            — optionnel, utilisé pour l&apos;inventaire
+            {t("circuitsIracingOptional")}
           </span>
         </label>
         {!iracingTracks?.length ? (
@@ -375,8 +374,7 @@ export default function CircuitsManager({ initialCircuits, iracingTracks }) {
               padding: "0.5rem 0",
             }}
           >
-            ⚠️ Catalogue iRacing vide. Lancez une synchronisation iRacing
-            d&apos;abord.
+            {t("circuitsIracingEmpty")}
           </div>
         ) : selectedIracingTrack ? (
           <div
@@ -390,7 +388,7 @@ export default function CircuitsManager({ initialCircuits, iracingTracks }) {
               onClick={clearIracingTrackSelection}
               className="btn btn-secondary btn-sm"
             >
-              Changer
+              {t("change")}
             </button>
             <button
               type="button"
@@ -400,7 +398,7 @@ export default function CircuitsManager({ initialCircuits, iracingTracks }) {
               }}
               className="btn btn-danger btn-sm"
             >
-              Délier
+              {t("circuitsUnlink")}
             </button>
           </div>
         ) : (
@@ -412,7 +410,7 @@ export default function CircuitsManager({ initialCircuits, iracingTracks }) {
               onKeyDown={(e) => {
                 if (e.key === "Escape") setSearchQuery("");
               }}
-              placeholder="Rechercher un circuit iRacing…"
+              placeholder={t("circuitsIracingSearch")}
             />
             {filteredGroups.length > 0 && (
               <div
@@ -465,7 +463,7 @@ export default function CircuitsManager({ initialCircuits, iracingTracks }) {
                           e.currentTarget.style.background = "transparent";
                         }}
                       >
-                        {track.config_name || "Circuit complet"}
+                        {track.config_name || t("circuitsFullLayout")}
                       </div>
                     ))}
                   </div>
@@ -479,26 +477,26 @@ export default function CircuitsManager({ initialCircuits, iracingTracks }) {
       {/* Circuit name — auto-filled from iRacing but editable */}
       <div className="form-grid" style={{ marginBottom: "1rem" }}>
         <div className="form-group">
-          <label>Nom Kronos *</label>
+          <label>{t("circuitsNameLabel")}</label>
           <input
             type="text"
             value={form.name}
             onChange={set("name")}
-            placeholder="ex : Spa-Francorchamps Endu"
+            placeholder={t("circuitsNamePlaceholder")}
           />
         </div>
         <div className="form-group">
           <label>
-            Temps pit lane (secondes){" "}
+            {t("circuitsPitLabel")}{" "}
             <span style={{ fontWeight: 400, color: "var(--text-dim)" }}>
-              — optionnel
+              {t("circuitsPitOptional")}
             </span>
           </label>
           <input
             type="number"
             value={form.pit_lane_time_seconds}
             onChange={set("pit_lane_time_seconds")}
-            placeholder="ex : 60"
+            placeholder={t("circuitsPitPlaceholder")}
             min="1"
             max="300"
           />
@@ -516,10 +514,10 @@ export default function CircuitsManager({ initialCircuits, iracingTracks }) {
           className="btn btn-primary"
           disabled={saving}
         >
-          {saving ? "…" : editingId ? "✓ Enregistrer" : "✓ Ajouter"}
+          {saving ? t("saving") : editingId ? t("save") : t("add")}
         </button>
         <button onClick={reset} className="btn btn-secondary">
-          Annuler
+          {t("cancel")}
         </button>
       </div>
     </div>
@@ -541,7 +539,7 @@ export default function CircuitsManager({ initialCircuits, iracingTracks }) {
       {adding && (
         <div className="card" style={{ marginBottom: "0.75rem" }}>
           <h3 style={{ marginBottom: "1rem", color: "var(--text-dim)" }}>
-            Nouveau circuit
+            {t("circuitsNewTitle")}
           </h3>
           {editForm}
         </div>
@@ -553,7 +551,7 @@ export default function CircuitsManager({ initialCircuits, iracingTracks }) {
           className="btn btn-primary"
           style={{ marginBottom: "0.75rem" }}
         >
-          + Ajouter un circuit
+          {t("circuitsAddBtn")}
         </button>
       )}
 
@@ -574,7 +572,7 @@ export default function CircuitsManager({ initialCircuits, iracingTracks }) {
                   borderBottom: "1px solid var(--border)",
                 }}
               >
-                Circuit
+                {t("circuitsColCircuit")}
               </th>
               <th
                 style={{
@@ -589,7 +587,7 @@ export default function CircuitsManager({ initialCircuits, iracingTracks }) {
                   borderBottom: "1px solid var(--border)",
                 }}
               >
-                Pit lane
+                {t("circuitsColPitLane")}
               </th>
               <th
                 style={{
@@ -680,13 +678,13 @@ export default function CircuitsManager({ initialCircuits, iracingTracks }) {
                                 onClick={() => startEdit(circuit)}
                                 className="btn btn-secondary btn-sm"
                               >
-                                Modifier
+                                {t("edit")}
                               </button>
                               <button
                                 onClick={() => handleDelete(circuit.id)}
                                 className="btn btn-danger btn-sm"
                               >
-                                Supprimer
+                                {t("delete")}
                               </button>
                             </div>
                           </td>
@@ -735,7 +733,7 @@ export default function CircuitsManager({ initialCircuits, iracingTracks }) {
                     >
                       ▶
                     </span>
-                    Autres (non liés iRacing)
+                    {t("circuitsOthers")}
                     <span
                       style={{
                         marginLeft: "0.6rem",
@@ -773,13 +771,13 @@ export default function CircuitsManager({ initialCircuits, iracingTracks }) {
                               onClick={() => startEdit(circuit)}
                               className="btn btn-secondary btn-sm"
                             >
-                              Modifier
+                              {t("edit")}
                             </button>
                             <button
                               onClick={() => handleDelete(circuit.id)}
                               className="btn btn-danger btn-sm"
                             >
-                              Supprimer
+                              {t("delete")}
                             </button>
                           </div>
                         </td>
@@ -797,7 +795,7 @@ export default function CircuitsManager({ initialCircuits, iracingTracks }) {
             {circuits.length === 0 && (
               <tr>
                 <td colSpan={3} className="empty">
-                  Aucun circuit.
+                  {t("circuitsEmpty")}
                 </td>
               </tr>
             )}

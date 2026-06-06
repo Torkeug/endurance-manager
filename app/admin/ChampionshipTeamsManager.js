@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { useTranslations } from "next-intl";
 import { supabaseBrowser } from "@/lib/supabase-browser";
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -81,6 +82,7 @@ function ExpandableRow({
   onToggle,
   onSave,
 }) {
+  const t = useTranslations("admin");
   const consistent = isConsistent(entries);
   const sharedNumber = consistent ? entries[0].car_number : null;
   const isOpen = autoExpanded || expanded;
@@ -196,7 +198,7 @@ function ExpandableRow({
                 fontStyle: "italic",
               }}
             >
-              varie
+              {t("champVaries")}
             </span>
           )}
         </span>
@@ -210,7 +212,7 @@ function ExpandableRow({
           {entries.map((entry) => {
             const event = events.find((ev) => ev.id === entry.event_id);
             const roundLabel = event
-              ? `Round ${event.round_number} · ${event.name}`
+              ? t("champRound", { number: event.round_number, name: event.name })
               : "—";
 
             return (
@@ -262,6 +264,7 @@ function ChampionshipView({
   toggleRow,
   onSave,
 }) {
+  const t = useTranslations("admin");
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
       {championships.map((champ) => {
@@ -319,7 +322,7 @@ function ChampionshipView({
               </span>
               {champ.season && (
                 <span style={{ color: "var(--text-dim)", fontSize: "0.85rem" }}>
-                  · Saison {champ.season}
+                  {t("champSeason", { season: champ.season })}
                 </span>
               )}
               <span
@@ -329,7 +332,7 @@ function ChampionshipView({
                   fontSize: "0.78rem",
                 }}
               >
-                {byTeam.size} équipe{byTeam.size !== 1 ? "s" : ""}
+                {t("champTeamCount", { count: byTeam.size })}
               </span>
             </div>
 
@@ -370,6 +373,7 @@ function ChampionshipView({
 // Shown when a car number conflicts with an existing entry in the same event.
 // Replaces the native alert() for consistency with the rest of the app.
 function CarNumberConflictModal({ conflict, onClose }) {
+  const t = useTranslations("admin");
   if (!conflict) return null;
   return (
     <div
@@ -385,7 +389,7 @@ function CarNumberConflictModal({ conflict, onClose }) {
       }}
     >
       <div className="card" style={{ maxWidth: "400px", width: "100%" }}>
-        <h3 style={{ marginBottom: "0.75rem" }}>Numéro déjà utilisé</h3>
+        <h3 style={{ marginBottom: "0.75rem" }}>{t("champConflictTitle")}</h3>
         <p
           style={{
             fontSize: "0.9rem",
@@ -393,16 +397,10 @@ function CarNumberConflictModal({ conflict, onClose }) {
             marginBottom: "1.5rem",
           }}
         >
-          Le numéro{" "}
-          <strong style={{ color: "var(--text)" }}>#{conflict.number}</strong>{" "}
-          est déjà utilisé par{" "}
-          <strong style={{ color: "var(--text)" }}>
-            {conflict.existingCrewName}
-          </strong>{" "}
-          pour ce créneau de départ dans cette manche.
+          {t("champConflictMessage", { number: conflict.number, crew: conflict.existingCrewName })}
         </p>
         <button onClick={onClose} className="btn btn-primary">
-          OK
+          {t("champOk")}
         </button>
       </div>
     </div>
@@ -423,6 +421,7 @@ function TeamView({
   toggleRow,
   onSave,
 }) {
+  const t = useTranslations("admin");
   const byTeam = groupBy(entries, (e) => e.crew_name);
 
   return (
@@ -488,7 +487,7 @@ function TeamView({
                   fontSize: "0.78rem",
                 }}
               >
-                {byChamp.size} championnat{byChamp.size !== 1 ? "s" : ""}
+                {t("champCount", { count: byChamp.size })}
               </span>
             </div>
 
@@ -505,7 +504,7 @@ function TeamView({
                       key={rowKey}
                       label={champ.name}
                       sublabel={
-                        champ.season ? `· Saison ${champ.season} ·` : undefined
+                        champ.season ? t("champSeasonLabel", { season: champ.season }) : undefined
                       }
                       car={carName(champEntries[0])}
                       cls={champEntries[0].class}
@@ -533,6 +532,7 @@ function TeamView({
 // ─────────────────────────────────────────────────────────────────────────────
 
 export default function ChampionshipTeamsManager() {
+  const t = useTranslations("admin");
   const [championships, setChampionships] = useState([]);
   const [events, setEvents] = useState([]);
   const [entries, setEntries] = useState([]);
@@ -640,18 +640,18 @@ export default function ChampionshipTeamsManager() {
 
   if (loading)
     return (
-      <p style={{ color: "var(--text-dim)", padding: "1rem" }}>Chargement...</p>
+      <p style={{ color: "var(--text-dim)", padding: "1rem" }}>{t("champLoading")}</p>
     );
   if (!championships.length)
     return (
       <p style={{ color: "var(--text-dim)", padding: "1rem" }}>
-        Aucun championnat actif.
+        {t("champNoChampionships")}
       </p>
     );
   if (!entries.length)
     return (
       <p style={{ color: "var(--text-dim)", padding: "1rem" }}>
-        Aucune équipe inscrite dans les championnats actifs.
+        {t("champNoTeams")}
       </p>
     );
 
@@ -674,12 +674,11 @@ export default function ChampionshipTeamsManager() {
         onClose={() => setNumberConflict(null)}
       />
 
-      {/* ── View toggle ── */}
       {/* ── View toggle ─────────────────────────────────────────────────── */}
       <div style={{ display: "flex", gap: "0.5rem" }}>
         {[
-          { key: "team", label: "Par équipe" },
-          { key: "championship", label: "Par championnat" },
+          { key: "team", label: t("champViewByTeam") },
+          { key: "championship", label: t("champViewByChamp") },
         ].map(({ key, label }) => (
           <button
             key={key}

@@ -1,9 +1,11 @@
 "use client";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { supabaseBrowser as supabase } from "../../lib/supabase-browser";
 
 function ConfirmModal({ modal, onConfirm, onCancel }) {
+  const t = useTranslations("admin");
   if (!modal) return null;
   return (
     <div
@@ -31,10 +33,9 @@ function ConfirmModal({ modal, onConfirm, onCancel }) {
           >
             ⚠️{" "}
             <strong style={{ color: "var(--text)" }}>
-              {modal.affectedCars.length} voiture
-              {modal.affectedCars.length > 1 ? "s" : ""}
+              {t("classesCarsCount", { count: modal.affectedCars.length })}
             </strong>{" "}
-            seront déclassées :{" "}
+            {t("classesCarsUnclassed")}{" "}
             <span style={{ color: "var(--danger)" }}>
               {modal.affectedCars.join(", ")}
             </span>
@@ -51,10 +52,9 @@ function ConfirmModal({ modal, onConfirm, onCancel }) {
                 marginTop: "0.5rem",
               }}
             >
-              Cette classe est utilisée dans{" "}
+              {t("classesEventsWarningIntro")}{" "}
               <strong style={{ color: "var(--text)" }}>
-                {modal.affectedEvents.length} événement
-                {modal.affectedEvents.length > 1 ? "s" : ""} actifs
+                {t("classesEventsCount", { count: modal.affectedEvents.length })}
               </strong>{" "}
               :
             </p>
@@ -84,8 +84,7 @@ function ConfirmModal({ modal, onConfirm, onCancel }) {
               marginBottom: "1rem",
             }}
           >
-            Cette classe n&apos;est utilisée par aucune voiture ni événement
-            actif.
+            {t("classesNoImpact")}
           </p>
         )}
 
@@ -97,18 +96,17 @@ function ConfirmModal({ modal, onConfirm, onCancel }) {
             marginTop: "0.5rem",
           }}
         >
-          Les événements archivés ne sont pas affectés. Cette action est
-          irréversible.
+          {t("classesArchivedNote")}
         </p>
 
         <div
           style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}
         >
           <button onClick={onConfirm} className="btn btn-danger">
-            {modal.confirmLabel || "Confirmer"}
+            {modal.confirmLabel || t("confirm")}
           </button>
           <button onClick={onCancel} className="btn btn-secondary">
-            Annuler
+            {t("cancel")}
           </button>
         </div>
       </div>
@@ -117,6 +115,7 @@ function ConfirmModal({ modal, onConfirm, onCancel }) {
 }
 
 export default function ClassesManager({ initialClasses, initialCars }) {
+  const t = useTranslations("admin");
   const router = useRouter();
   const [classes, setClasses] = useState(initialClasses);
   const [cars, setCars] = useState(initialCars);
@@ -277,10 +276,10 @@ export default function ClassesManager({ initialClasses, initialCars }) {
     ];
 
     setConfirmModal({
-      title: `Supprimer la classe "${className}"`,
+      title: t("classesDeleteTitle", { name: className }),
       affectedCars: carsInClass.map((c) => c.name),
       affectedEvents,
-      confirmLabel: "Supprimer",
+      confirmLabel: t("delete"),
       onConfirm: async () => {
         setConfirmModal(null);
         const { error: err } = await supabase
@@ -348,12 +347,12 @@ export default function ClassesManager({ initialClasses, initialCars }) {
             style={{ display: "flex", gap: "0.75rem", alignItems: "flex-end" }}
           >
             <div className="form-group" style={{ flex: 1 }}>
-              <label>Nouvelle classe</label>
+              <label>{t("classesNewLabel")}</label>
               <input
                 type="text"
                 value={newName}
                 onChange={(e) => setNewName(e.target.value)}
-                placeholder="ex : LMP3"
+                placeholder={t("classesNewPlaceholder")}
                 autoFocus
               />
             </div>
@@ -362,10 +361,10 @@ export default function ClassesManager({ initialClasses, initialCars }) {
               className="btn btn-primary"
               disabled={saving}
             >
-              {saving ? "…" : "✓ Ajouter"}
+              {saving ? t("saving") : t("add")}
             </button>
             <button onClick={reset} className="btn btn-secondary">
-              Annuler
+              {t("cancel")}
             </button>
           </div>
           {error && (
@@ -383,7 +382,7 @@ export default function ClassesManager({ initialClasses, initialCars }) {
           className="btn btn-primary"
           style={{ marginBottom: "0.75rem" }}
         >
-          + Ajouter une classe
+          {t("classesAddBtn")}
         </button>
       )}
 
@@ -430,8 +429,7 @@ export default function ClassesManager({ initialClasses, initialCars }) {
                       color: "var(--text-dim)",
                     }}
                   >
-                    {carsInClass.length} voiture
-                    {carsInClass.length !== 1 ? "s" : ""}
+                    {t("classesCarsCount", { count: carsInClass.length })}
                   </span>
                 </div>
                 <div
@@ -463,7 +461,7 @@ export default function ClassesManager({ initialClasses, initialCars }) {
                         alignItems: "center",
                       }}
                     >
-                      Ravit.
+                      {t("classesRefuelLabel")}
                     </span>
                     <button
                       type="button"
@@ -555,26 +553,26 @@ export default function ClassesManager({ initialClasses, initialCars }) {
                         fontSize: "0.8rem",
                       }}
                     >
-                      L/s
+                      {t("classesRefuelUnit")}
                     </span>
                   </div>
                   <button
                     onClick={() => setExpandedId(isExpanded ? null : cls.id)}
                     className="btn btn-secondary btn-sm"
                   >
-                    {isExpanded ? "▲ Voitures" : "▼ Voitures"}
+                    {t("classesToggle", { expanded: isExpanded ? "true" : "false" })}
                   </button>
                   <button
                     onClick={() => startEdit(cls)}
                     className="btn btn-secondary btn-sm"
                   >
-                    Modifier
+                    {t("edit")}
                   </button>
                   <button
                     onClick={() => handleDelete(cls.id, cls.name)}
                     className="btn btn-danger btn-sm"
                   >
-                    Supprimer
+                    {t("delete")}
                   </button>
                 </div>
               </div>
@@ -596,7 +594,7 @@ export default function ClassesManager({ initialClasses, initialCars }) {
                     }}
                   >
                     <div className="form-group" style={{ flex: 1 }}>
-                      <label>Nom de la classe</label>
+                      <label>{t("classesNameLabel")}</label>
                       <input
                         type="text"
                         value={newName}
@@ -609,10 +607,10 @@ export default function ClassesManager({ initialClasses, initialCars }) {
                       className="btn btn-primary"
                       disabled={saving}
                     >
-                      {saving ? "…" : "✓ Enregistrer"}
+                      {saving ? t("saving") : t("save")}
                     </button>
                     <button onClick={reset} className="btn btn-secondary">
-                      Annuler
+                      {t("cancel")}
                     </button>
                   </div>
                   {error && (
@@ -648,7 +646,7 @@ export default function ClassesManager({ initialClasses, initialCars }) {
                           marginBottom: "0.5rem",
                         }}
                       >
-                        Voitures assignées
+                        {t("classesAssigned")}
                       </div>
                       <div
                         style={{
@@ -684,7 +682,7 @@ export default function ClassesManager({ initialClasses, initialCars }) {
                                 lineHeight: 1,
                                 padding: "0",
                               }}
-                              title="Retirer de cette classe"
+                              title={t("classesRemoveTitle")}
                             >
                               ×
                             </button>
@@ -707,7 +705,7 @@ export default function ClassesManager({ initialClasses, initialCars }) {
                           marginBottom: "0.5rem",
                         }}
                       >
-                        Voitures non classées — cliquer pour assigner
+                        {t("classesUnassigned")}
                       </div>
                       <div
                         style={{
@@ -743,7 +741,7 @@ export default function ClassesManager({ initialClasses, initialCars }) {
                     <p
                       style={{ color: "var(--text-dim)", fontSize: "0.85rem" }}
                     >
-                      Toutes les voitures sont déjà assignées à une classe.
+                      {t("classesAllAssigned")}
                     </p>
                   )}
                 </div>
@@ -754,7 +752,7 @@ export default function ClassesManager({ initialClasses, initialCars }) {
 
         {classes.length === 0 && (
           <div className="card">
-            <div className="empty">Aucune classe configurée.</div>
+            <div className="empty">{t("classesEmpty")}</div>
           </div>
         )}
       </div>
@@ -775,8 +773,7 @@ export default function ClassesManager({ initialClasses, initialCars }) {
               marginBottom: "0.5rem",
             }}
           >
-            ⚠️ {unclassedCars.length} voiture
-            {unclassedCars.length > 1 ? "s" : ""} sans classe
+            {t("classesUnclassedWarning", { count: unclassedCars.length })}
           </div>
           <div style={{ fontSize: "0.85rem", color: "var(--text-dim)" }}>
             {unclassedCars.map((c) => c.name).join(", ")}

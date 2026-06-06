@@ -1,17 +1,8 @@
 "use client";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useLocale } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { supabaseBrowser as supabase } from "../../lib/supabase-browser";
-
-const ROLE_LABELS = {
-  driver: "Pilote",
-  external: "Externe",
-  // Engineer is a race-day role: full read access, stint interaction only
-  engineer: "Ingénieur",
-  admin: "Admin",
-  super_admin: "Super Admin",
-};
 
 const ROLE_COLORS = {
   driver: "var(--text-dim)",
@@ -23,6 +14,7 @@ const ROLE_COLORS = {
 };
 
 function ConfirmModal({ modal, onConfirm, onCancel }) {
+  const t = useTranslations("admin");
   if (!modal) return null;
   return (
     <div
@@ -52,10 +44,10 @@ function ConfirmModal({ modal, onConfirm, onCancel }) {
           style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}
         >
           <button onClick={onConfirm} className="btn btn-danger">
-            {modal.confirmLabel || "Confirmer"}
+            {modal.confirmLabel || t("confirm")}
           </button>
           <button onClick={onCancel} className="btn btn-secondary">
-            Annuler
+            {t("cancel")}
           </button>
         </div>
       </div>
@@ -104,6 +96,7 @@ function canApproveOrRevoke(
 // Note: drivers with stints cannot be deleted at all (FK constraint) —
 // this modal only appears for drivers with signups but no stints.
 function DeleteDriverModal({ modal, onConfirm, onCancel }) {
+  const t = useTranslations("admin");
   if (!modal) return null;
   return (
     <div
@@ -120,7 +113,7 @@ function DeleteDriverModal({ modal, onConfirm, onCancel }) {
     >
       <div className="card" style={{ maxWidth: "480px", width: "100%" }}>
         <h3 style={{ marginBottom: "0.75rem" }}>
-          Supprimer {modal.driverName}
+          {t("driversDeleteTitle", { name: modal.driverName })}
         </h3>
 
         {/* Stints warning — will be deleted explicitly before driver */}
@@ -136,8 +129,7 @@ function DeleteDriverModal({ modal, onConfirm, onCancel }) {
               color: "var(--danger)",
             }}
           >
-            ⚠️ Ce pilote a des relais assignés qui seront supprimés
-            définitivement.
+            {t("driversStintsWarning")}
           </div>
         )}
 
@@ -151,12 +143,11 @@ function DeleteDriverModal({ modal, onConfirm, onCancel }) {
                 marginBottom: "0.75rem",
               }}
             >
-              Ce pilote est inscrit à{" "}
+              {t("driversSignupsIntro")}{" "}
               <strong style={{ color: "var(--text)" }}>
-                {modal.affectedEvents.length} événement
-                {modal.affectedEvents.length > 1 ? "s" : ""}
+                {t("driversSignupsCount", { count: modal.affectedEvents.length })}
               </strong>
-              . Ces inscriptions seront supprimées automatiquement :
+              {t("driversSignupsSuffix")}
             </p>
             <ul
               style={{
@@ -185,9 +176,7 @@ function DeleteDriverModal({ modal, onConfirm, onCancel }) {
               marginBottom: "1.5rem",
             }}
           >
-            Confirmer la suppression définitive de{" "}
-            <strong style={{ color: "var(--text)" }}>{modal.driverName}</strong>{" "}
-            ? Cette action est irréversible.
+            {t("driversCleanDelete", { name: modal.driverName })}
           </p>
         )}
 
@@ -198,17 +187,17 @@ function DeleteDriverModal({ modal, onConfirm, onCancel }) {
             marginBottom: "1.5rem",
           }}
         >
-          Cette action est irréversible.
+          {t("irreversible")}
         </p>
 
         <div
           style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}
         >
           <button onClick={onConfirm} className="btn btn-danger">
-            Supprimer définitivement
+            {t("deleteForever")}
           </button>
           <button onClick={onCancel} className="btn btn-secondary">
-            Annuler
+            {t("cancel")}
           </button>
         </div>
       </div>
@@ -217,6 +206,7 @@ function DeleteDriverModal({ modal, onConfirm, onCancel }) {
 }
 
 export default function DriversManager({ initialDrivers, currentDriver }) {
+  const t = useTranslations("admin");
   const locale = useLocale();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -238,6 +228,15 @@ export default function DriversManager({ initialDrivers, currentDriver }) {
   // Which driver row has its Discord ID pencil editor open, and the draft value
   const [editingDiscord, setEditingDiscord] = useState(null);
   const [discordDraft, setDiscordDraft] = useState("");
+
+  // Role labels depend on t() — must be inside component
+  const ROLE_LABELS = useMemo(() => ({
+    driver: t("roleDriver"),
+    external: t("roleExternal"),
+    engineer: t("roleEngineer"),
+    admin: t("roleAdmin"),
+    super_admin: t("roleSuperAdmin"),
+  }), [t]);
 
   const pending = drivers.filter((d) => !d.approved && !d.refused);
   const refused = drivers.filter((d) => d.refused);
@@ -287,9 +286,9 @@ export default function DriversManager({ initialDrivers, currentDriver }) {
 
   const refuse = (driverId) => {
     setConfirmModal({
-      title: "Refuser l'accès",
-      message: "Ce pilote ne pourra plus se connecter avec cet email.",
-      confirmLabel: "Refuser",
+      title: t("driversRefuseTitle"),
+      message: t("driversRefuseMessage"),
+      confirmLabel: t("driversRefuseLabel"),
       onConfirm: async () => {
         setConfirmModal(null);
         setSaving(driverId);
@@ -317,9 +316,9 @@ export default function DriversManager({ initialDrivers, currentDriver }) {
   // revoke = back to pending (approved: false), distinct from refuse (refused: true)
   const revoke = (driverId) => {
     setConfirmModal({
-      title: "Révoquer l'accès",
-      message: "Ce pilote sera mis en attente d'approbation.",
-      confirmLabel: "Révoquer",
+      title: t("driversRevokeTitle"),
+      message: t("driversRevokeMessage"),
+      confirmLabel: t("driversRevokeLabel"),
       onConfirm: async () => {
         setConfirmModal(null);
         setSaving(driverId);
@@ -371,7 +370,7 @@ export default function DriversManager({ initialDrivers, currentDriver }) {
         .delete()
         .eq("driver_id", driverId);
       if (stintErr) {
-        setError(`Erreur suppression relais : ${stintErr.message}`);
+        setError(t("driversStintDeleteError", { message: stintErr.message }));
         setSaving(null);
         return;
       }
@@ -522,11 +521,11 @@ export default function DriversManager({ initialDrivers, currentDriver }) {
   const tabs = [
     {
       id: "pending",
-      label: `En attente (${pending.length})`,
+      label: t("driversPendingTab", { count: pending.length }),
       danger: pending.length > 0,
     },
-    { id: "all", label: `Approuvés (${approved.length})` },
-    { id: "refused", label: `Refusés (${refused.length})` },
+    { id: "all", label: t("driversApprovedTab", { count: approved.length }) },
+    { id: "refused", label: t("driversRefusedTab", { count: refused.length }) },
   ];
 
   // Copies a driver's email to clipboard and flashes ✓ for 1.5s
@@ -554,15 +553,12 @@ export default function DriversManager({ initialDrivers, currentDriver }) {
       {/* iRacing sync-all feedback banners */}
       {iracingSyncedCount && (
         <div className="alert alert-success" style={{ marginBottom: "1rem" }}>
-          ✓ {iracingSyncedCount} pilote{iracingSyncedCount !== "1" ? "s" : ""}{" "}
-          synchronisé
-          {iracingSyncedCount !== "1" ? "s" : ""} avec iRacing.
+          {t("driversSyncSuccess", { count: iracingSyncedCount })}
         </div>
       )}
       {iracingUnauthorized && (
         <div className="alert alert-error" style={{ marginBottom: "1rem" }}>
-          Accès refusé — seuls les admins peuvent lancer une synchronisation
-          globale.
+          {t("driversSyncDenied")}
         </div>
       )}
       {error && (
@@ -584,7 +580,7 @@ export default function DriversManager({ initialDrivers, currentDriver }) {
             href="/auth/iracing?mode=syncall"
             className="btn btn-secondary btn-sm"
           >
-            🔄 Sync All iRating
+            {t("driversSyncAll")}
           </a>
         </div>
       )}
@@ -640,7 +636,7 @@ export default function DriversManager({ initialDrivers, currentDriver }) {
         (pending.length === 0 ? (
           <div className="card">
             <div className="empty">
-              Aucun pilote en attente d&apos;approbation.
+              {t("driversNoPending")}
             </div>
           </div>
         ) : (
@@ -648,8 +644,8 @@ export default function DriversManager({ initialDrivers, currentDriver }) {
             <table style={{ width: "100%", borderCollapse: "collapse" }}>
               <thead>
                 <tr>
-                  <th style={TH}>Nom</th>
-                  <th style={TH}>Email</th>
+                  <th style={TH}>{t("driversColName")}</th>
+                  <th style={TH}>{t("driversColEmail")}</th>
                   <th style={TH}>iRacing ID</th>
                   <th style={TH}>Discord</th>
                   <th style={TH}></th>
@@ -681,21 +677,21 @@ export default function DriversManager({ initialDrivers, currentDriver }) {
                           className="btn btn-primary btn-sm"
                           disabled={saving === d.id}
                         >
-                          ✓ Approuver
+                          {t("driversApproveBtn")}
                         </button>
                         <button
                           onClick={() => refuse(d.id)}
                           className="btn btn-danger btn-sm"
                           disabled={saving === d.id}
                         >
-                          ✗ Refuser
+                          {t("driversRefuseBtn")}
                         </button>
                         <button
                           onClick={() => deleteDriver(d.id, d.name)}
                           className="btn btn-secondary btn-sm"
                           disabled={saving === d.id}
                         >
-                          Supprimer
+                          {t("delete")}
                         </button>
                       </div>
                     </td>
@@ -710,24 +706,24 @@ export default function DriversManager({ initialDrivers, currentDriver }) {
       {filter === "all" &&
         (approved.length === 0 ? (
           <div className="card">
-            <div className="empty">Aucun pilote approuvé.</div>
+            <div className="empty">{t("driversNoApproved")}</div>
           </div>
         ) : (
           <div className="table-wrap">
             <table style={{ width: "100%", borderCollapse: "collapse" }}>
               <thead>
                 <tr>
-                  <th style={TH}>Nom</th>
-                  <th style={TH}>Email</th>
-                  <th style={TH}>Rôle</th>
+                  <th style={TH}>{t("driversColName")}</th>
+                  <th style={TH}>{t("driversColEmail")}</th>
+                  <th style={TH}>{t("driversColRole")}</th>
                   {/* Discord ID column — editable via pencil icon */}
                   <th style={TH}>Discord ID</th>
                   <th style={TH_TIGHT}>
                     <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "0.4rem" }}>
-                      <span>Cotis.</span>
+                      <span>{t("driversColMembership")}</span>
                       <input
                         type="checkbox"
-                        title="Tout cocher / décocher"
+                        title={t("driversCheckAllTitle")}
                         checked={approved.length > 0 && approved.every((d) => d.membership_ok)}
                         ref={(el) => {
                           if (el) el.indeterminate = approved.some((d) => d.membership_ok) && !approved.every((d) => d.membership_ok);
@@ -738,8 +734,8 @@ export default function DriversManager({ initialDrivers, currentDriver }) {
                       />
                     </div>
                   </th>
-                  <th style={TH_TIGHT}>Test</th>
-                  <th style={TH_TIGHT}>Actif</th>
+                  <th style={TH_TIGHT}>{t("driversColTest")}</th>
+                  <th style={TH_TIGHT}>{t("driversColActive")}</th>
                   {/* iRacing sync — read-only timestamp, populated by sync-all or driver self-sync */}
                   <th style={TH_TIGHT}>iRacing sync</th>
                   <th style={TH}></th>
@@ -780,7 +776,7 @@ export default function DriversManager({ initialDrivers, currentDriver }) {
                               color: "var(--accent)",
                             }}
                           >
-                            (vous)
+                            {t("driversYou")}
                           </span>
                         )}
                       </td>
@@ -817,7 +813,7 @@ export default function DriversManager({ initialDrivers, currentDriver }) {
                             {/* Clipboard copy button — flashes ✓ on success */}
                             <button
                               onClick={() => copyEmail(d.id, d.email)}
-                              title="Copier l'adresse email"
+                              title={t("driversCopyEmailTitle")}
                               style={{
                                 background: "none",
                                 border: "none",
@@ -876,7 +872,7 @@ export default function DriversManager({ initialDrivers, currentDriver }) {
                               color: ROLE_COLORS[d.role],
                             }}
                           >
-                            {ROLE_LABELS[d.role] || "Pilote"}
+                            {ROLE_LABELS[d.role] || t("roleDriver")}
                           </span>
                         )}
                       </td>
@@ -900,7 +896,7 @@ export default function DriversManager({ initialDrivers, currentDriver }) {
                                 if (e.key === "Enter") saveDiscordId(d.id);
                                 if (e.key === "Escape") cancelDiscordEdit();
                               }}
-                              placeholder="Discord ID"
+                              placeholder={t("driversDiscordPlaceholder")}
                               autoFocus
                               className="mono"
                               style={{
@@ -948,7 +944,7 @@ export default function DriversManager({ initialDrivers, currentDriver }) {
                               onClick={() =>
                                 openDiscordEdit(d.id, d.discord_id)
                               }
-                              title="Modifier le Discord ID"
+                              title={t("driversEditDiscordTitle")}
                               style={{
                                 background: "none",
                                 border: "none",
@@ -1065,14 +1061,14 @@ export default function DriversManager({ initialDrivers, currentDriver }) {
                               className="btn btn-secondary btn-sm"
                               disabled={saving === d.id}
                             >
-                              Révoquer
+                              {t("driversRevokeBtn")}
                             </button>
                             <button
                               onClick={() => deleteDriver(d.id, d.name)}
                               className="btn btn-danger btn-sm"
                               disabled={saving === d.id}
                             >
-                              Supprimer
+                              {t("delete")}
                             </button>
                           </div>
                         )}
@@ -1089,15 +1085,15 @@ export default function DriversManager({ initialDrivers, currentDriver }) {
       {filter === "refused" &&
         (refused.length === 0 ? (
           <div className="card">
-            <div className="empty">Aucun pilote refusé.</div>
+            <div className="empty">{t("driversNoRefused")}</div>
           </div>
         ) : (
           <div className="table-wrap">
             <table style={{ width: "100%", borderCollapse: "collapse" }}>
               <thead>
                 <tr>
-                  <th style={TH}>Nom</th>
-                  <th style={TH}>Email</th>
+                  <th style={TH}>{t("driversColName")}</th>
+                  <th style={TH}>{t("driversColEmail")}</th>
                   <th style={TH}></th>
                 </tr>
               </thead>
@@ -1123,14 +1119,14 @@ export default function DriversManager({ initialDrivers, currentDriver }) {
                           className="btn btn-primary btn-sm"
                           disabled={saving === d.id}
                         >
-                          Approuver
+                          {t("driversApproveBtn")}
                         </button>
                         <button
                           onClick={() => deleteDriver(d.id, d.name)}
                           className="btn btn-danger btn-sm"
                           disabled={saving === d.id}
                         >
-                          Supprimer
+                          {t("delete")}
                         </button>
                       </div>
                     </td>

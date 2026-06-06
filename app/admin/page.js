@@ -3,8 +3,10 @@ import { getSessionAndDriver } from "../../lib/auth";
 import { redirect } from "next/navigation";
 import AdminTabs from "./AdminTabs";
 import { isLegacyContent } from "../../lib/car-types";
+import { getTranslations } from "next-intl/server";
 
 export default async function AdminPage() {
+  const t = await getTranslations("admin");
   const { driver: currentDriver } = await getSessionAndDriver();
   // Redirect non-admin users — this is a server-side guard,
   // middleware also blocks this route but we double-check here
@@ -170,7 +172,7 @@ export default async function AdminPage() {
     <div className="page">
       <div className="page-header">
         <div>
-          <h1>Administration</h1>
+          <h1>{t("pageTitle")}</h1>
           <div className="accent-line" />
           <p
             style={{
@@ -179,7 +181,7 @@ export default async function AdminPage() {
               fontSize: "0.85rem",
             }}
           >
-            Données de référence &amp; gestion des accès
+            {t("pageSubtitle")}
           </p>
         </div>
       </div>

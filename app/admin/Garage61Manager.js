@@ -1,6 +1,6 @@
 "use client";
-import { useState, useEffect } from "react";
-import { useLocale } from "next-intl";
+import { useState, useEffect, useMemo } from "react";
+import { useLocale, useTranslations } from "next-intl";
 import { supabaseBrowser as supabase } from "../../lib/supabase-browser";
 
 const CACHE_KEY = "garage61_detected_drivers";
@@ -72,15 +72,6 @@ function buildMatches(g61Drivers, dbDrivers) {
   });
 }
 
-const STATUS_META = {
-  confirmed: { label: "✓ Lié",                   color: "#2eb460" },
-  exact:     { label: "→ Correspondance exacte",  color: "var(--accent)" },
-  fuzzy:     { label: "~ Correspondance partielle", color: "#7eb8e0" },
-  conflict:  { label: "⚠ Conflit",               color: "#e07b39" },
-  ambiguous: { label: "⚠ Ambigu",                color: "#c9a84c" },
-  no_match:  { label: "Inconnu",                  color: "var(--text-dim)" },
-};
-
 const thStyle = {
   background: "var(--surface-2)",
   color: "var(--text-dim)",
@@ -97,6 +88,7 @@ const thStyle = {
 const tdStyle = { padding: "0.55rem 1rem", borderBottom: "1px solid var(--border)", fontSize: "0.85rem" };
 
 export default function Garage61Manager({ currentDriver }) {
+  const t = useTranslations("admin");
   const locale = useLocale();
   const [dbDrivers, setDbDrivers] = useState([]);
   const [g61Drivers, setG61Drivers] = useState(null); // null = not yet loaded
@@ -108,6 +100,15 @@ export default function Garage61Manager({ currentDriver }) {
   const [overrides, setOverrides] = useState({});
   const [linkedDrivers, setLinkedDrivers] = useState([]);
   const [detectionDriverId, setDetectionDriverId] = useState("");
+
+  const STATUS_META = useMemo(() => ({
+    confirmed: { label: t("g61ConfirmedLabel"), color: "#2eb460" },
+    exact:     { label: t("g61ExactLabel"),     color: "var(--accent)" },
+    fuzzy:     { label: t("g61FuzzyLabel"),     color: "#7eb8e0" },
+    conflict:  { label: t("g61ConflictLabel"),  color: "#e07b39" },
+    ambiguous: { label: t("g61AmbiguousLabel"), color: "#c9a84c" },
+    no_match:  { label: t("g61NoMatchLabel"),   color: "var(--text-dim)" },
+  }), [t]);
 
   // On mount: load DB drivers + cached detection result from settings table
   useEffect(() => {
@@ -155,10 +156,10 @@ export default function Garage61Manager({ currentDriver }) {
       if (!res.ok) {
         setError(
           data.error === "not_linked"
-            ? "Votre compte Garage61 n'est pas lié. Connectez-le sur votre profil pilote."
+            ? t("g61ErrNotLinked")
             : data.error === "token_expired"
-              ? "Session Garage61 expirée — re-liez votre compte."
-              : `Erreur : ${data.error ?? "inconnue"}`,
+              ? t("g61ErrExpired")
+              : t("g61ErrGeneric", { error: data.error ?? "inconnue" }),
         );
       } else {
         const drivers = data.drivers || [];
@@ -172,7 +173,7 @@ export default function Garage61Manager({ currentDriver }) {
         );
       }
     } catch {
-      setError("Erreur réseau");
+      setError(t("g61ErrNetwork"));
     } finally {
       setLoading(false);
     }
@@ -209,10 +210,10 @@ export default function Garage61Manager({ currentDriver }) {
       <div>
         {error && <div className="alert alert-error" style={{ marginBottom: "1rem" }}>{error}</div>}
         <p style={{ fontSize: "0.85rem", color: "var(--text-dim)", marginBottom: "1rem" }}>
-          Aucune détection enregistrée. Lancez une détection pour lier les pilotes Garage61.
+          {t("g61NoDetection")}
         </p>
         <button className="btn btn-primary" onClick={runDetect} disabled={loading}>
-          {loading ? "Détection en cours…" : "🔍 Détecter les correspondances"}
+          {loading ? t("g61Detecting") : t("g61DetectBtn")}
         </button>
       </div>
     );
@@ -231,21 +232,21 @@ export default function Garage61Manager({ currentDriver }) {
       {/* Controls */}
       <div style={{ display: "flex", gap: "0.75rem", alignItems: "center", flexWrap: "wrap" }}>
         <button className="btn btn-secondary" onClick={runDetect} disabled={loading}>
-          {loading ? "Actualisation…" : "🔄 Actualiser"}
+          {loading ? t("g61Refreshing") : t("g61RefreshBtn")}
         </button>
         {lastUpdated && !loading && (
           <span style={{ fontSize: "0.78rem", color: "var(--text-dim)" }}>
-            Dernière détection : {new Date(lastUpdated).toLocaleString(locale)}
+            {t("g61LastDetection")} {new Date(lastUpdated).toLocaleString(locale)}
           </span>
         )}
         {exactCount > 0 && (
           <button className="btn btn-primary" onClick={() => applyExact(matches)} disabled={saving}>
-            {saving ? "Enregistrement…" : `✓ Appliquer ${exactCount} correspondance${exactCount > 1 ? "s" : ""} exacte${exactCount > 1 ? "s" : ""}`}
+            {saving ? t("g61Saving") : t("g61ApplyExact", { count: exactCount })}
           </button>
         )}
         {savedCount !== null && (
           <span style={{ fontSize: "0.82rem", color: "#2eb460" }}>
-            {savedCount} slug{savedCount > 1 ? "s" : ""} enregistré{savedCount > 1 ? "s" : ""}.
+            {t("g61SavedCount", { count: savedCount })}
           </span>
         )}
       </div>
@@ -254,19 +255,19 @@ export default function Garage61Manager({ currentDriver }) {
 
       {/* Detection account */}
       <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
-        <span style={{ fontSize: "0.78rem", color: "var(--text-dim)", whiteSpace: "nowrap" }}>Compte de détection :</span>
+        <span style={{ fontSize: "0.78rem", color: "var(--text-dim)", whiteSpace: "nowrap" }}>{t("g61DetectionAccount")}</span>
         <select
           value={detectionDriverId}
           onChange={(e) => saveDetectionDriver(e.target.value)}
           style={{ fontSize: "0.82rem", background: "var(--surface-2)", border: "1px solid var(--border)", borderRadius: "3px", color: "var(--text)", padding: "0.25rem 0.5rem" }}
         >
-          <option value="">Compte connecté (par défaut)</option>
+          <option value="">{t("g61DefaultAccount")}</option>
           {linkedDrivers.map((d) => (
             <option key={d.id} value={d.id}>{d.name}</option>
           ))}
         </select>
         <span style={{ fontSize: "0.75rem", color: "var(--text-dim)" }}>
-          Choisissez un pilote membre de toutes les équipes.
+          {t("g61AccountHint")}
         </span>
       </div>
 
@@ -275,12 +276,12 @@ export default function Garage61Manager({ currentDriver }) {
         <div style={{ display: "flex", gap: "1rem", flexWrap: "wrap" }}>
           {conflictCount > 0 && (
             <div style={{ fontSize: "0.82rem", color: "#e07b39" }}>
-              ⚠ {conflictCount} conflit{conflictCount > 1 ? "s" : ""} — le slug en base diffère de celui détecté sur Garage61.
+              {t("g61ConflictWarning", { count: conflictCount })}
             </div>
           )}
           {ambiguousCount > 0 && (
             <div style={{ fontSize: "0.82rem", color: "#c9a84c" }}>
-              ⚠ {ambiguousCount} correspondance{ambiguousCount > 1 ? "s" : ""} ambiguë{ambiguousCount > 1 ? "s" : ""} — plusieurs pilotes ont le même nom normalisé.
+              {t("g61AmbiguousWarning", { count: ambiguousCount })}
             </div>
           )}
         </div>
@@ -289,16 +290,16 @@ export default function Garage61Manager({ currentDriver }) {
       {/* Main match table */}
       <div>
         <div style={{ fontSize: "0.72rem", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "var(--text-dim)", marginBottom: "0.5rem" }}>
-          Pilotes détectés sur Garage61 ({g61Drivers.length})
+          {t("g61DetectedTitle", { count: g61Drivers.length })}
         </div>
         <div className="table-wrap">
           <table style={{ width: "100%", borderCollapse: "collapse" }}>
             <thead>
               <tr>
-                <th style={thStyle}>Nom Garage61</th>
-                <th style={thStyle}>Slug</th>
-                <th style={thStyle}>Pilote en base</th>
-                <th style={thStyle}>Statut</th>
+                <th style={thStyle}>{t("g61ColG61Name")}</th>
+                <th style={thStyle}>{t("g61ColSlug")}</th>
+                <th style={thStyle}>{t("g61ColDbDriver")}</th>
+                <th style={thStyle}>{t("g61ColStatus")}</th>
                 <th style={thStyle}></th>
               </tr>
             </thead>
@@ -318,7 +319,7 @@ export default function Garage61Manager({ currentDriver }) {
                         <span>
                           {m.dbDriver.name}
                           <span style={{ fontFamily: "var(--font-mono), monospace", fontSize: "0.72rem", color: "#e07b39", marginLeft: "0.5rem" }}>
-                            (actuellement : {m.dbDriver.garage61_slug})
+                            {t("g61CurrentSlug", { slug: m.dbDriver.garage61_slug })}
                           </span>
                         </span>
                       ) : m.dbDriver ? (
@@ -337,7 +338,7 @@ export default function Garage61Manager({ currentDriver }) {
                           style={{ fontSize: "0.72rem" }}
                           onClick={() => applyOverride(m.dbDriver.id, m.g61.slug)}
                         >
-                          {m.status === "fuzzy" ? "Lier" : "Mettre à jour"}
+                          {m.status === "fuzzy" ? t("g61LinkBtn") : t("g61UpdateBtn")}
                         </button>
                       )}
                       {m.status === "ambiguous" && (
@@ -346,7 +347,7 @@ export default function Garage61Manager({ currentDriver }) {
                           defaultValue=""
                           onChange={(e) => e.target.value && applyOverride(e.target.value, m.g61.slug)}
                         >
-                          <option value="">Assigner à…</option>
+                          <option value="">{t("g61AssignTo")}</option>
                           {m.candidates.map((c) => (
                             <option key={c.id} value={c.id}>{c.name}</option>
                           ))}
@@ -365,10 +366,10 @@ export default function Garage61Manager({ currentDriver }) {
       {notFoundInG61.length > 0 && (
         <div>
           <div style={{ fontSize: "0.72rem", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "var(--text-dim)", marginBottom: "0.5rem" }}>
-            Pilotes non trouvés sur Garage61 ({notFoundInG61.length})
+            {t("g61NotFoundTitle", { count: notFoundInG61.length })}
           </div>
           <div style={{ fontSize: "0.82rem", color: "var(--text-dim)", marginBottom: "0.5rem" }}>
-            Ces pilotes approuvés n&apos;ont pas de correspondance dans les données d&apos;équipe Garage61 et n&apos;ont pas encore lié leur compte.
+            {t("g61NotFoundDesc")}
           </div>
           <div style={{ display: "flex", flexWrap: "wrap", gap: "0.4rem" }}>
             {notFoundInG61.map((d) => (

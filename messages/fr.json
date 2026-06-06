@@ -1234,6 +1234,7 @@
     "carsAffectedCount": "{count, plural, one {{count} pilote} other {{count} pilotes}}",
     "carsAffectedVerb": "{count, plural, one {a cette voiture dans leurs préférences et perdra silencieusement cette préférence :} other {ont cette voiture dans leurs préférences et perdront silencieusement cette préférence :}}",
     "carsUpdatePrefsHint": "Ces pilotes devront mettre à jour leurs préférences lors de leur prochaine inscription.",
+    "carsConfirmDelete": "Confirmer la suppression de {name} ?\nCette action est irréversible.",
     "carsIracingLabel": "Voiture iRacing",
     "carsIracingEmpty": "⚠️ Catalogue iRacing vide. Lancez une synchronisation iRacing d'abord.",
     "carsIracingSearch": "Rechercher une voiture iRacing…",

@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import EquipagesManager from "./EquipagesManager";
 import CarsManager from "./CarsManager";
 import ClassesManager from "./ClassesManager";
@@ -8,17 +9,6 @@ import EventTypesManager from "./EventTypesManager";
 import DriversManager from "./DriversManager";
 import SettingsManager from "./SettingsManager";
 import Garage61Manager from "./Garage61Manager";
-
-const TABS = [
-  { id: "pilotes", label: "Pilotes" },
-  { id: "equipages", label: "Équipages" },
-  { id: "voitures", label: "Voitures" },
-  { id: "classes", label: "Classes" },
-  { id: "circuits", label: "Circuits" },
-  { id: "types", label: "Types d'événement" },
-  { id: "garage61", label: "Garage61" },
-  { id: "parametres", label: "Paramètres" },
-];
 
 export default function AdminTabs({
   circuits,
@@ -36,6 +26,17 @@ export default function AdminTabs({
   iracingCars,
   iracingTracks,
 }) {
+  const t = useTranslations("admin");
+  const TABS = [
+    { id: "pilotes", label: t("tabDrivers") },
+    { id: "equipages", label: t("tabEntries") },
+    { id: "voitures", label: t("tabCars") },
+    { id: "classes", label: t("tabClasses") },
+    { id: "circuits", label: t("tabCircuits") },
+    { id: "types", label: t("tabEventTypes") },
+    { id: "garage61", label: t("tabGarage61") },
+    { id: "parametres", label: t("tabSettings") },
+  ];
   const [activeTab, setActiveTab] = useState("pilotes");
   // Count drivers awaiting approval for the red badge on the Pilotes tab
   const pendingCount = (drivers || []).filter(
