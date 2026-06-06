@@ -1206,6 +1206,11 @@ export default function RaceMode({
         </div>
 
         {/* Driver name */}
+        {isPitStop && (
+          <div style={{ ...labelStyle, color: "#5ac8c8", marginBottom: "0.3rem" }}>
+            {t("incomingDriver")}
+          </div>
+        )}
         <div
           style={{
             fontFamily: "var(--font-rajdhani), sans-serif",
