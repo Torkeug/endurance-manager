@@ -460,7 +460,7 @@ export default function AvailabilityGrid({
 
           {/* Paint mode selector */}
           {selectedDriverId && (
-            <div className="card" style={{ marginBottom: "1rem" }}>
+            <div style={{ marginTop: "0.75rem", marginBottom: "0.25rem" }}>
               <div
                 style={{
                   fontSize: "0.75rem",
@@ -473,7 +473,7 @@ export default function AvailabilityGrid({
               >
                 {t("inputMode")}
               </div>
-              <div style={{ display: "flex", gap: "0.5rem" }}>
+              <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
                 {[
                   { value: "available", label: t("available"), color: "var(--accent)" },
                   { value: "unavailable", label: t("unavailable"), color: "var(--danger)" },

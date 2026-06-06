@@ -295,15 +295,25 @@ export default function PlanningTab({
   }
 
   // ── Hour tick marks ────────────────────────────────────────────────────────
+  // Pick a tick interval (in hours) so labels (~40px each) don't overlap.
+  // Estimate: timeline area ≈ 450px (600px min-width − 130px label col − 20px padding).
+  const estPxPerHour = 450 / (timelineMs / 3600000);
+  const tickStepHours =
+    estPxPerHour >= 50 ? 1 :
+    estPxPerHour >= 25 ? 2 :
+    estPxPerHour >= 12 ? 4 :
+    estPxPerHour >= 6  ? 6 : 12;
+
   const hourTicks = [];
   const firstHour = new Date(timelineStart);
   firstHour.setMinutes(0, 0, 0);
-  // Advance to the next whole hour if we're past it
   if (firstHour.getTime() < timelineStart)
     firstHour.setHours(firstHour.getHours() + 1);
   let tick = firstHour.getTime();
   while (tick <= timelineEnd) {
-    hourTicks.push({ ts: tick, label: formatTime(new Date(tick)) });
+    const d = new Date(tick);
+    if (d.getHours() % tickStepHours === 0)
+      hourTicks.push({ ts: tick, label: formatTime(d) });
     tick += 60 * 60 * 1000;
   }
 

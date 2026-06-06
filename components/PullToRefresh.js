@@ -83,7 +83,7 @@ export default function PullToRefresh({ children }) {
   const ready = progress >= 1;
 
   return (
-    <main ref={containerRef} className="flex-1 overflow-auto" style={{ position: "relative" }}>
+    <main ref={containerRef} className="flex-1 overflow-y-auto overflow-x-hidden" style={{ position: "relative" }}>
       {/* Pull indicator — pushes content down as user drags */}
       <div
         style={{
