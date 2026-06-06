@@ -295,14 +295,10 @@ export default function PlanningTab({
   }
 
   // ── Hour tick marks ────────────────────────────────────────────────────────
-  // Every hour gets a tick notch; labels are shown every N hours so text
-  // doesn't overlap. Estimate: timeline area ≈ 450px (600px min-width −
-  // 130px label col − 20px padding). Label is ~40px wide.
+  // All hours are always labeled. On dense timelines, odd-indexed ticks are
+  // shifted up so consecutive labels never overlap horizontally.
   const estPxPerHour = 450 / (timelineMs / 3600000);
-  const labelStepHours =
-    estPxPerHour >= 40 ? 1 :
-    estPxPerHour >= 20 ? 2 :
-    estPxPerHour >= 10 ? 4 : 6;
+  const stagger = estPxPerHour < 40; // stagger when labels would overlap
 
   const hourTicks = [];
   const firstHour = new Date(timelineStart);
@@ -310,14 +306,11 @@ export default function PlanningTab({
   if (firstHour.getTime() < timelineStart)
     firstHour.setHours(firstHour.getHours() + 1);
   let tick = firstHour.getTime();
+  let tickIndex = 0;
   while (tick <= timelineEnd) {
-    const d = new Date(tick);
-    hourTicks.push({
-      ts: tick,
-      label: formatTime(d),
-      showLabel: d.getHours() % labelStepHours === 0,
-    });
+    hourTicks.push({ ts: tick, label: formatTime(new Date(tick)), staggerUp: stagger && tickIndex % 2 === 1 });
     tick += 60 * 60 * 1000;
+    tickIndex++;
   }
 
   // ── Gantt rows — one per assigned driver ──────────────────────────────────
@@ -718,17 +711,17 @@ export default function PlanningTab({
             </div>
           )}
 
-          {/* Hour axis — positioned above the chart rows */}
+          {/* Hour axis — positioned above the chart rows.
+              When staggering, height doubles to 36px to fit two label rows. */}
           <div
             style={{
               position: "relative",
-              height: "20px",
-              // 130px left offset to align with the driver label column
+              height: stagger ? "36px" : "20px",
               marginLeft: "130px",
               marginBottom: "4px",
             }}
           >
-            {hourTicks.map(({ ts, label, showLabel }) => (
+            {hourTicks.map(({ ts, label, staggerUp }) => (
               <div
                 key={ts}
                 style={{
@@ -739,26 +732,24 @@ export default function PlanningTab({
                   flexDirection: "column",
                   alignItems: "center",
                   gap: "2px",
+                  // Odd ticks sit at the top row, even at the bottom row
+                  top: staggerUp ? "0" : undefined,
+                  bottom: staggerUp ? undefined : "0",
                 }}
               >
-                {/* Tick notch — always visible */}
+                <span style={{
+                  fontSize: "0.65rem",
+                  color: "var(--text-dim)",
+                  fontFamily: "var(--font-mono), monospace",
+                  whiteSpace: "nowrap",
+                }}>
+                  {label}
+                </span>
                 <div style={{
                   width: "1px",
-                  height: showLabel ? "5px" : "3px",
+                  height: staggerUp ? "14px" : "5px",
                   background: "var(--border)",
-                  flexShrink: 0,
                 }} />
-                {/* Label — only on labeled hours */}
-                {showLabel && (
-                  <span style={{
-                    fontSize: "0.65rem",
-                    color: "var(--text-dim)",
-                    fontFamily: "var(--font-mono), monospace",
-                    whiteSpace: "nowrap",
-                  }}>
-                    {label}
-                  </span>
-                )}
               </div>
             ))}
           </div>
