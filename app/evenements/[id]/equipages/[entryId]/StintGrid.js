@@ -2966,7 +2966,7 @@ export default function StintGrid({
                 dragOverIndex === i && draggingIndex !== i
                   ? "rgba(var(--accent-rgb), 0.1)"
                   : isActiveStint
-                    ? "rgba(var(--accent-rgb), 0.18)"
+                    ? "rgba(46,180,96,0.13)"
                     : stint._isLastStint
                       ? stint._doesNotCoverRaceEnd
                         ? "rgba(224,85,85,0.15)"
@@ -3052,7 +3052,9 @@ export default function StintGrid({
                     outline:
                       dragOverIndex === i && draggingIndex !== i
                         ? "2px solid var(--accent)"
-                        : "none",
+                        : isActiveStint
+                          ? "1px solid #2eb460"
+                          : "none",
                   }}
                 >
                   {/* # — firstCellBorderStyle applied here instead of <tr> for reliable alignment */}
@@ -3063,8 +3065,8 @@ export default function StintGrid({
                       // Active stint overrides the tier border — accent pulse takes priority
                       ...(isActiveStint
                         ? {
-                            boxShadow: "inset 3px 0 0 0 var(--accent)",
-                            background: "rgba(var(--accent-rgb), 0.12)",
+                            boxShadow: "inset 3px 0 0 0 #2eb460",
+                            background: "rgba(46,180,96,0.1)",
                           }
                         : firstCellBorderStyle),
                     }}
@@ -3083,7 +3085,7 @@ export default function StintGrid({
                             width: "7px",
                             height: "7px",
                             borderRadius: "50%",
-                            background: "var(--accent)",
+                            background: "#2eb460",
                             flexShrink: 0,
                             // CSS pulse animation — no JS needed
                             animation: "pulse 1.5s ease-in-out infinite",
@@ -3094,7 +3096,7 @@ export default function StintGrid({
                         className="mono"
                         style={{
                           color: isActiveStint
-                            ? "var(--accent)"
+                            ? "#2eb460"
                             : "var(--text-dim)",
                           fontSize: "0.72rem",
                           fontWeight: isActiveStint ? 700 : 400,
