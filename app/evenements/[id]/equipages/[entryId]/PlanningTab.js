@@ -297,7 +297,8 @@ export default function PlanningTab({
   // ── Hour tick marks ────────────────────────────────────────────────────────
   // All hours are always labeled. On dense timelines, odd-indexed ticks are
   // shifted up so consecutive labels never overlap horizontally.
-  const estPxPerHour = 450 / (timelineMs / 3600000);
+  // Timeline area estimate: 900px min-width − 130px label col − 20px padding
+  const estPxPerHour = 750 / (timelineMs / 3600000);
   const stagger = estPxPerHour < 40; // stagger when labels would overlap
 
   const hourTicks = [];
@@ -332,7 +333,7 @@ export default function PlanningTab({
       style={{
         position: "relative",
         flex: 1,
-        height: "32px",
+        height: "40px",
         background: "var(--surface-2)",
         borderRadius: "3px",
         overflow: "hidden",
@@ -687,7 +688,7 @@ export default function PlanningTab({
           Page max-width: 1200px means zoom-creates-scroll naturally once the
           CSS viewport drops below 1200px (~160% zoom on 1920px screens). */}
       <div style={{ overflowX: "auto" }}>
-        <div style={{ minWidth: "600px", paddingRight: "20px" }}>
+        <div style={{ minWidth: "900px", paddingRight: "20px" }}>
           {/* Race-end flag row — above the hour axis so it doesn't overlap ticks */}
           {raceEndPct != null && (
             <div
