@@ -651,6 +651,17 @@ export default function RaceMode({
      prevNextStintIrlStartRef.current !== null ||
      nextAfterLastStamped.irl_start_actual != null);
 
+  // isPitStop: car is in the pit lane — current stint just stamped, next hasn't started yet.
+  // Detected when in-race, no active stint, but next stint has a future irl_start_actual.
+  const isPitStop =
+    isInRace &&
+    activeStint === null &&
+    nextAfterLastStamped?.irl_start_actual != null &&
+    new Date(nextAfterLastStamped.irl_start_actual) > now;
+  const pitTimeRemainingSec = isPitStop
+    ? Math.max(0, Math.floor((new Date(nextAfterLastStamped.irl_start_actual) - now) / 1000))
+    : null;
+
   // ── Live fuel effects — placed after activeStint derivation ───────────────
   // Re-fetch whenever the active driver or stint start changes.
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -1140,20 +1151,24 @@ export default function RaceMode({
             ? "#2eb460"
             : isPreRace
               ? "var(--border)"
-              : isOvertime
-                ? "var(--danger)"
-                : inPitWindow
-                  ? "#f59e0b"
-                  : "var(--accent-dim)",
+              : isPitStop
+                ? "#5ac8c8"
+                : isOvertime
+                  ? "var(--danger)"
+                  : inPitWindow
+                    ? "#f59e0b"
+                    : "var(--accent-dim)",
           background: isFinished
             ? "rgba(46,180,96,0.06)"
             : isPreRace
               ? "var(--surface)"
-              : isOvertime
-                ? "rgba(224,85,85,0.06)"
-                : inPitWindow
-                  ? "rgba(245,158,11,0.06)"
-                  : "var(--surface)",
+              : isPitStop
+                ? "rgba(90,200,200,0.06)"
+                : isOvertime
+                  ? "rgba(224,85,85,0.06)"
+                  : inPitWindow
+                    ? "rgba(245,158,11,0.06)"
+                    : "var(--surface)",
         }}
       >
         {/* Status label */}
@@ -1167,11 +1182,13 @@ export default function RaceMode({
               ? "#2eb460"
               : isPreRace
                 ? "var(--text-dim)"
-                : isOvertime
-                  ? "var(--danger)"
-                  : inPitWindow
-                    ? "#f59e0b"
-                    : "var(--accent)",
+                : isPitStop
+                  ? "#5ac8c8"
+                  : isOvertime
+                    ? "var(--danger)"
+                    : inPitWindow
+                      ? "#f59e0b"
+                      : "var(--accent)",
             marginBottom: "0.75rem",
           }}
         >
@@ -1179,11 +1196,13 @@ export default function RaceMode({
             ? t("raceFinishedBadge")
             : isPreRace
               ? t("beforeRace")
-              : isOvertime
-                ? `${t("overtime")} ${activeStint?.stint_number ?? "?"} / ${stints.length}`
-                : inPitWindow
-                  ? `${t("pitWindow")} ${activeStint?.stint_number ?? "?"} / ${stints.length}`
-                  : `${t("inRace")} ${activeStint?.stint_number ?? "?"} / ${stints.length}`}
+              : isPitStop
+                ? t("pitStop")
+                : isOvertime
+                  ? `${t("overtime")} ${activeStint?.stint_number ?? "?"} / ${stints.length}`
+                  : inPitWindow
+                    ? `${t("pitWindow")} ${activeStint?.stint_number ?? "?"} / ${stints.length}`
+                    : `${t("inRace")} ${activeStint?.stint_number ?? "?"} / ${stints.length}`}
         </div>
 
         {/* Driver name */}
@@ -1203,10 +1222,15 @@ export default function RaceMode({
               ? driverMap[stints[0]?.driver_id] || (
                   <span style={{ color: "var(--text-dim)" }}>{t("tbd")}</span>
                 )
-              : driverMap[activeStint?.driver_id] ||
-                activeStint?.driver_name_snapshot || (
-                  <span style={{ color: "var(--text-dim)" }}>{t("tbd")}</span>
-                )}
+              : isPitStop
+                ? driverMap[nextAfterLastStamped?.driver_id] ||
+                  nextAfterLastStamped?.driver_name_snapshot || (
+                    <span style={{ color: "var(--text-dim)" }}>{t("tbd")}</span>
+                  )
+                : driverMap[activeStint?.driver_id] ||
+                  activeStint?.driver_name_snapshot || (
+                    <span style={{ color: "var(--text-dim)" }}>{t("tbd")}</span>
+                  )}
         </div>
 
         {/* Timing row */}
@@ -1239,6 +1263,25 @@ export default function RaceMode({
                   >
                     {preRaceCountdownSec !== null
                       ? formatCountdown(preRaceCountdownSec, t("dayAbbr"))
+                      : "—"}
+                  </div>
+                </div>
+              </>
+            ) : isPitStop ? (
+              <>
+                <div>
+                  <div style={labelStyle}>{t("pitExitIn")}</div>
+                  <div
+                    className="mono"
+                    style={{
+                      fontSize: "1.5rem",
+                      fontWeight: 700,
+                      lineHeight: 1,
+                      color: "#5ac8c8",
+                    }}
+                  >
+                    {pitTimeRemainingSec !== null
+                      ? formatCountdown(pitTimeRemainingSec, t("dayAbbr"))
                       : "—"}
                   </div>
                 </div>
@@ -1394,7 +1437,9 @@ export default function RaceMode({
                   ? t("raceFinished")
                   : isPreRace
                     ? t("raceNotStarted")
-                    : t("markPitStop")}
+                    : isPitStop
+                      ? t("pitStopActive")
+                      : t("markPitStop")}
             </button>
 
             {/* Secondary button — only shown when a previous stint was never stamped.
