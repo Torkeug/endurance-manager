@@ -312,6 +312,7 @@
     "statusActual": "Réel",
     "statusBefore": "Avant course",
     "statusInRace": "En course",
+    "statusPitStop": "Arrêt stand",
     "statusFinished": "Terminée",
     "unknownDriver": "Pilote inconnu",
     "stintTooltip": "Relais {number} — {driver}",

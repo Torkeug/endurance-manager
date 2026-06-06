@@ -318,6 +318,7 @@ export default function RaceMode({
 
   // Dev-only state override
   const [devState, setDevState] = useState(null);
+  const [devPitStop, setDevPitStop] = useState(false);
 
   // Refs for latest stints + driverMap inside event handler (avoids stale closures)
   const stintsRef = useRef(stints);
@@ -654,13 +655,16 @@ export default function RaceMode({
   // isPitStop: car is in the pit lane — current stint just stamped, next hasn't started yet.
   // Detected when in-race, no active stint, but next stint has a future irl_start_actual.
   const isPitStop =
-    isInRace &&
-    activeStint === null &&
-    nextAfterLastStamped?.irl_start_actual != null &&
-    new Date(nextAfterLastStamped.irl_start_actual) > now;
-  const pitTimeRemainingSec = isPitStop
-    ? Math.max(0, Math.floor((new Date(nextAfterLastStamped.irl_start_actual) - now) / 1000))
-    : null;
+    (devPitStop && isInRace) ||
+    (isInRace &&
+      activeStint === null &&
+      nextAfterLastStamped?.irl_start_actual != null &&
+      new Date(nextAfterLastStamped.irl_start_actual) > now);
+  const pitTimeRemainingSec = devPitStop && isInRace
+    ? 45
+    : isPitStop
+      ? Math.max(0, Math.floor((new Date(nextAfterLastStamped.irl_start_actual) - now) / 1000))
+      : null;
 
   // ── Live fuel effects — placed after activeStint derivation ───────────────
   // Re-fetch whenever the active driver or stint start changes.
@@ -1861,28 +1865,31 @@ export default function RaceMode({
             DEV
           </span>
           {[
-            { key: null, label: t("statusActual") },
-            { key: "PRE_RACE", label: t("statusBefore") },
-            { key: "IN_RACE", label: t("statusInRace") },
-            { key: "FINISHED", label: t("statusFinished") },
-          ].map(({ key, label }) => (
-            <button
-              key={String(key)}
-              onClick={() => setDevState(key)}
-              style={{
-                padding: "0.2rem 0.6rem",
-                fontSize: "0.75rem",
-                borderRadius: "3px",
-                border: `1px solid ${devState === key ? "var(--accent)" : "#555"}`,
-                background:
-                  devState === key ? "var(--accent-dim)" : "transparent",
-                color: devState === key ? "var(--accent)" : "#555",
-                cursor: "pointer",
-              }}
-            >
-              {label}
-            </button>
-          ))}
+            { key: null, label: t("statusActual"), pitStop: false },
+            { key: "PRE_RACE", label: t("statusBefore"), pitStop: false },
+            { key: "IN_RACE", label: t("statusInRace"), pitStop: false },
+            { key: "IN_RACE", label: t("statusPitStop"), pitStop: true },
+            { key: "FINISHED", label: t("statusFinished"), pitStop: false },
+          ].map(({ key, label, pitStop }) => {
+            const isActive = devState === key && devPitStop === pitStop;
+            return (
+              <button
+                key={`${String(key)}-${pitStop}`}
+                onClick={() => { setDevState(key); setDevPitStop(pitStop); }}
+                style={{
+                  padding: "0.2rem 0.6rem",
+                  fontSize: "0.75rem",
+                  borderRadius: "3px",
+                  border: `1px solid ${isActive ? "var(--accent)" : "#555"}`,
+                  background: isActive ? "var(--accent-dim)" : "transparent",
+                  color: isActive ? "var(--accent)" : "#555",
+                  cursor: "pointer",
+                }}
+              >
+                {label}
+              </button>
+            );
+          })}
         </div>
       )}
     </div>

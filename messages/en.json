@@ -331,6 +331,7 @@
     "statusActual": "Actual",
     "statusBefore": "Before race",
     "statusInRace": "In race",
+    "statusPitStop": "Pit stop",
     "statusFinished": "Finished",
     "unknownDriver": "Unknown driver",
     "stintTooltip": "Stint {number} — {driver}",
