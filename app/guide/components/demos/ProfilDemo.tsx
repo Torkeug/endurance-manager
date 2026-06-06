@@ -10,7 +10,8 @@ const G61_CIRCUITS = [
   { name: "Sebring International Raceway", variant: null,                 laps: 98,  cleanPct: 61, cleanLaps: 60,  time: "5h11",  sessionTypes: [1, 3], category: "road", bestLap: "1:54.837", bestCar: "Ferrari 296 GT3", bestSession: "R" },
 ];
 
-const STAT_VALUES = [
+// Stat values only (labels are built inside component using tStats)
+const STAT_RAW = [
   { value: "18",  color: "var(--accent)" },
   { value: "34h", color: "var(--accent)" },
   { value: "3",   color: "#c9a84c" },
@@ -70,6 +71,12 @@ export default function ProfilDemo({ activeTab = "engagements", statsSubTab = "a
   const tTabs = useTranslations("driverPageTabs");
   const tStats = useTranslations("driverStats");
   const tG61 = useTranslations("garage61Stats");
+  const STATS = [
+    { label: tStats("statRaces"),         value: STAT_RAW[0].value, color: STAT_RAW[0].color },
+    { label: tStats("statStints"),        value: STAT_RAW[1].value, color: STAT_RAW[1].color },
+    { label: tStats("statChampionships"), value: STAT_RAW[2].value, color: STAT_RAW[2].color },
+    { label: tStats("statLaps"),          value: STAT_RAW[3].value, color: STAT_RAW[3].color },
+  ];
   const TAB_LABELS: Record<string, string> = {
     "engagements": tTabs("engagements"),
     "statistiques": tTabs("stats"),
@@ -115,7 +122,7 @@ export default function ProfilDemo({ activeTab = "engagements", statsSubTab = "a
               { label: "iRacing ID",   value: "458921",                          discord: false },
               { label: "Email",        value: "theo.bernard@kronos.team",        discord: false },
               { label: "Discord",      value: "TheoB#4812",                      discord: true  },
-              { label: "Alerte relais", value: "5 min",                          discord: true  },
+              { label: t("socialDiscordAlert"), value: "5 min",                          discord: true  },
             ].map((f) => (
               <div key={f.label}>
                 <div style={{ fontSize: "0.7rem", fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--text-dim)", marginBottom: "0.2rem", display: "flex", alignItems: "center", gap: "0.3rem" }}>

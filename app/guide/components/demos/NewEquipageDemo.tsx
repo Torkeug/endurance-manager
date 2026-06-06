@@ -114,7 +114,7 @@ export default function NewEquipageDemo() {
         <div style={sectionTitle}>
           {t("sectionDrivers")}{" "}
           <span style={{ fontSize: "0.72rem", fontWeight: 400, color: "var(--accent)", marginLeft: "0.5rem", textTransform: "none", letterSpacing: 0 }}>
-            2 sélectionnés
+            {t("driversSelected", { count: 2 })}
           </span>
         </div>
         <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem" }}>
