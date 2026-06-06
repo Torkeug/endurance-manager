@@ -295,14 +295,14 @@ export default function PlanningTab({
   }
 
   // ── Hour tick marks ────────────────────────────────────────────────────────
-  // Pick a tick interval (in hours) so labels (~40px each) don't overlap.
-  // Estimate: timeline area ≈ 450px (600px min-width − 130px label col − 20px padding).
+  // Every hour gets a tick notch; labels are shown every N hours so text
+  // doesn't overlap. Estimate: timeline area ≈ 450px (600px min-width −
+  // 130px label col − 20px padding). Label is ~40px wide.
   const estPxPerHour = 450 / (timelineMs / 3600000);
-  const tickStepHours =
-    estPxPerHour >= 50 ? 1 :
-    estPxPerHour >= 25 ? 2 :
-    estPxPerHour >= 12 ? 4 :
-    estPxPerHour >= 6  ? 6 : 12;
+  const labelStepHours =
+    estPxPerHour >= 40 ? 1 :
+    estPxPerHour >= 20 ? 2 :
+    estPxPerHour >= 10 ? 4 : 6;
 
   const hourTicks = [];
   const firstHour = new Date(timelineStart);
@@ -312,8 +312,11 @@ export default function PlanningTab({
   let tick = firstHour.getTime();
   while (tick <= timelineEnd) {
     const d = new Date(tick);
-    if (d.getHours() % tickStepHours === 0)
-      hourTicks.push({ ts: tick, label: formatTime(d) });
+    hourTicks.push({
+      ts: tick,
+      label: formatTime(d),
+      showLabel: d.getHours() % labelStepHours === 0,
+    });
     tick += 60 * 60 * 1000;
   }
 
@@ -725,20 +728,37 @@ export default function PlanningTab({
               marginBottom: "4px",
             }}
           >
-            {hourTicks.map(({ ts, label }) => (
+            {hourTicks.map(({ ts, label, showLabel }) => (
               <div
                 key={ts}
                 style={{
                   position: "absolute",
                   left: `${toPercent(ts)}%`,
                   transform: "translateX(-50%)",
-                  fontSize: "0.65rem",
-                  color: "var(--text-dim)",
-                  fontFamily: "var(--font-mono), monospace",
-                  whiteSpace: "nowrap",
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                  gap: "2px",
                 }}
               >
-                {label}
+                {/* Tick notch — always visible */}
+                <div style={{
+                  width: "1px",
+                  height: showLabel ? "5px" : "3px",
+                  background: "var(--border)",
+                  flexShrink: 0,
+                }} />
+                {/* Label — only on labeled hours */}
+                {showLabel && (
+                  <span style={{
+                    fontSize: "0.65rem",
+                    color: "var(--text-dim)",
+                    fontFamily: "var(--font-mono), monospace",
+                    whiteSpace: "nowrap",
+                  }}>
+                    {label}
+                  </span>
+                )}
               </div>
             ))}
           </div>
