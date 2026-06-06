@@ -9,19 +9,30 @@ const labelStyle = {
   marginBottom: "0.5rem",
 };
 
-const STATS = [
-  { label: "Événements",        value: 4,  color: "var(--accent)" },
-  { label: "Pilotes actifs",    value: 18, color: "var(--accent)" },
-  { label: "Pilotes inactifs",  value: 2,  color: "var(--text-dim)" },
-  { label: "Pilotes test",      value: 1,  color: "var(--text-dim)" },
-  { label: "En attente",        value: 2,  color: "var(--danger)" },
-  { label: "Cotisations exp.",  value: 3,  color: "var(--danger)" },
-  { label: "Syncs iRacing",     value: 1,  color: "#f59e0b" },
+const STAT_COLORS = [
+  "var(--accent)",
+  "var(--accent)",
+  "var(--text-dim)",
+  "var(--text-dim)",
+  "var(--danger)",
+  "var(--danger)",
+  "#f59e0b",
 ];
 
 export default function AdminAccueilDemo() {
   const t = useTranslations("dashboard");
   const tHomeTabs = useTranslations("homeTabs");
+
+  const STATS = [
+    { label: t("statEvents_other"),           value: 4,  color: STAT_COLORS[0] },
+    { label: t("statActiveDrivers_other"),     value: 18, color: STAT_COLORS[1] },
+    { label: t("statInactiveDrivers_other"),   value: 2,  color: STAT_COLORS[2] },
+    { label: t("statTestDrivers_other"),       value: 1,  color: STAT_COLORS[3] },
+    { label: t("statPending"),                 value: 2,  color: STAT_COLORS[4] },
+    { label: t("statOverdue_other"),           value: 3,  color: STAT_COLORS[5] },
+    { label: t("statSync_other"),              value: 1,  color: STAT_COLORS[6] },
+  ];
+
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
 
@@ -32,7 +43,7 @@ export default function AdminAccueilDemo() {
         display: "flex", alignItems: "center", justifyContent: "space-between", gap: "1rem", flexWrap: "wrap",
       }}>
         <span style={{ color: "var(--danger)", fontWeight: 600, fontSize: "0.9rem" }}>
-          ⚠️ 2 pilotes en attente d'approbation
+          ⚠️ {t("pendingWarning_other").replace("#", "2")}
         </span>
         <button className="btn btn-danger btn-sm">{t("manageAccess")}</button>
       </div>

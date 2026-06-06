@@ -1,4 +1,5 @@
 import type { CSSProperties } from "react";
+import { useTranslations } from "next-intl";
 
 const DRIVERS = [
   { name: "Marc Dubois",  irating: 4210, prefs: "GT3, Audi R8 LMS",  tags: ["chill", "gros rouleur"] },
@@ -25,13 +26,14 @@ const TD: CSSProperties = {
 };
 
 export default function PilotsDemo() {
+  const t = useTranslations("driverList");
   return (
     <div className="table-wrap">
       <table style={{ width: "100%", borderCollapse: "collapse" }}>
         <thead>
           <tr>
-            <th style={TH}>Pilote</th>
-            <th style={TH}>iRating</th>
+            <th style={TH}>{t("colName")}</th>
+            <th style={TH}>{t("colIRating")}</th>
             <th style={TH}>Préférences</th>
             <th style={TH}>Tags</th>
             <th style={TH}></th>
@@ -57,7 +59,7 @@ export default function PilotsDemo() {
                 ) : <span style={{ color: "var(--text-dim)" }}>—</span>}
               </td>
               <td style={TD}>
-                <button className="btn btn-secondary btn-sm">Voir</button>
+                <button className="btn btn-secondary btn-sm">{t("view")}</button>
               </td>
             </tr>
           ))}

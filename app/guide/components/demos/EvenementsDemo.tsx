@@ -74,7 +74,7 @@ export default function EvenementsDemo() {
             {/* Stats */}
             <div style={{ display: "flex", gap: "1.25rem", flexShrink: 0 }}>
               <div>
-                <div style={statLabel}>Format</div>
+                <div style={statLabel}>{t("infoFormat")}</div>
                 <div style={{ ...statVal, fontSize: "0.78rem" }}>{ev.format}</div>
               </div>
               <div>

@@ -10,11 +10,11 @@ const G61_CIRCUITS = [
   { name: "Sebring International Raceway", variant: null,                 laps: 98,  cleanPct: 61, cleanLaps: 60,  time: "5h11",  sessionTypes: [1, 3], category: "road", bestLap: "1:54.837", bestCar: "Ferrari 296 GT3", bestSession: "R" },
 ];
 
-const STATS = [
-  { label: "Relais",        value: "18",      color: "var(--accent)" },
-  { label: "Heures pilotées", value: "34h",   color: "var(--accent)" },
-  { label: "Podiums",       value: "3",        color: "#c9a84c" },
-  { label: "Victoires",     value: "1",        color: "#2eb460" },
+const STAT_VALUES = [
+  { value: "18",  color: "var(--accent)" },
+  { value: "34h", color: "var(--accent)" },
+  { value: "3",   color: "#c9a84c" },
+  { value: "1",   color: "#2eb460" },
 ];
 
 const MINI_BARS = [
@@ -68,6 +68,8 @@ function SectionHeader({ title }: { title: string }) {
 export default function ProfilDemo({ activeTab = "engagements", statsSubTab = "app" }: { activeTab?: string; statsSubTab?: string }) {
   const t = useTranslations("driverProfile");
   const tTabs = useTranslations("driverPageTabs");
+  const tStats = useTranslations("driverStats");
+  const tG61 = useTranslations("garage61Stats");
   const TAB_LABELS: Record<string, string> = {
     "engagements": tTabs("engagements"),
     "statistiques": tTabs("stats"),
@@ -179,7 +181,7 @@ export default function ProfilDemo({ activeTab = "engagements", statsSubTab = "a
         <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
           {/* Subtab nav */}
           <div style={{ display: "flex", gap: "0.25rem", borderBottom: "1px solid var(--border)", marginBottom: "0.25rem" }}>
-            {[{ id: "app", label: "Endurance Manager" }, { id: "garage61", label: "Garage61" }].map((st) => (
+            {[{ id: "app", label: tStats("tabApp") }, { id: "garage61", label: tStats("tabGarage61") }].map((st) => (
               <div key={st.id} style={{ padding: "0.35rem 0.85rem", borderBottom: statsSubTab === st.id ? "2px solid var(--accent)" : "2px solid transparent", color: statsSubTab === st.id ? "var(--accent)" : "var(--text-dim)", fontFamily: "var(--font-rajdhani), sans-serif", fontSize: "0.82rem", fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase", marginBottom: "-1px" }}>
                 {st.label}
               </div>
@@ -198,7 +200,7 @@ export default function ProfilDemo({ activeTab = "engagements", statsSubTab = "a
 
             {/* Mini bars */}
             <div>
-              <SectionHeader title="Conditions" />
+              <SectionHeader title={tStats("conditionsSection")} />
               {MINI_BARS.map((b) => <MiniBar key={b.label} {...b} />)}
             </div>
 
@@ -220,7 +222,7 @@ export default function ProfilDemo({ activeTab = "engagements", statsSubTab = "a
 
             {/* Lap time table */}
             <div>
-              <SectionHeader title="Chronos par circuit" />
+              <SectionHeader title={tStats("lapTimesSection")} />
               <div style={{ overflowX: "auto" }}>
                 <table style={{ borderCollapse: "collapse", width: "100%" }}>
                   <thead>
@@ -251,13 +253,13 @@ export default function ProfilDemo({ activeTab = "engagements", statsSubTab = "a
               {/* Controls */}
               <div style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap", alignItems: "center" }}>
                 <div style={{ display: "flex", gap: "0.35rem", alignItems: "center" }}>
-                  <span style={{ fontSize: "0.7rem", color: "var(--text-dim)", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase" }}>Tri</span>
-                  {["Tours", "% Propres", "Temps piste"].map((label, i) => (
+                  <span style={{ fontSize: "0.7rem", color: "var(--text-dim)", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase" }}>{tG61("sortLabel")}</span>
+                  {[tG61("sortLaps"), tG61("sortClean"), tG61("sortTime")].map((label, i) => (
                     <span key={label} style={{ padding: "0.2rem 0.6rem", borderRadius: "999px", border: "1px solid", borderColor: i === 0 ? "var(--accent)" : "var(--border)", background: i === 0 ? "var(--accent-dim)" : "transparent", color: i === 0 ? "var(--accent)" : "var(--text-dim)", fontSize: "0.75rem", fontWeight: 600 }}>{label}</span>
                   ))}
                 </div>
                 <div style={{ display: "flex", gap: "0.4rem", alignItems: "center" }}>
-                  <span style={{ fontSize: "0.7rem", color: "var(--text-dim)", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase" }}>Catégorie</span>
+                  <span style={{ fontSize: "0.7rem", color: "var(--text-dim)", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase" }}>{tG61("categoryLabel")}</span>
                   <span style={{ padding: "0.3rem 0.75rem", borderRadius: "3px", border: "1px solid var(--accent)", background: "var(--accent-dim)", color: "var(--accent)", fontFamily: "var(--font-rajdhani), sans-serif", fontSize: "0.78rem", fontWeight: 700 }}>Road</span>
                 </div>
               </div>
@@ -267,8 +269,8 @@ export default function ProfilDemo({ activeTab = "engagements", statsSubTab = "a
                 <table style={{ width: "100%", borderCollapse: "collapse" }}>
                   <thead>
                     <tr>
-                      {["Circuit", "Tours", "Propres", "Temps piste", "Sessions", ""].map((h) => (
-                        <th key={h} style={{ background: "var(--surface-2)", color: "var(--text-dim)", fontSize: "0.65rem", fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase", padding: "0.5rem 0.75rem", borderBottom: "2px solid var(--border)", textAlign: h === "Tours" || h === "Propres" || h === "Temps piste" ? "right" : "left", whiteSpace: "nowrap" }}>{h}</th>
+                      {[tG61("colCircuit"), tG61("colLaps"), tG61("colClean"), tG61("colTime"), tG61("colSessions"), ""].map((h, hi) => (
+                        <th key={hi} style={{ background: "var(--surface-2)", color: "var(--text-dim)", fontSize: "0.65rem", fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase", padding: "0.5rem 0.75rem", borderBottom: "2px solid var(--border)", textAlign: hi === 1 || hi === 2 || hi === 3 ? "right" : "left", whiteSpace: "nowrap" }}>{h}</th>
                       ))}
                     </tr>
                   </thead>
@@ -294,7 +296,7 @@ export default function ProfilDemo({ activeTab = "engagements", statsSubTab = "a
                             </div>
                           </td>
                           <td style={{ padding: "0.4rem 0.75rem", borderBottom: "1px solid var(--border)", textAlign: "right" }}>
-                            <span className="btn btn-secondary btn-sm" style={{ fontSize: "0.72rem" }}>↗ Garage61</span>
+                            <span className="btn btn-secondary btn-sm" style={{ fontSize: "0.72rem" }}>{tG61("linkGarage61")}</span>
                           </td>
                         </tr>
                         {expandedCircuit === c.name && (
@@ -302,13 +304,13 @@ export default function ProfilDemo({ activeTab = "engagements", statsSubTab = "a
                             <td colSpan={6} style={{ padding: "0.5rem 1.5rem 0.6rem", background: "var(--surface-2)", borderBottom: "1px solid var(--border)" }}>
                               <div style={{ display: "flex", gap: "1.25rem", alignItems: "center", flexWrap: "wrap" }}>
                                 <div>
-                                  <span style={{ fontSize: "0.65rem", color: "var(--text-dim)", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", marginRight: "0.5rem" }}>Meilleur tour</span>
+                                  <span style={{ fontSize: "0.65rem", color: "var(--text-dim)", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", marginRight: "0.5rem" }}>{tG61("bestLapLabel")}</span>
                                   <span style={{ fontFamily: "var(--font-mono), monospace", fontWeight: 700, fontSize: "0.95rem", color: "var(--accent)" }}>{c.bestLap}</span>
                                 </div>
                                 <span style={{ fontSize: "0.78rem", color: "var(--text-dim)" }}>{c.bestCar}</span>
                                 <span style={{ padding: "0.1rem 0.35rem", background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "3px", fontSize: "0.68rem", fontWeight: 700, color: "var(--text-dim)" }}>{c.bestSession}</span>
-                                <span style={{ fontSize: "0.72rem", color: "#2eb460" }}>✓ propre</span>
-                                <span className="btn btn-secondary btn-sm" style={{ fontSize: "0.72rem", marginLeft: "auto" }}>↗ Meilleur tour</span>
+                                <span style={{ fontSize: "0.72rem", color: "#2eb460" }}>{tG61("cleanLap")}</span>
+                                <span className="btn btn-secondary btn-sm" style={{ fontSize: "0.72rem", marginLeft: "auto" }}>{tG61("linkBestLap")}</span>
                               </div>
                             </td>
                           </tr>
@@ -318,7 +320,7 @@ export default function ProfilDemo({ activeTab = "engagements", statsSubTab = "a
                   </tbody>
                 </table>
               </div>
-              <div style={{ fontSize: "0.72rem", color: "var(--text-dim)" }}>Données agrégées depuis Garage61 · 672 tours au total</div>
+              <div style={{ fontSize: "0.72rem", color: "var(--text-dim)" }}>{tG61("footerPrefix")} 672 {tG61("footerSuffix")}</div>
             </div>
           )}
         </div>

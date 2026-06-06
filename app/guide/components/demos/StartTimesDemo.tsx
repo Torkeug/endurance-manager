@@ -26,12 +26,13 @@ const TD: CSSProperties = {
 
 export default function StartTimesDemo() {
   const t = useTranslations("events");
+  const tEF = useTranslations("eventForm");
   return (
     <div className="table-wrap" style={{ overflowX: "auto" }}>
       <table style={{ borderCollapse: "collapse", width: "100%" }}>
         <thead>
           <tr>
-            <th style={TH}>Créneau de départ</th>
+            <th style={TH}>{tEF("colStartSlot")}</th>
           </tr>
         </thead>
         <tbody>

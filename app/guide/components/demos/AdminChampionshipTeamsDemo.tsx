@@ -64,7 +64,7 @@ export default function AdminChampionshipTeamsDemo() {
           </span>
           <span style={{ color: "var(--text-dim)", fontSize: "0.85rem" }}>{t("champSeasonLabel", { season: "2025" })}</span>
           <span style={{ marginLeft: "auto", color: "var(--text-dim)", fontSize: "0.78rem" }}>
-            {view === "team" ? "1 championnat" : "3 équipes"}
+            {view === "team" ? t("champCount", { count: 1 }) : t("champTeamCount", { count: 3 })}
           </span>
         </div>
 
