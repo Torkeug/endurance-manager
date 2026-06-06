@@ -1,4 +1,5 @@
 import type { CSSProperties } from "react";
+import { useTranslations } from "next-intl";
 
 // Driver names (abbreviated as in actual app: firstName + initial)
 const DRIVER_COLS = [
@@ -93,6 +94,8 @@ function gPct(h: number) { return ((h - G_START) / (G_END - G_START)) * 100; }
 const G_RACE_END_PCT = gPct(G_RACE_END);
 
 export default function StintGridDemo() {
+  const t = useTranslations("stintGrid");
+  const tPlan = useTranslations("planningTab");
   return (
     <div>
       {/* ── Strategy tabs ── */}
@@ -125,37 +128,37 @@ export default function StintGridDemo() {
           color: "var(--text-dim)",
           border: "1px solid var(--border)",
         }}>
-          + Nouvelle
+          {t("addStrategy")}
         </div>
       </div>
 
       {/* ── Strategy metadata ── */}
       <div style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap", alignItems: "flex-end", marginBottom: "0.75rem", padding: "0.65rem 0.85rem", background: "var(--surface-2)", border: "1px solid var(--border)", borderRadius: "4px" }}>
         <div style={{ display: "flex", flexDirection: "column", gap: "0.2rem" }}>
-          <span style={{ fontSize: "0.62rem", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "var(--text-dim)" }}>Nom</span>
+          <span style={{ fontSize: "0.62rem", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "var(--text-dim)" }}>{t("strategyName")}</span>
           <div style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "3px", padding: "0.28rem 0.5rem", fontSize: "0.82rem", fontWeight: 700, fontFamily: "var(--font-rajdhani), sans-serif", color: "var(--text)", minWidth: "90px" }}>Plan A</div>
         </div>
         <div style={{ display: "flex", flexDirection: "column", gap: "0.2rem", flex: 1, minWidth: "160px" }}>
-          <span style={{ fontSize: "0.62rem", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "var(--text-dim)" }}>Description</span>
+          <span style={{ fontSize: "0.62rem", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "var(--text-dim)" }}>{t("strategyDesc")}</span>
           <div style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "3px", padding: "0.28rem 0.5rem", fontSize: "0.82rem", color: "var(--text-dim)" }}>Météo sèche — nominal</div>
         </div>
         <div style={{ display: "flex", flexDirection: "column", gap: "0.2rem" }}>
-          <span style={{ fontSize: "0.62rem", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "var(--text-dim)" }}>Décalage départ</span>
+          <span style={{ fontSize: "0.62rem", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "var(--text-dim)" }}>{t("startOffset")}</span>
           <div style={{ display: "flex", alignItems: "center", gap: "0.35rem" }}>
             <div style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "3px", padding: "0.28rem 0.5rem", fontSize: "0.82rem", fontFamily: "var(--font-mono), monospace", color: "var(--text)", width: "36px", textAlign: "right" }}>0</div>
-            <span style={{ fontSize: "0.82rem", color: "var(--text-dim)" }}>min</span>
+            <span style={{ fontSize: "0.82rem", color: "var(--text-dim)" }}>{t("minutes")}</span>
           </div>
         </div>
-        <span style={{ fontSize: "0.75rem", color: "#c9a84c", padding: "0.3rem 0.6rem", background: "rgba(201,168,76,0.08)", border: "1px solid rgba(201,168,76,0.3)", borderRadius: "3px", whiteSpace: "nowrap" }}>★ Active</span>
+        <span style={{ fontSize: "0.75rem", color: "#c9a84c", padding: "0.3rem 0.6rem", background: "rgba(201,168,76,0.08)", border: "1px solid rgba(201,168,76,0.3)", borderRadius: "3px", whiteSpace: "nowrap" }}>{t("setActive")}</span>
       </div>
 
       {/* ── Summary bar ── */}
       <div style={{ display: "flex", gap: "0.5rem", marginBottom: "0.75rem", flexWrap: "wrap" }}>
         {[
-          { label: "Départ",     value: "14:00" },
-          { label: "Fin course", value: "23:00" },
-          { label: "Relais",     value: "5" },
-          { label: "Fin prévue", value: "23:02", color: "#2eb460" },
+          { label: t("startLabel"), value: "14:00" },
+          { label: t("raceEnd"),    value: "23:00" },
+          { label: t("stint"),      value: "5" },
+          { label: t("plannedEnd"), value: "23:02", color: "#2eb460" },
         ].map(({ label, value, color }) => (
           <div key={label} style={{ background: "var(--surface-2)", border: "1px solid var(--border)", borderRadius: "4px", padding: "0.5rem 0.85rem", flex: 1, minWidth: "100px" }}>
             <div style={{ fontSize: "0.62rem", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "var(--text-dim)", marginBottom: "0.15rem" }}>{label}</div>
@@ -212,16 +215,16 @@ export default function StintGridDemo() {
 
             {/* Hover detail panel placeholder */}
             <div style={{ marginTop: "0.75rem", padding: "0.65rem 0.9rem", fontSize: "0.75rem", color: "var(--text-dim)", fontStyle: "italic", opacity: 0.5 }}>
-              Survolez un relais pour voir les détails
+              {tPlan("hoverHint")}
             </div>
 
             {/* Legend */}
             <div style={{ marginTop: "0.75rem", display: "flex", gap: "1.25rem", flexWrap: "wrap", fontSize: "0.72rem", color: "var(--text-dim)", alignItems: "center" }}>
               {[
-                { bg: "rgba(46,180,96,0.35)", label: "Disponible" },
-                { bg: "rgba(224,85,85,0.35)", label: "Indisponible" },
-                { bg: "rgba(74,74,106,0.35)", label: "Incertain" },
-                { bg: "rgba(10,10,30,0.45)",  label: "Nuit IG" },
+                { bg: "rgba(46,180,96,0.35)", label: t("legendAvailable") },
+                { bg: "rgba(224,85,85,0.35)", label: t("legendUnavailable") },
+                { bg: "rgba(74,74,106,0.35)", label: t("legendUncertain") },
+                { bg: "rgba(10,10,30,0.45)",  label: tPlan("legendNight") },
                 { bg: "rgba(74,159,212,0.8)",  label: "🌧 Pluie" },
               ].map(({ bg, label }) => (
                 <span key={label} style={{ display: "flex", alignItems: "center", gap: "4px" }}>
@@ -237,19 +240,19 @@ export default function StintGridDemo() {
 
       {/* Legend — availability dots */}
       <div style={{ display: "flex", gap: "1rem", marginBottom: "0.35rem", fontSize: "0.72rem", color: "var(--text-dim)", flexWrap: "wrap", alignItems: "center" }}>
-        <span style={{ fontWeight: 700, color: "var(--text)" }}>Dispo :</span>
+        <span style={{ fontWeight: 700, color: "var(--text)" }}>{t("availCol")} :</span>
         {[
-          { color: "#2eb460", label: "Disponible" },
-          { color: "#c9a84c", label: "Partielle" },
-          { color: "#e05555", label: "Indisponible" },
-          { color: "#4a4a6a", label: "Incertain" },
+          { color: "#2eb460", label: t("legendAvailable") },
+          { color: "#c9a84c", label: t("legendPartial") },
+          { color: "#e05555", label: t("legendUnavailable") },
+          { color: "#4a4a6a", label: t("legendUncertain") },
         ].map(({ color, label }) => (
           <span key={label} style={{ display: "flex", alignItems: "center", gap: "0.3rem" }}>
             <span style={{ width: 8, height: 8, borderRadius: "50%", background: color, display: "inline-block", flexShrink: 0 }} />
             {label}
           </span>
         ))}
-        <span style={{ marginLeft: "0.5rem" }}>🛞 = Chgt pneus · 💧 = Pluie</span>
+        <span style={{ marginLeft: "0.5rem" }}>{t("legendIcons")}</span>
       </div>
 
       <div className="table-wrap" style={{ overflowX: "auto" }}>
@@ -257,15 +260,15 @@ export default function StintGridDemo() {
           <thead>
             <tr>
               <th style={{ ...TH, width: "28px" }}>#</th>
-              <th style={{ ...TH, minWidth: "130px" }}>Pilote</th>
-              <th style={TH}>Départ IRL</th>
-              <th style={TH}>Fin IRL</th>
-              <th style={{ ...TH, minWidth: "110px" }}>Fin réelle</th>
-              <th style={{ ...TH, width: "80px" }}>Durée</th>
-              <th style={{ ...TH, width: "52px" }}>Tours</th>
-              <th style={{ ...TH, width: "62px" }}>Conso</th>
-              <th style={{ ...TH, width: "92px" }}>Skip fin</th>
-              <th style={{ ...TH, width: "52px" }}>IG</th>
+              <th style={{ ...TH, minWidth: "130px" }}>{t("colDriver")}</th>
+              <th style={TH}>{t("colStartIRL")}</th>
+              <th style={TH}>{t("colEndIRL")}</th>
+              <th style={{ ...TH, minWidth: "110px" }}>{t("colActualEnd")}</th>
+              <th style={{ ...TH, width: "80px" }}>{t("colDuration")}</th>
+              <th style={{ ...TH, width: "52px" }}>{t("colLaps")}</th>
+              <th style={{ ...TH, width: "62px" }}>{t("colFuel")}</th>
+              <th style={{ ...TH, width: "92px" }}>{t("skipEnd")}</th>
+              <th style={{ ...TH, width: "52px" }}>{t("inGame")}</th>
               <th style={{ ...TH, width: "24px" }}>⏱</th>
               <th style={{ ...TH, width: "24px" }}>💧</th>
               <th style={{ ...TH, width: "24px" }}>🛞</th>

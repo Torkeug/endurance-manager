@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
 import AdminDemoShell from "./AdminDemoShell";
+import { useTranslations } from "next-intl";
 
 const CLASSES = [
   {
@@ -23,12 +24,13 @@ const CLASSES = [
 const UNCLASSED = ["Dallara P217"];
 
 export default function AdminClassesDemo() {
+  const t = useTranslations("admin");
   const [expanded, setExpanded] = useState<number | null>(1);
 
   return (
     <AdminDemoShell activeTab="classes">
     <div>
-      <button className="btn btn-primary" style={{ marginBottom: "0.75rem" }}>+ Ajouter une classe</button>
+      <button className="btn btn-primary" style={{ marginBottom: "0.75rem" }}>{t("classesAddBtn")}</button>
 
       <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem", marginBottom: "0.75rem" }}>
         {CLASSES.map((cls) => {
@@ -40,23 +42,23 @@ export default function AdminClassesDemo() {
                 <div style={{ flex: 1 }}>
                   <span className="badge badge-driver" style={{ fontSize: "0.9rem", padding: "0.25rem 0.6rem" }}>{cls.name}</span>
                   <span style={{ marginLeft: "0.75rem", fontSize: "0.8rem", color: "var(--text-dim)" }}>
-                    {cls.cars.length} voiture{cls.cars.length !== 1 ? "s" : ""}
+                    {t("classesCarsCount", { count: cls.cars.length })}
                   </span>
                 </div>
                 <div style={{ display: "flex", gap: "0.5rem", alignItems: "center", flexWrap: "wrap" }}>
                   {/* Refuel rate stepper */}
                   <div style={{ display: "flex", alignItems: "stretch", fontSize: "0.8rem" }}>
-                    <span style={{ padding: "0.3rem 0.5rem", background: "var(--surface-2)", border: "1px solid var(--border)", borderRight: "none", borderRadius: "3px 0 0 3px", color: "var(--text-dim)", display: "flex", alignItems: "center" }}>Ravit.</span>
+                    <span style={{ padding: "0.3rem 0.5rem", background: "var(--surface-2)", border: "1px solid var(--border)", borderRight: "none", borderRadius: "3px 0 0 3px", color: "var(--text-dim)", display: "flex", alignItems: "center" }}>{t("classesRefuelLabel")}</span>
                     <button style={{ padding: "0.3rem 0.5rem", background: "var(--surface-2)", border: "1px solid var(--border)", borderRight: "none", color: "var(--text-dim)", cursor: "pointer", fontSize: "0.9rem", lineHeight: 1 }}>−</button>
                     <input readOnly value={cls.refuel} className="no-arrows" style={{ width: "56px", background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 0, color: "var(--text)", fontFamily: "var(--font-mono),monospace", fontSize: "0.8rem", padding: "0.3rem 0.4rem", textAlign: "center" }} />
                     <button style={{ padding: "0.3rem 0.5rem", background: "var(--surface-2)", border: "1px solid var(--border)", borderLeft: "none", color: "var(--text-dim)", cursor: "pointer", fontSize: "0.9rem", lineHeight: 1 }}>+</button>
-                    <span style={{ padding: "0.3rem 0.5rem", background: "var(--surface-2)", border: "1px solid var(--border)", borderLeft: "none", borderRadius: "0 3px 3px 0", color: "var(--text-dim)", display: "flex", alignItems: "center", fontSize: "0.8rem" }}>L/s</span>
+                    <span style={{ padding: "0.3rem 0.5rem", background: "var(--surface-2)", border: "1px solid var(--border)", borderLeft: "none", borderRadius: "0 3px 3px 0", color: "var(--text-dim)", display: "flex", alignItems: "center", fontSize: "0.8rem" }}>{t("classesRefuelUnit")}</span>
                   </div>
                   <button onClick={() => setExpanded(isExpanded ? null : cls.id)} className="btn btn-secondary btn-sm">
-                    {isExpanded ? "▲ Voitures" : "▼ Voitures"}
+                    {t("classesToggle", { expanded: String(isExpanded) })}
                   </button>
-                  <button className="btn btn-secondary btn-sm">Modifier</button>
-                  <button className="btn btn-danger btn-sm">Supprimer</button>
+                  <button className="btn btn-secondary btn-sm">{t("edit")}</button>
+                  <button className="btn btn-danger btn-sm">{t("delete")}</button>
                 </div>
               </div>
 
@@ -66,7 +68,7 @@ export default function AdminClassesDemo() {
                   {cls.cars.length > 0 && (
                     <div style={{ marginBottom: UNCLASSED.length > 0 ? "1rem" : 0 }}>
                       <div style={{ fontSize: "0.72rem", fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase" as const, color: "var(--text-dim)", marginBottom: "0.5rem" }}>
-                        Voitures assignées
+                        {t("classesAssigned")}
                       </div>
                       <div style={{ display: "flex", flexWrap: "wrap", gap: "0.4rem" }}>
                         {cls.cars.map((car) => (
@@ -81,7 +83,7 @@ export default function AdminClassesDemo() {
                   {UNCLASSED.length > 0 && (
                     <div>
                       <div style={{ fontSize: "0.72rem", fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase" as const, color: "var(--text-dim)", marginBottom: "0.5rem" }}>
-                        Voitures non classées — cliquer pour assigner
+                        {t("classesUnassigned")}
                       </div>
                       <div style={{ display: "flex", flexWrap: "wrap", gap: "0.4rem" }}>
                         {UNCLASSED.map((car) => (
@@ -93,7 +95,7 @@ export default function AdminClassesDemo() {
                     </div>
                   )}
                   {cls.cars.length === 0 && UNCLASSED.length === 0 && (
-                    <p style={{ color: "var(--text-dim)", fontSize: "0.85rem" }}>Toutes les voitures sont déjà assignées à une classe.</p>
+                    <p style={{ color: "var(--text-dim)", fontSize: "0.85rem" }}>{t("classesAllAssigned")}</p>
                   )}
                 </div>
               )}
@@ -106,7 +108,7 @@ export default function AdminClassesDemo() {
       {UNCLASSED.length > 0 && (
         <div className="card" style={{ marginBottom: "0.75rem", borderColor: "var(--accent-dim)" }}>
           <div style={{ fontSize: "0.72rem", fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase" as const, color: "var(--text-dim)", marginBottom: "0.5rem" }}>
-            ⚠️ {UNCLASSED.length} voiture sans classe
+            {t("classesUnclassedWarning", { count: UNCLASSED.length })}
           </div>
           <div style={{ fontSize: "0.85rem", color: "var(--text-dim)" }}>{UNCLASSED.join(", ")}</div>
         </div>

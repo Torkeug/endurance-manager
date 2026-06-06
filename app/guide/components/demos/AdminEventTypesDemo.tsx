@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
 import AdminDemoShell from "./AdminDemoShell";
+import { useTranslations } from "next-intl";
 
 const TYPES = [
   { id: 1, name: "Endurance GT",  cars: [
@@ -17,12 +18,13 @@ const TYPES = [
 ];
 
 export default function AdminEventTypesDemo() {
+  const t = useTranslations("admin");
   const [expanded, setExpanded] = useState<number | null>(1);
 
   return (
     <AdminDemoShell activeTab="types">
     <div>
-      <button className="btn btn-primary" style={{ marginBottom: "0.75rem" }}>+ Ajouter un type d'événement</button>
+      <button className="btn btn-primary" style={{ marginBottom: "0.75rem" }}>{t("eventTypesAddBtn")}</button>
       <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem", marginBottom: "0.75rem" }}>
         {TYPES.map((et) => {
           const allowedCount = et.cars.filter((c) => c.allowed).length;
@@ -41,16 +43,16 @@ export default function AdminEventTypesDemo() {
                   <div style={{ fontWeight: 700, fontSize: "1rem" }}>{et.name}</div>
                   <div style={{ fontSize: "0.78rem", color: "var(--text-dim)", marginTop: "0.2rem" }}>
                     {et.cars.length === 0
-                      ? "Toutes les voitures autorisées"
-                      : `${allowedCount} voiture${allowedCount > 1 ? "s" : ""} autorisée${allowedCount > 1 ? "s" : ""}`}
+                      ? t("eventTypesAllCars")
+                      : t("eventTypesCarsCount", { count: allowedCount })}
                   </div>
                 </div>
                 <div style={{ display: "flex", gap: "0.5rem" }}>
                   <button onClick={() => setExpanded(isExpanded ? null : et.id)} className="btn btn-secondary btn-sm">
-                    {isExpanded ? "▲ Voitures" : "▼ Voitures"}
+                    {t("eventTypesToggle", { expanded: String(isExpanded) })}
                   </button>
-                  <button className="btn btn-secondary btn-sm">Modifier</button>
-                  <button className="btn btn-danger btn-sm">Supprimer</button>
+                  <button className="btn btn-secondary btn-sm">{t("edit")}</button>
+                  <button className="btn btn-danger btn-sm">{t("delete")}</button>
                 </div>
               </div>
 
@@ -58,7 +60,7 @@ export default function AdminEventTypesDemo() {
               {isExpanded && (
                 <div style={{ padding: "1rem", borderTop: "1px solid var(--border)", background: "var(--surface-2)" }}>
                   <p style={{ fontSize: "0.8rem", color: "var(--text-dim)", marginBottom: "1rem" }}>
-                    Cochez les voitures autorisées pour ce type. Si aucune voiture n'est cochée, toutes sont autorisées.
+                    {t("eventTypesCarsHint")}
                   </p>
                   {et.cars.length === 0 ? (
                     <p style={{ fontSize: "0.85rem", color: "var(--text-dim)" }}>Aucune restriction configurée — toutes les voitures sont accessibles.</p>

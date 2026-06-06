@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
 import AdminDemoShell from "./AdminDemoShell";
+import { useTranslations } from "next-intl";
 
 const ENTRIES = [
   { id: 1, crew: "Kronos Alpha", car: "Audi R8 LMS GT3 EVO II", cls: "GT3", rounds: [{ label: "Round 1 · Spa 6H", num: 56 }, { label: "Round 2 · Le Mans 24H", num: 56 }, { label: "Round 3 · Portimão 3H", num: 56 }] },
@@ -14,6 +15,7 @@ function isConsistent(rounds: typeof ENTRIES[0]["rounds"]) {
 }
 
 export default function AdminChampionshipTeamsDemo() {
+  const t = useTranslations("admin");
   const [view, setView] = useState<"team" | "championship">("team");
   const [expanded, setExpanded] = useState<Record<number, boolean>>({ 2: true });
 
@@ -22,7 +24,7 @@ export default function AdminChampionshipTeamsDemo() {
     <div>
       {/* Équipages sub-tabs */}
       <div style={{ display: "flex", gap: "0.25rem", borderBottom: "1px solid var(--border)", marginBottom: "1.5rem" }}>
-        {(["Équipages utilisés en championnats", "Configuration"] as const).map((label, i) => (
+        {([t("entriesTabNumbers"), t("entriesTabConfig")] as const).map((label, i) => (
           <button key={label} style={{
             padding: "0.5rem 1.25rem", background: "transparent", border: "none",
             borderBottom: i === 0 ? "2px solid var(--accent)" : "2px solid transparent",
@@ -35,7 +37,7 @@ export default function AdminChampionshipTeamsDemo() {
       </div>
       {/* View toggle */}
       <div style={{ display: "flex", gap: "0.5rem", marginBottom: "1rem" }}>
-        {([["team", "Par équipe"], ["championship", "Par championnat"]] as const).map(([key, label]) => (
+        {([["team", t("champViewByTeam")], ["championship", t("champViewByChamp")]] as const).map(([key, label]) => (
           <button
             key={key}
             onClick={() => setView(key)}
@@ -60,7 +62,7 @@ export default function AdminChampionshipTeamsDemo() {
           <span style={{ fontWeight: 700, fontFamily: "var(--font-rajdhani),sans-serif", letterSpacing: "0.04em", fontSize: "0.95rem" }}>
             {view === "team" ? "Kronos Beta" : "Kronos Endurance Championship"}
           </span>
-          <span style={{ color: "var(--text-dim)", fontSize: "0.85rem" }}>· Saison 2025 ·</span>
+          <span style={{ color: "var(--text-dim)", fontSize: "0.85rem" }}>{t("champSeasonLabel", { season: "2025" })}</span>
           <span style={{ marginLeft: "auto", color: "var(--text-dim)", fontSize: "0.78rem" }}>
             {view === "team" ? "1 championnat" : "3 équipes"}
           </span>
@@ -89,7 +91,7 @@ export default function AdminChampionshipTeamsDemo() {
                       {sharedNum != null ? `#${sharedNum}` : "—"}
                     </span>
                   ) : (
-                    <span style={{ color: "#f59e0b", fontSize: "0.78rem", fontStyle: "italic" }}>varie</span>
+                    <span style={{ color: "#f59e0b", fontSize: "0.78rem", fontStyle: "italic" }}>{t("champVaries")}</span>
                   )}
                 </span>
               </div>

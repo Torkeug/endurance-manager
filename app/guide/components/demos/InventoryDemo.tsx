@@ -1,4 +1,5 @@
 import { Fragment } from "react";
+import { useTranslations } from "next-intl";
 
 // Static demo of the InventoryMatrix (cars × drivers).
 // Each driver column header is vertical text (writing-mode: vertical-rl).
@@ -33,6 +34,7 @@ function FreeBadge() {
 }
 
 export default function InventoryDemo() {
+  const t = useTranslations("inventoryMatrix");
   // Group cars by class
   const classes = [...new Set(CARS.map((c) => c.class))];
 
@@ -43,11 +45,11 @@ export default function InventoryDemo() {
           <tr style={{ height: `${HEADER_H}px` }}>
             {/* Name col header */}
             <th style={{ position: "sticky", left: 0, zIndex: 4, background: "var(--surface-2)", boxShadow: "inset -1px 0 0 var(--border)", borderBottom: "2px solid var(--border)", width: NAME_W, maxWidth: NAME_W, padding: "0.5rem 0.75rem", textAlign: "left", fontSize: "0.68rem", fontWeight: 700, letterSpacing: "0.07em", textTransform: "uppercase", color: "var(--text-dim)", verticalAlign: "bottom" }}>
-              Voiture
+              {t("colCar")}
             </th>
             {/* Count col header */}
             <th style={{ position: "sticky", left: NAME_W, zIndex: 4, background: "var(--surface-2)", boxShadow: "inset -1px 0 0 var(--border)", borderBottom: "2px solid var(--border)", width: COUNT_W, textAlign: "center", fontSize: "0.68rem", fontWeight: 700, letterSpacing: "0.07em", textTransform: "uppercase", color: "var(--text-dim)", verticalAlign: "bottom", padding: "0.5rem 0.25rem" }}>
-              #
+              {t("colCount")}
             </th>
             {/* Driver col headers — vertical text */}
             {DRIVERS.map((d) => (

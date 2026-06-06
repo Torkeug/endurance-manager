@@ -1,11 +1,15 @@
+import { useTranslations } from "next-intl";
+
 export default function NavDemo() {
+  const t = useTranslations("nav");
+
   const navLinks = [
-    { label: "ACCUEIL" },
-    { label: "PILOTES" },
-    { label: "ÉVÉNEMENTS" },
-    { label: "INVENTAIRE" },
-    { label: "ADMIN" },
-    { label: "GUIDE", active: true },
+    { label: t("home").toUpperCase() },
+    { label: t("drivers").toUpperCase() },
+    { label: t("events").toUpperCase() },
+    { label: t("inventory").toUpperCase() },
+    { label: t("admin").toUpperCase() },
+    { label: t("guide").toUpperCase(), active: true },
   ];
 
   return (
@@ -39,10 +43,10 @@ export default function NavDemo() {
             Raphaël Laurent
           </span>
           <span className="text-xs font-bold px-2 py-1 rounded" style={{ backgroundColor: "var(--accent-dim)", color: "var(--accent)" }}>
-            SUPER ADMIN
+            {t("roleSuperAdmin").toUpperCase()}
           </span>
           <div className="text-sm font-bold uppercase" style={{ color: "var(--text-dim)" }}>
-            DÉCONNEXION
+            {t("logout").toUpperCase()}
           </div>
         </div>
       </nav>

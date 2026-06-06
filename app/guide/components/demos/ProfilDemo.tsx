@@ -1,10 +1,8 @@
 "use client";
 import React, { useState } from "react";
+import { useTranslations } from "next-intl";
 
-const TABS = [
-  { id: "engagements",  label: "Engagements" },
-  { id: "statistiques", label: "Statistiques" },
-];
+const TAB_IDS = ["engagements", "statistiques"] as const;
 
 const G61_CIRCUITS = [
   { name: "Circuit des 24 Heures du Mans", variant: "24 Heures du Mans", laps: 360, cleanPct: 82, cleanLaps: 295, time: "21h04", sessionTypes: [1, 3], category: "road", bestLap: "3:54.182", bestCar: "Ferrari 296 GT3", bestSession: "P" },
@@ -68,6 +66,12 @@ function SectionHeader({ title }: { title: string }) {
 }
 
 export default function ProfilDemo({ activeTab = "engagements", statsSubTab = "app" }: { activeTab?: string; statsSubTab?: string }) {
+  const t = useTranslations("driverProfile");
+  const tTabs = useTranslations("driverPageTabs");
+  const TAB_LABELS: Record<string, string> = {
+    "engagements": tTabs("engagements"),
+    "statistiques": tTabs("stats"),
+  };
   const [expandedCircuit, setExpandedCircuit] = useState<string | null>(null);
 
   return (
@@ -82,23 +86,23 @@ export default function ProfilDemo({ activeTab = "engagements", statsSubTab = "a
             5 120 iR
           </div>
         </div>
-        <button className="btn btn-secondary" style={{ fontSize: "0.82rem", opacity: 0.85 }}>← Pilotes</button>
+        <button className="btn btn-secondary" style={{ fontSize: "0.82rem", opacity: 0.85 }}>{t("back")}</button>
       </div>
 
       {/* Section 2: Integration buttons (left) + Inventaire (right) */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "0.5rem", flexWrap: "wrap", gap: "0.5rem" }}>
         <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
-          <button className="btn btn-secondary btn-sm" style={{ fontSize: "0.82rem", color: "#2eb460", border: "1px solid #2eb460", opacity: 0.9 }}>✓ Garage61 lié</button>
-          <button className="btn btn-secondary btn-sm" style={{ fontSize: "0.82rem", color: "#2eb460", border: "1px solid #2eb460", opacity: 0.9 }}>✓ iRacing lié</button>
-          <button className="btn btn-secondary btn-sm" style={{ fontSize: "0.82rem", opacity: 0.85 }}>🔄 Mettre à jour</button>
+          <button className="btn btn-secondary btn-sm" style={{ fontSize: "0.82rem", color: "#2eb460", border: "1px solid #2eb460", opacity: 0.9 }}>{t("garage61Linked")}</button>
+          <button className="btn btn-secondary btn-sm" style={{ fontSize: "0.82rem", color: "#2eb460", border: "1px solid #2eb460", opacity: 0.9 }}>{t("iracingLinked")}</button>
+          <button className="btn btn-secondary btn-sm" style={{ fontSize: "0.82rem", opacity: 0.85 }}>{t("updateIRacing")}</button>
         </div>
-        <button className="btn btn-secondary btn-sm" style={{ fontSize: "0.82rem", opacity: 0.85 }}>📦 Inventaire</button>
+        <button className="btn btn-secondary btn-sm" style={{ fontSize: "0.82rem", opacity: 0.85 }}>{t("inventory")}</button>
       </div>
 
       {/* Timestamps */}
       <div style={{ fontSize: "0.8rem", color: "var(--text-dim)", marginBottom: "1.5rem", display: "flex", flexDirection: "column", gap: "0.2rem" }}>
-        <span>iRating synchronisé le 12/05/2026 14:30</span>
-        <span>Inventaire synchronisé le 02/04/2026 09:15</span>
+        <span>{t("iratingSyncedAt")} 12/05/2026 14:30</span>
+        <span>{t("inventorySyncedAt")} 02/04/2026 09:15</span>
       </div>
 
       {/* Info card */}
@@ -125,21 +129,21 @@ export default function ProfilDemo({ activeTab = "engagements", statsSubTab = "a
             ))}
           </div>
           <div style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap", justifyContent: "flex-end" }}>
-            <button className="btn btn-secondary btn-sm" style={{ opacity: 0.85 }}>Changer mot de passe</button>
-            <button className="btn btn-secondary btn-sm" style={{ opacity: 0.85 }}>Modifier</button>
+            <button className="btn btn-secondary btn-sm" style={{ opacity: 0.85 }}>{t("changePassword")}</button>
+            <button className="btn btn-secondary btn-sm" style={{ opacity: 0.85 }}>{t("edit")}</button>
           </div>
         </div>
       </div>
 
       {/* Tab bar — display only, not interactive */}
       <div style={{ display: "flex", gap: "0.25rem", borderBottom: "1px solid var(--border)" }}>
-        {TABS.map((t) => (
+        {TAB_IDS.map((tabId) => (
           <div
-            key={t.id}
+            key={tabId}
             style={{
               padding: "0.6rem 1.25rem",
-              borderBottom: activeTab === t.id ? "2px solid var(--accent)" : "2px solid transparent",
-              color: activeTab === t.id ? "var(--accent)" : "var(--text-dim)",
+              borderBottom: activeTab === tabId ? "2px solid var(--accent)" : "2px solid transparent",
+              color: activeTab === tabId ? "var(--accent)" : "var(--text-dim)",
               fontFamily: "var(--font-rajdhani), sans-serif",
               fontSize: "0.9rem",
               fontWeight: 700,
@@ -148,7 +152,7 @@ export default function ProfilDemo({ activeTab = "engagements", statsSubTab = "a
               marginBottom: "-1px",
             }}
           >
-            {t.label}
+            {TAB_LABELS[tabId]}
           </div>
         ))}
       </div>

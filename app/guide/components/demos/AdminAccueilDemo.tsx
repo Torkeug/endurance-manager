@@ -1,3 +1,5 @@
+import { useTranslations } from "next-intl";
+
 const labelStyle = {
   fontSize: "0.65rem",
   fontWeight: 700,
@@ -18,6 +20,8 @@ const STATS = [
 ];
 
 export default function AdminAccueilDemo() {
+  const t = useTranslations("dashboard");
+  const tHomeTabs = useTranslations("homeTabs");
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
 
@@ -30,23 +34,23 @@ export default function AdminAccueilDemo() {
         <span style={{ color: "var(--danger)", fontWeight: 600, fontSize: "0.9rem" }}>
           ⚠️ 2 pilotes en attente d'approbation
         </span>
-        <button className="btn btn-danger btn-sm">Gérer les accès →</button>
+        <button className="btn btn-danger btn-sm">{t("manageAccess")}</button>
       </div>
 
       {/* Page header */}
       <div>
-        <h2 style={{ fontSize: "1.5rem", fontWeight: 700, margin: 0 }}>Tableau de bord</h2>
+        <h2 style={{ fontSize: "1.5rem", fontWeight: 700, margin: 0 }}>{t("title")}</h2>
         <div style={{ height: "2px", background: "var(--accent)", width: "2rem", margin: "0.4rem 0" }} />
-        <p style={{ color: "var(--text-dim)", fontSize: "0.9rem", margin: 0 }}>Bienvenue, <strong style={{ color: "var(--text)" }}>Raphaël Laurent</strong></p>
+        <p style={{ color: "var(--text-dim)", fontSize: "0.9rem", margin: 0 }}>{t("welcome")} <strong style={{ color: "var(--text)" }}>Raphaël Laurent</strong></p>
       </div>
 
       {/* Quick actions */}
       <div style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap" }}>
-        <button className="btn btn-primary">+ Ajouter un pilote</button>
-        <button className="btn btn-primary">+ Créer un événement</button>
-        <button className="btn btn-primary">+ Créer un championnat</button>
-        <button className="btn btn-secondary">Voir les événements</button>
-        <button className="btn btn-secondary">Mon profil</button>
+        <button className="btn btn-primary">{t("addDriver")}</button>
+        <button className="btn btn-primary">{t("createEvent")}</button>
+        <button className="btn btn-primary">{t("createChampionship")}</button>
+        <button className="btn btn-secondary">{t("viewEvents")}</button>
+        <button className="btn btn-secondary">{t("myProfile")}</button>
       </div>
 
       {/* Admin stats grid */}
@@ -63,8 +67,8 @@ export default function AdminAccueilDemo() {
       <div>
         <div style={{ display: "flex", gap: "0.25rem", borderBottom: "1px solid var(--border)", marginBottom: "1.25rem" }}>
           {[
-            { label: "Planning",  badge: 0, active: true },
-            { label: "Suivi",     badge: 3, active: false },
+            { label: tHomeTabs("planning"), badge: 0, active: true },
+            { label: tHomeTabs("incomplete"), badge: 3, active: false },
           ].map(({ label, badge, active }) => (
             <button key={label} style={{
               padding: "0.5rem 1.25rem", background: "transparent", border: "none",
@@ -85,9 +89,9 @@ export default function AdminAccueilDemo() {
         {/* Planning content */}
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
           <div className="card">
-            <div style={labelStyle}>Prochain événement</div>
+            <div style={labelStyle}>{t("nextEvent")}</div>
             <div style={{ display: "flex", gap: "0.4rem", marginBottom: "0.5rem" }}>
-              <span style={{ fontSize: "0.62rem", fontWeight: 700, padding: "0.1rem 0.45rem", background: "var(--accent)", color: "#fff", borderRadius: "2px" }}>Spécial</span>
+              <span style={{ fontSize: "0.62rem", fontWeight: 700, padding: "0.1rem 0.45rem", background: "var(--accent)", color: "#fff", borderRadius: "2px" }}>{t("specialBadge")}</span>
             </div>
             <div style={{ fontWeight: 700, fontSize: "0.95rem", marginBottom: "0.25rem" }}>Endurance GT 24h Le Mans</div>
             <div style={{ fontSize: "0.8rem", color: "var(--text-dim)", marginBottom: "0.5rem" }}>Circuit de la Sarthe · GT3 · 24h</div>
@@ -95,7 +99,7 @@ export default function AdminAccueilDemo() {
             <div style={{ fontSize: "0.72rem", color: "var(--text-dim)", marginTop: "0.2rem" }}>dans 5j 2h · 3 équipages</div>
           </div>
           <div className="card">
-            <div style={labelStyle}>Mon prochain relais</div>
+            <div style={labelStyle}>{t("myNextStint")}</div>
             <div style={{ fontWeight: 700, fontSize: "0.95rem", marginBottom: "0.2rem" }}>Endurance GT 24h</div>
             <div style={{ fontSize: "0.8rem", color: "var(--text-dim)", marginBottom: "0.5rem" }}>Kronos Alpha · Relais 3</div>
             <div style={{ fontFamily: "var(--font-mono),monospace", fontSize: "0.9rem", color: "var(--accent)" }}>17:44 IRL</div>

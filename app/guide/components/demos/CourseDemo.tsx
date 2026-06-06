@@ -1,3 +1,5 @@
+import { useTranslations } from "next-intl";
+
 const STINTS_DEMO = [
   { n: 1, done: true,   active: false },
   { n: 2, done: true,   active: false },
@@ -16,6 +18,7 @@ const labelStyle = {
 };
 
 export default function CourseDemo() {
+  const t = useTranslations("raceMode");
   const progress = 38;
 
   return (
@@ -23,7 +26,7 @@ export default function CourseDemo() {
       {/* Race progress bar */}
       <div>
         <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.75rem", color: "var(--text-dim)", marginBottom: "0.35rem" }}>
-          <span>Progression de la course</span>
+          <span>{t("raceProgress")}</span>
           <span style={{ fontFamily: "var(--font-mono), monospace" }}>−5h 33min 12s</span>
         </div>
         <div style={{ height: "8px", background: "var(--surface-2)", borderRadius: "4px", overflow: "hidden", border: "1px solid var(--border)" }}>
@@ -41,7 +44,7 @@ export default function CourseDemo() {
         {STINTS_DEMO.map((s) => (
           <div
             key={s.n}
-            title={`Relais ${s.n}`}
+            title={t("stintTooltip", { number: s.n, driver: "" }).split("—")[0].trim()}
             style={{
               flex: 1,
               minWidth: "24px",
@@ -59,7 +62,7 @@ export default function CourseDemo() {
       <div className="card" style={{ borderColor: "var(--accent-dim)" }}>
         {/* Status label */}
         <div style={{ fontSize: "0.68rem", fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--accent)", marginBottom: "0.75rem" }}>
-          🟢 En course — Relais 3 / 5
+          {t("inRace")} 3 / 5
         </div>
 
         {/* Driver name */}
@@ -70,15 +73,15 @@ export default function CourseDemo() {
         {/* Timing row */}
         <div style={{ display: "flex", gap: "1.5rem", flexWrap: "wrap", marginBottom: "1.25rem" }}>
           <div>
-            <div style={labelStyle}>Départ relais</div>
+            <div style={labelStyle}>{t("stintStart")}</div>
             <div style={{ fontFamily: "var(--font-mono), monospace", fontSize: "0.95rem" }}>17:44</div>
           </div>
           <div>
-            <div style={labelStyle}>Fin prévue</div>
+            <div style={labelStyle}>{t("plannedEnd")}</div>
             <div style={{ fontFamily: "var(--font-mono), monospace", fontSize: "0.95rem" }}>19:36</div>
           </div>
           <div>
-            <div style={labelStyle}>Temps restant</div>
+            <div style={labelStyle}>{t("timeRemaining")}</div>
             <div style={{ fontFamily: "var(--font-mono), monospace", fontSize: "1.5rem", fontWeight: 700, lineHeight: 1, color: "var(--text)" }}>
               01:12:08
             </div>
@@ -88,7 +91,7 @@ export default function CourseDemo() {
         {/* Undo button */}
         <div style={{ textAlign: "right", marginBottom: "0.5rem" }}>
           <button className="btn btn-danger" style={{ fontSize: "0.78rem", opacity: 0.85 }}>
-            ↩ Annuler dernier arrêt
+            {t("undoLastStopBtn")}
           </button>
         </div>
 
@@ -109,7 +112,7 @@ export default function CourseDemo() {
             cursor: "pointer",
             opacity: 0.85,
           }}>
-            ⏱ Marquer arrêt au stand
+            {t("markPitStop")}
           </button>
 
           {/* Overdue stint button — teal, inside same flex column */}
@@ -127,7 +130,7 @@ export default function CourseDemo() {
             borderRadius: "4px",
             cursor: "pointer",
           }}>
-            ⏱ Marquer fin relais précédent
+            {t("markPrevStintEnd")}
           </button>
         </div>
       </div>

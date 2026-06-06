@@ -1,15 +1,17 @@
 "use client";
 import { useEffect, useRef } from "react";
-
-const TABS = [
-  { id: "inscriptions", label: "Inscriptions", count: 8 },
-  { id: "equipages", label: "Équipages", count: 3 },
-  { id: "horaires", label: "Horaires de départ" },
-  { id: "inventaire", label: "Inventaire" },
-];
+import { useTranslations } from "next-intl";
 
 export default function EventDetailTabsDemo({ activeTab = "inscriptions" }: { activeTab?: string }) {
+  const t = useTranslations("events");
   const activeRef = useRef<HTMLDivElement>(null);
+
+  const TABS = [
+    { id: "inscriptions", label: t("tabInscriptions"), count: 8 },
+    { id: "equipages",    label: t("tabEquipages"),    count: 3 },
+    { id: "horaires",     label: t("tabStartTimes") },
+    { id: "inventaire",   label: t("tabInventory") },
+  ];
 
   useEffect(() => {
     activeRef.current?.scrollIntoView({ inline: "start", block: "nearest" });

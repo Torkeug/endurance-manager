@@ -34,25 +34,27 @@ const TH: React.CSSProperties = {
 const TD: React.CSSProperties = { padding: "0.5rem 0.65rem", borderBottom: "1px solid var(--border)", fontSize: "0.88rem" };
 
 import type { CSSProperties } from "react";
+import { useTranslations } from "next-intl";
 
 export default function EquipagesDemo({ showCreate }: { showCreate?: boolean }) {
+  const t = useTranslations("events");
   return (
     <div>
       {showCreate && (
         <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: "0.75rem" }}>
-          <button className="btn btn-primary" style={{ opacity: 0.85 }}>+ Ajouter un équipage</button>
+          <button className="btn btn-primary" style={{ opacity: 0.85 }}>{t("addTeamEntry")}</button>
         </div>
       )}
     <div className="table-wrap" style={{ overflowX: "auto" }}>
       <table style={{ borderCollapse: "collapse", width: "100%", minWidth: "580px" }}>
         <thead>
           <tr>
-            <th style={TH}>Équipage</th>
-            <th style={TH}>Voiture</th>
-            <th style={TH}>Classe</th>
-            <th style={TH}>Pilotes</th>
-            <th style={TH}>SoF</th>
-            <th style={TH}>Départ IRL</th>
+            <th style={TH}>{t("colCrew")}</th>
+            <th style={TH}>{t("colCar")}</th>
+            <th style={TH}>{t("colClass")}</th>
+            <th style={TH}>{t("colDrivers")}</th>
+            <th style={TH}>{t("colSoF")}</th>
+            <th style={TH}>{t("colStart")}</th>
           </tr>
         </thead>
         <tbody>

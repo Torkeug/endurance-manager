@@ -1,22 +1,24 @@
-const TABS = [
-  { id: "pilotes",    label: "Pilotes",          badge: 2 },
-  { id: "equipages",  label: "Équipages",         badge: 0 },
-  { id: "voitures",   label: "Voitures",          badge: 0 },
-  { id: "classes",    label: "Classes",           badge: 0 },
-  { id: "circuits",   label: "Circuits",          badge: 0 },
-  { id: "types",      label: "Types d'événement", badge: 0 },
-  { id: "garage61",   label: "Garage61",          badge: 0 },
-  { id: "parametres", label: "Paramètres",        badge: 0 },
-];
+import { useTranslations } from "next-intl";
 
 export default function AdminTabsDemo() {
+  const t = useTranslations("admin");
+  const TABS = [
+    { id: "pilotes",    label: t("tabDrivers"),     badge: 2 },
+    { id: "equipages",  label: t("tabEntries"),      badge: 0 },
+    { id: "voitures",   label: t("tabCars"),         badge: 0 },
+    { id: "classes",    label: t("tabClasses"),      badge: 0 },
+    { id: "circuits",   label: t("tabCircuits"),     badge: 0 },
+    { id: "types",      label: t("tabEventTypes"),   badge: 0 },
+    { id: "garage61",   label: t("tabGarage61"),     badge: 0 },
+    { id: "parametres", label: t("tabSettings"),     badge: 0 },
+  ];
   return (
     <div>
       {/* Page header */}
       <div style={{ marginBottom: "1.5rem" }}>
-        <h2 style={{ fontSize: "1.5rem", fontWeight: 700, margin: 0 }}>Administration</h2>
+        <h2 style={{ fontSize: "1.5rem", fontWeight: 700, margin: 0 }}>{t("pageTitle")}</h2>
         <div style={{ height: "2px", background: "var(--accent)", width: "2rem", margin: "0.4rem 0" }} />
-        <p style={{ color: "var(--text-dim)", fontSize: "0.85rem", margin: 0 }}>Données de référence &amp; gestion des accès</p>
+        <p style={{ color: "var(--text-dim)", fontSize: "0.85rem", margin: 0 }}>{t("pageSubtitle")}</p>
       </div>
 
       {/* Tab bar */}

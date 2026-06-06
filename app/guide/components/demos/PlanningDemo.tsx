@@ -1,3 +1,5 @@
+import { useTranslations } from "next-intl";
+
 const RACE_START = 14;
 const RACE_HOURS = 9;
 const HOURS = Array.from({ length: RACE_HOURS + 1 }, (_, i) => RACE_START + i);
@@ -35,12 +37,13 @@ const ROW_H = 36;
 const RACE_END = RACE_START + RACE_HOURS; // 23h
 
 export default function PlanningDemo() {
+  const t = useTranslations("planningTab");
   const raceEndPct = toPercent(RACE_END);
   return (
     <div>
       {/* Strategy label */}
       <div style={{ textAlign: "center", marginBottom: "0.6rem", fontSize: "0.78rem", color: "var(--text-dim)" }}>
-        Stratégie active : <span style={{ fontWeight: 700, color: "var(--text)" }}>Plan A</span>
+        {t("activeStrategy")} <span style={{ fontWeight: 700, color: "var(--text)" }}>Plan A</span>
         <span> — Météo sèche — nominal</span>
       </div>
 

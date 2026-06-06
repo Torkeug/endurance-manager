@@ -1,10 +1,22 @@
 "use client";
 import { useEffect, useRef } from "react";
+import { useTranslations } from "next-intl";
 
-const TABS = ["Pilotes", "Disponibilités", "Relais", "Planning", "Performances", "🏁 Course"];
+// Tab IDs — these match the activeTab prop values passed from guide.data.ts
+const TAB_IDS = ["Pilotes", "Disponibilités", "Relais", "Planning", "Performances", "Course"];
 
 export default function TabsDemo({ activeTab = "Pilotes" }: { activeTab?: string }) {
+  const t = useTranslations("equipageTabs");
   const activeRef = useRef<HTMLDivElement>(null);
+
+  const TAB_LABELS: Record<string, string> = {
+    "Pilotes":        t("tabPilotes"),
+    "Disponibilités": t("tabDisponibilites"),
+    "Relais":         t("tabRelais"),
+    "Planning":       t("tabPlanning"),
+    "Performances":   t("tabPerformances"),
+    "Course":         t("tabCourse"),
+  };
 
   useEffect(() => {
     activeRef.current?.scrollIntoView({ inline: "start", block: "nearest" });
@@ -21,11 +33,12 @@ export default function TabsDemo({ activeTab = "Pilotes" }: { activeTab?: string
         scrollbarWidth: "none",
       }}
     >
-      {TABS.map((tab) => {
-        const isActive = tab === activeTab || tab.replace("🏁 ", "") === activeTab;
+      {TAB_IDS.map((tabId) => {
+        const isActive = tabId === activeTab;
+        const label = TAB_LABELS[tabId] ?? tabId;
         return (
           <div
-            key={tab}
+            key={tabId}
             ref={isActive ? activeRef : null}
             style={{
               padding: "0.6rem 1.25rem",
@@ -40,7 +53,7 @@ export default function TabsDemo({ activeTab = "Pilotes" }: { activeTab?: string
               flexShrink: 0,
             }}
           >
-            {tab}
+            {label}
           </div>
         );
       })}

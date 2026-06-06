@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 
 const CREWS: Record<string, { bg: string; border: string }> = {
   "Kronos Alpha": { bg: "rgba(99,102,241,0.12)",  border: "#6366f1" },
@@ -37,9 +38,8 @@ const TH_BASE: React.CSSProperties = {
 };
 const TD: React.CSSProperties = { padding: "0.5rem 0.65rem", borderBottom: "1px solid var(--border)", fontSize: "0.88rem" };
 
-const SORT_LABELS: Record<SortField, string> = { name: "Pilote", irating: "iRating", team: "Équipe", starttime: "Créneaux" };
-
 export default function InscriptionsDemo() {
+  const t = useTranslations("events");
   const [sortField, setSortField] = useState<SortField>("team");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
 
@@ -67,7 +67,7 @@ export default function InscriptionsDemo() {
     });
     groupHeaders = new Map();
     let last = "";
-    rows.forEach((r, i) => { if (r.time !== last) { groupHeaders!.set(i, `${r.slot} · Départ à ${r.time}`); last = r.time; } });
+    rows.forEach((r, i) => { if (r.time !== last) { groupHeaders!.set(i, `${r.slot} · ${t("startAt", { time: r.time })}`); last = r.time; } });
   } else if (sortField === "irating") {
     rows = [...ALL_ROWS].sort((a, b) => sortDir === "asc" ? a.irating - b.irating : b.irating - a.irating);
     // Merguez header
@@ -105,7 +105,7 @@ export default function InscriptionsDemo() {
       }}>
         <label style={{ display: "flex", alignItems: "center", gap: "0.35rem", cursor: "pointer", color: "var(--text-dim)", whiteSpace: "nowrap" }}>
           <input type="checkbox" readOnly style={{ accentColor: "var(--accent)" }} />
-          Sans équipe
+          {t("filterNoTeam")}
         </label>
         <span style={{ color: "var(--border)" }}>|</span>
         <div style={{ display: "flex", alignItems: "center", gap: "0.35rem", color: "var(--text-dim)" }}>
@@ -136,16 +136,16 @@ export default function InscriptionsDemo() {
         <table style={{ borderCollapse: "collapse", width: "100%", minWidth: "640px" }}>
           <thead>
             <tr>
-              {([["name","Pilote"],["irating","iRating"],["team","Équipe"]] as [SortField,string][]).map(([f, label]) => (
+              {([["name", t("colDriver")],["irating","iRating"],["team", t("colTeam")]] as [SortField,string][]).map(([f, label]) => (
                 <th key={f} style={TH_BASE} onClick={() => toggleSort(f)}>
                   {label} <SortArrow field={f} />
                 </th>
               ))}
-              <th style={TH_BASE}>Préférences</th>
+              <th style={TH_BASE}>{t("colPreferences")}</th>
               <th style={{ ...TH_BASE, cursor: "pointer" }} onClick={() => toggleSort("starttime")}>
-                Créneaux <SortArrow field="starttime" />
+                {t("colSlots")} <SortArrow field="starttime" />
               </th>
-              <th style={TH_BASE}>Tags</th>
+              <th style={TH_BASE}>{t("colTags")}</th>
             </tr>
           </thead>
           <tbody>
@@ -202,7 +202,7 @@ export default function InscriptionsDemo() {
                   <td style={{ ...TD, color: "var(--text-dim)" }}>{r.prefs}</td>
                   <td style={{ ...TD, fontFamily: "var(--font-mono),monospace", color: "var(--accent)", fontSize: "0.82rem" }}>
                     <div style={{ fontWeight: 600, fontSize: "0.82rem" }}>{r.slot}</div>
-                    <div style={{ fontSize: "0.75rem" }}>Départ à {r.time}</div>
+                    <div style={{ fontSize: "0.75rem" }}>{t("startAt", { time: r.time })}</div>
                   </td>
                   <td style={TD}>
                     {r.tags.length > 0 ? (

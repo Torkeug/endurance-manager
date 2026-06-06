@@ -1,4 +1,5 @@
 import type { CSSProperties } from "react";
+import { useTranslations } from "next-intl";
 
 const G61_LAPS = [
   { cond: "☀️", time: "1:50.990", fuel: "2.181", tank: "8.2",  temp: "38°", date: "23/05/25", car: "Ferrari 296 GT3", sess: "P" },
@@ -52,14 +53,15 @@ function Chip({ label, active }: { label: string; active?: boolean }) {
 }
 
 export default function Garage61ImportDemo() {
+  const t = useTranslations("performanceData");
   return (
     <div style={{ border: "1px solid var(--border)", borderRadius: "6px", padding: "0.75rem 1rem", background: "var(--surface-1)" }}>
       {/* Header row */}
       <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", marginBottom: "0.75rem", flexWrap: "wrap" }}>
         <span style={{ fontSize: "0.72rem", fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--text-dim)" }}>
-          📥 Importer depuis Garage61
+          {t("importFromGarage61")}
         </span>
-        <button className="btn btn-secondary btn-sm" style={{ fontSize: "0.72rem" }}>Charger les chronos</button>
+        <button className="btn btn-secondary btn-sm" style={{ fontSize: "0.72rem" }}>{t("loadLaps")}</button>
         <span style={{ fontSize: "0.75rem", color: "var(--text-dim)" }}>Circuit des 24 Heures du Mans</span>
       </div>
 
@@ -67,15 +69,15 @@ export default function Garage61ImportDemo() {
       <div style={{ display: "flex", flexDirection: "column", gap: "0.4rem", marginBottom: "0.6rem" }}>
         <div style={{ display: "flex", gap: "0.75rem", alignItems: "center", flexWrap: "wrap" }}>
           <div style={{ display: "flex", gap: "0.25rem" }}>
-            <Chip label="Tous" active />
-            <Chip label="☀️ Sec" />
-            <Chip label="💧 Pluie" />
+            <Chip label={t("filterAll")} active />
+            <Chip label={t("filterDry")} />
+            <Chip label={t("filterWet")} />
           </div>
           <div style={{ display: "flex", gap: "0.25rem" }}>
-            <Chip label="Tous" active />
-            <Chip label="P" />
-            <Chip label="Q" />
-            <Chip label="R" />
+            <Chip label={t("filterAll")} active />
+            <Chip label={t("filterP")} />
+            <Chip label={t("filterQ")} />
+            <Chip label={t("filterR")} />
           </div>
           <span style={{ fontSize: "0.72rem", color: "var(--text-dim)", marginLeft: "auto" }}>
             4/4 chronos
@@ -85,30 +87,30 @@ export default function Garage61ImportDemo() {
         {/* Filter row 2 — same car / fuel range / date presets + range */}
         <div style={{ display: "flex", gap: "1rem", alignItems: "center", flexWrap: "wrap" }}>
           <label style={{ display: "flex", alignItems: "center", gap: "0.3rem", fontSize: "0.72rem", color: "var(--text-dim)", cursor: "default" }}>
-            <input type="checkbox" readOnly defaultChecked /> Même voiture
+            <input type="checkbox" readOnly defaultChecked /> {t("sameCar")}
           </label>
           <div style={{ display: "flex", alignItems: "center", gap: "0.4rem", fontSize: "0.72rem", color: "var(--text-dim)" }}>
-            <span>Réservoir</span>
-            <input readOnly placeholder="min L" style={{ ...inputStyle, width: "58px" }} />
+            <span>{t("fuelRange")}</span>
+            <input readOnly placeholder={t("fuelMin")} style={{ ...inputStyle, width: "58px" }} />
             <span>–</span>
-            <input readOnly placeholder="max L" style={{ ...inputStyle, width: "58px" }} />
+            <input readOnly placeholder={t("fuelMax")} style={{ ...inputStyle, width: "58px" }} />
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: "0.4rem", fontSize: "0.72rem", color: "var(--text-dim)" }}>
-            <span>T. piste</span>
-            <input readOnly placeholder="min °C" style={{ ...inputStyle, width: "58px" }} />
+            <span>{t("trackTemp")}</span>
+            <input readOnly placeholder={t("trackTempMin")} style={{ ...inputStyle, width: "58px" }} />
             <span>–</span>
-            <input readOnly placeholder="max °C" style={{ ...inputStyle, width: "58px" }} />
+            <input readOnly placeholder={t("trackTempMax")} style={{ ...inputStyle, width: "58px" }} />
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: "0.4rem", fontSize: "0.72rem", color: "var(--text-dim)", flexWrap: "wrap" }}>
             <div style={{ display: "flex", gap: "0.25rem" }}>
-              <Chip label="Tout" active />
-              <Chip label="7j" />
-              <Chip label="30j" />
-              <Chip label="3 mois" />
+              <Chip label={t("dateAll")} active />
+              <Chip label={t("date7d")} />
+              <Chip label={t("date30d")} />
+              <Chip label={t("date3m")} />
             </div>
-            <span>De</span>
+            <span>{t("dateFrom")}</span>
             <input readOnly placeholder="aaaa-mm-jj" style={{ ...inputStyle, width: "100px" }} />
-            <span>à</span>
+            <span>{t("dateTo")}</span>
             <input readOnly placeholder="aaaa-mm-jj" style={{ ...inputStyle, width: "100px" }} />
           </div>
         </div>
@@ -119,7 +121,7 @@ export default function Garage61ImportDemo() {
         <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.78rem", minWidth: "520px" }}>
           <thead>
             <tr>
-              {["", "Chrono", "Conso", "Réservoir", "T. Piste", "Date", "Voiture", "Session", ""].map((h, i) => (
+              {["", t("colLapTime"), t("colFuel"), t("colTank"), t("colTrackTemp"), t("colDate"), t("colCar"), t("colSession"), ""].map((h, i) => (
                 <th key={i} style={TH}>{h}</th>
               ))}
             </tr>

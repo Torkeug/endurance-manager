@@ -1,11 +1,14 @@
 import type { ReactNode } from "react";
+import { useTranslations } from "next-intl";
 
 // Shared shell: HomeTabs bar → Suivi active → IncompleteTab sub-tabs
 function SuiviShell({ activeSubTab, children }: { activeSubTab: "noDrivers" | "noStints" | "unassigned"; children: ReactNode }) {
+  const tHomeTabs = useTranslations("homeTabs");
+  const tIncomplete = useTranslations("incompleteTab");
   const subTabs = [
-    { id: "noDrivers",  label: "Sans pilotes",  count: 2 },
-    { id: "noStints",   label: "Sans relais",   count: 3 },
-    { id: "unassigned", label: "Sans équipage", count: 1 },
+    { id: "noDrivers",  label: tIncomplete("noDrivers"),  count: 2 },
+    { id: "noStints",   label: tIncomplete("noStints"),   count: 3 },
+    { id: "unassigned", label: tIncomplete("unassigned"), count: 1 },
   ];
   const total = subTabs.reduce((s, t) => s + t.count, 0);
 
@@ -13,8 +16,8 @@ function SuiviShell({ activeSubTab, children }: { activeSubTab: "noDrivers" | "n
     <div>
       {/* HomeTabs bar */}
       <div style={{ display: "flex", gap: "0.25rem", borderBottom: "1px solid var(--border)", marginBottom: "1.5rem" }}>
-        {(["Planning", "Suivi"] as const).map((tab) => {
-          const isSuivi = tab === "Suivi";
+        {([tHomeTabs("planning"), tHomeTabs("incomplete")] as const).map((tab, idx) => {
+          const isSuivi = idx === 1;
           return (
             <button key={tab} style={{
               padding: "0.5rem 1.25rem", background: "transparent", border: "none",
@@ -95,14 +98,15 @@ function StatusCard({ label, badge }: { label: string; badge: string }) {
 // ── Sub-tab 1: Sans pilotes ───────────────────────────────────────────────────
 
 export function AdminSuiviSansPilotesDemo() {
+  const t = useTranslations("dashboard");
   return (
     <SuiviShell activeSubTab="noDrivers">
       <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
         <EventGroup eventName="Endurance GT 24h Le Mans" urgency="dans 5j 2h">
-          <StatusCard label="Kronos Alpha" badge="Aucun pilote" />
+          <StatusCard label="Kronos Alpha" badge={t("noDriversBadge")} />
         </EventGroup>
         <EventGroup eventName="Spa 6H" urgency="dans 12j">
-          <StatusCard label="Kronos Beta" badge="Aucun pilote" />
+          <StatusCard label="Kronos Beta" badge={t("noDriversBadge")} />
         </EventGroup>
       </div>
     </SuiviShell>
@@ -112,15 +116,16 @@ export function AdminSuiviSansPilotesDemo() {
 // ── Sub-tab 2: Sans relais ────────────────────────────────────────────────────
 
 export function AdminSuiviSansRelaisDemo() {
+  const t = useTranslations("dashboard");
   return (
     <SuiviShell activeSubTab="noStints">
       <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
         <EventGroup eventName="Endurance GT 24h Le Mans" urgency="dans 5j 2h">
-          <StatusCard label="Kronos Alpha" badge="Aucun relais" />
-          <StatusCard label="Kronos Gamma" badge="Aucun relais" />
+          <StatusCard label="Kronos Alpha" badge={t("noStintsBadge")} />
+          <StatusCard label="Kronos Gamma" badge={t("noStintsBadge")} />
         </EventGroup>
         <EventGroup eventName="Spa 6H" urgency="dans 12j">
-          <StatusCard label="Kronos Beta" badge="Aucun relais" />
+          <StatusCard label="Kronos Beta" badge={t("noStintsBadge")} />
         </EventGroup>
       </div>
     </SuiviShell>
@@ -130,11 +135,12 @@ export function AdminSuiviSansRelaisDemo() {
 // ── Sub-tab 3: Sans équipage ──────────────────────────────────────────────────
 
 export function AdminSuiviSansEquipageDemo() {
+  const t = useTranslations("dashboard");
   return (
     <SuiviShell activeSubTab="unassigned">
       <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
         <EventGroup eventName="Endurance GT 24h Le Mans" urgency="dans 5j 2h">
-          <StatusCard label="Jules Martin" badge="Sans équipage" />
+          <StatusCard label="Jules Martin" badge={t("unassignedBadge")} />
         </EventGroup>
       </div>
     </SuiviShell>

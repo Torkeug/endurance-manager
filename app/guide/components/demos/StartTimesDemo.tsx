@@ -1,4 +1,5 @@
 import type { CSSProperties } from "react";
+import { useTranslations } from "next-intl";
 
 const START_TIMES = [
   { label: "Samedi 23 avril 2026", time: "14:00" },
@@ -24,6 +25,7 @@ const TD: CSSProperties = {
 };
 
 export default function StartTimesDemo() {
+  const t = useTranslations("events");
   return (
     <div className="table-wrap" style={{ overflowX: "auto" }}>
       <table style={{ borderCollapse: "collapse", width: "100%" }}>
@@ -38,7 +40,7 @@ export default function StartTimesDemo() {
               <td style={TD}>
                 <div style={{ fontWeight: 600, fontSize: "0.9rem" }}>{st.label}</div>
                 <div style={{ fontFamily: "var(--font-mono), monospace", fontSize: "0.82rem", color: "var(--accent)", marginTop: "0.1rem" }}>
-                  Départ à {st.time}
+                  {t("startAt", { time: st.time })}
                 </div>
               </td>
             </tr>

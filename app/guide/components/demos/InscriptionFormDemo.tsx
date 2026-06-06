@@ -1,4 +1,5 @@
 import type { CSSProperties } from "react";
+import { useTranslations } from "next-intl";
 
 const sectionTitle: CSSProperties = {
   fontSize: "0.68rem",
@@ -81,22 +82,24 @@ function CheckCard({ label, checked }: { label: string; checked?: boolean }) {
 }
 
 export default function InscriptionFormDemo() {
+  const t = useTranslations("inscription");
+
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
 
       {/* Qui êtes-vous */}
       <div className="card">
-        <div style={sectionTitle}>Qui êtes-vous ?</div>
+        <div style={sectionTitle}>{t("sectionWho")}</div>
         <div className="form-group">
-          <label style={{ display: "block", fontSize: "0.82rem", fontWeight: 600, color: "var(--text-dim)", marginBottom: "0.3rem" }}>Votre nom *</label>
+          <label style={{ display: "block", fontSize: "0.82rem", fontWeight: 600, color: "var(--text-dim)", marginBottom: "0.3rem" }}>{t("labelName")}</label>
           <div style={{ ...inputStyle, color: "var(--text)" }}>Marc Dubois</div>
         </div>
       </div>
 
       {/* Créneaux de départ préférés */}
       <div className="card">
-        <div style={sectionTitle}>Créneaux de départ préférés</div>
-        <p style={subText}>Optionnel — cochez les créneaux auxquels vous souhaitez participer.</p>
+        <div style={sectionTitle}>{t("sectionStartTimes")}</div>
+        <p style={subText}>{t("startTimesNote")}</p>
         <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
           {[
             { label: "Vague A", mono: "Départ à 14:00", checked: true },
@@ -121,10 +124,10 @@ export default function InscriptionFormDemo() {
 
       {/* Équipe */}
       <div className="card">
-        <div style={sectionTitle}>Équipe</div>
-        <p style={subText}>Optionnel — sélectionnez l&apos;équipe que vous souhaitez rejoindre.</p>
+        <div style={sectionTitle}>{t("sectionTeam")}</div>
+        <p style={subText}>{t("teamNote")}</p>
         <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
-          <RadioCard label="Pas de préférence" />
+          <RadioCard label={t("noPreference")} />
           <RadioCard label="Kronos Alpha" sub="Audi R8 LMS GT3 Evo 2 · GT3" mono="Vague A · Départ à 14:00" selected />
           <RadioCard label="Kronos Beta" sub="Ferrari 488 GT3 Evo 2022 · GT3" mono="Vague B · Départ à 20:00" mismatch="soft" />
           <RadioCard label="Kronos Gamma" sub="Porsche 911 GT3 R · GT3" mono="Vague A · Départ à 14:00" />
@@ -143,14 +146,14 @@ export default function InscriptionFormDemo() {
           alignItems: "flex-start",
         }}>
           <span>⚠️</span>
-          <span>La voiture de cette équipe (Ferrari 488 GT3 Evo 2022) ne correspond pas à vos préférences (Audi R8 LMS GT3 Evo 2). La classe correspond (GT3).</span>
+          <span>{t("carMismatch", { entryCar: "Ferrari 488 GT3 Evo 2022", preferred: "Audi R8 LMS GT3 Evo 2", entryClass: "GT3" })}</span>
         </div>
       </div>
 
       {/* Classes préférées */}
       <div className="card">
-        <div style={sectionTitle}>Classes préférées</div>
-        <p style={subText}>Optionnel — sélectionnez une ou plusieurs classes.</p>
+        <div style={sectionTitle}>{t("sectionClasses")}</div>
+        <p style={subText}>{t("classesNote")}</p>
         <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem" }}>
           <CheckCard label="GT3" checked />
           <CheckCard label="GTE" />
@@ -160,8 +163,8 @@ export default function InscriptionFormDemo() {
 
       {/* Voitures préférées */}
       <div className="card">
-        <div style={sectionTitle}>Voitures préférées</div>
-        <p style={subText}>Optionnel — sélectionnez une ou plusieurs voitures spécifiques.</p>
+        <div style={sectionTitle}>{t("sectionCars")}</div>
+        <p style={subText}>{t("carsNote")}</p>
         <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
           {[
             { cls: "GT3", cars: ["Audi R8 LMS GT3 Evo 2", "Ferrari 488 GT3 Evo 2022", "Porsche 911 GT3 R"] },
@@ -179,8 +182,8 @@ export default function InscriptionFormDemo() {
 
       {/* Tags */}
       <div className="card">
-        <div style={sectionTitle}>Tags</div>
-        <p style={subText}>Optionnel — sélectionnez un ou plusieurs tags pour décrire votre profil de pilote.</p>
+        <div style={sectionTitle}>{t("sectionTags")}</div>
+        <p style={subText}>{t("tagsNote")}</p>
         <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem" }}>
           {[
             { name: "chill", selected: true },
@@ -208,10 +211,10 @@ export default function InscriptionFormDemo() {
       {/* Actions */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "0.75rem" }}>
         <div style={{ display: "flex", gap: "0.75rem" }}>
-          <button className="btn btn-primary">✓ S&apos;inscrire</button>
-          <button className="btn btn-secondary">Annuler</button>
+          <button className="btn btn-primary">{t("signupBtn")}</button>
+          <button className="btn btn-secondary">{t("cancel")}</button>
         </div>
-        <button className="btn btn-danger" style={{ fontSize: "0.88rem" }}>Se désinscrire</button>
+        <button className="btn btn-danger" style={{ fontSize: "0.88rem" }}>{t("unsubscribeBtn")}</button>
       </div>
     </div>
   );

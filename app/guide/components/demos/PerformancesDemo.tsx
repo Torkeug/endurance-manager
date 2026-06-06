@@ -1,4 +1,5 @@
 import type { CSSProperties } from "react";
+import { useTranslations } from "next-intl";
 
 const DRIVERS = [
   { name: "Marc Dubois",   dry: "1:52.340", wet: "1:58.120", fuelDry: "2.14", fuelWet: "2.09", setDry: "Base",  setWet: "Pluie" },
@@ -30,18 +31,19 @@ const MONO: CSSProperties = {
 };
 
 export default function PerformancesDemo() {
+  const t = useTranslations("performanceData");
   return (
     <div className="table-wrap" style={{ overflowX: "auto" }}>
       <table style={{ borderCollapse: "collapse", width: "100%", minWidth: "560px" }}>
         <thead>
           <tr>
-            <th style={TH}>Pilote</th>
-            <th style={TH}>Chrono ☀️</th>
-            <th style={TH}>Chrono 💧</th>
-            <th style={TH}>Conso ☀️</th>
-            <th style={TH}>Conso 💧</th>
-            <th style={TH}>Réglages ☀️</th>
-            <th style={TH}>Réglages 💧</th>
+            <th style={TH}>{t("colDriver")}</th>
+            <th style={TH}>{t("colDryLap")}</th>
+            <th style={TH}>{t("colWetLap")}</th>
+            <th style={TH}>{t("colDryFuel")}</th>
+            <th style={TH}>{t("colWetFuel")}</th>
+            <th style={TH}>{t("colDrySetup")}</th>
+            <th style={TH}>{t("colWetSetup")}</th>
             <th style={TH}></th>
           </tr>
         </thead>
@@ -61,8 +63,8 @@ export default function PerformancesDemo() {
               <td style={{ ...TD, color: "var(--text-dim)", fontSize: "0.82rem" }}>{d.setWet ?? "—"}</td>
               <td style={TD}>
                 <div style={{ display: "flex", flexDirection: "column", gap: "0.3rem" }}>
-                  <button className="btn btn-secondary btn-sm" style={{ fontSize: "0.75rem" }}>Modifier</button>
-                  <button className="btn btn-secondary btn-sm" style={{ fontSize: "0.72rem" }}>📥 Garage61</button>
+                  <button className="btn btn-secondary btn-sm" style={{ fontSize: "0.75rem" }}>{t("edit")}</button>
+                  <button className="btn btn-secondary btn-sm" style={{ fontSize: "0.72rem" }}>{t("importGarage61")}</button>
                 </div>
               </td>
             </tr>
@@ -70,8 +72,8 @@ export default function PerformancesDemo() {
         </tbody>
       </table>
       <div style={{ padding: "0.5rem 0.75rem", fontSize: "0.72rem", color: "var(--text-dim)", display: "flex", gap: "1.25rem", flexWrap: "wrap" }}>
-        <span style={{ color: "#a07830" }}>* modificateur équipage</span>
-        <span style={{ color: "#806020" }}>~ sans modificateur configuré</span>
+        <span style={{ color: "#a07830" }}>* {t("teamModifier")}</span>
+        <span style={{ color: "#806020" }}>~ {t("noModifier")}</span>
       </div>
     </div>
   );

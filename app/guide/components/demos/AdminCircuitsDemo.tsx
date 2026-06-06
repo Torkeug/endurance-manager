@@ -1,6 +1,7 @@
 "use client";
 import React, { useState } from "react";
 import AdminDemoShell from "./AdminDemoShell";
+import { useTranslations } from "next-intl";
 
 const TH = {
   background: "var(--surface-2)", color: "var(--text-dim)", fontSize: "0.72rem", fontWeight: 700,
@@ -23,6 +24,7 @@ const GROUPS = [
 ];
 
 export default function AdminCircuitsDemo() {
+  const t = useTranslations("admin");
   const [expanded, setExpanded] = useState<Set<string>>(new Set(["Circuit de la Sarthe"]));
 
   const toggle = (name: string) =>
@@ -35,13 +37,13 @@ export default function AdminCircuitsDemo() {
   return (
     <AdminDemoShell activeTab="circuits">
     <div>
-      <button className="btn btn-primary" style={{ marginBottom: "0.75rem" }}>+ Ajouter un circuit</button>
+      <button className="btn btn-primary" style={{ marginBottom: "0.75rem" }}>{t("circuitsAddBtn")}</button>
       <div className="table-wrap" style={{ marginBottom: "0.75rem" }}>
         <table style={{ width: "100%", borderCollapse: "collapse" }}>
           <thead>
             <tr>
-              <th style={TH}>Circuit</th>
-              <th style={TH}>Pit lane</th>
+              <th style={TH}>{t("circuitsColCircuit")}</th>
+              <th style={TH}>{t("circuitsColPitLane")}</th>
               <th style={{ ...TH, background: "var(--surface-2)", borderBottom: "1px solid var(--border)" }} />
             </tr>
           </thead>
@@ -63,8 +65,8 @@ export default function AdminCircuitsDemo() {
                       <td className="mono" style={{ ...TD, color: "var(--accent)" }}>{c.pit}s</td>
                       <td style={{ ...TD, textAlign: "right" }}>
                         <div style={{ display: "flex", gap: "0.5rem", justifyContent: "flex-end" }}>
-                          <button className="btn btn-secondary btn-sm">Modifier</button>
-                          <button className="btn btn-danger btn-sm">Supprimer</button>
+                          <button className="btn btn-secondary btn-sm">{t("edit")}</button>
+                          <button className="btn btn-danger btn-sm">{t("delete")}</button>
                         </div>
                       </td>
                     </tr>

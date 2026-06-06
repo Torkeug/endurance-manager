@@ -1,19 +1,20 @@
 import type { ReactNode } from "react";
+import { useTranslations } from "next-intl";
 
-const TABS = [
-  { id: "pilotes",    label: "Pilotes",          badge: 2 },
-  { id: "equipages",  label: "Équipages" },
-  { id: "voitures",   label: "Voitures" },
-  { id: "classes",    label: "Classes" },
-  { id: "circuits",   label: "Circuits" },
-  { id: "types",      label: "Types d'événement" },
-  { id: "garage61",   label: "Garage61" },
-  { id: "parametres", label: "Paramètres" },
-] as const;
-
-type TabId = typeof TABS[number]["id"];
+type TabId = "pilotes" | "equipages" | "voitures" | "classes" | "circuits" | "types" | "garage61" | "parametres";
 
 export default function AdminDemoShell({ activeTab, children }: { activeTab: TabId; children: ReactNode }) {
+  const t = useTranslations("admin");
+  const TABS = [
+    { id: "pilotes" as TabId,    label: t("tabDrivers"),   badge: 2 },
+    { id: "equipages" as TabId,  label: t("tabEntries") },
+    { id: "voitures" as TabId,   label: t("tabCars") },
+    { id: "classes" as TabId,    label: t("tabClasses") },
+    { id: "circuits" as TabId,   label: t("tabCircuits") },
+    { id: "types" as TabId,      label: t("tabEventTypes") },
+    { id: "garage61" as TabId,   label: t("tabGarage61") },
+    { id: "parametres" as TabId, label: t("tabSettings") },
+  ];
   return (
     <div>
       {/* Tab bar */}

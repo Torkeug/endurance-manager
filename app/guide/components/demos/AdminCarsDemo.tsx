@@ -1,5 +1,6 @@
 import React from "react";
 import AdminDemoShell from "./AdminDemoShell";
+import { useTranslations } from "next-intl";
 
 const TH = {
   background: "var(--surface-2)", color: "var(--text-dim)", fontSize: "0.72rem", fontWeight: 700,
@@ -23,12 +24,13 @@ for (const c of CARS) {
 }
 
 export default function AdminCarsDemo() {
+  const t = useTranslations("admin");
   return (
     <AdminDemoShell activeTab="voitures">
     <div>
       {/* Sub-tabs */}
       <div style={{ display: "flex", gap: "0.25rem", borderBottom: "1px solid var(--border)", marginBottom: "1.5rem" }}>
-        {["Kronos Endurance", "Catalogue iRacing"].map((tab, i) => (
+        {([t("carsTabKronos"), t("carsTabCatalogue")] as const).map((tab, i) => (
           <button key={tab} style={{
             padding: "0.5rem 1.25rem", background: "transparent", border: "none",
             borderBottom: i === 0 ? "2px solid var(--accent)" : "2px solid transparent",
@@ -40,17 +42,17 @@ export default function AdminCarsDemo() {
         ))}
       </div>
 
-      <button className="btn btn-primary" style={{ marginBottom: "0.75rem" }}>+ Ajouter une voiture</button>
+      <button className="btn btn-primary" style={{ marginBottom: "0.75rem" }}>{t("carsAddBtn")}</button>
 
       <div className="table-wrap" style={{ marginBottom: "0.75rem" }}>
         <table style={{ width: "100%", borderCollapse: "collapse" }}>
           <thead>
             <tr>
-              <th style={TH}>Voiture</th>
-              <th style={TH}>Classe</th>
-              <th style={TH}>Type iRacing</th>
-              <th style={TH}>Réservoir</th>
-              <th style={TH}>Ravit.</th>
+              <th style={TH}>{t("carsColCar")}</th>
+              <th style={TH}>{t("carsColClass")}</th>
+              <th style={TH}>{t("carsColType")}</th>
+              <th style={TH}>{t("carsColTank")}</th>
+              <th style={TH}>{t("carsColRefuel")}</th>
               <th style={TH} />
             </tr>
           </thead>
@@ -75,12 +77,12 @@ export default function AdminCarsDemo() {
                     <td className="mono" style={{ ...TD, fontSize: "0.82rem" }}>
                       {car.fuel != null
                         ? <span style={{ color: "var(--accent)" }}>{car.fuel} L/s</span>
-                        : <span style={{ color: "var(--text-dim)" }}>classe</span>}
+                        : <span style={{ color: "var(--text-dim)" }}>{t("carsFromClass")}</span>}
                     </td>
                     <td style={{ ...TD, textAlign: "right" }}>
                       <div style={{ display: "flex", gap: "0.5rem", justifyContent: "flex-end" }}>
-                        <button className="btn btn-secondary btn-sm">Modifier</button>
-                        <button className="btn btn-danger btn-sm">Supprimer</button>
+                        <button className="btn btn-secondary btn-sm">{t("edit")}</button>
+                        <button className="btn btn-danger btn-sm">{t("delete")}</button>
                       </div>
                     </td>
                   </tr>

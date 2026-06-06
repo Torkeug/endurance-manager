@@ -1,4 +1,5 @@
 import AdminDemoShell from "./AdminDemoShell";
+import { useTranslations } from "next-intl";
 
 const TH = {
   background: "var(--surface-2)", color: "var(--text-dim)", fontSize: "0.72rem", fontWeight: 700,
@@ -16,12 +17,13 @@ const IRACING_CARS = [
 ];
 
 export default function AdminCarsIracingDemo() {
+  const t = useTranslations("admin");
   return (
     <AdminDemoShell activeTab="voitures">
     <div>
       {/* Sub-tabs */}
       <div style={{ display: "flex", gap: "0.25rem", borderBottom: "1px solid var(--border)", marginBottom: "1.5rem" }}>
-        {["Kronos Endurance", "Catalogue iRacing"].map((tab, i) => (
+        {([t("carsTabKronos"), t("carsTabCatalogue")] as const).map((tab, i) => (
           <button key={tab} style={{
             padding: "0.5rem 1.25rem", background: "transparent", border: "none",
             borderBottom: i === 1 ? "2px solid var(--accent)" : "2px solid transparent",
@@ -34,20 +36,20 @@ export default function AdminCarsIracingDemo() {
       </div>
 
       <p style={{ fontSize: "0.82rem", color: "var(--text-dim)", marginBottom: "1rem" }}>
-        Assignez un label de type à chaque voiture iRacing pour le regroupement dans l'inventaire des pilotes. Ces labels n'affectent pas les événements ou équipages.
+        {t("carsCatalogueHint")}
       </p>
 
       <div style={{ marginBottom: "1rem", maxWidth: "400px" }}>
-        <input readOnly placeholder="Rechercher dans le catalogue iRacing…" style={{ width: "100%", padding: "0.4rem 0.6rem", background: "var(--surface-2)", border: "1px solid var(--border)", borderRadius: "3px", color: "var(--text-dim)", fontSize: "0.88rem" }} />
+        <input readOnly placeholder={t("carsCatalogueSearch")} style={{ width: "100%", padding: "0.4rem 0.6rem", background: "var(--surface-2)", border: "1px solid var(--border)", borderRadius: "3px", color: "var(--text-dim)", fontSize: "0.88rem" }} />
       </div>
 
       <div className="table-wrap">
         <table style={{ width: "100%", borderCollapse: "collapse" }}>
           <thead>
             <tr>
-              <th style={TH}>Voiture</th>
-              <th style={TH}>Tags iRacing</th>
-              <th style={TH}>Label inventaire</th>
+              <th style={TH}>{t("carsColIracingCar")}</th>
+              <th style={TH}>{t("carsColIracingTags")}</th>
+              <th style={TH}>{t("carsColInventoryLabel")}</th>
               <th style={TH} />
             </tr>
           </thead>
@@ -70,7 +72,7 @@ export default function AdminCarsIracingDemo() {
                     : <span style={{ color: "var(--text-dim)", fontSize: "0.78rem" }}>—</span>}
                 </td>
                 <td style={{ ...TD, textAlign: "right" }}>
-                  <button className="btn btn-secondary btn-sm">✏️ Modifier</button>
+                  <button className="btn btn-secondary btn-sm">{t("carsEditBtn")}</button>
                 </td>
               </tr>
             ))}

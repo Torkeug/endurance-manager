@@ -2,6 +2,7 @@
 import { useState } from "react";
 import type { CSSProperties } from "react";
 import AdminDemoShell from "./AdminDemoShell";
+import { useTranslations } from "next-intl";
 
 const TH: CSSProperties = {
   background: "var(--surface-2)", color: "var(--text-dim)", fontSize: "0.72rem", fontWeight: 700,
@@ -14,9 +15,6 @@ const TD_TIGHT: CSSProperties = { ...TD as object, textAlign: "center", padding:
 
 const ROLE_COLORS: Record<string, string> = {
   driver: "var(--text-dim)", engineer: "#f59e0b", admin: "var(--accent)", super_admin: "#e05555",
-};
-const ROLE_LABELS: Record<string, string> = {
-  driver: "Pilote", engineer: "Ingénieur", admin: "Admin", super_admin: "Super Admin",
 };
 
 const PENDING = [
@@ -39,12 +37,16 @@ const REFUSED = [
 type Tab = "pending" | "all" | "refused";
 
 export default function AdminDriversDemo() {
+  const t = useTranslations("admin");
+  const ROLE_LABELS: Record<string, string> = {
+    driver: t("roleDriver"), engineer: t("roleEngineer"), admin: t("roleAdmin"), super_admin: t("roleSuperAdmin"),
+  };
   const [tab, setTab] = useState<Tab>("all");
 
   const tabs: { id: Tab; label: string; danger?: boolean }[] = [
-    { id: "pending",  label: `En attente (${PENDING.length})`,   danger: true },
-    { id: "all",      label: `Approuvés (${APPROVED.length})` },
-    { id: "refused",  label: `Refusés (${REFUSED.length})` },
+    { id: "pending",  label: t("driversPendingTab", { count: PENDING.length }),   danger: true },
+    { id: "all",      label: t("driversApprovedTab", { count: APPROVED.length }) },
+    { id: "refused",  label: t("driversRefusedTab", { count: REFUSED.length }) },
   ];
 
   return (
@@ -52,7 +54,7 @@ export default function AdminDriversDemo() {
     <div>
       {/* Sync All + tab pills */}
       <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: "1rem" }}>
-        <a className="btn btn-secondary btn-sm">🔄 Sync All iRating</a>
+        <a className="btn btn-secondary btn-sm">{t("driversSyncAll")}</a>
       </div>
       <div style={{ display: "flex", gap: "0.5rem", marginBottom: "1.5rem", flexWrap: "wrap" }}>
         {tabs.map(({ id, label, danger }) => {
@@ -75,8 +77,8 @@ export default function AdminDriversDemo() {
           <table style={{ width: "100%", borderCollapse: "collapse" }}>
             <thead>
               <tr>
-                <th style={TH}>Nom</th>
-                <th style={TH}>Email</th>
+                <th style={TH}>{t("driversColName")}</th>
+                <th style={TH}>{t("driversColEmail")}</th>
                 <th style={TH}>iRacing ID</th>
                 <th style={TH}>Discord</th>
                 <th style={TH}></th>
@@ -91,9 +93,9 @@ export default function AdminDriversDemo() {
                   <td style={TD}>{d.discord || "—"}</td>
                   <td style={{ ...TD, textAlign: "right" }}>
                     <div style={{ display: "flex", gap: "0.5rem", justifyContent: "flex-end" }}>
-                      <button className="btn btn-primary btn-sm">✓ Approuver</button>
-                      <button className="btn btn-danger btn-sm">✗ Refuser</button>
-                      <button className="btn btn-secondary btn-sm">Supprimer</button>
+                      <button className="btn btn-primary btn-sm">{t("driversApproveBtn")}</button>
+                      <button className="btn btn-danger btn-sm">{t("driversRefuseBtn")}</button>
+                      <button className="btn btn-secondary btn-sm">{t("delete")}</button>
                     </div>
                   </td>
                 </tr>
@@ -109,13 +111,13 @@ export default function AdminDriversDemo() {
           <table style={{ width: "100%", borderCollapse: "collapse", minWidth: "750px" }}>
             <thead>
               <tr>
-                <th style={TH}>Nom</th>
-                <th style={TH}>Email</th>
-                <th style={TH}>Rôle</th>
+                <th style={TH}>{t("driversColName")}</th>
+                <th style={TH}>{t("driversColEmail")}</th>
+                <th style={TH}>{t("driversColRole")}</th>
                 <th style={TH}>Discord ID</th>
-                <th style={TH_TIGHT}>Cotis.</th>
-                <th style={TH_TIGHT}>Test</th>
-                <th style={TH_TIGHT}>Actif</th>
+                <th style={TH_TIGHT}>{t("driversColMembership")}</th>
+                <th style={TH_TIGHT}>{t("driversColTest")}</th>
+                <th style={TH_TIGHT}>{t("driversColActive")}</th>
                 <th style={TH_TIGHT}>iRacing sync</th>
                 <th style={TH}></th>
               </tr>
@@ -125,7 +127,7 @@ export default function AdminDriversDemo() {
                 <tr key={d.name}>
                   <td style={TD}>
                     <span style={{ fontWeight: 600 }}>{d.name}</span>
-                    {d.isMe && <span style={{ marginLeft: "0.5rem", fontSize: "0.72rem", color: "var(--accent)" }}>(vous)</span>}
+                    {d.isMe && <span style={{ marginLeft: "0.5rem", fontSize: "0.72rem", color: "var(--accent)" }}>{t("driversYou")}</span>}
                   </td>
                   <td style={{ ...TD, fontSize: "0.82rem", maxWidth: "160px", whiteSpace: "nowrap" }}>
                     <span className="mono">{d.email}</span>
@@ -140,9 +142,9 @@ export default function AdminDriversDemo() {
                         color: ROLE_COLORS[d.role], fontFamily: "var(--font-rajdhani),sans-serif",
                         fontSize: "0.85rem", fontWeight: 700, padding: "0.25rem 0.5rem", cursor: "pointer",
                       }}>
-                        <option value="driver">Pilote</option>
-                        <option value="engineer">Ingénieur</option>
-                        <option value="admin">Admin</option>
+                        <option value="driver">{t("roleDriver")}</option>
+                        <option value="engineer">{t("roleEngineer")}</option>
+                        <option value="admin">{t("roleAdmin")}</option>
                       </select>
                     )}
                   </td>
@@ -159,8 +161,8 @@ export default function AdminDriversDemo() {
                   <td style={{ ...TD, textAlign: "right" }}>
                     {!d.isMe && d.role === "driver" && (
                       <div style={{ display: "flex", gap: "0.5rem", justifyContent: "flex-end" }}>
-                        <button className="btn btn-secondary btn-sm">Révoquer</button>
-                        <button className="btn btn-danger btn-sm">Supprimer</button>
+                        <button className="btn btn-secondary btn-sm">{t("driversRevokeBtn")}</button>
+                        <button className="btn btn-danger btn-sm">{t("delete")}</button>
                       </div>
                     )}
                   </td>
@@ -177,8 +179,8 @@ export default function AdminDriversDemo() {
           <table style={{ width: "100%", borderCollapse: "collapse" }}>
             <thead>
               <tr>
-                <th style={TH}>Nom</th>
-                <th style={TH}>Email</th>
+                <th style={TH}>{t("driversColName")}</th>
+                <th style={TH}>{t("driversColEmail")}</th>
                 <th style={TH}></th>
               </tr>
             </thead>
@@ -188,7 +190,7 @@ export default function AdminDriversDemo() {
                   <td style={{ ...TD, fontWeight: 600 }}>{d.name}</td>
                   <td className="mono" style={{ ...TD, fontSize: "0.82rem" }}>{d.email}</td>
                   <td style={{ ...TD, textAlign: "right" }}>
-                    <button className="btn btn-primary btn-sm">✓ Approuver</button>
+                    <button className="btn btn-primary btn-sm">{t("driversApproveBtn")}</button>
                   </td>
                 </tr>
               ))}

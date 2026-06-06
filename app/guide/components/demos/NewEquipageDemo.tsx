@@ -1,4 +1,5 @@
 import type { CSSProperties } from "react";
+import { useTranslations } from "next-intl";
 
 const sectionTitle: CSSProperties = {
   fontSize: "0.68rem",
@@ -46,23 +47,25 @@ function Field({ lbl, children }: { lbl: string; children: React.ReactNode }) {
 }
 
 export default function NewEquipageDemo() {
+  const t = useTranslations("entryForm");
+  const tDrTab = useTranslations("driversTab");
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
 
       {/* ── Équipage & voiture ── */}
       <div className="card">
-        <div style={sectionTitle}>Équipage &amp; voiture</div>
+        <div style={sectionTitle}>{t("sectionEntryInfo")}</div>
         <div className="form-grid">
-          <Field lbl="Nom d'équipage *">
+          <Field lbl={t("labelCrewName")}>
             <div style={{ ...inputStyle, color: "var(--text)" }}>Kronos Alpha</div>
           </Field>
-          <Field lbl="Voiture *">
+          <Field lbl={t("labelCar")}>
             <div style={{ ...inputStyle, color: "var(--text)" }}>Audi R8 LMS GT3 Evo 2</div>
           </Field>
-          <Field lbl="Réservoir (auto-rempli)">
+          <Field lbl={t("labelTank")}>
             <div style={readonlyMono}>120L</div>
           </Field>
-          <Field lbl="Classe *">
+          <Field lbl={t("labelClass")}>
             <div style={readonlyMono}>GT3</div>
           </Field>
         </div>
@@ -70,7 +73,7 @@ export default function NewEquipageDemo() {
 
       {/* ── Horaire de départ ── */}
       <div className="card">
-        <div style={sectionTitle}>Horaire de départ *</div>
+        <div style={sectionTitle}>{t("labelStartTime")}</div>
         <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
           {[
             { label: "Vague A", time: "14:00", selected: true },
@@ -98,7 +101,7 @@ export default function NewEquipageDemo() {
               <div>
                 <div style={{ fontWeight: 600, fontSize: "0.95rem" }}>{st.label}</div>
                 <div style={{ fontFamily: "var(--font-mono), monospace", fontSize: "0.8rem", color: "var(--accent)", marginTop: "0.1rem" }}>
-                  Départ à {st.time}
+                  {t("startAt")} {st.time}
                 </div>
               </div>
             </label>
@@ -109,7 +112,7 @@ export default function NewEquipageDemo() {
       {/* ── Pilotes ── */}
       <div className="card">
         <div style={sectionTitle}>
-          Pilotes{" "}
+          {t("sectionDrivers")}{" "}
           <span style={{ fontSize: "0.72rem", fontWeight: 400, color: "var(--accent)", marginLeft: "0.5rem", textTransform: "none", letterSpacing: 0 }}>
             2 sélectionnés
           </span>
@@ -145,12 +148,12 @@ export default function NewEquipageDemo() {
               </span>
               {d.hard && (
                 <span style={{ fontSize: "0.7rem", padding: "0.15rem 0.4rem", borderRadius: "2px", background: "rgba(224,85,85,0.12)", border: "1px solid var(--danger)", color: "var(--danger)" }}>
-                  ⚠️ classe
+                  ⚠️ {tDrTab("conflictClass")}
                 </span>
               )}
               {d.soft && (
                 <span style={{ fontSize: "0.7rem", padding: "0.15rem 0.4rem", borderRadius: "2px", background: "#2a1a00", border: "1px solid #a06020", color: "#d4904a" }}>
-                  ⚠️ voiture
+                  ⚠️ {tDrTab("conflictCar")}
                 </span>
               )}
             </button>
@@ -160,7 +163,7 @@ export default function NewEquipageDemo() {
 
       {/* ── Streams Twitch ── */}
       <div className="card">
-        <div style={sectionTitle}>Streams Twitch</div>
+        <div style={sectionTitle}>{t("sectionStreams")}</div>
         <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap", marginBottom: "0.75rem" }}>
           {["kronos_marc"].map((u) => (
             <div key={u} style={{ display: "flex", alignItems: "center", gap: "0.4rem", padding: "0.25rem 0.5rem 0.25rem 0.75rem", borderRadius: "3px", background: "rgba(145,71,255,0.12)", border: "1px solid #9147ff" }}>
@@ -175,23 +178,23 @@ export default function NewEquipageDemo() {
               twitch.tv/
             </span>
             <div style={{ flex: 1, minWidth: 0, background: "var(--surface-2)", border: "1px solid var(--border)", borderLeft: "none", borderRadius: "0 3px 3px 0", padding: "0.55rem 0.75rem", fontSize: "0.9rem", color: "var(--text-dim)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-              nom_de_chaine
+              {t("streamPlaceholder")}
             </div>
           </div>
-          <button className="btn btn-secondary" style={{ whiteSpace: "nowrap", flexShrink: 0 }}>+ Ajouter</button>
+          <button className="btn btn-secondary" style={{ whiteSpace: "nowrap", flexShrink: 0 }}>{t("addStream")}</button>
         </div>
       </div>
 
       {/* ── Paramètres stratégie ── */}
       <div className="card">
-        <div style={sectionTitle}>Paramètres stratégie</div>
+        <div style={sectionTitle}>{t("sectionStrategy")}</div>
         <div className="form-grid">
           {[
-            { lbl: "BOP Puissance (%)",         val: "100" },
-            { lbl: "BOP Poids (kg)",             val: "0"   },
-            { lbl: "BOP Réservoir (%)",          val: ""    },
-            { lbl: "Temps ravitaillement (sec)", val: "30"  },
-            { lbl: "Temps changement pneus (sec)", val: "0" },
+            { lbl: t("labelBopPower"),   val: "100" },
+            { lbl: t("labelBopWeight"),  val: "0"   },
+            { lbl: t("labelBopTank"),    val: ""    },
+            { lbl: t("labelRefuelTime"), val: "30"  },
+            { lbl: t("labelTyreTime"),   val: "0"   },
           ].map(({ lbl, val }) => (
             <Field key={lbl} lbl={lbl}>
               <div style={{ ...inputStyle, fontFamily: "var(--font-mono), monospace", color: val ? "var(--text)" : "var(--text-dim)" }}>
@@ -204,8 +207,8 @@ export default function NewEquipageDemo() {
 
       {/* ── Actions ── */}
       <div style={{ display: "flex", gap: "0.75rem" }}>
-        <button className="btn btn-primary">✓ Ajouter l&apos;équipage</button>
-        <button className="btn btn-secondary">Annuler</button>
+        <button className="btn btn-primary">{t("submitNew")}</button>
+        <button className="btn btn-secondary">{t("cancel")}</button>
       </div>
     </div>
   );
