@@ -896,7 +896,7 @@
     "badgeArchived": "Archived",
     "carTbd": "Car TBD",
     "labelAtTime": "{label} at {time}",
-    "editEntry":"Edit",
+    "editEntry": "Edit",
     "backToEvent": "Event"
   },
   "collapsibleSummary": {
@@ -1124,7 +1124,7 @@
     "slotPrefAddSuffix": "to their preferences?",
     "slotPrefConfirm": "Yes, add the slot",
     "labelAtTime": "{label} at {time}",
-    "slotPrefDecline":"No, leave preferences unchanged"
+    "slotPrefDecline": "No, leave preferences unchanged"
   },
   "inscription": {
     "loading": "Loading…",
@@ -1204,7 +1204,6 @@
   "admin": {
     "pageTitle": "Administration",
     "pageSubtitle": "Reference data & access management",
-
     "tabDrivers": "Drivers",
     "tabEntries": "Entries",
     "tabCars": "Cars",
@@ -1213,10 +1212,8 @@
     "tabEventTypes": "Event Types",
     "tabGarage61": "Garage61",
     "tabSettings": "Settings",
-
     "entriesTabNumbers": "Championship team numbers",
     "entriesTabConfig": "Configuration",
-
     "confirm": "Confirm",
     "cancel": "Cancel",
     "save": "✓ Save",
@@ -1227,7 +1224,6 @@
     "saving": "…",
     "irreversible": "This action is irreversible.",
     "change": "Change",
-
     "carsGroupedUnder": "Grouped under:",
     "carsTypePlaceholder": "e.g. gt3, gte, gtp, lmp2…",
     "carsDeleteTitle": "Delete car",
@@ -1267,7 +1263,6 @@
     "carsColIracingTags": "iRacing tags",
     "carsColInventoryLabel": "Inventory label",
     "carsEditBtn": "✏️ Edit",
-
     "champLoading": "Loading...",
     "champNoChampionships": "No active championships.",
     "champNoTeams": "No teams entered in active championships.",
@@ -1282,7 +1277,6 @@
     "champConflictTitle": "Number already in use",
     "champConflictMessage": "Number #{number} is already used by {crew} for this start slot in this round.",
     "champOk": "OK",
-
     "circuitsDeleteTitle": "Delete this circuit",
     "circuitsActiveWarningIntro": "⚠️ This circuit is used by",
     "circuitsActiveCount": "{count, plural, one {{count} active event} other {{count} active events}}",
@@ -1306,7 +1300,6 @@
     "circuitsColPitLane": "Pit lane",
     "circuitsOthers": "Others (not linked to iRacing)",
     "circuitsEmpty": "No circuits.",
-
     "classesDeleteTitle": "Delete class \"{name}\"",
     "classesCarsCount": "{count, plural, one {{count} car} other {{count} cars}}",
     "classesCarsUnclassed": "will be unclassed:",
@@ -1327,7 +1320,6 @@
     "classesAllAssigned": "All cars are already assigned to a class.",
     "classesEmpty": "No classes configured.",
     "classesUnclassedWarning": "{count, plural, one {⚠️ {count} car without a class} other {⚠️ {count} cars without a class}}",
-
     "crewDeleteTitle": "Delete \"{name}\"",
     "crewUsedIntro": "⚠️ This name is used by",
     "crewUsedCount": "{count, plural, one {{count} event} other {{count} events}}",
@@ -1345,7 +1337,6 @@
     "crewColColor": "Color",
     "crewAutoColor": "Auto",
     "crewEmpty": "No crew names.",
-
     "driversDeleteTitle": "Delete {name}",
     "driversStintsWarning": "⚠️ This driver has assigned stints that will be permanently deleted.",
     "driversSignupsIntro": "This driver is registered for",
@@ -1387,7 +1378,6 @@
     "driversDiscordPlaceholder": "Discord ID",
     "driversRevokeBtn": "Revoke",
     "driversNoRefused": "No refused drivers.",
-
     "eventTypesDeleteTitle": "Delete \"{name}\"",
     "eventTypesActiveIntro": "⚠️ This type is used by",
     "eventTypesActiveCount": "{count, plural, one {{count} active event} other {{count} active events}}",
@@ -1403,7 +1393,6 @@
     "eventTypesNameLabel": "Name",
     "eventTypesCarsHint": "Check the cars allowed for this type. If no cars are checked, all are allowed.",
     "eventTypesEmpty": "No event types.",
-
     "g61ConfirmedLabel": "✓ Linked",
     "g61ExactLabel": "→ Exact match",
     "g61FuzzyLabel": "~ Partial match",
@@ -1439,7 +1428,6 @@
     "g61AssignTo": "Assign to…",
     "g61NotFoundTitle": "Drivers not found on Garage61 ({count})",
     "g61NotFoundDesc": "These approved drivers have no match in the Garage61 team data and have not yet linked their account.",
-
     "settingsDeleteTagTitle": "Delete this tag",
     "settingsDeleteTagMessage": "This tag will be deleted. Existing registrations that used it will retain the name as text.",
     "settingsDeleteDurationTitle": "Delete this duration",
@@ -1464,5 +1452,429 @@
     "settingsTagsAddBtn": "+ Add a tag",
     "settingsColTag": "Tag",
     "settingsTagsEmpty": "No tags configured."
+  },
+  "guide": {
+    "header": "User Guide — Drivers",
+    "subtitle": "Master every section of the Kronos Endurance Planner.",
+    "navButton": "☰ Navigation",
+    "apercu": "Preview",
+    "navTab": {
+      "home": "Home",
+      "pilots": "Pilots",
+      "events": "Events",
+      "inventory": "Inventory",
+      "admin": "Admin"
+    },
+    "label": {
+      "home": "Home",
+      "pilots": "Pilots",
+      "events": "Events",
+      "eventDetail": "Event Detail",
+      "crew": "Crew",
+      "inventory": "Inventory",
+      "admin": "Admin"
+    },
+    "accueil": {
+      "title": "Dashboard",
+      "text1": "The home page gives you an overview of your next race:",
+      "items1": [
+        "Next event — Card with name, circuit, format, duration, schedule and countdown.",
+        "My next stint — The stint you will drive, with crew, number and start time.",
+        "My upcoming events — List of all your registrations with assigned car and team."
+      ]
+    },
+    "accueilAdmin": {
+      "title": "Dashboard",
+      "text1": "As an admin, the dashboard displays additional elements:",
+      "items1": [
+        "⚠️ Banner — Appears if drivers are waiting for approval, with a direct link to access management.",
+        "Quick actions — + Add a driver, + Create an event, + Create a championship buttons in addition to standard actions.",
+        "Stats grid — Real-time counters: Events, Active drivers, Inactive drivers, Test drivers, Pending, Expired memberships, iRacing Syncs. Red or orange cells are clickable and lead directly to the relevant section.",
+        "Tracking tab — Visible to admins only, with a red badge showing the total number of items to handle. Three sub-tabs organise the alerts."
+      ],
+      "divNoPilots": "No drivers",
+      "textNoPilots": "Crews registered for an event but with no signed drivers. Clicking a card opens the crew page directly.",
+      "divNoStints": "No stints",
+      "textNoStints": "Crews with signed drivers but whose active strategy contains no assigned stints. Clicking a card opens the crew page.",
+      "divNoCrew": "No crew",
+      "textNoCrew": "Drivers registered for an event but not assigned to a crew. Clicking a card opens the event page to proceed with assignment."
+    },
+    "pilotes": {
+      "title": "Drivers list",
+      "text1": "List of all team drivers with their current iRating and contact information.",
+      "items1": [
+        "Columns — Name, iRacing ID (clickable link), iRating, Discord, Twitch, Instagram, Role.",
+        "⚠️ Badge — Displayed if the last iRacing sync is more than 100 days old.",
+        "Click on a driver to see their detailed profile."
+      ]
+    },
+    "profil": {
+      "title": "Driver profile",
+      "text1": "Personal page for the driver. Two tabs:",
+      "headerEngagements": "Engagements",
+      "textEngagements": "History of all driver registrations, grouped by event — assigned crew, allocated stints, availability fill rate.",
+      "headerStatsApp": "Statistics — Endurance Manager",
+      "textStatsApp": "Stats from races managed in the app: iRating, history by category, stints, conditions, lap times and fuel consumption per circuit.",
+      "headerStatsG61": "Statistics — Garage61",
+      "textStatsG61": "View of all training sessions recorded on Garage61. Circuits grouped by category (Road, Oval, Dirt Road, Dirt Oval), sortable by laps / % clean / track time / name. Click a circuit to see the best recorded lap (time, car, session type, date) with a direct link to Garage61.",
+      "headerInfo": "Information",
+      "items1": [
+        "Basic info — Name, email, iRacing ID (clickable link), Discord, Stint alert (default delay if enabled), Twitch, Instagram, Garage61 (link to public profile).",
+        "⚠️ Badge — iRacing sync overdue (>100 days)."
+      ],
+      "callout1": "The \"Inventory\" button (visible to the driver and admins) displays owned iRacing cars and circuits. The sync can be relaunched from this same profile — it updates the inventory and iRating.",
+      "headerThirdParty": "Third-party connections",
+      "items2": [
+        "🔗 Link Garage61 — Connect your Garage61 account via OAuth. Once linked: the profile shows a link to your Garage61 profile, the Statistics tab unlocks the Garage61 sub-tab (training sessions), and your lap times can be imported in your crew's Performances tab.",
+        "🔗 Link iRacing — Connect your iRacing account to sync inventory and iRating."
+      ],
+      "callout2": "By linking your Garage61 account, you allow your team members to view your training stats and import your lap times (useful if an engineer enters performance data).",
+      "headerDiscord": "Discord notifications",
+      "textDiscord": "From your profile edit page, you can configure a default Discord alert delay: the bot will alert you X minutes before the end of each of your stints.",
+      "items3": [
+        "Enable / disable — The checkbox enables or disables alerts globally.",
+        "Default delay — Number of minutes before the end of the stint (e.g. 5 min).",
+        "Per-event override — In the Availability tab of your crew, you can configure a different delay for a specific event, without changing the global setting."
+      ]
+    },
+    "evenements": {
+      "title": "Events",
+      "text1": "All races are listed here. The \"All\" tab is displayed by default and groups all types, sorted chronologically.",
+      "items1": [
+        "All — Chronological view of all events. Coloured badges identify the type: Special (orange) or Championship (purple).",
+        "Standard — Standard races with editable schedules.",
+        "Special — Races with fixed time slots.",
+        "Championships — Series with multiple rounds. Each round is a race belonging to this championship."
+      ],
+      "text2": "Click on a race to see details, register, or manage the crew."
+    },
+    "inscription": {
+      "title": "Register for a race",
+      "text1": "Accessible via the \"+ Register\" button on an event page. All fields are optional except the driver:",
+      "items1": [
+        "Preferred start slots — Indicate which waves you are available for.",
+        "Team — Express a preference for an existing crew. Leave \"No preference\" if you are flexible.",
+        "Classes and cars — Preference filters used to detect incompatibilities.",
+        "Tags — Describe your driver profile (e.g.: chill, competitive, solo, heavy mileage)."
+      ],
+      "text2": "If you select a crew, the form displays compatibility alerts:",
+      "stateHardLabel": "Hard",
+      "stateHardDesc": "Class incompatibility between your preference and the crew's car.",
+      "stateSoftLabel": "Soft",
+      "stateSoftDesc": "Car incompatibility in a compatible class.",
+      "callout1": "You can register for multiple crews within the same race. This is useful if several teams are looking for drivers for the same event."
+    },
+    "creationEquipage": {
+      "title": "Add a crew",
+      "text1": "Accessible via the \"+ Add a crew\" button in the Crews tab (not available for external drivers and engineers). Fields to fill in:",
+      "items1": [
+        "Crew name — Dropdown from the Kronos catalogue (e.g.: Kronos Alpha).",
+        "Car — Dropdown of catalogue cars, filtered by event format. Class and tank size are deduced automatically.",
+        "Race number — For championships only.",
+        "Start schedule — Selection from the time slots configured for this event.",
+        "Drivers — Selection from drivers registered for the event without a crew. Preference conflicts (class, car, schedule) are flagged with a ⚠️ badge. Availabilities are pre-initialised to \"unavailable\" for each added driver.",
+        "Twitch streams — Channels associated with this crew for live tracking.",
+        "BOP — Power (%), weight (kg) and tank size (%) adjustments imposed by the organiser.",
+        "Refuelling & tyres — Pit stop duration in seconds."
+      ]
+    },
+    "evenementInscriptions": {
+      "title": "Registrations",
+      "text1": "List of all drivers registered for this event. A driver may appear multiple times if they are in multiple crews or have chosen multiple start slots.",
+      "items1": [
+        "Driver + iRating — Driver identity and level.",
+        "Team — The crew to which the driver is assigned (coloured pill).",
+        "Preferences — Class and cars requested at registration.",
+        "Slots — Preferred start times.",
+        "Tags — Driver profile chosen at registration (e.g.: chill, competitive, solo, heavy mileage)."
+      ],
+      "text2": "Sort — Click a column header to sort. Driver and iRating keep registrations from the same driver grouped. Team and Slots split rows to respect the sort order, with a group header for each new value.",
+      "text3": "Duplicate drivers — When a driver appears multiple times (multiple teams or multiple slots), their rows are marked with a coloured bar on the left and a badge showing the number of occurrences (e.g.: \"2 crews\"). Each colour is unique to a driver. When sorting by iRating, a 🌭 Merguez separator marks the 3,000 iRating threshold.",
+      "text4": "Filters — The filter bar above the table allows you to narrow the list:",
+      "items2": [
+        "No team — Shows only drivers without an assigned crew.",
+        "iRating min / max — Filter by driver level.",
+        "Categories / Cars — Click a category label (GT3, GTP…) to select all its cars at once. You can also select cars individually. If a category has no preferred car (e.g.: LMP2), its label filters directly by declared class.",
+        "× Reset — Clears all active filters (appears as soon as a filter is active)."
+      ]
+    },
+    "evenementEquipages": {
+      "title": "Crews",
+      "text1": "Overview of all crews entered for this event. Click on a crew to access its management page (availability, stints, planning, race).",
+      "items1": [
+        "Crew — Team name with coloured pill.",
+        "Car / Class — Entered car and category.",
+        "Drivers — Names of drivers assigned to this crew.",
+        "SoF — Estimated Strength of Field (crew average iRating).",
+        "IRL Start — Real start time.",
+        "Stream — Twitch link if provided on one of the drivers' profiles.",
+        "# — Car number (championships only)."
+      ]
+    },
+    "evenementHoraires": {
+      "title": "Start times",
+      "text1": "Management of available start slots for this event. Each slot shows an auto-generated label (e.g.: \"Saturday 23 April 2026\") and the IRL start time.",
+      "callout1": "Slots are created by admins. Drivers choose their preferences from these slots at registration."
+    },
+    "evenementInventaire": {
+      "title": "Inventory",
+      "text1": "Matrix view filtered to the relevant cars for this event: which registered drivers own each car in their iRacing account.",
+      "items1": [
+        "Rows — Cars available for this event, grouped by class.",
+        "Columns — Drivers registered for the event.",
+        "✓ — The driver owns this car in their iRacing account.",
+        "K badge — Car configured in the Kronos catalogue for events.",
+        "iR+ badge — Free content with iRacing subscription.",
+        "Your column is highlighted to quickly spot your content."
+      ],
+      "callout1": "Useful before assembling crews: you can see at a glance who owns which car among the registrants."
+    },
+    "onglePilotes": {
+      "title": "1. Drivers",
+      "text1": "List of drivers assigned to this crew. Compatibility badges flag discrepancies between registration preferences and the crew:",
+      "stateHardLabel": "Hard",
+      "stateHardDesc": "Class incompatibility between the driver's preference and the crew's car.",
+      "stateSoftLabel": "Soft",
+      "stateSoftDesc": "Car or time slot incompatibility in a compatible class.",
+      "headerJoin": "Join or add a driver",
+      "text2": "Below the assigned driver table, a \"Registered drivers without a team\" section lists drivers registered for the event but not yet assigned to this crew:",
+      "items1": [
+        "Registered driver — Click your own name to join the crew (if you are registered for the event but not yet assigned).",
+        "Admin — Can click on any driver in the list to assign them to the crew.",
+        "A modal then offers to synchronise the driver's time slot preferences with the crew's."
+      ]
+    },
+    "ongletDisponibilites": {
+      "title": "2. Availability",
+      "text1": "Availability grid: each row is a 30-minute slot (IRL time, IG time, day/night phase), each column a driver. Three possible states:",
+      "stateYesLabel": "Available",
+      "stateNoLabel": "Unavailable",
+      "stateNeutralLabel": "Uncertain",
+      "callout1": "On mobile: press and drag to quickly fill multiple cells. On desktop: click or click-drag to toggle the state of multiple cells at once.",
+      "callout2": "Once your name is selected, a \"Discord stint alert\" card appears. It shows your default delay and lets you replace it for this event only — without modifying your global setting.",
+      "callout3": "Availabilities are updated in real-time — cells checked by other drivers appear instantly without reloading the page."
+    },
+    "ongletRelais": {
+      "title": "3. Stints",
+      "text1": "The core of the system: stint planning, automatic duration and fuel calculation, strategy management, conflict detection.",
+      "headerStrategies": "Strategies",
+      "text2": "You can create up to 5 different strategies (e.g.: \"Plan A dry\", \"Plan B rain\"). Each strategy has:",
+      "items1": [
+        "Name + Description — Editable above the table.",
+        "Start offset (minutes) — Offset to compensate for formation lap or other delays.",
+        "★ Active status — Only one strategy is active (the one Race Mode uses)."
+      ],
+      "headerTable": "Stint table",
+      "text3": "Main columns:",
+      "items2": [
+        "# — Stint number (sequential).",
+        "Driver — Dropdown to assign a driver or leave \"To be defined\".",
+        "IRL Start / IRL End — Real times calculated automatically from start time + cumulative durations.",
+        "Actual end — Filled automatically by Race Mode during a pit stop, or manually enterable directly in the cell.",
+        "Duration — Calculated from Laps × lap time + refuelling time, or manual entry.",
+        "Laps — Number of planned laps (manual or calculated from a target duration).",
+        "Fuel — Estimated fuel. Red badge if you exceed the tank capacity.",
+        "End skip — Target fuel consumption to pass the last pit (visible when the race is fully covered).",
+        "Rain / Tyre change — Checkboxes that guide lap time and stop time calculations."
+      ],
+      "text4": "Estimated values (lap time, fuel) display reliability markers based on the source:",
+      "items3": [
+        "No marker — Data specific to the driver and condition.",
+        "* — Estimated via crew modifier (e.g.: night = dry + night offset).",
+        "~ — Modifier is zero, conservative estimate.",
+        "† — Team average, no driver data available."
+      ],
+      "callout1": "Drag and drop table rows to reorder stints. Only stints that have not yet started can be moved.",
+      "callout2": "The Recalculate button forces a full recalculation of IRL times and estimates. Use it if you change the strategy or performance data after the fact.",
+      "headerGantt": "Integrated Gantt",
+      "text5": "When the \"Avail\" checkbox is checked, a Gantt chart is displayed above the Fair Share. It represents the currently selected strategy (not necessarily the active strategy) and updates in real-time.",
+      "headerFairShare": "Fair Share",
+      "text6": "Visual indicators showing whether each driver has at least 25% of the \"equal share\" of laps. Green = OK, red = imbalance. Useful for balancing the workload.",
+      "callout3": "Important: IRL times are calculated when you open this tab. They are saved in the database and used by Planning + Race. If they are missing, the calculation has not taken place — simply reopening this tab generates them.",
+      "callout4": "The table is updated in real-time — changes by another user (driver assignment, laps, rain) appear instantly."
+    },
+    "ongletPlanning": {
+      "title": "4. Planning",
+      "text1": "Gantt chart visualising the active strategy. The strategy name is displayed centred above the chart. One row per driver, coloured stint bands, with availability background and IG night band.",
+      "headerReading": "Reading the chart",
+      "items1": [
+        "Horizontal axis — Real time (hours marked at the top).",
+        "Rows — One driver per row (label on the left).",
+        "Coloured bands — Assigned stints (colour per driver).",
+        "Grey dashed bands — Unassigned stints.",
+        "Green/red/grey background — Driver availability at that moment.",
+        "Dark background — IG night (ig_sunset → ig_sunrise).",
+        "🏁 + red line — End of race (actual end time of the event)."
+      ],
+      "headerInteractivity": "Interactivity",
+      "text2": "Hover over a stint band to display its details in a panel below (number, times, duration, laps, completion badge).",
+      "callout1": "Planning is updated in real-time — stint changes and active strategy changes appear instantly for all users on the page."
+    },
+    "ongletPerformances": {
+      "title": "5. Performances",
+      "text1": "Performance data table: lap times and fuel consumption per driver, per condition (dry day, rain, night). This data feeds the laps and fuel calculations in the Stints tab.",
+      "headerDayNight": "Day and night structure",
+      "text2": "Each driver has two rows: day (dry/rain data) and 🌙 night (optional). The columns cover four conditions: dry day, rain day, dry night, rain night — with lap time and fuel for each.",
+      "text3": "When a value doesn't come from direct data, it is estimated by a fallback cascade:",
+      "items1": [
+        "No marker — Data entered directly for this condition.",
+        "* — Estimated by adding a crew modifier to a close condition.",
+        "~ — Modifier is zero (data identical to the source condition).",
+        "† — Team average, no driver data available."
+      ],
+      "headerModifiers": "Crew modifiers",
+      "text4": "Three editable fields above the table (saved automatically):",
+      "items2": [
+        "💧 Rain day — Seconds to add to the dry lap time to estimate rain day.",
+        "🌙☀️ Dry night — Offset to estimate dry night if the driver has no night data.",
+        "🌙💧 Rain night — Offset for night + rain."
+      ],
+      "headerFill": "Filling in your data",
+      "text5": "Click \"Edit\" at the end of your row. Lap time format: M:SS.mmm (e.g.: 1:52.345). Fuel in L/lap. The date of last entry is shown per row. This data is critical — it feeds all strategy calculations.",
+      "callout1": "Night data is optional: if you don't have a specific night lap time, the system estimates via crew offsets. The night row only appears if night data exists for this driver.",
+      "headerG61": "Import from Garage61",
+      "text6": "If the event circuit is configured with an iRacing identifier and your Garage61 account is linked, a 📥 Garage61 button appears next to \"Edit\". It opens an import panel with all your lap times recorded on this circuit.",
+      "items3": [
+        "Available filters — Condition (dry/rain), session (P/Q/R), same car as the crew (enabled by default), tank range (min/max in litres — useful to isolate a representative stint pace), track temperature range (min/max °C), date range with shortcuts 7d / 30d / 3 months.",
+        "Filtered/total counter — Always visible to know how many lap times are hidden.",
+        "Columns — Condition, lap time, fuel, tank (fuel in reserve at the time of the lap — lower = lighter), track temperature, date, car, session.",
+        "Import buttons — → ☀️ → 💧 → 🌙☀️ → 🌙💧 apply the lap time AND the corresponding fuel in the form.",
+        "The panel stays open after each import to allow entering multiple conditions in a row. A ✓ on the button confirms the import for each field."
+      ],
+      "callout2": "The Garage61 account must be linked from your driver profile before using this feature."
+    },
+    "ongletCourse": {
+      "title": "6. Race",
+      "text1": "Live mode during the race. Shows current state, current stint, remaining time, next driver, and allows marking pit stops in real-time.",
+      "headerStates": "Race states",
+      "stateBeforeLabel": "Before race",
+      "stateInLabel": "In race",
+      "stateOverLabel": "Overrun",
+      "stateDoneLabel": "Finished",
+      "headerDisplay": "Main display",
+      "text2": "A large card displays the current driver's name, estimated start and end time, remaining time (large counter). When the race is very close to the end, the colour changes to orange (pit window) then red (overrun).",
+      "headerActions": "Actions during the race",
+      "items1": [
+        "Mark pit stop — Records the actual time of the pit stop for the active stint. The app automatically switches to the next stint.",
+        "Mark end of previous stint — Visible if Race Mode has automatically advanced to stint N while stint N−1 was never stamped. Records the end of N−1 with the current time and recalculates the start of N accordingly.",
+        "Cancel last stop — Reverts the most recent pit stop (useful in case of error)."
+      ],
+      "headerFuel": "Fuel summary",
+      "text3": "Once stints are completed, a table summarises actual vs planned consumption with difference per stint. Cumulative difference in green (under budget) or red (deficit). Estimated values carry the same reliability markers as in the Stints tab (*, ~, †).",
+      "callout1": "During the race: Keep this tab open during your stints to easily track progress. The real data collected feeds the Performances tab after the race."
+    },
+    "inventaire": {
+      "title": "Inventory",
+      "text1": "Matrix of iRacing content purchased by drivers. Rows are cars (or circuits), columns are drivers. ✓ indicates that this driver owns this content in their iRacing account.",
+      "items1": [
+        "Cars / Circuits tabs — Toggle between the two matrices.",
+        "K badge — Car or circuit configured in the Kronos catalogue for events.",
+        "iR+ badge — Free content with iRacing subscription.",
+        "# column — Number of drivers who own this content.",
+        "Filters — Filter by car or circuit category."
+      ],
+      "callout1": "The matrix is synced from iRacing at the last sync of each driver. If a driver has just purchased content, they must relaunch their sync from their profile."
+    },
+    "adminIntro": {
+      "title": "Admin area",
+      "callout1": "This section is reserved for drivers with the Admin or Super Admin role. The tabs described here are not visible to standard drivers.",
+      "text1": "The admin area groups all configuration and team management tools. It is accessible from the main menu via the Admin button. Eight tabs organise the different sections."
+    },
+    "adminPilotes": {
+      "title": "Drivers",
+      "text1": "Management of driver accounts and registration requests. Three tabs (only one active at a time) allow switching between views:",
+      "items1": [
+        "Pending — New registration requests. ✓ Approve and ✗ Refuse buttons per driver. A red badge on the Drivers tab flags the number of pending requests.",
+        "Approved — Full table of active drivers. Columns: Name, Email (with clipboard copy), Role (dropdown selector), Discord ID (inline pencil), Membership (checkbox), Test (checkbox), Active (checkbox), iRacing sync (date of last sync). Revoke and Delete actions available based on role.",
+        "Refused — Drivers whose request was refused. Option to re-approve them."
+      ],
+      "callout1": "The \"🔄 Sync All iRating\" button updates all approved drivers' iRating in one action. Inventory (owned cars and circuits) is not synced here — each driver must relaunch their own sync from their profile."
+    },
+    "adminEquipages": {
+      "title": "Crews",
+      "text1": "Two sub-tabs: car number management by team and championship, and crew name configuration.",
+      "divChampionships": "Crews used in championships",
+      "text2": "View of all crews registered in active championships, with car number editing per round.",
+      "items1": [
+        "Team / Championship view — Toggle between the two display modes via the buttons at the top.",
+        "Car number — Inline editable field per round. The value is saved on focus loss.",
+        "\"Varies\" indicator — Appears in orange when the car number differs between rounds of the same championship. The row is automatically expanded for resolution.",
+        "Number conflict — If the entered number is already used by another crew in the same round (and the same start slot), a confirmation window appears."
+      ],
+      "divConfig": "Configuration",
+      "text3": "Management of crew names available when creating teams.",
+      "items2": [
+        "Create / edit / delete — Add a crew name with an optional colour.",
+        "Colour — Selector with presets and native wheel. Luminance is calculated automatically to ensure readability on light and dark backgrounds.",
+        "Live preview — The coloured pill updates in real-time during selection.",
+        "Deletion — Blocked if active crews use this name."
+      ]
+    },
+    "adminVoitures": {
+      "title": "Cars",
+      "text1": "Two sub-tabs: the Kronos catalogue used in events, and the full iRacing catalogue for inventory labels.",
+      "divKronos": "Kronos Endurance",
+      "text2": "Active cars in the app, linked to the iRacing catalogue. These are the cars that appear when creating a crew.",
+      "items1": [
+        "Tank — Size in litres, used by the stint planner.",
+        "Refuel — Refuelling rate (L/s) optional per car. If empty, the class rate applies.",
+        "iRacing type — Grouping label in the driver inventory (e.g.: GT3, GTP). Inherited from the iRacing catalogue but modifiable.",
+        "Deletion — Blocked if an active crew uses this car. A warning is displayed if drivers have it as a preference."
+      ],
+      "divCatalogue": "iRacing catalogue",
+      "text3": "Full view of iRacing catalogue cars, populated during iRacing syncs. Allows assigning a type label to each car for grouping in the driver inventory.",
+      "items2": [
+        "Inventory label — Free text (e.g.: gt3, gtp, lmp2) or selectable from the car's iRacing tags. Displayed in uppercase in the inventory.",
+        "iRacing tags — Native iRacing tags for the car (read-only), displayed as reference to choose the label.",
+        "These labels do not affect events or crews — only display in the driver inventory."
+      ]
+    },
+    "adminClasses": {
+      "title": "Classes",
+      "text1": "Management of car categories (GT3, GTP, LMP2…). Each class groups cars and defines a default refuelling rate.",
+      "items1": [
+        "Create / edit / delete — Class name + refuelling rate (L/s) with −/+ buttons.",
+        "Assign cars — Click ▼ Cars to open the panel. Already assigned cars appear as accent pills with × to remove them. Unclassified cars appear as \"+ Car\" buttons to click to assign. A car can only belong to one class.",
+        "Per-car override — The refuelling rate defined on an individual car (Cars tab) takes precedence over the class rate."
+      ]
+    },
+    "adminCircuits": {
+      "title": "Circuits",
+      "text1": "Management of circuits used in events. Each circuit can be linked to an iRacing circuit from the catalogue.",
+      "items1": [
+        "Create / edit / delete — Kronos circuit name + pit lane time (seconds, optional).",
+        "iRacing link — Associates the circuit with a circuit from the iRacing catalogue for matching with driver inventory.",
+        "Grouping — Circuits are grouped by base iRacing circuit, with collapsible display (state saved locally)."
+      ]
+    },
+    "adminTypes": {
+      "title": "Event types",
+      "text1": "Management of event formats (e.g.: Endurance GT, LMP Cup…). Types allow restricting available cars when creating a crew.",
+      "items1": [
+        "Create / edit / delete — Event type name.",
+        "Allowed cars — Check allowed cars for this type via ▼ Cars. Cars are grouped by class with a class checkbox to select/deselect all at once. If no car is checked, all are allowed."
+      ]
+    },
+    "adminGarage61": {
+      "title": "Garage61",
+      "text1": "Matching tool between the team's Garage61 members and drivers in the database. Displays a single table of all drivers detected on Garage61 with their match status.",
+      "items1": [
+        "🔄 Refresh — Relaunches Garage61 detection and updates the cache. The date of last detection is displayed.",
+        "Detection account — Selector to choose which driver (member of all teams) is used for detection.",
+        "✓ Apply N exact matches — Button visible if exact matches not yet applied exist. Applies all at once.",
+        "Status per row: ✓ Linked (already linked), → Exact match (applicable), ~ Partial match (abbreviated first name), ⚠ Conflict (different slug already in database), ⚠ Ambiguous (multiple drivers, same normalised name), Unknown (no match).",
+        "Apply button — On exact rows not yet applied. Resolve button — On partial or ambiguous rows to force manually."
+      ]
+    },
+    "adminParametres": {
+      "title": "Settings",
+      "text1": "General application configuration.",
+      "items1": [
+        "Preset durations — List of durations (in minutes) offered in the selector when creating an event.",
+        "Default duration — Pre-selected duration when opening the creation form.",
+        "Special slots — Fixed start times by day of the week (Friday, Saturday, Sunday) for events marked as \"special\".",
+        "Registration tags — List of tags available when registering a driver for an event (e.g.: chill, competitive, solo, heavy mileage)."
+      ]
+    }
   }
 }

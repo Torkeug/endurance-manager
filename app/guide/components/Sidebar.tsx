@@ -1,9 +1,10 @@
 "use client";
 import { useRef } from "react";
+import { useTranslations } from "next-intl";
 import useScrollSpy from "./useScrollSpy";
 import type { GuideSection } from "../guide.data";
 
-const NAV_TAB_ORDER = ["Accueil", "Pilotes", "Événements", "Inventaire", "Admin"];
+const NAV_TAB_ORDER = ["home", "pilots", "events", "inventory", "admin"];
 
 export default function Sidebar({
   sections,
@@ -12,18 +13,19 @@ export default function Sidebar({
   sections: GuideSection[];
   scrollContainerId: string;
 }) {
+  const t = useTranslations("guide");
   const ids = sections.map((s) => s.id);
   const active = useScrollSpy(ids, scrollContainerId);
   const sidebarRef = useRef<HTMLDivElement>(null);
 
-  // Group sections by navTab, preserving insertion order within each tab
+  // Group sections by navTab ID, preserving insertion order within each tab
   const byNavTab = new Map<string, GuideSection[]>();
   for (const section of sections) {
     if (!byNavTab.has(section.navTab)) byNavTab.set(section.navTab, []);
     byNavTab.get(section.navTab)!.push(section);
   }
 
-  const orderedTabs = NAV_TAB_ORDER.filter((t) => byNavTab.has(t));
+  const orderedTabs = NAV_TAB_ORDER.filter((tabId) => byNavTab.has(tabId));
 
   return (
     <aside
@@ -38,8 +40,9 @@ export default function Sidebar({
         padding: "1.5rem 0",
       }}
     >
-      {orderedTabs.map((navTab) => {
-        const tabSections = byNavTab.get(navTab)!;
+      {orderedTabs.map((tabId) => {
+        const tabSections = byNavTab.get(tabId)!;
+        const tabLabel = t(`navTab.${tabId}`);
 
         // Collect sub-group labels in order of first appearance
         const labelOrder: string[] = [];
@@ -56,7 +59,7 @@ export default function Sidebar({
         const tabIsActive = tabSections.some((s) => s.id === active);
 
         return (
-          <div key={navTab} style={{ marginBottom: "1.5rem" }}>
+          <div key={tabId} style={{ marginBottom: "1.5rem" }}>
             {/* Nav tab header */}
             <div
               style={{
@@ -69,12 +72,12 @@ export default function Sidebar({
                 color: tabIsActive ? "var(--accent)" : "var(--text-dim)",
               }}
             >
-              {navTab}
+              {tabLabel}
             </div>
 
             {labelOrder.map((label) => {
               const labelSections = byLabel.get(label)!;
-              const isSubGroup = label !== navTab;
+              const isSubGroup = label !== tabLabel;
 
               return (
                 <div key={label}>

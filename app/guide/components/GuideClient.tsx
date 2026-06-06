@@ -1,10 +1,12 @@
 "use client";
 import { useState, useEffect, useRef } from "react";
+import { useTranslations } from "next-intl";
 import Sidebar from "./Sidebar";
 import GuideRenderer from "./GuideRenderer";
 import type { GuideSection } from "../guide.data";
 
 export default function GuideClient({ guide }: { guide: GuideSection[] }) {
+  const t = useTranslations("guide");
   const [open, setOpen] = useState(false);
   const mainRef = useRef<HTMLElement>(null);
 
@@ -41,7 +43,7 @@ export default function GuideClient({ guide }: { guide: GuideSection[] }) {
             fontFamily: "var(--font-rajdhani), sans-serif",
           }}
         >
-          ☰ Navigation
+          {t("navButton")}
         </button>
       </div>
 
@@ -79,10 +81,10 @@ export default function GuideClient({ guide }: { guide: GuideSection[] }) {
         >
           <div style={{ padding: "4rem 4%" }}>
             <h1 className="text-4xl font-bold mb-4 uppercase tracking-wider" style={{ color: "var(--text)", letterSpacing: "0.05em" }}>
-              Guide d&apos;utilisation — Pilotes
+              {t("header")}
             </h1>
             <p className="text-lg font-medium mb-16 pb-8" style={{ color: "var(--text-dim)", borderBottom: "1px solid var(--border)" }}>
-              Maîtrise chaque section du Kronos Endurance Planner.
+              {t("subtitle")}
             </p>
             <GuideRenderer data={guide} />
           </div>

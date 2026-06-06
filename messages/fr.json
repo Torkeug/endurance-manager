@@ -896,7 +896,7 @@
     "badgeArchived": "Archivé",
     "carTbd": "Voiture à définir",
     "labelAtTime": "{label} à {time}",
-    "editEntry":"Modifier",
+    "editEntry": "Modifier",
     "backToEvent": "Événement"
   },
   "collapsibleSummary": {
@@ -1124,7 +1124,7 @@
     "slotPrefAddSuffix": "à leurs préférences ?",
     "slotPrefConfirm": "Oui, ajouter le créneau",
     "labelAtTime": "{label} à {time}",
-    "slotPrefDecline":"Non, laisser les préférences inchangées"
+    "slotPrefDecline": "Non, laisser les préférences inchangées"
   },
   "inscription": {
     "loading": "Chargement…",
@@ -1204,7 +1204,6 @@
   "admin": {
     "pageTitle": "Administration",
     "pageSubtitle": "Données de référence & gestion des accès",
-
     "tabDrivers": "Pilotes",
     "tabEntries": "Équipages",
     "tabCars": "Voitures",
@@ -1213,10 +1212,8 @@
     "tabEventTypes": "Types d'événement",
     "tabGarage61": "Garage61",
     "tabSettings": "Paramètres",
-
     "entriesTabNumbers": "Équipages utilisés en championnats",
     "entriesTabConfig": "Configuration",
-
     "confirm": "Confirmer",
     "cancel": "Annuler",
     "save": "✓ Enregistrer",
@@ -1227,7 +1224,6 @@
     "saving": "…",
     "irreversible": "Cette action est irréversible.",
     "change": "Changer",
-
     "carsGroupedUnder": "Groupé sous :",
     "carsTypePlaceholder": "ex: gt3, gte, gtp, lmp2…",
     "carsDeleteTitle": "Supprimer la voiture",
@@ -1267,7 +1263,6 @@
     "carsColIracingTags": "Tags iRacing",
     "carsColInventoryLabel": "Label inventaire",
     "carsEditBtn": "✏️ Modifier",
-
     "champLoading": "Chargement...",
     "champNoChampionships": "Aucun championnat actif.",
     "champNoTeams": "Aucune équipe inscrite dans les championnats actifs.",
@@ -1282,7 +1277,6 @@
     "champConflictTitle": "Numéro déjà utilisé",
     "champConflictMessage": "Le numéro #{number} est déjà utilisé par {crew} pour ce créneau de départ dans cette manche.",
     "champOk": "OK",
-
     "circuitsDeleteTitle": "Supprimer ce circuit",
     "circuitsActiveWarningIntro": "⚠️ Ce circuit est utilisé par",
     "circuitsActiveCount": "{count, plural, one {{count} événement actif} other {{count} événements actifs}}",
@@ -1306,7 +1300,6 @@
     "circuitsColPitLane": "Pit lane",
     "circuitsOthers": "Autres (non liés iRacing)",
     "circuitsEmpty": "Aucun circuit.",
-
     "classesDeleteTitle": "Supprimer la classe \"{name}\"",
     "classesCarsCount": "{count, plural, one {{count} voiture} other {{count} voitures}}",
     "classesCarsUnclassed": "seront déclassées :",
@@ -1327,7 +1320,6 @@
     "classesAllAssigned": "Toutes les voitures sont déjà assignées à une classe.",
     "classesEmpty": "Aucune classe configurée.",
     "classesUnclassedWarning": "{count, plural, one {⚠️ {count} voiture sans classe} other {⚠️ {count} voitures sans classe}}",
-
     "crewDeleteTitle": "Supprimer \"{name}\"",
     "crewUsedIntro": "⚠️ Ce nom est utilisé par",
     "crewUsedCount": "{count, plural, one {{count} événement} other {{count} événements}}",
@@ -1345,7 +1337,6 @@
     "crewColColor": "Couleur",
     "crewAutoColor": "Auto",
     "crewEmpty": "Aucun nom d'équipage.",
-
     "driversDeleteTitle": "Supprimer {name}",
     "driversStintsWarning": "⚠️ Ce pilote a des relais assignés qui seront supprimés définitivement.",
     "driversSignupsIntro": "Ce pilote est inscrit à",
@@ -1387,7 +1378,6 @@
     "driversDiscordPlaceholder": "Discord ID",
     "driversRevokeBtn": "Révoquer",
     "driversNoRefused": "Aucun pilote refusé.",
-
     "eventTypesDeleteTitle": "Supprimer \"{name}\"",
     "eventTypesActiveIntro": "⚠️ Ce type est utilisé par",
     "eventTypesActiveCount": "{count, plural, one {{count} événement actif} other {{count} événements actifs}}",
@@ -1403,7 +1393,6 @@
     "eventTypesNameLabel": "Nom",
     "eventTypesCarsHint": "Cochez les voitures autorisées pour ce type. Si aucune voiture n'est cochée, toutes sont autorisées.",
     "eventTypesEmpty": "Aucun type d'événement.",
-
     "g61ConfirmedLabel": "✓ Lié",
     "g61ExactLabel": "→ Correspondance exacte",
     "g61FuzzyLabel": "~ Correspondance partielle",
@@ -1439,7 +1428,6 @@
     "g61AssignTo": "Assigner à…",
     "g61NotFoundTitle": "Pilotes non trouvés sur Garage61 ({count})",
     "g61NotFoundDesc": "Ces pilotes approuvés n'ont pas de correspondance dans les données d'équipe Garage61 et n'ont pas encore lié leur compte.",
-
     "settingsDeleteTagTitle": "Supprimer ce tag",
     "settingsDeleteTagMessage": "Ce tag sera supprimé. Les inscriptions existantes qui l'utilisaient conserveront le nom en texte.",
     "settingsDeleteDurationTitle": "Supprimer cette durée",
@@ -1464,5 +1452,429 @@
     "settingsTagsAddBtn": "+ Ajouter un tag",
     "settingsColTag": "Tag",
     "settingsTagsEmpty": "Aucun tag configuré."
+  },
+  "guide": {
+    "header": "Guide d’utilisation — Pilotes",
+    "subtitle": "Maîtrise chaque section du Kronos Endurance Planner.",
+    "navButton": "☰ Navigation",
+    "apercu": "Aperçu",
+    "navTab": {
+      "home": "Accueil",
+      "pilots": "Pilotes",
+      "events": "Événements",
+      "inventory": "Inventaire",
+      "admin": "Admin"
+    },
+    "label": {
+      "home": "Accueil",
+      "pilots": "Pilotes",
+      "events": "Événements",
+      "eventDetail": "Détail événement",
+      "crew": "Équipage",
+      "inventory": "Inventaire",
+      "admin": "Admin"
+    },
+    "accueil": {
+      "title": "Tableau de bord",
+      "text1": "La page d’accueil te donne une vue d’ensemble de ta prochaine course :",
+      "items1": [
+        "Prochain événement — Card avec nom, circuit, format, durée, horaire et compte à rebours.",
+        "Mon prochain relais — Relais que tu vas piloter, avec équipage, numéro et heure de départ.",
+        "Mes événements à venir — Liste de toutes tes inscriptions avec voiture et équipe assignées."
+      ]
+    },
+    "accueilAdmin": {
+      "title": "Tableau de bord",
+      "text1": "En tant qu’admin, le tableau de bord affiche des éléments supplémentaires :",
+      "items1": [
+        "Bannière ⚠️ — Apparaît si des pilotes sont en attente d’approbation, avec lien direct vers la gestion des accès.",
+        "Actions rapides — Boutons + Ajouter un pilote, + Créer un événement, + Créer un championnat en plus des actions standard.",
+        "Grille de statistiques — Compteurs en temps réel : Événements, Pilotes actifs, Pilotes inactifs, Pilotes test, En attente, Cotisations expirées, Syncs iRacing. Les cases en rouge ou orange sont cliquables et mènent directement à la section concernée.",
+        "Onglet Suivi — Visible uniquement pour les admins, avec un badge rouge indiquant le nombre total d’éléments à traiter. Trois sous-onglets organisent les alertes."
+      ],
+      "divNoPilots": "Sans pilotes",
+      "textNoPilots": "Équipages inscrits à un événement mais sans aucun pilote signé. Cliquer sur une carte ouvre directement la page de l’équipage.",
+      "divNoStints": "Sans relais",
+      "textNoStints": "Équipages avec des pilotes inscrits mais dont la stratégie active ne contient aucun relais assigné. Cliquer sur une carte ouvre la page de l’équipage.",
+      "divNoCrew": "Sans équipage",
+      "textNoCrew": "Pilotes inscrits à un événement mais non assignés à un équipage. Cliquer sur une carte ouvre la page de l’événement pour procéder à l’assignation."
+    },
+    "pilotes": {
+      "title": "Liste des pilotes",
+      "text1": "Liste de tous les pilotes de l’équipe avec leur iRating actuel et informations de contact.",
+      "items1": [
+        "Colonnes — Nom, iRacing ID (lien cliquable), iRating, Discord, Twitch, Instagram, Rôle.",
+        "Badge ⚠️ — Affiché si la dernière synchronisation iRacing date de plus de 100 jours.",
+        "Clique sur un pilote pour voir son profil détaillé."
+      ]
+    },
+    "profil": {
+      "title": "Profil pilote",
+      "text1": "Page personnelle du pilote. Deux onglets :",
+      "headerEngagements": "Engagements",
+      "textEngagements": "Historique de toutes les inscriptions du pilote, groupées par événement — équipage assigné, relais attribués, taux de remplissage des disponibilités.",
+      "headerStatsApp": "Statistiques — Endurance Manager",
+      "textStatsApp": "Stats issues des courses gérées dans l’app : iRating, historique par catégorie, relais, conditions, chronos et consommations par circuit.",
+      "headerStatsG61": "Statistiques — Garage61",
+      "textStatsG61": "Vue de toutes les sessions d’entraînement enregistrées sur Garage61. Circuits groupés par catégorie (Road, Oval, Dirt Road, Dirt Oval), triables par tours / % propres / temps piste / nom. Clique sur un circuit pour voir le meilleur tour enregistré (chrono, voiture, type de session, date) avec un lien direct vers Garage61.",
+      "headerInfo": "Informations",
+      "items1": [
+        "Infos de base — Nom, email, iRacing ID (lien cliquable), Discord, Alerte relais (délai par défaut si activé), Twitch, Instagram, Garage61 (lien vers le profil public).",
+        "Badge ⚠️ — Synchronisation iRacing en retard (>100 jours)."
+      ],
+      "callout1": "Le bouton « Inventaire » (visible par le pilote et les admins) affiche les voitures et circuits iRacing possédés. La synchro se relance depuis ce même profil — elle met à jour l’inventaire et l’iRating.",
+      "headerThirdParty": "Connexions tierces",
+      "items2": [
+        "🔗 Lier Garage61 — Connecte ton compte Garage61 via OAuth. Une fois lié : le profil affiche un lien vers ton profil Garage61, l’onglet Statistiques débloque le sous-onglet Garage61 (entraînements), et tes chronos peuvent être importés dans l’onglet Performances de ton équipage.",
+        "🔗 Lier iRacing — Connecte ton compte iRacing pour synchroniser l’inventaire et l’iRating."
+      ],
+      "callout2": "En liant ton compte Garage61, tu autorises les membres de ton équipe à consulter tes stats d’entraînement et à importer tes chronos (utile si un ingénieur renseigne les données de performance).",
+      "headerDiscord": "Notifications Discord",
+      "textDiscord": "Depuis la page de modification de ton profil, tu peux configurer un délai d’alerte Discord par défaut : le bot t’alertera X minutes avant la fin de chacun de tes relais.",
+      "items3": [
+        "Activer / désactiver — La case à cocher active ou désactive les alertes globalement.",
+        "Délai par défaut — Nombre de minutes avant la fin du relais (ex : 5 min).",
+        "Override par événement — Dans l’onglet Disponibilités de ton équipage, tu peux configurer un délai différent pour un événement spécifique, sans toucher au réglage global."
+      ]
+    },
+    "evenements": {
+      "title": "Événements",
+      "text1": "Toutes les courses sont listées ici. L’onglet « Tous » est affiché par défaut et regroupe tous les types, triés chronologiquement.",
+      "items1": [
+        "Tous — Vue chronologique de l’ensemble des événements. Des badges colorés identifient le type : Spécial (orange) ou Championnat (violet).",
+        "Normaux — Courses standards avec horaires éditables.",
+        "Spéciaux — Courses avec créneaux horaires fixes.",
+        "Championnats — Séries avec plusieurs manches. Chaque manche est une course appartenant à ce championnat."
+      ],
+      "text2": "Clique sur une course pour voir les détails, t’inscrire, ou gérer l’équipage."
+    },
+    "inscription": {
+      "title": "S’inscrire à une course",
+      "text1": "Accessible via le bouton « + S’inscrire » sur la page d’un événement. Tous les champs sont optionnels sauf le pilote :",
+      "items1": [
+        "Créneaux de départ préférés — Indique sur quelles vagues tu es disponible.",
+        "Équipe — Exprime une préférence pour un équipage existant. Laisse « Pas de préférence » si tu es flexible.",
+        "Classes et voitures — Filtres de préférence utilisés pour détecter les incompatibilités.",
+        "Tags — Décris ton profil de pilote (ex : chill, compet, solo, gros rouleur)."
+      ],
+      "text2": "Si tu sélectionnes un équipage, le formulaire affiche des alertes de compatibilité :",
+      "stateHardLabel": "Hard",
+      "stateHardDesc": "Incompatibilité de classe entre ta préférence et la voiture de l’équipage.",
+      "stateSoftLabel": "Soft",
+      "stateSoftDesc": "Incompatibilité de voiture dans une classe compatible.",
+      "callout1": "Tu peux t’inscrire à plusieurs équipages au sein d’une même course. C’est utile si plusieurs teams cherchent des drivers pour le même événement."
+    },
+    "creationEquipage": {
+      "title": "Ajouter un équipage",
+      "text1": "Accessible via le bouton « + Ajouter un équipage » dans l’onglet Équipages (non disponible pour les pilotes externes et les ingénieurs). Champs à remplir :",
+      "items1": [
+        "Nom d’équipage — Dropdown issu du catalogue Kronos (ex : Kronos Alpha).",
+        "Voiture — Dropdown des voitures du catalogue, filtrées par format d’événement. La classe et la taille du réservoir sont déduites automatiquement.",
+        "Numéro de course — Pour les championnats uniquement.",
+        "Horaire de départ — Sélection parmi les créneaux configurés pour cet événement.",
+        "Pilotes — Sélection parmi les pilotes inscrits à l’événement sans équipage. Les conflits de préférences (classe, voiture, horaire) sont signalés par un badge ⚠️. Les disponibilités sont pré-initialisées à « indisponible » pour chaque pilote ajouté.",
+        "Streams Twitch — Chaînes associées à cet équipage pour le suivi en direct.",
+        "BOP — Ajustements de puissance (%), poids (kg) et taille de réservoir (%) imposés par l’organisateur.",
+        "Ravitaillement & pneus — Durée des arrêts en secondes."
+      ]
+    },
+    "evenementInscriptions": {
+      "title": "Inscriptions",
+      "text1": "Liste de tous les pilotes inscrits à cet événement. Un pilote peut apparaître plusieurs fois s’il est dans plusieurs équipages ou a choisi plusieurs créneaux de départ.",
+      "items1": [
+        "Pilote + iRating — Identité et niveau du pilote.",
+        "Équipe — L’équipage auquel le pilote est affecté (pill colorée).",
+        "Préférences — Classe et voitures souhaitées lors de l’inscription.",
+        "Créneaux — Horaires de départ préférés.",
+        "Tags — Profil de pilote choisi lors de l’inscription (ex : chill, compet, solo, gros rouleur)."
+      ],
+      "text2": "Tri — Clique sur un en-tête de colonne pour trier. Pilote et iRating conservent les inscriptions d’un même pilote groupées. Équipe et Créneaux éclatent les lignes pour respecter l’ordre de tri, avec un en-tête de groupe pour chaque nouvelle valeur.",
+      "text3": "Pilotes dupliqués — Quand un pilote apparaît plusieurs fois (plusieurs équipes ou plusieurs créneaux), ses lignes sont marquées d’une barre colorée à gauche et d’un badge indiquant le nombre d’occurrences (ex : « 2 équipages »). Chaque couleur est propre à un pilote. En tri par iRating, un séparateur 🌭 Merguez marque le seuil des 3 000 iRating.",
+      "text4": "Filtres — La barre de filtres au-dessus du tableau permet de restreindre la liste :",
+      "items2": [
+        "Sans équipe — Affiche uniquement les pilotes sans équipage assigné.",
+        "iRating min / max — Filtre par niveau de pilote.",
+        "Catégories / Voitures — Clique sur un label de catégorie (GT3, GTP…) pour sélectionner toutes ses voitures d’un coup. Tu peux aussi sélectionner des voitures individuellement. Si une catégorie n’a aucune voiture préférée (ex : LMP2), son label filtre directement par classe déclarée.",
+        "× Réinitialiser — Efface tous les filtres actifs (apparaît dès qu’un filtre est actif)."
+      ]
+    },
+    "evenementEquipages": {
+      "title": "Équipages",
+      "text1": "Vue d’ensemble de tous les équipages engagés pour cet événement. Clique sur un équipage pour accéder à sa page de gestion (disponibilités, relais, planning, course).",
+      "items1": [
+        "Équipage — Nom de l’équipe avec pill colorée.",
+        "Voiture / Classe — Voiture engagée et catégorie.",
+        "Pilotes — Noms des pilotes affectés à cet équipage.",
+        "SoF — Strength of Field estimé (moyenne iRating de l’équipage).",
+        "Départ IRL — Horaire de départ réel.",
+        "Stream — Lien Twitch si renseigné sur le profil d’un des pilotes.",
+        "# — Numéro de voiture (championnats uniquement)."
+      ]
+    },
+    "evenementHoraires": {
+      "title": "Horaires de départ",
+      "text1": "Gestion des créneaux de départ disponibles pour cet événement. Chaque créneau affiche un label auto-généré (ex : « Samedi 23 avril 2026 ») et l’heure IRL de départ.",
+      "callout1": "Les créneaux sont créés par les admins. Les pilotes choisissent leurs préférences parmi ces créneaux lors de l’inscription."
+    },
+    "evenementInventaire": {
+      "title": "Inventaire",
+      "text1": "Vue matricielle filtrée sur les voitures pertinentes pour cet événement : quels pilotes inscrits possèdent chaque voiture dans leur compte iRacing.",
+      "items1": [
+        "Lignes — Voitures disponibles pour cet événement, groupées par classe.",
+        "Colonnes — Pilotes inscrits à l’événement.",
+        "✓ — Le pilote possède cette voiture dans son compte iRacing.",
+        "Badge K — Voiture configurée dans le catalogue Kronos pour les événements.",
+        "Badge iR+ — Contenu gratuit avec abonnement iRacing.",
+        "Ta colonne est mise en surbrillance pour repérer rapidement tes contenus."
+      ],
+      "callout1": "Utile avant de constituer les équipages : tu vois d’un coup d’œil qui possède quelle voiture parmi les inscrits."
+    },
+    "onglePilotes": {
+      "title": "1. Pilotes",
+      "text1": "Liste des pilotes assignés à cet équipage. Des badges de compatibilité signalent les écarts entre préférences d’inscription et l’équipage :",
+      "stateHardLabel": "Hard",
+      "stateHardDesc": "Incompatibilité de classe entre la préférence du pilote et la voiture de l’équipage.",
+      "stateSoftLabel": "Soft",
+      "stateSoftDesc": "Incompatibilité de voiture ou de créneau horaire dans une classe compatible.",
+      "headerJoin": "Rejoindre ou ajouter un pilote",
+      "text2": "Sous le tableau des pilotes assignés, une section « Pilotes inscrits sans équipe » liste les pilotes inscrits à l’événement mais pas encore affectés à cet équipage :",
+      "items1": [
+        "Pilote inscrit — Clique sur ton propre nom pour rejoindre l’équipage (si tu es inscrit à l’événement mais pas encore assigné).",
+        "Admin — Peut cliquer sur n’importe quel pilote de la liste pour l’assigner à l’équipage.",
+        "Un modal propose ensuite de synchroniser les préférences de créneau horaire du pilote avec celui de l’équipage."
+      ]
+    },
+    "ongletDisponibilites": {
+      "title": "2. Disponibilités",
+      "text1": "Grille de disponibilité : chaque ligne est un créneau de 30 minutes (heure IRL, heure IG, phase jour/nuit), chaque colonne un pilote. Trois états possibles :",
+      "stateYesLabel": "Disponible",
+      "stateNoLabel": "Indisponible",
+      "stateNeutralLabel": "Incertain",
+      "callout1": "Sur mobile : appuie et glisse pour remplir rapidement plusieurs cases. Sur desktop : clique ou clique-glisse pour basculer l’état de plusieurs cases d’un coup.",
+      "callout2": "Une fois ton nom sélectionné, une carte « Alerte relais Discord » apparaît. Elle affiche ton délai par défaut et te permet de le remplacer pour cet événement uniquement — sans modifier ton réglage global.",
+      "callout3": "Les disponibilités sont mises à jour en temps réel — les cases cochées par les autres pilotes apparaissent instantanément sans recharger la page."
+    },
+    "ongletRelais": {
+      "title": "3. Relais",
+      "text1": "Le cœur du système : planification des relais (stints), calcul automatique des durées et carburants, gestion des stratégies, détection des conflits.",
+      "headerStrategies": "Stratégies",
+      "text2": "Tu peux créer jusqu’à 5 stratégies différentes (ex : « Plan A sec », « Plan B pluie »). Chaque stratégie a :",
+      "items1": [
+        "Nom + Description — Éditables au-dessus du tableau.",
+        "Décalage départ (minutes) — Offset pour compenser formation lap ou autres délais.",
+        "★ Statut actif — Une seule stratégie est active (celle que Race Mode utilise)."
+      ],
+      "headerTable": "Tableau de relais",
+      "text3": "Colonnes principales :",
+      "items2": [
+        "# — Numéro du relais (séquentiel).",
+        "Pilote — Dropdown pour assigner un pilote ou laisser « À définir ».",
+        "Départ IRL / Fin IRL — Temps réels calculés automatiquement depuis l’heure de départ + durées cumulées.",
+        "Fin réelle — Remplie automatiquement par Race Mode lors d’un pit stop, ou saisissable manuellement directement dans la cellule.",
+        "Durée — Calculée depuis Tours × chrono + temps de ravitaillement, ou saisie manuelle.",
+        "Tours — Nombre de tours planifiés (manuel ou calculé depuis une durée cible).",
+        "Conso — Carburant estimé. Badge rouge si tu dépasses la capacité du réservoir.",
+        "Skip fin — Consommation cible pour passer le dernier pit (visible quand la course est entièrement couverte).",
+        "Pluie / Chgt pneus — Cases à cocher qui orientent les calculs de chrono et de temps d’arrêt."
+      ],
+      "text4": "Les valeurs estimées (chrono, conso) affichent des marqueurs de fiabilité selon la source :",
+      "items3": [
+        "Sans marqueur — Donnée spécifique au pilote et à la condition.",
+        "* — Estimée via modificateur d’équipage (ex : nuit = sec + offset nuit).",
+        "~ — Modificateur à zéro, estimation conservatrice.",
+        "† — Moyenne équipe, aucune donnée pilote disponible."
+      ],
+      "callout1": "Glisse-dépose les lignes du tableau pour réordonner les relais. Seuls les relais non encore démarrés peuvent être bougés.",
+      "callout2": "Le bouton Recalculer force un recalcul complet des temps IRL et des estimations. À utiliser si tu changes la stratégie ou les données de performances après coup.",
+      "headerGantt": "Gantt intégré",
+      "text5": "Quand la case « Dispo » est cochée, un diagramme de Gantt s’affiche au-dessus du Fair Share. Il représente la stratégie actuellement sélectionnée (pas nécessairement la stratégie active) et se met à jour en temps réel.",
+      "headerFairShare": "Fair Share",
+      "text6": "Indicateurs visuels montrant si chaque pilote a au minimum 25% de la « part égale » de tours. Vert = OK, rouge = déséquilibre. Utile pour équilibrer la charge.",
+      "callout3": "Important : Les temps IRL sont calculés quand tu ouvres cet onglet. Ils sont enregistrés en base et utilisés par Planning + Course. S’ils manquent, c’est que le calcul n’a pas eu lieu — simplement ré-ouvrir cet onglet les génère.",
+      "callout4": "Le tableau est mis à jour en temps réel — les modifications d’un autre utilisateur (assignation pilote, tours, pluie) apparaissent instantanément."
+    },
+    "ongletPlanning": {
+      "title": "4. Planning",
+      "text1": "Diagramme de Gantt visualisant la stratégie active. Le nom de la stratégie est affiché centré au-dessus du diagramme. Une ligne par pilote, bandes de relais colorées, avec fond de disponibilité et bande nuit IG.",
+      "headerReading": "Lecture du diagramme",
+      "items1": [
+        "Axe horizontal — Temps réel (heures marquées en haut).",
+        "Lignes — Un pilote par ligne (label à gauche).",
+        "Bandes colorées — Relais assignés (couleur par pilote).",
+        "Bandes grises pointillées — Relais non assignés.",
+        "Fond vert/rouge/gris — Disponibilité du pilote à ce moment-là.",
+        "Fond foncé — Nuit IG (ig_sunset → ig_sunrise).",
+        "🏁 + ligne rouge — Fin de course (heure réelle de fin d’épreuve)."
+      ],
+      "headerInteractivity": "Interactivité",
+      "text2": "Survolez une bande de relais pour afficher ses détails dans un panneau ci-dessous (numéro, horaires, durée, tours, badge de complétion).",
+      "callout1": "Le Planning est mis à jour en temps réel — les modifications de relais et les changements de stratégie active apparaissent instantanément pour tous les utilisateurs sur la page."
+    },
+    "ongletPerformances": {
+      "title": "5. Performances",
+      "text1": "Tableau des données de performance : chronométrages et consommations par pilote, par condition (jour sec, pluie, nuit). Ces données alimentent les calculs de tours et carburant du tab Relais.",
+      "headerDayNight": "Structure jour et nuit",
+      "text2": "Chaque pilote a deux lignes : jour (données sec/pluie) et 🌙 nuit (optionnelle). Les colonnes couvrent quatre conditions : sec jour, pluie jour, sec nuit, pluie nuit — avec chrono et conso pour chacune.",
+      "text3": "Quand une valeur ne vient pas de données directes, elle est estimée par cascade de fallbacks :",
+      "items1": [
+        "Sans marqueur — Donnée saisie directement pour cette condition.",
+        "* — Estimée en ajoutant un modificateur d’équipage à une condition proche.",
+        "~ — Modificateur à zéro (données identiques à la condition source).",
+        "† — Moyenne de toute l’équipe, aucune donnée pilote disponible."
+      ],
+      "headerModifiers": "Modificateurs d’équipage",
+      "text4": "Trois champs éditables au-dessus du tableau (enregistrés automatiquement) :",
+      "items2": [
+        "💧 Pluie jour — Secondes à ajouter au chrono sec pour estimer la pluie jour.",
+        "🌙☀️ Nuit sec — Offset pour estimer nuit sec si le pilote n’a pas de données nuit.",
+        "🌙💧 Nuit pluie — Offset pour nuit + pluie."
+      ],
+      "headerFill": "Remplir tes données",
+      "text5": "Clique « Modifier » à la fin de ta ligne. Format chrono : M:SS.mmm (ex : 1:52.345). Conso en L/tour. La date de dernière saisie est affichée par ligne. Ces données sont critiques — elles alimentent tous les calculs de stratégie.",
+      "callout1": "Données nuit optionnelles : si tu n’as pas de chrono nuit spécifique, le système estime via les offsets d’équipage. La ligne nuit n’apparaît que si des données nuit existent pour ce pilote.",
+      "headerG61": "Importer depuis Garage61",
+      "text6": "Si le circuit de l’événement est configuré avec un identifiant iRacing et que ton compte Garage61 est lié, un bouton 📥 Garage61 apparaît à côté de « Modifier ». Il ouvre un panneau d’import avec tous tes chronos enregistrés sur ce circuit.",
+      "items3": [
+        "Filtres disponibles — Condition (sec/pluie), session (P/Q/R), même voiture que l’équipage (activé par défaut), plage de réservoir (min/max en litres — utile pour isoler un rythme représentatif d’un relais), plage de température de piste (min/max °C), plage de dates avec raccourcis 7j / 30j / 3 mois.",
+        "Compteur filtré/total — Toujours visible pour savoir combien de chronos sont masqués.",
+        "Colonnes — Condition, chrono, conso, réservoir (carburant en réserve au moment du tour — plus bas = plus léger), température de piste, date, voiture, session.",
+        "Boutons d’import — → ☀️ → 💧 → 🌙☀️ → 🌙💧 appliquent le chrono ET la conso correspondante dans le formulaire.",
+        "Le panneau reste ouvert après chaque import pour permettre de renseigner plusieurs conditions d’affilée. Un ✓ sur le bouton confirme l’import pour chaque champ."
+      ],
+      "callout2": "Le compte Garage61 doit être lié depuis ton profil pilote avant de pouvoir utiliser cette fonctionnalité."
+    },
+    "ongletCourse": {
+      "title": "6. Course",
+      "text1": "Mode live pendant la course. Affiche l’état actuel, le relais en cours, le temps restant, le prochain pilote, et permet de marquer les pit stops en temps réel.",
+      "headerStates": "États de la course",
+      "stateBeforeLabel": "Avant course",
+      "stateInLabel": "En course",
+      "stateOverLabel": "Dépassement",
+      "stateDoneLabel": "Terminée",
+      "headerDisplay": "Affichage principal",
+      "text2": "Une grande card affiche le nom du pilote courant, l’heure de départ et fin estimée, le temps restant (gros compteur). Quand la course est très proche de la fin, la couleur passe à orange (fenêtre de stand) puis rouge (dépassement).",
+      "headerActions": "Actions pendant la course",
+      "items1": [
+        "Marquer arrêt au stand — Enregistre l’heure réelle du pit stop pour le relais actif. L’app bascule automatiquement au relais suivant.",
+        "Marquer fin relais précédent — Visible si Race Mode a automatiquement avancé au relais N alors que le relais N−1 n’avait jamais été stampé. Enregistre la fin de N−1 avec l’heure actuelle et recalcule le début de N en conséquence.",
+        "Annuler dernier arrêt — Revert le pit stop le plus récent (utile en cas d’erreur)."
+      ],
+      "headerFuel": "Bilan carburant",
+      "text3": "Une fois des relais complétés, un tableau résume consommation réelle vs prévue avec écart par relais. Écart cumulé en vert (sous budget) ou rouge (déficit). Les valeurs estimées portent les mêmes marqueurs de fiabilité que dans l’onglet Relais (*, ~, †).",
+      "callout1": "Pendant la course : Garde cet onglet ouvert pendant tes relais pour tracker facilement l’avancée. Les vraies données collectées alimentent l’onglet Performances après la course."
+    },
+    "inventaire": {
+      "title": "Inventaire",
+      "text1": "Matrice des contenus iRacing achetés par les pilotes. Les lignes sont les voitures (ou circuits), les colonnes les pilotes. ✓ indique que ce pilote possède ce contenu dans son compte iRacing.",
+      "items1": [
+        "Onglets Voitures / Circuits — Bascule entre les deux matrices.",
+        "Badge K — Voiture ou circuit configuré dans le catalogue Kronos pour les événements.",
+        "Badge iR+ — Contenu gratuit avec abonnement iRacing.",
+        "Colonne # — Nombre de pilotes qui possèdent ce contenu.",
+        "Filtres — Filtrer par catégorie de voiture ou de circuit."
+      ],
+      "callout1": "La matrice est synchronisée depuis iRacing lors du dernier sync de chaque pilote. Si un pilote vient d’acheter un contenu, il doit relancer sa synchronisation depuis son profil."
+    },
+    "adminIntro": {
+      "title": "Espace admin",
+      "callout1": "Cette section est réservée aux pilotes avec le rôle Admin ou Super Admin. Les onglets décrits ici ne sont pas visibles par les pilotes standard.",
+      "text1": "L’espace admin regroupe tous les outils de configuration et de gestion de l’équipe. Il est accessible depuis le menu principal via le bouton Admin. Huit onglets organisent les différentes sections."
+    },
+    "adminPilotes": {
+      "title": "Pilotes",
+      "text1": "Gestion des comptes pilotes et des demandes d’inscription. Trois onglets (un seul actif à la fois) permettent de basculer entre les vues :",
+      "items1": [
+        "En attente — Nouvelles demandes d’inscription. Boutons ✓ Approuver et ✗ Refuser par pilote. Un badge rouge sur l’onglet Pilotes signale le nombre de demandes en attente.",
+        "Approuvés — Tableau complet des pilotes actifs. Colonnes : Nom, Email (avec copie presse-papier), Rôle (sélecteur déroulant), Discord ID (crayon inline), Cotis. (checkbox), Test (checkbox), Actif (checkbox), iRacing sync (date de dernière synchro). Actions Révoquer et Supprimer disponibles selon le rôle.",
+        "Refusés — Pilotes dont la demande a été refusée. Possibilité de les ré-approuver."
+      ],
+      "callout1": "Le bouton « 🔄 Sync All iRating » met à jour l’iRating de tous les pilotes approuvés en une seule action. L’inventaire (voitures et circuits possédés) n’est pas synchronisé ici — chaque pilote doit relancer sa propre synchronisation depuis son profil."
+    },
+    "adminEquipages": {
+      "title": "Équipages",
+      "text1": "Deux sous-onglets : la gestion des numéros de voiture par équipe et championnat, et la configuration des noms d’équipages.",
+      "divChampionships": "Équipages utilisés en championnats",
+      "text2": "Vue de tous les équipages inscrits dans les championnats actifs, avec édition des numéros de voiture par manche.",
+      "items1": [
+        "Vue par équipe / par championnat — Bascule entre les deux modes d’affichage via les boutons en haut.",
+        "Numéro de voiture — Champ éditable inline par manche. La valeur est sauvegardée à la perte de focus.",
+        "Indicateur « varie » — Apparaît en orange quand le numéro de voiture diffère entre les manches d’un même championnat. La ligne est automatiquement dépliée pour résolution.",
+        "Conflit de numéro — Si le numéro saisi est déjà utilisé par un autre équipage dans la même manche (et le même créneau de départ), une fenêtre de confirmation apparaît."
+      ],
+      "divConfig": "Configuration",
+      "text3": "Gestion des noms d’équipages (crew names) disponibles lors de la création des équipes.",
+      "items2": [
+        "Créer / modifier / supprimer — Ajoute un nom d’équipage avec une couleur optionnelle.",
+        "Couleur — Sélecteur avec presets et roue native. La luminance est calculée automatiquement pour garantir la lisibilité sur fond clair et sombre.",
+        "Aperçu en direct — La pill colorée se met à jour en temps réel lors de la sélection.",
+        "Suppression — Bloquée si des équipages actifs utilisent ce nom."
+      ]
+    },
+    "adminVoitures": {
+      "title": "Voitures",
+      "text1": "Deux sous-onglets : le catalogue Kronos utilisé dans les événements, et le catalogue iRacing complet pour les labels d’inventaire.",
+      "divKronos": "Kronos Endurance",
+      "text2": "Voitures actives dans l’app, liées au catalogue iRacing. Ce sont ces voitures qui apparaissent lors de la création d’un équipage.",
+      "items1": [
+        "Réservoir — Taille en litres, utilisée par le planificateur de relais.",
+        "Ravit. — Taux de ravitaillement (L/s) optionnel par voiture. Si vide, le taux de la classe s’applique.",
+        "Type iRacing — Label de regroupement dans l’inventaire pilote (ex : GT3, GTP). Hérité du catalogue iRacing mais modifiable.",
+        "Suppression — Bloquée si un équipage actif utilise cette voiture. Un avertissement s’affiche si des pilotes l’ont en préférence."
+      ],
+      "divCatalogue": "Catalogue iRacing",
+      "text3": "Vue complète des voitures du catalogue iRacing, alimentée lors des synchronisations iRacing. Permet d’assigner un label de type à chaque voiture pour le regroupement dans l’inventaire des pilotes.",
+      "items2": [
+        "Label inventaire — Texte libre (ex : gt3, gtp, lmp2) ou sélectionnable depuis les tags iRacing de la voiture. Affiché en majuscules dans l’inventaire.",
+        "Tags iRacing — Tags natifs iRacing de la voiture (lecture seule), affichés comme référence pour choisir le label.",
+        "Ces labels n’affectent pas les événements ni les équipages — uniquement l’affichage dans l’inventaire pilote."
+      ]
+    },
+    "adminClasses": {
+      "title": "Classes",
+      "text1": "Gestion des catégories de voitures (GT3, GTP, LMP2…). Chaque classe regroupe des voitures et définit un taux de ravitaillement par défaut.",
+      "items1": [
+        "Créer / modifier / supprimer — Nom de la classe + taux de ravitaillement (L/s) avec boutons −/+.",
+        "Assigner des voitures — Cliquer sur ▼ Voitures pour ouvrir le panneau. Les voitures déjà assignées apparaissent en pills accent avec × pour les retirer. Les voitures non classées apparaissent comme boutons « + Voiture » à cliquer pour assigner. Une voiture ne peut appartenir qu’à une seule classe.",
+        "Override par voiture — Le taux de ravitaillement défini sur une voiture individuelle (onglet Voitures) prend le dessus sur celui de la classe."
+      ]
+    },
+    "adminCircuits": {
+      "title": "Circuits",
+      "text1": "Gestion des circuits utilisés dans les événements. Chaque circuit peut être lié à un circuit iRacing du catalogue.",
+      "items1": [
+        "Créer / modifier / supprimer — Nom Kronos du circuit + temps pit lane (secondes, optionnel).",
+        "Lien iRacing — Associe le circuit à un circuit du catalogue iRacing pour la correspondance avec l’inventaire des pilotes.",
+        "Groupement — Les circuits sont groupés par circuit iRacing de base, avec affichage repliable (état sauvegardé localement)."
+      ]
+    },
+    "adminTypes": {
+      "title": "Types d’événement",
+      "text1": "Gestion des formats d’événement (ex : Endurance GT, LMP Cup…). Les types permettent de restreindre les voitures disponibles lors de la création d’un équipage.",
+      "items1": [
+        "Créer / modifier / supprimer — Nom du type d’événement.",
+        "Voitures autorisées — Cocher les voitures autorisées pour ce type via ▼ Voitures. Les voitures sont groupées par classe avec une case à cocher de classe pour tout sélectionner/désélectionner d’un coup. Si aucune voiture n’est cochée, toutes sont autorisées."
+      ]
+    },
+    "adminGarage61": {
+      "title": "Garage61",
+      "text1": "Outil de correspondance entre les membres Garage61 de l’équipe et les pilotes de la base de données. Affiche un tableau unique de tous les pilotes détectés sur Garage61 avec leur statut de correspondance.",
+      "items1": [
+        "🔄 Actualiser — Relance la détection Garage61 et met à jour le cache. La date de dernière détection est affichée.",
+        "Compte de détection — Sélecteur pour choisir quel pilote (membre de toutes les équipes) est utilisé pour la détection.",
+        "✓ Appliquer N correspondances exactes — Bouton visible si des correspondances exactes non encore appliquées existent. Applique toutes en une fois.",
+        "Statuts par ligne : ✓ Lié (déjà lié), → Correspondance exacte (applicable), ~ Correspondance partielle (prénom abrégé), ⚠ Conflit (slug différent déjà en base), ⚠ Ambigu (plusieurs pilotes, même nom normalisé), Inconnu (aucune correspondance).",
+        "Bouton Appliquer — Sur les lignes exactes non encore appliquées. Bouton Résoudre — Sur les lignes partielles ou ambiguës pour forcer manuellement."
+      ]
+    },
+    "adminParametres": {
+      "title": "Paramètres",
+      "text1": "Configuration générale de l’application.",
+      "items1": [
+        "Durées prédéfinies — Liste de durées (en minutes) proposées dans le sélecteur lors de la création d’un événement.",
+        "Durée par défaut — Durée pré-sélectionnée à l’ouverture du formulaire de création.",
+        "Créneaux spéciaux — Heures de départ fixes par jour de la semaine (vendredi, samedi, dimanche) pour les événements marqués « spéciaux ».",
+        "Tags d’inscription — Liste des tags disponibles lors de l’inscription d’un pilote à un événement (ex : chill, compet, solo, gros rouleur)."
+      ]
+    }
   }
 }

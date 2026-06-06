@@ -1,4 +1,5 @@
 import React from "react";
+import { useTranslations } from "next-intl";
 import Section from "./Section";
 import Callout from "./Callout";
 import Steps from "./Steps";
@@ -6,7 +7,7 @@ import FeatureList from "./FeatureList";
 import States from "./States";
 import ComponentDemo from "./ComponentDemo";
 
-const NAV_TAB_ORDER = ["Accueil", "Pilotes", "Événements", "Inventaire", "Admin"];
+const NAV_TAB_ORDER = ["home", "pilots", "events", "inventory", "admin"];
 
 function renderBlock(block: any, i: number) {
   if (block.type === "divider") {
@@ -65,7 +66,7 @@ function renderBlock(block: any, i: number) {
 const APERCU_LABEL: React.CSSProperties = { fontSize: "0.6rem", fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase" as const, color: "var(--text-dim)", marginBottom: "0.5rem", paddingLeft: "0.1rem" };
 const APERCU_BOX: React.CSSProperties = { border: "1px solid var(--border)", borderTop: "2px solid var(--accent)", borderRadius: "4px", background: "var(--bg)", overflowX: "auto" };
 
-function renderBlocks(blocks: any[]) {
+function renderBlocks(blocks: any[], apercu: string) {
   const out: React.ReactNode[] = [];
   let i = 0;
   while (i < blocks.length) {
@@ -75,7 +76,7 @@ function renderBlocks(blocks: any[]) {
       const next = blocks[i + 1];
       out.push(
         <div key={i} style={{ margin: "2.5rem 0" }}>
-          <div style={APERCU_LABEL}>Aperçu</div>
+          <div style={APERCU_LABEL}>{apercu}</div>
           <div style={APERCU_BOX}>
             <div style={{ padding: "1.5rem 1.5rem 0", overflowX: "auto" }}>
               <ComponentDemo type={block.componentType} config={block.config} />
@@ -90,7 +91,7 @@ function renderBlocks(blocks: any[]) {
     } else if (block.type === "component-demo") {
       out.push(
         <div key={i} style={{ margin: "2.5rem 0" }}>
-          <div style={APERCU_LABEL}>Aperçu</div>
+          <div style={APERCU_LABEL}>{apercu}</div>
           <div style={{ ...APERCU_BOX, padding: "1.5rem" }}>
             <ComponentDemo type={block.componentType} config={block.config} />
           </div>
@@ -106,51 +107,57 @@ function renderBlocks(blocks: any[]) {
 }
 
 export default function GuideRenderer({ data }: { data: any[] }) {
+  const t = useTranslations("guide");
+  const apercu = t("apercu");
+
   const byNavTab = new Map<string, any[]>();
   for (const section of data) {
     const tab = section.navTab ?? section.label;
     if (!byNavTab.has(tab)) byNavTab.set(tab, []);
     byNavTab.get(tab)!.push(section);
   }
-  const orderedTabs = NAV_TAB_ORDER.filter((t) => byNavTab.has(t));
+  const orderedTabs = NAV_TAB_ORDER.filter((tabId) => byNavTab.has(tabId));
 
-  return orderedTabs.map((navTab) => (
-    <div key={navTab}>
-      <div style={{ marginBottom: "3rem" }}>
-        <h2
-          className="text-2xl font-bold uppercase tracking-widest"
-          style={{ color: "var(--accent)", letterSpacing: "0.1em" }}
-        >
-          {navTab}
-        </h2>
-        <div style={{ height: "2px", background: "var(--accent)", width: "2rem", marginTop: "0.5rem" }} />
+  return orderedTabs.map((tabId) => {
+    const tabLabel = t(`navTab.${tabId}`);
+    return (
+      <div key={tabId}>
+        <div style={{ marginBottom: "3rem" }}>
+          <h2
+            className="text-2xl font-bold uppercase tracking-widest"
+            style={{ color: "var(--accent)", letterSpacing: "0.1em" }}
+          >
+            {tabLabel}
+          </h2>
+          <div style={{ height: "2px", background: "var(--accent)", width: "2rem", marginTop: "0.5rem" }} />
+        </div>
+        {byNavTab.get(tabId)!.map((section, idx, arr) => {
+          const prevLabel = idx > 0 ? arr[idx - 1].label : null;
+          const showLabelHeader = section.label !== tabLabel && section.label !== prevLabel;
+          return (
+            <div key={section.id}>
+              {showLabelHeader && (
+                <div style={{ marginTop: "2.5rem", marginBottom: "1.25rem" }}>
+                  <h3 style={{
+                    fontSize: "0.75rem",
+                    fontWeight: 700,
+                    letterSpacing: "0.12em",
+                    textTransform: "uppercase",
+                    color: "var(--text-dim)",
+                    margin: 0,
+                  }}>
+                    {section.label}
+                  </h3>
+                  <div style={{ height: "1px", background: "var(--border)", marginTop: "0.5rem" }} />
+                </div>
+              )}
+              <Section id={section.id} title={section.title} isSubsection={!!section.parent} showTitle={section.title !== tabLabel}>
+                {renderBlocks(section.blocks, apercu)}
+              </Section>
+            </div>
+          );
+        })}
       </div>
-      {byNavTab.get(navTab)!.map((section, idx, arr) => {
-        const prevLabel = idx > 0 ? arr[idx - 1].label : null;
-        const showLabelHeader = section.label !== navTab && section.label !== prevLabel;
-        return (
-          <div key={section.id}>
-            {showLabelHeader && (
-              <div style={{ marginTop: "2.5rem", marginBottom: "1.25rem" }}>
-                <h3 style={{
-                  fontSize: "0.75rem",
-                  fontWeight: 700,
-                  letterSpacing: "0.12em",
-                  textTransform: "uppercase",
-                  color: "var(--text-dim)",
-                  margin: 0,
-                }}>
-                  {section.label}
-                </h3>
-                <div style={{ height: "1px", background: "var(--border)", marginTop: "0.5rem" }} />
-              </div>
-            )}
-            <Section id={section.id} title={section.title} isSubsection={!!section.parent} showTitle={section.title !== navTab}>
-              {renderBlocks(section.blocks)}
-            </Section>
-          </div>
-        );
-      })}
-    </div>
-  ));
+    );
+  });
 }
