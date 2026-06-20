@@ -2,9 +2,9 @@ import type { CSSProperties } from "react";
 import { useTranslations } from "next-intl";
 
 const DRIVERS = [
-  { name: "Marc Dubois",  irating: 4210, prefs: "GT3, Audi R8 LMS",  tags: ["chill", "gros rouleur"] },
-  { name: "Léa Fontaine", irating: 3870, prefs: "GT3",                tags: [] },
-  { name: "Théo Bernard", irating: 5120, prefs: "GTE, Ferrari 488",   tags: ["compet"] },
+  { name: "Marc Dubois",  iracingId: 482910, irating: 4210, discord: "marc#1234",  twitch: null,         role: "admin" },
+  { name: "Léa Fontaine", iracingId: 371045, irating: 3870, discord: "lea#5678",   twitch: "leafontsim", role: "driver" },
+  { name: "Théo Bernard", iracingId: 519203, irating: 5120, discord: null,          twitch: null,         role: "driver" },
 ];
 
 const TH: CSSProperties = {
@@ -33,9 +33,11 @@ export default function PilotsDemo() {
         <thead>
           <tr>
             <th style={TH}>{t("colName")}</th>
+            <th style={TH}>{t("colIRacingId")}</th>
             <th style={TH}>{t("colIRating")}</th>
-            <th style={TH}>Préférences</th>
-            <th style={TH}>Tags</th>
+            <th style={TH}>{t("colDiscord")}</th>
+            <th style={TH}>{t("colTwitch")}</th>
+            <th style={TH}>{t("colRole")}</th>
             <th style={TH}></th>
           </tr>
         </thead>
@@ -43,20 +45,30 @@ export default function PilotsDemo() {
           {DRIVERS.map((d) => (
             <tr key={d.name}>
               <td style={{ ...TD, fontWeight: 600 }}>{d.name}</td>
+              <td style={{ ...TD, fontFamily: "var(--font-mono), monospace", fontSize: "0.85rem", color: "var(--text-dim)" }}>
+                {d.iracingId}
+              </td>
               <td style={{ ...TD, fontFamily: "var(--font-mono), monospace", color: "var(--accent)", fontSize: "0.85rem" }}>
                 {d.irating}
               </td>
-              <td style={{ ...TD, color: "var(--text-dim)", fontSize: "0.85rem" }}>{d.prefs}</td>
+              <td style={{ ...TD, color: "var(--text-dim)", fontSize: "0.9rem" }}>{d.discord ?? "—"}</td>
+              <td style={{ ...TD, fontSize: "0.9rem" }}>
+                {d.twitch ? (
+                  <span style={{ color: "#9147ff" }}>{d.twitch}</span>
+                ) : (
+                  <span style={{ color: "var(--text-dim)" }}>—</span>
+                )}
+              </td>
               <td style={TD}>
-                {d.tags.length > 0 ? (
-                  <div style={{ display: "flex", flexWrap: "wrap", gap: "0.25rem" }}>
-                    {[...d.tags].sort().map((tag) => (
-                      <span key={tag} style={{ fontSize: "0.72rem", fontWeight: 600, padding: "0.1rem 0.45rem", borderRadius: "3px", background: "var(--surface-2)", border: "1px solid var(--border)", color: "var(--text-dim)", whiteSpace: "nowrap" }}>
-                        {tag}
-                      </span>
-                    ))}
-                  </div>
-                ) : <span style={{ color: "var(--text-dim)" }}>—</span>}
+                <span
+                  className="badge badge-driver"
+                  style={{
+                    color: d.role === "admin" ? "var(--accent)" : "var(--text-dim)",
+                    borderColor: d.role === "admin" ? "var(--accent)" : "var(--border)",
+                  }}
+                >
+                  {t(d.role === "admin" ? "roleAdmin" : "roleDriver")}
+                </span>
               </td>
               <td style={TD}>
                 <button className="btn btn-secondary btn-sm">{t("view")}</button>

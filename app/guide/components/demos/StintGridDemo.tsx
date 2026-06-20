@@ -225,7 +225,7 @@ export default function StintGridDemo() {
                 { bg: "rgba(224,85,85,0.35)", label: t("legendUnavailable") },
                 { bg: "rgba(74,74,106,0.35)", label: t("legendUncertain") },
                 { bg: "rgba(10,10,30,0.45)",  label: tPlan("legendNight") },
-                { bg: "rgba(74,159,212,0.8)",  label: "🌧 Pluie" },
+                { bg: "rgba(74,159,212,0.8)",  label: `🌧 ${tPlan("rain")}` },
               ].map(({ bg, label }) => (
                 <span key={label} style={{ display: "flex", alignItems: "center", gap: "4px" }}>
                   <span style={{ display: "inline-block", width: "12px", height: "10px", background: bg, borderRadius: "2px", border: "1px solid var(--border)" }} />

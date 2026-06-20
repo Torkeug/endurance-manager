@@ -18,9 +18,9 @@ const STAT_RAW = [
   { value: "1",   color: "#2eb460" },
 ];
 
-const MINI_BARS = [
-  { label: "Nuit",  value: 38, count: 7,  color: "#6366f1" },
-  { label: "Pluie", value: 22, count: 4,  color: "#4a9fd4" },
+const MINI_BAR_RAW = [
+  { key: "condNight", value: 38, count: 7,  color: "#6366f1" },
+  { key: "condRain",  value: 22, count: 4,  color: "#4a9fd4" },
 ];
 
 // Fake iRating sparkline points (x%, y%)
@@ -30,9 +30,9 @@ const IRATING_PTS = [
 ].map(([x, y]) => `${x},${y}`);
 
 const LAP_TIMES = [
-  { circuit: "Circuit de la Sarthe", car: "Audi R8 LMS",   time: "3:54.182", fuel: "3.82 L/tr" },
-  { circuit: "Circuit de Spa",       car: "Audi R8 LMS",   time: "2:18.445", fuel: "2.61 L/tr" },
-  { circuit: "Nürburgring",          car: "Ferrari 488 GT3", time: "1:58.734", fuel: "2.24 L/tr" },
+  { circuit: "Circuit de la Sarthe", dry: "3:54.182", wet: null,       nightDry: "3:57.450", nightWet: null },
+  { circuit: "Circuit de Spa",       dry: "2:18.445", wet: "2:23.810", nightDry: null,        nightWet: null },
+  { circuit: "Nürburgring",          dry: "1:58.734", wet: null,       nightDry: null,        nightWet: null },
 ];
 
 function StatCard({ label, value, color }: { label: string; value: string; color: string }) {
@@ -77,6 +77,7 @@ export default function ProfilDemo({ activeTab = "engagements", statsSubTab = "a
     { label: tStats("statChampionships"), value: STAT_RAW[2].value, color: STAT_RAW[2].color },
     { label: tStats("statLaps"),          value: STAT_RAW[3].value, color: STAT_RAW[3].color },
   ];
+  const MINI_BARS = MINI_BAR_RAW.map((b) => ({ ...b, label: tStats(b.key) }));
   const TAB_LABELS: Record<string, string> = {
     "engagements": tTabs("engagements"),
     "statistiques": tTabs("stats"),
@@ -198,11 +199,8 @@ export default function ProfilDemo({ activeTab = "engagements", statsSubTab = "a
           {/* ── Endurance Manager subtab ── */}
           {statsSubTab === "app" && <>
             {/* Summary stat cards */}
-            <div>
-              <SectionHeader title="Résumé" />
-              <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
-                {STATS.map((s) => <StatCard key={s.label} {...s} />)}
-              </div>
+            <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
+              {STATS.map((s) => <StatCard key={s.label} {...s} />)}
             </div>
 
             {/* Mini bars */}
@@ -213,7 +211,7 @@ export default function ProfilDemo({ activeTab = "engagements", statsSubTab = "a
 
             {/* iRating sparkline */}
             <div>
-              <SectionHeader title="Historique iRating — Sports Car" />
+              <SectionHeader title={tStats("iRatingSection")} />
               <div style={{ background: "var(--surface-2)", border: "1px solid var(--border)", borderRadius: "4px", padding: "0.75rem" }}>
                 <svg viewBox="0 0 100 100" preserveAspectRatio="none" style={{ width: "100%", height: "80px", display: "block" }}>
                   <polyline points={IRATING_PTS.join(" ")} fill="none" stroke="var(--accent)" strokeWidth="2" vectorEffect="non-scaling-stroke" />
@@ -234,7 +232,7 @@ export default function ProfilDemo({ activeTab = "engagements", statsSubTab = "a
                 <table style={{ borderCollapse: "collapse", width: "100%" }}>
                   <thead>
                     <tr>
-                      {["Circuit", "Voiture", "Chrono", "Conso"].map((h) => (
+                      {[tStats("colCircuit"), tStats("colDry"), tStats("colWet"), tStats("colNightDry"), tStats("colNightWet")].map((h) => (
                         <th key={h} style={{ padding: "0.4rem 0.65rem", textAlign: "left", fontSize: "0.65rem", fontWeight: 700, letterSpacing: "0.07em", textTransform: "uppercase", color: "var(--text-dim)", borderBottom: "1px solid var(--border)", whiteSpace: "nowrap" }}>{h}</th>
                       ))}
                     </tr>
@@ -242,10 +240,11 @@ export default function ProfilDemo({ activeTab = "engagements", statsSubTab = "a
                   <tbody>
                     {LAP_TIMES.map((r) => (
                       <tr key={r.circuit}>
-                        <td style={{ padding: "0.45rem 0.65rem", borderBottom: "1px solid var(--border)", fontSize: "0.82rem" }}>{r.circuit}</td>
-                        <td style={{ padding: "0.45rem 0.65rem", borderBottom: "1px solid var(--border)", fontSize: "0.8rem", color: "var(--text-dim)" }}>{r.car}</td>
-                        <td style={{ padding: "0.45rem 0.65rem", borderBottom: "1px solid var(--border)", fontFamily: "var(--font-mono), monospace", fontSize: "0.82rem", color: "var(--accent)" }}>{r.time}</td>
-                        <td style={{ padding: "0.45rem 0.65rem", borderBottom: "1px solid var(--border)", fontFamily: "var(--font-mono), monospace", fontSize: "0.8rem", color: "var(--text-dim)" }}>{r.fuel}</td>
+                        <td style={{ padding: "0.45rem 0.65rem", borderBottom: "1px solid var(--border)", fontSize: "0.82rem", fontWeight: 600 }}>{r.circuit}</td>
+                        <td style={{ padding: "0.45rem 0.65rem", borderBottom: "1px solid var(--border)", fontFamily: "var(--font-mono), monospace", fontSize: "0.82rem", color: "var(--accent)" }}>{r.dry ?? "—"}</td>
+                        <td style={{ padding: "0.45rem 0.65rem", borderBottom: "1px solid var(--border)", fontFamily: "var(--font-mono), monospace", fontSize: "0.82rem", color: r.wet ? "#4a9fd4" : "var(--text-dim)" }}>{r.wet ?? "—"}</td>
+                        <td style={{ padding: "0.45rem 0.65rem", borderBottom: "1px solid var(--border)", fontFamily: "var(--font-mono), monospace", fontSize: "0.82rem", color: r.nightDry ? "#8b5cf6" : "var(--text-dim)" }}>{r.nightDry ?? "—"}</td>
+                        <td style={{ padding: "0.45rem 0.65rem", borderBottom: "1px solid var(--border)", fontFamily: "var(--font-mono), monospace", fontSize: "0.82rem", color: "var(--text-dim)" }}>{r.nightWet ?? "—"}</td>
                       </tr>
                     ))}
                   </tbody>
