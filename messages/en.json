@@ -125,9 +125,10 @@
   },
   "availabilityGrid": {
     "clearAllTitle": "Clear all availabilities",
-    "clearAllConfirmPrompt": "This will clear availabilities for all drivers. Type to confirm.",
+    "clearAllConfirmPrompt": "This will clear availabilities for all drivers. Type the following word to continue:",
     "clearAllConfirmWord": "CONFIRM",
     "clearAllConfirmBtn": "Clear permanently",
+    "clearAllWrongWord": "Wrong word.",
     "cancelBtn": "Cancel",
     "noStartTimes": "No start times configured.",
     "noDrivers": "No drivers assigned to this entry.",

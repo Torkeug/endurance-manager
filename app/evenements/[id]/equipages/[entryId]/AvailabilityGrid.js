@@ -107,6 +107,7 @@ function WipeModal({ onConfirm, onCancel }) {
   const [input, setInput] = useState("");
   const confirmWord = t("clearAllConfirmWord");
   const valid = input === confirmWord;
+  const hasError = input.length > 0 && !valid;
   return (
     <div
       style={{
@@ -122,19 +123,35 @@ function WipeModal({ onConfirm, onCancel }) {
     >
       <div className="card" style={{ maxWidth: "420px", width: "100%" }}>
         <h3 style={{ marginBottom: "0.75rem" }}>{t("clearAllTitle")}</h3>
-        <p style={{ fontSize: "0.9rem", color: "var(--text-dim)", marginBottom: "1rem" }}>
+        <p style={{ fontSize: "0.9rem", color: "var(--text-dim)", marginBottom: "0.5rem" }}>
           {t("clearAllConfirmPrompt")}
         </p>
-        <input
-          type="text"
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          placeholder={confirmWord}
-          autoFocus
-          style={{ marginBottom: "1rem" }}
-        />
+        <p style={{ marginBottom: "1rem" }}>
+          <span className="mono" style={{ color: "var(--danger)", fontWeight: 700 }}>
+            {confirmWord}
+          </span>
+        </p>
+        <div className="form-group" style={{ marginBottom: hasError ? "0.35rem" : "1rem" }}>
+          <input
+            type="text"
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            autoFocus
+            style={hasError ? { borderColor: "var(--danger)", outline: "none" } : {}}
+          />
+        </div>
+        {hasError && (
+          <p style={{ color: "var(--danger)", fontSize: "0.78rem", marginBottom: "1rem" }}>
+            {t("clearAllWrongWord")}
+          </p>
+        )}
         <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
-          <button onClick={onConfirm} className="btn btn-danger" disabled={!valid}>
+          <button
+            onClick={onConfirm}
+            className="btn btn-danger"
+            disabled={!valid}
+            style={!valid ? { opacity: 0.4, cursor: "not-allowed" } : {}}
+          >
             {t("clearAllConfirmBtn")}
           </button>
           <button onClick={onCancel} className="btn btn-secondary">

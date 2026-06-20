@@ -106,9 +106,10 @@
   },
   "availabilityGrid": {
     "clearAllTitle": "Effacer toutes les disponibilités",
-    "clearAllConfirmPrompt": "Cette action effacera les disponibilités de tous les pilotes. Tapez pour continuer.",
+    "clearAllConfirmPrompt": "Cette action effacera les disponibilités de tous les pilotes. Tapez le mot suivant pour continuer :",
     "clearAllConfirmWord": "CONFIRMER",
     "clearAllConfirmBtn": "Effacer définitivement",
+    "clearAllWrongWord": "Mot incorrect.",
     "cancelBtn": "Annuler",
     "noStartTimes": "Aucun horaire de départ configuré.",
     "noDrivers": "Aucun pilote assigné à cet équipage.",
