@@ -45,11 +45,12 @@ function StatCard({ label, value, color }: { label: string; value: string; color
 }
 
 function MiniBar({ label, value, count, color }: { label: string; value: number; count: number; color: string }) {
+  const tStats = useTranslations("driverStats");
   return (
     <div style={{ marginBottom: "0.6rem" }}>
       <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.78rem", marginBottom: "0.25rem" }}>
         <span style={{ color: "var(--text-dim)" }}>{label}</span>
-        <span style={{ fontFamily: "var(--font-mono), monospace", color }}>{value}% <span style={{ color: "var(--text-dim)", fontSize: "0.72rem" }}>({count} relais)</span></span>
+        <span style={{ fontFamily: "var(--font-mono), monospace", color }}>{value}% <span style={{ color: "var(--text-dim)", fontSize: "0.72rem" }}>({count} {tStats("stintsUnit")})</span></span>
       </div>
       <div style={{ height: "6px", background: "var(--border)", borderRadius: "3px", overflow: "hidden" }}>
         <div style={{ height: "100%", width: `${value}%`, background: color, borderRadius: "3px" }} />

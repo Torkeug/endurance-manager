@@ -29,6 +29,7 @@ const inputStyle: CSSProperties = {
 };
 
 function RadioCard({ label, sub, mono, selected, mismatch }: { label: string; sub?: string; mono?: string; selected?: boolean; mismatch?: "hard" | "soft" }) {
+  const t = useTranslations("inscription");
   return (
     <label style={{
       display: "flex",
@@ -55,7 +56,7 @@ function RadioCard({ label, sub, mono, selected, mismatch }: { label: string; su
           ...(mismatch === "hard"
             ? { background: "rgba(224,85,85,0.12)", border: "1px solid var(--danger)", color: "var(--danger)" }
             : { background: "#2a1a00", border: "1px solid #a06020", color: "#d4904a" }),
-        }}>⚠️ {mismatch === "hard" ? "classe" : "voiture"}</span>
+        }}>⚠️ {mismatch === "hard" ? t("conflictClass") : t("conflictCar")}</span>
       )}
     </label>
   );
