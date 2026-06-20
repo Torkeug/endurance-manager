@@ -1096,7 +1096,7 @@ export default function EventPageTabs({
                                   const username =
                                     url.match(
                                       /twitch\.tv\/([a-zA-Z0-9_]+)/i,
-                                    )?.[1] || `Stream ${i + 1}`;
+                                    )?.[1] || `${t("stream")} ${i + 1}`;
                                   return (
                                     <a
                                       key={url}
