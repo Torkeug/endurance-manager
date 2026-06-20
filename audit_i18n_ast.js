@@ -105,9 +105,15 @@ function insideTCall(ancestors) {
 function auditFile(filePath, source) {
   let ast;
   try {
+    const isTS = /\.tsx?$/.test(filePath);
     ast = parse(source, {
       sourceType: 'module',
-      plugins: ['jsx', 'optionalChaining', 'nullishCoalescingOperator'],
+      plugins: [
+        'jsx',
+        'optionalChaining',
+        'nullishCoalescingOperator',
+        ...(isTS ? ['typescript'] : []),
+      ],
       errorRecovery: true,
     });
   } catch (e) {
