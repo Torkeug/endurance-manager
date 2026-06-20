@@ -225,7 +225,7 @@ function KronosEnduranceTab({ initialCars, iracingCars }) {
 
   const validate = () => {
     if (!selectedIracingCar) {
-      setError("Sélectionnez une voiture depuis le catalogue iRacing.");
+      setError(t("carsSelectRequired"));
       return false;
     }
     return true;
@@ -268,7 +268,7 @@ function KronosEnduranceTab({ initialCars, iracingCars }) {
     if (err) {
       setError(
         err.code === "23505"
-          ? "Cette voiture est déjà dans le catalogue Kronos."
+          ? t("carsAlreadyExists")
           : err.message,
       );
       setSaving(false);
@@ -305,7 +305,7 @@ function KronosEnduranceTab({ initialCars, iracingCars }) {
     if (err) {
       setError(
         err.code === "23505"
-          ? "Cette voiture est déjà dans le catalogue Kronos."
+          ? t("carsAlreadyExists")
           : err.message,
       );
       setSaving(false);
