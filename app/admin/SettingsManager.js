@@ -845,7 +845,7 @@ export default function SettingsManager({
                 value={newTagName}
                 onChange={(e) => setNewTagName(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && handleAddTag()}
-                placeholder="ex : chill, compet, solo…"
+                placeholder={t("settingsTagsPlaceholder")}
                 autoFocus
                 style={{ flex: 1, minWidth: "160px", padding: "0.45rem 0.65rem", background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "3px", color: "var(--text)", fontSize: "0.9rem", fontFamily: "var(--font-rajdhani), sans-serif" }}
               />

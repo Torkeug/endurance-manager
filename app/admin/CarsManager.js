@@ -73,7 +73,7 @@ function CarTypePicker({ carTypes, value, onChange }) {
         type="text"
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        placeholder="ex: gt3, gte, gtp, lmp2…"
+        placeholder={t("carsTypePlaceholder")}
         style={{ maxWidth: "200px" }}
       />
       {value && (
