@@ -98,6 +98,7 @@ function SignupCard({ signup, availMap, stintsMap, carsMap = {} }) {
               ? formatInZone(
                   earliest.irl_start,
                   signup.events?.timezone || "Europe/Paris",
+                  locale,
                 )
               : t("dateUnknown")}
             {event?.circuits?.name && ` · ${event.circuits.name}`}
@@ -393,6 +394,7 @@ function SignupCard({ signup, availMap, stintsMap, carsMap = {} }) {
                             stint.irl_start,
                             stint.team_entries?.events?.timezone ||
                               "Europe/Paris",
+                            locale,
                           )}
                         </span>
                       )}

@@ -11,6 +11,7 @@ Web app for managing iRacing endurance teams. Handles driver registration/approv
 - **Garage61** — lap data integration via OAuth PKCE
 - **Recharts** — iRating history charts
 - **Luxon** — timezone-aware date/time formatting
+- **next-intl** — i18n (FR default, EN also supported). Cookie-based locale, no URL prefix.
 - **Discord bot** — separate external codebase, not in this repo
 
 ## Supabase
@@ -34,6 +35,23 @@ MCP is configured in `.mcp.json` — use it to inspect the live schema and apply
 | `lib/db-utils.js` | `fetchAllRows()` — paginates past PostgREST's 1000-row limit |
 | `lib/car-types.js` | Car class/type definitions and lookup helpers |
 | `lib/manufacturers.js` | Manufacturer lookup for iRacing cars |
+
+## i18n
+
+Uses **next-intl** with a cookie-based locale (`KRONOS_LOCALE`). No URL prefix.
+
+| Item | Detail |
+|------|--------|
+| Locales | `fr` (default), `en` |
+| Config | `i18n/request.js` — reads cookie, loads message file |
+| Plugin | `next.config.mjs` — `createNextIntlPlugin("./i18n/request.js")` |
+| Messages | `messages/fr.json`, `messages/en.json` — must be kept in sync |
+| Usage | `useTranslations("namespace")` → `t("key")` in any component |
+| Server | `getTranslations("namespace")` in server components / API routes |
+
+Translations are namespaced by feature (e.g. `stintGrid`, `planningTab`, `availabilityGrid`, `performanceData`, etc.). Guide demos use the same namespace as their corresponding real component.
+
+When adding a translation key: add it to **both** `fr.json` and `en.json`. Audit tools: `audit_i18n_ast.js` (JS/TSX), `audit_i18n.py` (Python alternative).
 
 ## App routes
 
@@ -179,7 +197,9 @@ Two distinct flags — do not conflate them:
 - `drivers.test_driver` — temporary flag toggled per-driver by admins. Excluded from: membership overdue count only. **NOT excluded from active driver count, sync required count, or inactive count** — use `is_test_account` for permanent bot/automation exclusions.
 
 ### Discord bot
-External codebase, not in this repo. Reads directly from the DB. Current schema it should use:
+External codebase, not in this repo. Reads directly from the DB.
+
+Alert columns the bot should use:
 
 | Column | Table | Purpose |
 |--------|-------|---------|
@@ -189,13 +209,6 @@ External codebase, not in this repo. Reads directly from the DB. Current schema 
 | `discord_alert_minutes` | `drivers` | int — per-driver default timing |
 
 **Resolution order:** signup override (`discord_alert_enabled_override` + `discord_alert_minutes_override`) → driver default (`discord_alert_enabled` + `discord_alert_minutes`) → disabled.
-
-⚠️ **The bot currently queries `signups.discord_notifications` which no longer exists** (renamed through two migrations, now `discord_alert_enabled_override`). The bot needs updating before the Discord notification system works again.
-
-### Discord alert driver-based feature (in progress)
-DB schema is applied (migration done). App UI not yet built:
-- Driver profile edit page needs `discord_alert_minutes` input
-- AvailabilityGrid needs `discord_alert_minutes_override` input per driver row
 
 ### Admin home page stat cards
 Active driver count excludes: `is_test_account = true`, `role = engineer`.
@@ -215,7 +228,14 @@ Done via the `archive_event(uuid)` DB function — snapshots circuit/car/driver 
 Always use `supabase-server.js` in server components and API routes. Use `supabase-browser.js` in `"use client"` components. The legacy `supabase.js` anon client is not actively used.
 
 ### Timezone handling
-All event times stored in UTC. Displayed using Luxon with the event's `timezone` field (e.g. `Europe/Paris`). Use `lib/timezone.js` helpers — never do raw `new Date()` on event times in server components; use `LocalDate` client component for display.
+All event times stored in UTC. Displayed using Luxon with the event's `timezone` field (e.g. `Europe/Paris`). Use `lib/timezone.js` helpers — never do raw `new Date()` on event times.
+
+| Helper | Locale-aware | Notes |
+|--------|-------------|-------|
+| `formatDateLabelInZone(iso, tz, locale)` | ✅ | Pass `useLocale()` / `await getLocale()`. Produces e.g. "Samedi 14 juin 2025". |
+| `formatTimeInZone(iso, tz)` | — | Time only (HH:mm). 24h is the racing standard — intentionally locale-independent. |
+| `formatInZone(iso, tz, locale)` | ✅ | Full datetime + TZ abbr. Pass `useLocale()` / `await getLocale()`. |
+| `LocalDate` client component | ✅ | Uses `useLocale()` internally. Only used for sync timestamps (not event times). Avoids SSR hydration mismatch. |
 
 ## Environment variables
 

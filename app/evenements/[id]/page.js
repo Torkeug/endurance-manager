@@ -1,7 +1,7 @@
 import { supabaseServer as supabase } from "../../../lib/supabase-server";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getTranslations } from "next-intl/server";
+import { getTranslations, getLocale } from "next-intl/server";
 import { getSessionAndDriver, isAdmin, isEngineer } from "../../../lib/auth";
 import { formatInZone } from "../../../lib/timezone";
 import ArchiveToggle from "./ArchiveToggle";
@@ -30,7 +30,7 @@ function getEarliestStart(startTimes) {
 
 export default async function EvenementDetail({ params }) {
   const { id } = await params;
-  const t = await getTranslations("events");
+  const [t, locale] = await Promise.all([getTranslations("events"), getLocale()]);
 
   const { driver: currentDriver } = await getSessionAndDriver();
   const admin = isAdmin(currentDriver);
@@ -173,6 +173,7 @@ export default async function EvenementDetail({ params }) {
               ? formatInZone(
                   earliest.irl_start,
                   event.timezone || "Europe/Paris",
+                  locale,
                 )
               : t("dateUnknown")}
           </div>

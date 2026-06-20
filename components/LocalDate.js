@@ -1,11 +1,13 @@
 "use client";
 import { useState, useEffect } from "react";
+import { useLocale } from "next-intl";
 
 export default function LocalDate({ iso }) {
+  const locale = useLocale();
   const [formatted, setFormatted] = useState("");
   useEffect(() => {
     setFormatted(
-      new Date(iso).toLocaleString("fr-FR", {
+      new Date(iso).toLocaleString(locale, {
         day: "2-digit",
         month: "2-digit",
         year: "numeric",
@@ -13,6 +15,6 @@ export default function LocalDate({ iso }) {
         minute: "2-digit",
       }),
     );
-  }, [iso]);
+  }, [iso, locale]);
   return formatted || "—";
 }

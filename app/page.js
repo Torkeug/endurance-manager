@@ -4,7 +4,7 @@ import Link from "next/link";
 import { formatInZone } from "../lib/timezone";
 import HomeTabs from "./HomeTabs";
 import IncompleteTab from "./IncompleteTab";
-import { getTranslations } from "next-intl/server";
+import { getTranslations, getLocale } from "next-intl/server";
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
@@ -42,7 +42,7 @@ function Badge({
 // ─── Page ───────────────────────────────────────────────────────────────────
 
 export default async function HomePage() {
-  const t = await getTranslations("dashboard");
+  const [t, locale] = await Promise.all([getTranslations("dashboard"), getLocale()]);
   const { driver: currentDriver } = await getSessionAndDriver();
   const admin = isAdmin(currentDriver);
   // Engineers don't have personal stints — "My next stint" is not relevant to them
@@ -263,7 +263,7 @@ export default async function HomePage() {
                   {nextEvent.duration_minutes && ` · ${formatDuration(nextEvent.duration_minutes)}`}
                 </div>
                 <div className="mono" style={{ fontSize: "0.85rem", color: "var(--accent)", marginBottom: "0.25rem" }}>
-                  {formatInZone(nextEvent.nextStart.irl_start, nextEvent.timezone || "Europe/Paris")}
+                  {formatInZone(nextEvent.nextStart.irl_start, nextEvent.timezone || "Europe/Paris", locale)}
                 </div>
                 <div style={{ fontSize: "0.78rem", color: "var(--text-dim)", marginBottom: "0.5rem" }}>
                   {timeUntil(nextEvent.nextStart.irl_start)}
@@ -300,7 +300,7 @@ export default async function HomePage() {
                     {myNextStint.tyre_change && " 🛞"}
                   </div>
                   <div className="mono" style={{ fontSize: "0.85rem", color: "var(--accent)", marginBottom: "0.25rem" }}>
-                    {formatInZone(myNextStint.irl_start, myNextStint.team_entries?.events?.timezone || "Europe/Paris")}
+                    {formatInZone(myNextStint.irl_start, myNextStint.team_entries?.events?.timezone || "Europe/Paris", locale)}
                   </div>
                   <div style={{ fontSize: "0.78rem", color: "var(--text-dim)" }}>
                     {timeUntil(myNextStint.irl_start)}
@@ -349,7 +349,7 @@ export default async function HomePage() {
                     <div style={{ fontWeight: 600 }}>{ev?.name}</div>
                     <div style={{ fontSize: "0.8rem", color: "var(--text-dim)", marginTop: "0.2rem" }}>
                       {ev?.circuits?.name}
-                      {nextStart && ` · ${formatInZone(nextStart.irl_start, ev?.timezone || "Europe/Paris")}`}
+                      {nextStart && ` · ${formatInZone(nextStart.irl_start, ev?.timezone || "Europe/Paris", locale)}`}
                       {nextStart && ` · ${timeUntil(nextStart.irl_start)}`}
                     </div>
                     {teamEntry ? (
