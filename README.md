@@ -11,6 +11,7 @@ Built with Next.js 16 + React 19, backed by Supabase.
 - **Recharts** — performance charts
 - **Luxon** — timezone-aware time formatting
 - **Resend** — transactional emails (registration, approval, stale-sync warnings)
+- **next-intl** — i18n (French primary, English secondary)
 
 ## Getting started
 
@@ -23,7 +24,7 @@ Built with Next.js 16 + React 19, backed by Supabase.
 
 ### Language
 
-The UI is entirely in French. There is no i18n layer — localising it requires editing the component source directly.
+The UI supports French (primary) and English via **next-intl**. Translation files live in `messages/fr.json` and `messages/en.json`. The locale is set via the `[locale]` route segment — French is the default. To add a new locale, add an entry in `i18n.ts` and create the corresponding `messages/<locale>.json` file.
 
 ### Environment variables
 
