@@ -346,27 +346,30 @@ export default function RaceMode({
       setLoading(false);
       return;
     }
-    const [{ data: stintsData }, { data: perfData }] = await Promise.all([
-      // Filter stints by the active strategy — Race Mode only operates on one strategy
-      supabase
-        .from("stints")
-        .select("*")
-        .eq("strategy_id", activeStrategy.id)
-        .order("stint_number"),
-      supabase
-        .from("driver_performance")
-        .select("*")
-        .eq("team_entry_id", teamEntryId),
-    ]);
+    try {
+      const [{ data: stintsData }, { data: perfData }] = await Promise.all([
+        // Filter stints by the active strategy — Race Mode only operates on one strategy
+        supabase
+          .from("stints")
+          .select("*")
+          .eq("strategy_id", activeStrategy.id)
+          .order("stint_number"),
+        supabase
+          .from("driver_performance")
+          .select("*")
+          .eq("team_entry_id", teamEntryId),
+      ]);
 
-    const perfMap = {};
-    (perfData || []).forEach((p) => {
-      perfMap[p.driver_id] = p;
-    });
+      const perfMap = {};
+      (perfData || []).forEach((p) => {
+        perfMap[p.driver_id] = p;
+      });
 
-    setStints(stintsData || []);
-    setDriverPerf(perfMap);
-    setLoading(false);
+      setStints(stintsData || []);
+      setDriverPerf(perfMap);
+    } finally {
+      setLoading(false);
+    }
   }, [teamEntryId, activeStrategy?.id]);
 
   useEffect(() => {
@@ -397,6 +400,8 @@ export default function RaceMode({
   // Returns { value (avg L/lap), count, currentFuelLevel (latest fuel_level) } or null.
   const fetchLiveFuel = useCallback(async (driverId, stintStart) => {
     if (!driverId || !stintStart) { setLiveFuelPerLap(null); return; }
+    const FUEL_SAMPLE_SIZE = 5;
+    const FUEL_MIN_LAPS = 3;
     const { data } = await supabase
       .from("iracing_laps")
       .select("fuel_used, fuel_level")
@@ -406,8 +411,8 @@ export default function RaceMode({
       .gte("recorded_at", stintStart)
       .not("fuel_used", "is", null)
       .order("recorded_at", { ascending: false })
-      .limit(5);
-    if (!data || data.length < 3) { setLiveFuelPerLap(null); return; }
+      .limit(FUEL_SAMPLE_SIZE);
+    if (!data || data.length < FUEL_MIN_LAPS) { setLiveFuelPerLap(null); return; }
     const avg = data.reduce((s, r) => s + r.fuel_used, 0) / data.length;
     // data is ordered descending — first row is the most recent lap
     const currentFuelLevel = data[0].fuel_level ?? null;
@@ -490,8 +495,11 @@ export default function RaceMode({
       const nextStint = currentStints[activeIdx + 1] ?? null;
       if (!nextStint) return;
       const ts = event.recorded_at;
-      prevNextStintIrlStartRef.current = { id: nextStint.id, value: nextStint.irl_start_actual ?? null };
-      setStints((prev) => prev.map((s) => s.id === nextStint.id ? { ...s, irl_start_actual: ts } : s));
+      const backup = nextStint.irl_start_actual ?? null;
+      prevNextStintIrlStartRef.current = { id: nextStint.id, value: backup };
+      // Persist backup so undo survives a page reload (mirrors markPitStop logic)
+      await supabase.from("stints").update({ irl_start_actual_backup: backup }).eq("id", nextStint.id);
+      setStints((prev) => prev.map((s) => s.id === nextStint.id ? { ...s, irl_start_actual: ts, irl_start_actual_backup: backup } : s));
       await supabase.from("stints").update({ irl_start_actual: ts }).eq("id", nextStint.id);
 
       // Check if the driver who exited is the one planned for this stint
@@ -531,7 +539,7 @@ export default function RaceMode({
         return [...prev, { id: `cond-${Date.now()}`, type, data: { isWet, teamEntry: currentTeamEntry } }];
       });
     }
-  }, []);
+  }, [t]);
 
   // Subscription to iracing_events — one channel, no driver filter (RLS scopes it)
   useEffect(() => {
@@ -814,55 +822,57 @@ export default function RaceMode({
   const markPitStop = async (stint) => {
     if (!stint || archived || saving || !isInRace) return;
     setSaving(true);
-    const actualEnd = new Date().toISOString();
+    try {
+      const actualEnd = new Date().toISOString();
 
-    // Compute pit stop duration to propagate the stamp to the next stint's irl_start.
-    // Uses fixed refuel fallback — StintGrid will correct variable-rate cars on next Relais open.
-    const pitLane = teamEntry?.events?.circuits?.pit_lane_time_seconds || 0;
-    const tyreChange = teamEntry?.tyre_change_time_seconds || 0;
-    const refuel = teamEntry?.refuel_time_seconds || 0;
-    const pitStopSec = pitLane + refuel + (stint.tyre_change ? tyreChange : 0);
-    const stintIndex = stints.findIndex((s) => s.id === stint.id);
-    const nextStint = stintIndex >= 0 ? (stints[stintIndex + 1] ?? null) : null;
-    const nextIrlStart = nextStint
-      ? new Date(new Date(actualEnd).getTime() + pitStopSec * 1000).toISOString()
-      : null;
+      // Compute pit stop duration to propagate the stamp to the next stint's irl_start.
+      // Uses fixed refuel fallback — StintGrid will correct variable-rate cars on next Relais open.
+      const pitLane = teamEntry?.events?.circuits?.pit_lane_time_seconds || 0;
+      const tyreChange = teamEntry?.tyre_change_time_seconds || 0;
+      const refuel = teamEntry?.refuel_time_seconds || 0;
+      const pitStopSec = pitLane + refuel + (stint.tyre_change ? tyreChange : 0);
+      const stintIndex = stints.findIndex((s) => s.id === stint.id);
+      const nextStint = stintIndex >= 0 ? (stints[stintIndex + 1] ?? null) : null;
+      const nextIrlStart = nextStint
+        ? new Date(new Date(actualEnd).getTime() + pitStopSec * 1000).toISOString()
+        : null;
 
-    // Save the pre-stamp irl_start_actual of the next stint for undo.
-    // Stored in both the in-memory ref (fast path) and DB (survives page reload).
-    // When there is no next stint, clear the ref so a stale value from the
-    // previous pit stop cannot corrupt the final-stint undo path.
-    if (nextStint) {
-      const backup = nextStint.irl_start_actual ?? null;
-      prevNextStintIrlStartRef.current = { id: nextStint.id, value: backup };
-      await supabase.from("stints").update({ irl_start_actual_backup: backup }).eq("id", nextStint.id);
-    } else {
-      prevNextStintIrlStartRef.current = null;
-    }
+      // Save the pre-stamp irl_start_actual of the next stint for undo.
+      // Stored in both the in-memory ref (fast path) and DB (survives page reload).
+      // When there is no next stint, clear the ref so a stale value from the
+      // previous pit stop cannot corrupt the final-stint undo path.
+      if (nextStint) {
+        const backup = nextStint.irl_start_actual ?? null;
+        prevNextStintIrlStartRef.current = { id: nextStint.id, value: backup };
+        await supabase.from("stints").update({ irl_start_actual_backup: backup }).eq("id", nextStint.id);
+      } else {
+        prevNextStintIrlStartRef.current = null;
+      }
 
-    // Optimistic update — instant UI response before DB confirms
-    setStints((prev) =>
-      prev.map((s) => {
-        if (s.id === stint.id) return { ...s, irl_end_actual: actualEnd };
-        if (nextStint && s.id === nextStint.id)
-          return { ...s, irl_start_actual: nextIrlStart, irl_start_actual_backup: nextStint.irl_start_actual ?? null };
-        return s;
-      }),
-    );
+      // Optimistic update — instant UI response before DB confirms
+      setStints((prev) =>
+        prev.map((s) => {
+          if (s.id === stint.id) return { ...s, irl_end_actual: actualEnd };
+          if (nextStint && s.id === nextStint.id)
+            return { ...s, irl_start_actual: nextIrlStart, irl_start_actual_backup: nextStint.irl_start_actual ?? null };
+          return s;
+        }),
+      );
 
-    await supabase
-      .from("stints")
-      .update({ irl_end_actual: actualEnd })
-      .eq("id", stint.id);
-
-    if (nextStint && nextIrlStart) {
       await supabase
         .from("stints")
-        .update({ irl_start_actual: nextIrlStart })
-        .eq("id", nextStint.id);
-    }
+        .update({ irl_end_actual: actualEnd })
+        .eq("id", stint.id);
 
-    setSaving(false);
+      if (nextStint && nextIrlStart) {
+        await supabase
+          .from("stints")
+          .update({ irl_start_actual: nextIrlStart })
+          .eq("id", nextStint.id);
+      }
+    } finally {
+      setSaving(false);
+    }
   };
 
   const undoLastPit = () => {
@@ -876,37 +886,41 @@ export default function RaceMode({
       onConfirm: async () => {
         setConfirmModal(null);
         setSaving(true);
-        const prev = prevNextStintIrlStartRef.current;
-        prevNextStintIrlStartRef.current = null;
+        try {
+          const prev = prevNextStintIrlStartRef.current;
+          prevNextStintIrlStartRef.current = null;
 
-        // Re-read from ref so a concurrent markPitStop between modal-open and
-        // confirm doesn't cause the undo to operate on a stale snapshot.
-        const currentStints = stintsRef.current;
-        const freshLast = [...currentStints].reverse().find((s) => s.irl_end_actual) ?? last;
+          // Re-read from ref so a concurrent markPitStop between modal-open and
+          // confirm doesn't cause the undo to operate on a stale snapshot.
+          const currentStints = stintsRef.current;
+          const freshLast = [...currentStints].reverse().find((s) => s.irl_end_actual);
+          if (!freshLast) return;
 
-        // Determine which stint to restore and what value to use.
-        // Fast path: in-memory ref (same session).
-        // Fallback: irl_start_actual_backup from already-loaded stints (after page reload).
-        const lastIndex = currentStints.findIndex((s) => s.id === freshLast.id);
-        const nextAfterLast = lastIndex >= 0 ? (currentStints[lastIndex + 1] ?? null) : null;
-        const nextId = prev?.id ?? nextAfterLast?.id ?? null;
-        const restoreValue = prev
-          ? prev.value
-          : (nextAfterLast?.irl_start_actual_backup ?? null);
+          // Determine which stint to restore and what value to use.
+          // Fast path: in-memory ref (same session).
+          // Fallback: irl_start_actual_backup from already-loaded stints (after page reload).
+          const lastIndex = currentStints.findIndex((s) => s.id === freshLast.id);
+          const nextAfterLast = lastIndex >= 0 ? (currentStints[lastIndex + 1] ?? null) : null;
+          const nextId = prev?.id ?? nextAfterLast?.id ?? null;
+          const restoreValue = prev
+            ? prev.value
+            : (nextAfterLast?.irl_start_actual_backup ?? null);
 
-        setStints((s) =>
-          s.map((stint) => {
-            if (stint.id === freshLast.id) return { ...stint, irl_end_actual: null };
-            if (nextId && stint.id === nextId)
-              return { ...stint, irl_start_actual: restoreValue, irl_start_actual_backup: null };
-            return stint;
-          }),
-        );
-        await supabase.from("stints").update({ irl_end_actual: null }).eq("id", freshLast.id);
-        if (nextId) {
-          await supabase.from("stints").update({ irl_start_actual: restoreValue, irl_start_actual_backup: null }).eq("id", nextId);
+          setStints((s) =>
+            s.map((stint) => {
+              if (stint.id === freshLast.id) return { ...stint, irl_end_actual: null };
+              if (nextId && stint.id === nextId)
+                return { ...stint, irl_start_actual: restoreValue, irl_start_actual_backup: null };
+              return stint;
+            }),
+          );
+          await supabase.from("stints").update({ irl_end_actual: null }).eq("id", freshLast.id);
+          if (nextId) {
+            await supabase.from("stints").update({ irl_start_actual: restoreValue, irl_start_actual_backup: null }).eq("id", nextId);
+          }
+        } finally {
+          setSaving(false);
         }
-        setSaving(false);
       },
     });
   };
