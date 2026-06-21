@@ -1,0 +1,7 @@
+{
+  "$schema": "https://unpkg.com/knip@latest/schema.json",
+  "ignore": ["audit_i18n_ast.js", "check_i18n.js"],
+  "paths": {
+    "@/*": ["./*"]
+  }
+}

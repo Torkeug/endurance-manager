@@ -245,7 +245,7 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY  # Supabase anon key (public)
 SUPABASE_SERVICE_ROLE_KEY      # Service role key (server only)
 NEXT_PUBLIC_APP_URL            # Must match OAuth redirect URIs
 GARAGE61_CLIENT_SECRET         # Garage61 OAuth client secret (server only)
-RESEND_IRACING_BRIDGE_API_KEY                 # Resend email API key (server only)
+RESEND_API_KEY                 # Resend email API key (server only)
 IRACING_BRIDGE_API_KEY                        # Bearer token for iRacing webhook endpoints
 CRON_SECRET                    # Bearer token for Vercel cron endpoints
 NEXT_PUBLIC_SHOW_TEST_ACCOUNTS # Set to "true" to show test accounts in driver lists — local-only, not set in Vercel (absent = hidden in production)

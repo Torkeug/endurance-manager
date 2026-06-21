@@ -1,0 +1,526 @@
+KRONOS ENDURANCE MANAGER — FULL CODE QUALITY AUDIT
+Generated: 2026-06-20
+Audited: All .js/.jsx/.ts/.tsx files under app/, components/, lib/
+Excluded from report: already-documented bugs BUG-1 through BUG-9, HOOK-1 through HOOK-5, MINOR-1 through MINOR-7
+
+================================================================================
+LEGEND
+  HIGH   — crash-inducing, security vulnerability, or silent data corruption
+  MEDIUM — data integrity risk, significant UX breakage, or logic error
+  LOW    — code quality, minor UX, i18n drift, maintainability
+================================================================================
+
+
+────────────────────────────────────────────────────────────────────────────────
+SECTION 1 — SECURITY
+────────────────────────────────────────────────────────────────────────────────
+
+app/api/iracing/event/route.js:8 — HIGH — SECURITY — Auth check is fail-open when env var unset.
+  `if (API_KEY && authHeader !== \`Bearer ${API_KEY}\`)` skips the check entirely if
+  IRACING_BRIDGE_API_KEY is not set — any unauthenticated request is accepted.
+  Fix: Invert guard to fail-closed: `if (!API_KEY || authHeader !== \`Bearer ${API_KEY}\`) return 401`.
+
+app/api/iracing/lap/route.js:9 — HIGH — SECURITY — Identical fail-open auth bypass as above.
+  Fix: Same inversion.
+
+app/api/register-driver/route.js — LOW — SECURITY — auth_user_id from request body cannot be session-verified.
+  The endpoint comment correctly notes the user has no active session yet (email confirmation pending),
+  so auth.uid() is null and session-based verification is not possible. However, any unauthenticated
+  caller can POST a fabricated UUID as auth_user_id to attach a driver record to an arbitrary auth
+  user. The auth_user_id unique constraint prevents duplicate records, but not the initial misuse.
+  Fix: Consider verifying auth_user_id against a real freshly-created Supabase auth user via
+  supabaseServer.auth.admin.getUserById() — reject if the user was not created in the last few minutes
+  or if email is already confirmed.
+
+app/api/notify-admins/route.js — MEDIUM — SECURITY — No authentication check on notification endpoints.
+  Any unauthenticated HTTP client can POST to this (and notify-driver-approved, notify-admins-approval,
+  notify-stale-sync) to trigger email sends — a spam vector.
+  Fix: Require a valid Supabase session (getSessionAndDriver()) or a shared secret before dispatching.
+
+
+────────────────────────────────────────────────────────────────────────────────
+SECTION 2 — HIGH-SEVERITY LOGIC BUGS & DATA INTEGRITY
+────────────────────────────────────────────────────────────────────────────────
+
+app/register/page.js:42 — HIGH — DATA INTEGRITY — Orphan auth user on registration failure.
+  supabase.auth.signUp() is called first. If the subsequent POST /api/register-driver fails (network
+  error, duplicate slug, constraint violation), a Supabase Auth user exists with no drivers row.
+  This user cannot log in (unapproved) and cannot re-register (email already taken).
+  Fix: In the /api/register-driver error path, compensate by deleting the auth user via service role
+  (supabase.auth.admin.deleteUser()), or create the driver row first before creating the auth user.
+
+app/championnats/[id]/nouveau-round/page.js:326 — HIGH — DATA INTEGRITY — event_start_times insert is fire-and-forget.
+  supabase.from("event_start_times").insert(...) is called with no await and no .then()/.catch().
+  If this insert fails, the user is redirected with no indication and the event has no start times.
+  Fix: await the insert, check error, and remain on the page with an error message if it fails.
+
+app/admin/DriversManager.js (syncall button) — verify URL — The syncall trigger URL should be
+  /api/auth/iracing?mode=syncall per CLAUDE.md. If it uses /auth/iracing?mode=syncall (no /api prefix),
+  the route handler at app/auth/iracing/route.js would still catch it in App Router (route handlers
+  take precedence over pages at the same path). Verify the syncall href in DriversManager to confirm
+  the correct prefix is used — /auth/iracing is valid, /api/auth/iracing is also valid if that route
+  exists under app/api/. The inventaire page per-driver sync correctly uses /auth/iracing.
+
+app/auth/callback/iracing/route.js:405-410 — HIGH — LOGIC — syncall mode fetches all drivers with an iRacing ID,
+  including unapproved, inactive, test accounts, and engineers. CLAUDE.md explicitly requires these
+  be excluded.
+  Fix: Add .eq("approved", true).eq("active", true).eq("is_test_account", false).neq("role", "engineer")
+  to the syncall driver query.
+
+app/admin/ClassesManager.js:217-258 — HIGH — DATA INTEGRITY — Class rename is not atomic.
+  handleEdit renames a car class in car_classes, then in a second DB call updates all cars referencing
+  the old class name. No transaction. If the second update fails after the first succeeds, the class
+  is renamed but all cars still carry the old class name — DB is inconsistent.
+  Fix: Wrap both updates in a single DB function/RPC, or rely on a DB-level CASCADE on the class FK.
+
+app/admin/EventTypesManager.js:491-500 — HIGH — STALE CLOSURE / LOST UPDATES — toggleClass parallel toggleCar calls.
+  toggleCar reads eventTypeCars from the closure (stale snapshot at call time) and calls
+  setEventTypeCars with a value derived from that snapshot. All parallel calls see the same initial
+  state — only the last write survives; all intermediate car toggles are silently lost.
+  Fix: Use a single batched DB operation and a single setEventTypeCars call after Promise.all resolves.
+
+app/admin/DriversManager.js:346-392 — HIGH — DEAD CODE / LOGIC BUG — hasStints never set on delete modal.
+  deleteDriver sets driverId, driverName, affectedEvents but never hasStints. The commitDelete block
+  conditioned on deleteModal.hasStints (lines 367-376) is always unreachable (undefined = falsy).
+  If a driver has stints with a FK constraint, the DB delete will fail post-hoc with a raw error.
+  Fix: Either fetch and set hasStints: true when stints exist, or remove the dead code and surface
+  the FK constraint error clearly.
+
+app/championnats/nouveau/page.js:63 — HIGH — DATA INTEGRITY — championship create: missing error cascade.
+  Similar orphan-record risk as register/page.js — if championship insert succeeds but a subsequent
+  step fails, partially created data is left without user feedback or cleanup. (See also
+  championnats/[id]/modifier/page.js for same pattern on update.)
+
+app/evenements/[id]/modifier/page.js:883-918 — MEDIUM — REACT INVARIANT — setState during render.
+  setForm(...) is called inside JSX render via IIFE blocks. Calling setState during render is a
+  React invariant violation causing "Cannot update a component while rendering a different component"
+  warnings, and causes infinite re-render loops in Strict Mode.
+  Fix: Move the auto-select logic into a useEffect with the appropriate dependency.
+
+app/evenements/nouveau/page.js:713-747 — MEDIUM — REACT INVARIANT — Same setState-during-render anti-pattern
+  as modifier/page.js above.
+  Fix: Move the filter/auto-select logic into a useEffect.
+
+app/championnats/[id]/nouveau-round/page.js:614 — HIGH — REACT INVARIANT — IIFE inside JSX calling setFilteredCircuits.
+  State update during render causes invariant violation and infinite loops in Strict Mode.
+  Fix: Replace with useMemo for derived state, or move into a useEffect.
+
+app/evenements/[id]/equipages/[entryId]/CollapsibleSummary.js:175 — HIGH — RUNTIME CRASH — Null crash on streamUrls.
+  streamUrls.length > 0 will throw TypeError if streamUrls is null. Supabase returns null for empty
+  JSONB array columns, not [].
+  Fix: Guard with (streamUrls ?? []).length > 0 or Array.isArray(streamUrls) && streamUrls.length > 0.
+
+app/auth/callback/route.js:35 — MEDIUM — LOGIC — Wrong Supabase SDK method for token_hash flow.
+  supabase.auth.exchangeCodeForSession(token_hash) is the PKCE authorization-code method.
+  For token_hash (password reset), the correct method is supabase.auth.verifyOtp({ token_hash, type }).
+  This may silently fail or produce an invalid session depending on SDK version.
+  Fix: Replace with supabase.auth.verifyOtp({ token_hash, type }) where type comes from query params.
+
+
+────────────────────────────────────────────────────────────────────────────────
+SECTION 3 — MEDIUM-SEVERITY BUGS
+────────────────────────────────────────────────────────────────────────────────
+
+StintGrid.js:1809-1813 — MEDIUM — LOGIC — handleSetActive doesn't call onActiveStrategyChange.
+  When the user clicks "Définir comme active", setStrategies is updated locally but onActiveStrategyChange
+  is never called. RaceMode's activeStrategy prop won't reflect the new active strategy until the parent
+  re-renders from an external source. commitDeleteActiveStrategy (line 1785) and the initial fetch both
+  call it correctly.
+  Fix: Call onActiveStrategyChange with the newly-activated strategy inside the onConfirm callback.
+
+StintGrid.js:1870-1895 — MEDIUM — DATA INTEGRITY — deleteStint optimistic renumbering not rolled back on error.
+  deleteStint renumbers remaining stints optimistically via setStints, then persists via Promise.all.
+  If any DB update fails, in-memory state is renumbered but the DB has inconsistent stint_number values.
+  The error is silently swallowed.
+  Fix: Add .catch handling to the Promise.all and revert the optimistic update on failure.
+
+StintGrid.js:2039-2041 — MEDIUM — LOGIC — isEligible uses new Date() instead of now state (same pattern as HOOK-4).
+  isEligible is used in drag/drop guards and "release driver" button visibility. A newly completed
+  stint may briefly still show as eligible until the next 10-second clock tick.
+  Fix: Pass the now state variable as a parameter or capture it in a useCallback that declares now as dep.
+
+RaceMode.js:349-369 — MEDIUM — MISSING ERROR HANDLING — fetchData: setLoading(false) not in finally.
+  If either query in the Promise.all throws, setLoading(false) is only called in the success path.
+  The loading spinner never resolves.
+  Fix: Wrap in try/finally; call setLoading(false) in the finally block.
+
+RaceMode.js:814-866 — MEDIUM — DATA INTEGRITY / NO TRY/FINALLY — markPitStop can lock saving state.
+  setSaving(true) at line 816 but no try/finally. If any of the three sequential awaits throw,
+  setSaving stays true permanently, locking the UI. Optimistic state update also precedes DB writes,
+  so failed writes leave UI showing a stamped stint that isn't in the DB.
+  Fix: Wrap body in try/finally with setSaving(false) in finally.
+
+RaceMode.js:876-911 — MEDIUM — DATA INTEGRITY / NO TRY/FINALLY — undoLastPit can lock saving state.
+  Same pattern as markPitStop — setSaving(false) at end with no try/finally.
+  Fix: Wrap in try/finally.
+
+RaceMode.js:493 — MEDIUM — DATA INTEGRITY — pit_exit bridge event doesn't write irl_start_actual_backup.
+  prevNextStintIrlStartRef.current is written in the pit_exit handler (line 493) as an in-memory ref,
+  but markPitStop (line 838) writes irl_start_actual_backup to the DB. If a pit_exit bridge event
+  fires and the page reloads before markPitStop is manually called, the undo state (ref) is lost.
+  Fix: Mirror markPitStop's backup write in the pit_exit handler.
+
+PerformanceData.js:1250-1281 — MEDIUM — MISSING ERROR HANDLING — main useEffect Promise.all has no .catch().
+  A network or DB error leaves loading stuck at true, showing a permanent spinner with no error message.
+  Fix: Add .catch(() => setLoading(false)) or use try/finally.
+
+PerformanceData.js:1281 — MEDIUM — STALE DATA — assignedDrivers.length dep misses driver-swap scenario.
+  If a driver is swapped out for another (same count, different driver), perfData is not refetched
+  and the new driver's performance row is missing — their row shows null initialData.
+  Fix: Use assignedDrivers.map(d => d.drivers?.id).join(",") as the dep or include assignedDrivers
+  in the dependency array.
+
+PerformanceData.js:679 — MEDIUM — PERFORMANCE / UX — saveNotifOverride fires on every keypress.
+  saveNotifOverride(mySignup.id, { minutes: e.target.value }) is called on onChange of the minutes
+  input (every keystroke), firing a DB write per character.
+  Fix: Change to onBlur for the minutes input.
+
+AvailabilityGrid.js:536-553 — MEDIUM — DATA INTEGRITY — "Mark all available" has no error handling or rollback.
+  On upsert failure, UI shows all slots as available while DB retains old values.
+  Fix: Add error handling and rollback the optimistic setAvailabilities on failure.
+
+AvailabilityGrid.js:564-585 — MEDIUM — DATA INTEGRITY — "Wipe all" WipeModal onConfirm has no error handling.
+  Same pattern — no rollback on upsert failure.
+  Fix: Add error handling and rollback.
+
+AvailabilityGrid.js:218-233 — MEDIUM — MISSING ERROR STATE — Initial fetch: setLoading(false) not in catch.
+  If the availabilities fetch rejects (network error), the loading spinner persists indefinitely.
+  Fix: Chain .catch(() => setLoading(false)).
+
+app/admin/Garage61Manager.js:182-194 — MEDIUM — UNHANDLED PROMISE REJECTION — applyExact has no .catch().
+  Promise.all with no catch; if any update fails, setSaving(false) is never called and the component
+  is permanently stuck in saving state.
+  Fix: Wrap in try/catch and call setSaving(false) in finally.
+
+app/admin/Garage61Manager.js:197-204 — MEDIUM — SILENT FAILURE — applyOverride has no error handling.
+  DB update failure is silently ignored; state is re-fetched as if update succeeded.
+  Fix: Add try/catch and surface error message on failure.
+
+app/admin/ChampionshipTeamsManager.js:593-629 — MEDIUM — NULL DEREF / MALFORMED QUERY — handleSave stale entry.
+  entries.find((e) => e.id === entryId) may return undefined if entryId is stale. The subsequent
+  .eq("event_id", undefined) Supabase query sends a malformed filter.
+  Fix: Guard with if (!entry) return; before using entry.
+
+app/admin/ChampionshipTeamsManager.js:547-587 — MEDIUM — SILENT FAILURE — fetchData swallows step errors.
+  Sequential fetches (championships → events → entries) with no error check after each step. If events
+  fetch fails, the UI silently renders an empty state.
+  Fix: Check error after each fetch and surface an error banner.
+
+app/admin/CarsManager.js:322-358 — MEDIUM — SILENT FAILURE — affectedEvents not shown in delete modal.
+  handleDelete collects affectedEvents (active team entries using this car) but DeleteCarModal never
+  renders them. Admin sees no warning that active team entries use this car; DB delete then fails
+  post-hoc with a raw error string.
+  Fix: Render affectedEvents in DeleteCarModal alongside affectedDrivers.
+
+app/admin/EventTypesManager.js:284-289 — MEDIUM — UX — "undefined" rendered as car class section header.
+  Cars without a class have car.class === undefined, which gets coerced to the string "undefined" as
+  an object key and rendered literally in the UI as a section header.
+  Fix: Substitute a fallback key (e.g., "Autre") for undefined class values.
+
+app/admin/DriversManager.js:939-958 — MEDIUM — MISSING ROLE GUARD — Discord ID edit not gated by canAct.
+  The Discord ID edit pencil button is rendered for all driver rows. An admin can edit a super_admin's
+  discord_id even though canApproveOrRevoke returns false for that pairing.
+  Fix: Gate the Discord edit button on the same canAct check used for other actions.
+
+app/pilotes/[id]/page.js:39-57 — MEDIUM — UNBOUNDED SSR HANG — Garage61 slug backfill has no timeout.
+  A live fetch("https://garage61.net/api/v1/me", ...) during SSR with no timeout. If Garage61 is
+  slow or unreachable, the driver profile page hangs until Node's default socket timeout.
+  Fix: Use AbortSignal.timeout(5000) on the fetch.
+
+app/pilotes/[id]/modifier/page.js:64-89 — MEDIUM — AUTH RACE CONDITION — auth and data effects run concurrently.
+  Auth check useEffect and data fetch useEffect run in parallel. A non-admin visiting another driver's
+  edit page briefly sees the populated form before being redirected.
+  Fix: Block rendering until both authChecked and fetching are resolved.
+
+app/pilotes/[id]/inventaire/InventaireDisplay.js (DriversAssignment.js:328) — MEDIUM — RUNTIME — restoreStints called without null guard.
+  restoreStints(signup.drivers?.id) is called without checking signup.drivers is non-null first.
+  If signup.drivers is null, signup.drivers?.id is undefined and the .eq("previous_driver_id", undefined)
+  query may error or return wrong rows.
+  Fix: Add if (!signup.drivers?.id) return; before the call.
+
+app/championnats/[id]/modifier/page.js:192 — MEDIUM — AUTH RACE CONDITION — Non-admin briefly sees populated edit form.
+  Data fetch effect and auth check effect run concurrently; non-admin briefly sees the populated
+  championship edit form before redirect.
+  Fix: Gate data fetch on authChecked && isAdminUser, or perform auth server-side.
+
+app/championnats/[id]/nouveau-round/page.js:303 — MEDIUM — TOCTOU — round_number computed from stale snapshot.
+  round_number = roundCount + 1 is computed at page load. Two simultaneous creates produce duplicate
+  round numbers.
+  Fix: Use a DB-level sequence or add UNIQUE(championship_id, round_number) constraint so duplicates
+  are rejected and surfaced to the user.
+
+app/championnats/[id]/nouveau-round/page.js:233 — MEDIUM — MISSING VALIDATION — handleAddStartTime accepts invalid times.
+  Only checks !newStartTime, does not call isValidTime(). A string like "99:99" is accepted.
+  Fix: Add if (!newStartTime || !isValidTime(newStartTime)) return;
+
+app/update-password/page.js:38 — MEDIUM — MEMORY LEAK — setTimeout with no cleanup.
+  setTimeout(() => router.push("/"), 2000) not stored or cleared. If component unmounts before 2s,
+  callback fires on unmounted component.
+  Fix: Store timer; return () => clearTimeout(timer) from useEffect.
+
+app/change-password/page.js:51 — MEDIUM — MEMORY LEAK — Same setTimeout-without-cleanup pattern.
+  Fix: Same as update-password/page.js.
+
+components/InventoryMatrix.js:204 — MEDIUM — SILENT FAILURE — iracingTracksFreeRes.error never checked.
+  Only iracingCarsRes.error is checked. If free-tracks query fails, matrix silently renders with
+  empty free-track list.
+  Fix: Add error check for iracingTracksFreeRes.error and surface to user.
+
+app/evenements/EventTabs.js:205 — MEDIUM — FRAGILE LOCALIZATION — activeRounds label built by string-slicing the translation.
+  t("activeRounds", { count }).replace(/^\d+ /, "") strips the leading number. Breaks silently if
+  translation format changes (e.g. "un round actif" or number at end).
+  Fix: Add a dedicated translation key for the label without the count.
+
+app/evenements/[id]/equipages/[entryId]/ActualEndInput.js:23-26 — MEDIUM — TIMEZONE BUG — actual end time formatted in browser timezone.
+  new Date(actualEnd).toLocaleTimeString(locale, ...) uses the browser local timezone, not the event
+  timezone. For cross-timezone events the pre-filled time is wrong.
+  Fix: Use Luxon DateTime.fromISO(actualEnd, {zone:"utc"}).setZone(eventTimezone).toFormat("HH:mm").
+
+app/evenements/[id]/DeleteEventButton.js:67-68 — MEDIUM — UX — No error feedback on delete failure.
+  setLoading(false) is called on error but no error state is set and no user-visible feedback shown.
+  Fix: Add setError(err.message) and render the error message below the button.
+
+
+────────────────────────────────────────────────────────────────────────────────
+SECTION 4 — REACT / HOOKS ISSUES (not already reported)
+────────────────────────────────────────────────────────────────────────────────
+
+StintGrid.js:1437-1451 — LOW — HOOK/DEPS — strategy-switch effect missing teamEntryId in dep array.
+  The effect queries stints for selectedStrategyId. If teamEntryId changes (remount), stints from the
+  previous entry could persist until selectedStrategyId or isActive also changes. Low risk in practice
+  (parent remounts on entry change) but incorrect.
+  Fix: Add teamEntryId to the dep array.
+
+RaceMode.js:499,534 — LOW — STALE CLOSURE — handleIracingEvent useCallback with empty deps captures stale t().
+  handleIracingEvent is useCallback(async (event) => {...}, []). The t function is captured at first
+  render. On locale change during a live race, the handler keeps using the stale translation.
+  Fix: Add t to the useCallback deps.
+
+app/evenements/[id]/equipages/[entryId]/PlanningTab.js:73-82 — LOW — HOOK/DEPS — Realtime subscription effect missing channelSuffix dep.
+  The Realtime channel subscription effect has [teamEntryId] as its dep array but uses channelSuffix
+  when constructing the channel name. If channelSuffix changes, the subscription isn't re-created.
+  Fix: Add channelSuffix to the effect dep array.
+
+app/evenements/[id]/EventPageTabs.js:166-177 — LOW — HOOK/DEPS — tab-restoration effect missing isExternal dep.
+  The effect has [event.id] as its dep but reads isExternal to validate accessible tabs. If isExternal
+  changes after mount, the check may use a stale value.
+  Fix: Add isExternal to the dep array.
+
+app/pilotes/[id]/DriverStats.js:193-221 — LOW — HOOKS — useLocale() called after conditional return in IRatingTooltip.
+  IRatingTooltip is a function component that returns null at line 194 if !active || !payload?.length,
+  then calls useLocale() at line 195. Hooks must be called before conditional returns.
+  Fix: Move const locale = useLocale() to before the guard.
+  (Note: This is the same DriverStats.js:195 issue already catalogued as an ESLint finding —
+  confirmed here as a genuine Rules of Hooks violation, not just a lint warning.)
+
+app/evenements/[id]/equipages/[entryId]/PlanningTab.js:75 — LOW — CODE QUALITY — Variable shadowing: t used as timer param.
+  const tick = () => { setRefreshTick((t) => t + 1) } uses t as the updater parameter, shadowing
+  the outer t from useTranslations("planningTab").
+  Fix: Rename the updater parameter to prev or n.
+
+
+────────────────────────────────────────────────────────────────────────────────
+SECTION 5 — TIMEZONE BUGS
+────────────────────────────────────────────────────────────────────────────────
+
+app/evenements/[id]/equipages/[entryId]/PlanningTab.js:21-28 — HIGH — TIMEZONE — Gantt time labels use browser local timezone.
+  _formatTime uses new Date(date).toLocaleTimeString(...) in the browser local timezone. Hour tick
+  marks (lines 305-315) also computed in local timezone. Any user whose browser timezone differs from
+  the event timezone sees wrong time labels on the entire Gantt chart.
+  Fix: Replace with formatTimeInZone(date, eventTimezone) from lib/timezone.js; compute hour ticks
+  in UTC then display with formatTimeInZone.
+
+app/evenements/[id]/equipages/[entryId]/ActualEndInput.js:18 — LOW — TIMEZONE — Date default uses UTC date.
+  planned.toISOString().slice(0, 10) extracts the UTC date. For late-night events (e.g. 23:00 Paris =
+  21:00 UTC), the UTC date differs from the local date and the date input defaults to the wrong day.
+  Fix: Convert to the event timezone with Luxon before slicing.
+
+app/evenements/nouveau/page.js:32 — LOW — TIMEZONE / I18N — generateLabel hardcodes .setLocale("fr").
+  Start-time labels always generated in French regardless of the active locale.
+  Fix: Pass locale (from useLocale()) as a parameter to generateLabel and use it in .setLocale().
+
+
+────────────────────────────────────────────────────────────────────────────────
+SECTION 6 — AUTH & PERMISSION GAPS
+────────────────────────────────────────────────────────────────────────────────
+
+app/evenements/[id]/equipages/nouveau/page.js — LOW — AUTH — No server-side admin guard.
+  Auth is checked client-side via useEffect; non-admin users briefly see the create-team-entry form
+  before redirect.
+  Fix: Call isAdmin() in the server component and redirect before rendering.
+
+app/evenements/[id]/equipages/[entryId]/modifier/page.js — LOW — AUTH — Same client-side-only auth guard.
+  Non-admins see the full edit form momentarily before redirect.
+  Fix: Same server-side guard.
+
+
+────────────────────────────────────────────────────────────────────────────────
+SECTION 7 — I18N ISSUES
+────────────────────────────────────────────────────────────────────────────────
+
+PerformanceData.js:1043 — LOW — I18N MISUSE — t("colLapTime") used as filler word in count display.
+  {filteredLaps.length}/{g61Laps.length} {t("colLapTime")} reads as "5/20 chrono", which is
+  grammatically odd — colLapTime means "lap time" / "chrono", not a unit or noun here.
+  Fix: Add a dedicated key like g61LapCount or g61Laps to messages.
+
+app/admin/CircuitsManager.js:231,264,293 — LOW — I18N — Hardcoded French error strings.
+  "Le nom est obligatoire.", "Ce nom existe déjà." always French regardless of locale.
+  Fix: Use t() keys for all user-facing error strings.
+
+app/admin/ClassesManager.js:159,185,201,218,219 — LOW — I18N — Hardcoded French error strings.
+  Same pattern: "Le nom est obligatoire.", "Ce nom existe déjà."
+  Fix: Use t() keys.
+
+app/admin/CrewNamesManager.js:145,163 — LOW — I18N — Hardcoded French error strings.
+  "Le nom est obligatoire.", "Ce nom existe déjà."
+  Fix: Use t() keys.
+
+app/admin/EventTypesManager.js:140,154,169,180 — LOW — I18N — Hardcoded French error strings.
+  "Le nom est obligatoire.", "Ce nom existe déjà."
+  Fix: Use t() keys.
+
+app/admin/SettingsManager.js:111-112,159,168,241-245,282 — LOW — I18N — Multiple hardcoded French error strings.
+  "Nom de tag requis.", "Ce tag existe déjà.", "Durée invalide.", "Cette durée existe déjà.",
+  "Heure invalide.", "Minutes invalides."
+  Fix: Use t() keys for all of these.
+
+
+────────────────────────────────────────────────────────────────────────────────
+SECTION 8 — DATA QUALITY & VALIDATION GAPS
+────────────────────────────────────────────────────────────────────────────────
+
+app/admin/SettingsManager.js:278-313 — LOW — MISSING VALIDATION — handleEditSpecialTime missing minutes range check.
+  handleAddSpecialTime validates m < 0 || m > 59 at line 244, but handleEditSpecialTime (lines 278-313)
+  omits this check. Invalid minutes like 99 are accepted on edit.
+  Fix: Add || m < 0 || m > 59 to the edit validation.
+
+app/admin/SettingsManager.js:239 — LOW — SILENT DEFAULT — parseInt fallback hides invalid input.
+  const m = parseInt(newStM) || 0: if newStM is "abc", parseInt returns NaN, NaN||0 returns 0,
+  so the subsequent range check (m < 0 || m > 59) passes silently with 0.
+  Fix: Check isNaN(parseInt(newStM)) explicitly before the range check.
+
+app/championnats/[id]/modifier/page.js:170 — HIGH — UX / DATA INTEGRITY — Delete championship shows no cascade warning.
+  handleDelete deletes all events in the championship (which cascade-deletes team entries, stints,
+  performances, availabilities, signups). The confirmation dialog only shows the championship name.
+  Fix: Add explicit warning listing how many events, entries, and stints will be permanently deleted.
+
+app/admin/CrewNamesManager.js:207-237 — LOW — DATA QUALITY — handleDelete includes archived events in warning.
+  The "affected events" warning lists all events including archived ones, alarming admins unnecessarily.
+  Fix: Filter or label archived events separately in the modal.
+
+
+────────────────────────────────────────────────────────────────────────────────
+SECTION 9 — CODE QUALITY & DEAD CODE
+────────────────────────────────────────────────────────────────────────────────
+
+app/evenements/[id]/equipages/[entryId]/page.js:104 — LOW — DEAD CODE — Extra arg to formatTimeInZone.
+  formatTimeInZone(st.irl_start, tz, "HH:mm") passes a third argument not in the 2-parameter signature.
+  Silently discarded.
+  Fix: Remove the third argument.
+
+app/pilotes/[id]/page.js:179-192 — LOW — DEAD CODE — Math.min fallback || 0 is unreachable.
+  Math.min(...[]) returns Infinity. Infinity || 0 evaluates to Infinity (truthy), so 0 is never
+  reached.
+  Fix: Remove || 0 or replace with || Infinity to make intent explicit.
+
+app/auth/reset/page.js:32 — LOW — CODE QUALITY — router absent from useEffect dep array.
+  router is used inside a useEffect with empty deps []. In Next.js router is stable so no stale
+  closure, but triggers react-hooks/exhaustive-deps ESLint rule.
+  Fix: Add router to the dep array.
+
+app/auth/callback/iracing/route.js:360-365 — LOW — DEAD CODE — !existing is redundant in isFirstLink.
+  At that code point, a non-null existing would have already triggered an early return. The !existing
+  term is always true and is dead logic.
+  Fix: Remove the redundant !existing term for clarity.
+
+app/admin/ClassesManager.js:128-132 — LOW — MEMORY LEAK — refuelRates state not cleaned up on class delete.
+  handleDelete never removes the corresponding key from refuelRates. Accumulates stale keys over a
+  session (harmless for typical class counts).
+  Fix: Remove the key in handleDelete via setRefuelRates((prev) => { const next = {...prev}; delete next[id]; return next; }).
+
+app/championnats/nouveau/page.js:63 / championnats/[id]/modifier/page.js:132 — LOW — REDUNDANT CODE — router.refresh() after router.push().
+  After a client-side push, the new page fetches fresh data on mount; the refresh is redundant and
+  triggers an extra server round-trip.
+  Fix: Remove the router.refresh() calls after router.push().
+
+app/admin/page.js:189-213 — LOW — DEAD PROPS — matrixDrivers, allCarsMatrix, allTracksMatrix etc. passed to AdminTabs
+  but not in AdminTabs' function signature. Confirm these are consumed via the prop chain or remove
+  the dead passing.
+  Fix: Verify prop chain; remove unused prop passing if not consumed.
+
+app/evenements/[id]/EventPageTabs.js:504 — LOW — FILTER LOGIC — filterIrMax passes null-iRating drivers.
+  filterIrMax !== "" && ir !== null && ir > Number(filterIrMax): drivers with null iRating always
+  pass a max filter, appearing above the cutoff. May be intentional but undocumented.
+  Fix: Document policy; if null should be excluded, change to (ir === null || ir > Number(filterIrMax)).
+
+components/InventoryMatrix.js:277 — LOW — VARIABLE SHADOWING — Map param t shadows outer useTranslations t.
+  .map((t) => t.track_name) uses t as the map param, shadowing the outer const t = useTranslations(...).
+  No runtime bug but would cause a real error if t(...) were called inside that map callback.
+  Fix: Rename the map parameter to track or tr.
+
+app/register/page.js:149 — LOW — HTML — Password input missing required attribute.
+  The password <input> is missing required while the confirm-password input has it. Allows form
+  submission with empty password bypassing HTML5 constraint (API still rejects, but UX is inconsistent).
+  Fix: Add required to the password field.
+
+app/login/page.js:157 — LOW — UX — <Suspense> wrapping login form has no fallback prop.
+  If the component suspends, React renders nothing instead of a loading indicator.
+  Fix: Add fallback={<div>Chargement…</div>} or a spinner component.
+
+
+────────────────────────────────────────────────────────────────────────────────
+SECTION 10 — GUIDE DEMO ISSUES
+────────────────────────────────────────────────────────────────────────────────
+
+app/guide/components/demos/InventoryDemo.tsx:24 — LOW — GUIDE DEMO DRIFT — Local re-implementation of KBadge/FreeBadge.
+  InventoryDemo defines its own local KBadge and FreeBadge inline instead of importing from
+  components/InventoryBadges.js. If the real badge styling changes, the demo silently shows the old appearance.
+  Fix: Import KBadge and FreeBadge from components/InventoryBadges.js.
+
+app/guide/components/demos/AdminEventTypesDemo.tsx:66 — LOW — I18N — Hardcoded French string in guide demo.
+  "Aucune restriction configurée — toutes les voitures sont accessibles." is hardcoded French.
+  In English locale the guide displays raw French text.
+  Fix: Extract to a translation key in both fr.json and en.json.
+
+app/guide/components/demos/ProfilDemo.tsx — LOW — GUIDE DEMO INACCURACY — Missing Profil and Inventaire tabs.
+  Demo renders only 2 tabs (Engagements and Statistiques). The real driver profile at /pilotes/[id]
+  has 4 tabs: Profil / Statistiques / Inventaire / Engagements (per CLAUDE.md).
+  Fix: Add missing Profil and Inventaire tabs to ProfilDemo.tsx and corresponding guide.data.ts entries.
+
+app/guide/components/demos/CourseDemo.tsx:47 — LOW — FRAGILE STRING MANIPULATION — Splits translated string on em-dash.
+  t("stintTooltip", { number: s.n, driver: "" }).split("—")[0].trim() extracts the stint label by
+  splitting on an em-dash. If the translation changes format (reorders, different dash character),
+  the split silently returns the full string or empty string.
+  Fix: Add a dedicated stintLabel translation key containing only the stint number portion.
+
+app/guide/components/demos/AdminAccueilDemo.tsx:46 — LOW — FRAGILE STRING MANIPULATION — Manual # replacement in translation.
+  t("pendingWarning_other").replace("#", "2") is fragile — if the translation changes (adds another
+  #, drops it, or uses a different placeholder), substitution fails silently.
+  Fix: Use t("pendingWarning_other", { count: 2 }) with proper {count} interpolation in the translation.
+
+
+────────────────────────────────────────────────────────────────────────────────
+SECTION 11 — ENV VAR MISMATCH
+────────────────────────────────────────────────────────────────────────────────
+
+app/api/notify-admins/route.js (and all 4 notify-* routes) — MEDIUM — CONFIG — RESEND_API_KEY vs RESEND_IRACING_BRIDGE_API_KEY.
+  All four notification routes use process.env.RESEND_API_KEY. CLAUDE.md documents the variable as
+  RESEND_IRACING_BRIDGE_API_KEY. If the Vercel project uses the CLAUDE.md name, email sending silently
+  fails (Resend initialized with undefined).
+  Fix: Confirm which name is actually set in Vercel; align all four routes and CLAUDE.md to the same name.
+
+
+================================================================================
+SUMMARY BY SEVERITY
+================================================================================
+
+  HIGH   : 13 findings
+  MEDIUM : 29 findings
+  LOW    : 35 findings
+  TOTAL  : 77 findings
+
+(All 77 are NEW — not in the pre-existing BUG-1..9, HOOK-1..5, MINOR-1..7 list)
+
+================================================================================
+END OF AUDIT
+================================================================================
