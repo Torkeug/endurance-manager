@@ -1,5 +1,6 @@
 import { Fragment } from "react";
 import { useTranslations } from "next-intl";
+import { KBadge, FreeBadge } from "../../../../components/InventoryBadges";
 
 // Static demo of the InventoryMatrix (cars × drivers).
 // Each driver column header is vertical text (writing-mode: vertical-rl).
@@ -20,18 +21,6 @@ const COUNT_W = 44;
 const CELL_W = 36;
 
 const HEADER_H = 110;
-
-function KBadge() {
-  return (
-    <span style={{ fontSize: "0.55rem", fontWeight: 700, color: "var(--accent)", border: "1px solid var(--accent)", padding: "0px 3px", borderRadius: "2px", marginLeft: "4px", verticalAlign: "middle" }}>K</span>
-  );
-}
-
-function FreeBadge() {
-  return (
-    <span style={{ fontSize: "0.55rem", fontWeight: 700, color: "#50c878", border: "1px solid #50c878", padding: "0px 3px", borderRadius: "2px", marginLeft: "4px", verticalAlign: "middle" }}>iR+</span>
-  );
-}
 
 export default function InventoryDemo() {
   const t = useTranslations("inventoryMatrix");

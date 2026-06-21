@@ -2,6 +2,14 @@
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 
+function SortArrow({ field, sortField, sortDir }: { field: string; sortField: string; sortDir: string }) {
+  return (
+    <span style={{ opacity: sortField === field ? 1 : 0.3, fontSize: "0.75em" }}>
+      {sortField === field && sortDir === "desc" ? "▼" : "▲"}
+    </span>
+  );
+}
+
 const CREWS: Record<string, { bg: string; border: string }> = {
   "Kronos Alpha": { bg: "rgba(99,102,241,0.12)",  border: "#6366f1" },
   "Kronos Beta":  { bg: "rgba(16,185,129,0.12)",  border: "#10b981" },
@@ -86,11 +94,6 @@ export default function InscriptionsDemo() {
     });
   }
 
-  const SortArrow = ({ field }: { field: SortField }) => (
-    <span style={{ opacity: sortField === field ? 1 : 0.3, fontSize: "0.75em" }}>
-      {sortField === field && sortDir === "desc" ? "▼" : "▲"}
-    </span>
-  );
 
   const isGrouped = sortField === "name";
   const seen = new Set<string>();
@@ -138,12 +141,12 @@ export default function InscriptionsDemo() {
             <tr>
               {([["name", t("colDriver")],["irating","iRating"],["team", t("colTeam")]] as [SortField,string][]).map(([f, label]) => (
                 <th key={f} style={TH_BASE} onClick={() => toggleSort(f)}>
-                  {label} <SortArrow field={f} />
+                  {label} <SortArrow field={f} sortField={sortField} sortDir={sortDir} />
                 </th>
               ))}
               <th style={TH_BASE}>{t("colPreferences")}</th>
               <th style={{ ...TH_BASE, cursor: "pointer" }} onClick={() => toggleSort("starttime")}>
-                {t("colSlots")} <SortArrow field="starttime" />
+                {t("colSlots")} <SortArrow field="starttime" sortField={sortField} sortDir={sortDir} />
               </th>
               <th style={TH_BASE}>{t("colTags")}</th>
             </tr>

@@ -44,7 +44,7 @@ export default function CourseDemo() {
         {STINTS_DEMO.map((s) => (
           <div
             key={s.n}
-            title={t("stintTooltip", { number: s.n, driver: "" }).split("—")[0].trim()}
+            title={t("stintNumber", { number: s.n })}
             style={{
               flex: 1,
               minWidth: "24px",
