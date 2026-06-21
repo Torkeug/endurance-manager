@@ -236,13 +236,6 @@ function SignupForm({
     setLoading(true);
     setError(null);
 
-    // Non-admins may only submit for themselves
-    if (currentUserId && driverId !== currentUserId && !currentUserIsAdmin) {
-      setError(t("unauthorized"));
-      setLoading(false);
-      return;
-    }
-
     const payload = {
       event_id: eventId,
       driver_id: driverId,
