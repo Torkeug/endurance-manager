@@ -191,8 +191,8 @@ function SectionHeader({ title }) {
 // ─── iRating chart tooltip ────────────────────────────────────────────────────
 
 function IRatingTooltip({ active, payload }) {
-  if (!active || !payload?.length) return null;
   const locale = useLocale();
+  if (!active || !payload?.length) return null;
   const { irating, recorded_at } = payload[0].payload;
   return (
     <div
@@ -276,6 +276,7 @@ export default function DriverStats({
     rawChartData = [...roadData, ...rawChartData];
   }
 
+  // eslint-disable-next-line react-hooks/purity
   const chartData = (() => {
     if (rawChartData.length === 0 && !currentIrating) return [];
 

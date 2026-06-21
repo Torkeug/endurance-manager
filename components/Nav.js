@@ -61,8 +61,9 @@ export default function Nav() {
       .then(({ count }) => setPendingCount(count || 0));
   }, [pathname, driver?.id]);
 
-  // Read theme from localStorage in useEffect, not useState initializer —
-  // localStorage is not available during SSR, reading it directly causes hydration mismatch.
+  // Read theme from localStorage after mount — not in useState initializer to avoid
+  // SSR/client hydration mismatch on the logo src (different img for dark vs light).
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => {
     const saved = localStorage.getItem("theme") || "dark";
     setTheme(saved);

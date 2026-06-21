@@ -530,7 +530,7 @@ export default async function HomePage() {
           }}
         >
           <span style={{ color: "var(--danger)", fontWeight: 600, fontSize: "0.9rem" }}>
-            ⚠️ {pendingCount === 1 ? t("pendingWarning_one").replace("#", pendingCount) : t("pendingWarning_other").replace("#", pendingCount)}
+            ⚠️ {t("pendingWarning", { count: pendingCount })}
           </span>
           <Link href="/admin" className="btn btn-danger btn-sm">{t("manageAccess")}</Link>
         </div>

@@ -251,7 +251,8 @@
     "noModifier": "sans modificateur configuré",
     "g61ErrorUnknown": "Erreur inconnue",
     "g61ErrorNetwork": "Erreur réseau",
-    "g61ErrorPrefix": "Erreur : {error}"
+    "g61ErrorPrefix": "Erreur : {error}",
+    "g61LapCount": "{count, plural, one {tour} other {tours}}"
   },
   "raceMode": {
     "confirm": "Confirmer",
@@ -316,6 +317,7 @@
     "statusFinished": "Terminée",
     "unknownDriver": "Pilote inconnu",
     "stintTooltip": "Relais {number} — {driver}",
+    "stintNumber": "Relais {number}",
     "beforeStart": "Avant départ",
     "fuelPlanned": "/ {amount}L prévu",
     "lapsCount": "{count} tours",
@@ -577,8 +579,7 @@
     "welcome": "Bienvenue,",
     "staleSyncWarning": "Vos données iRacing n'ont pas été synchronisées depuis plus de 100 jours.",
     "myProfileArrow": "Mon profil →",
-    "pendingWarning_one": "# pilote en attente d'approbation",
-    "pendingWarning_other": "# pilotes en attente d'approbation",
+    "pendingWarning": "{count, plural, one {# pilote en attente d'approbation} other {# pilotes en attente d'approbation}}",
     "manageAccess": "Gérer les accès →",
     "addDriver": "+ Ajouter un pilote",
     "createEvent": "+ Créer un événement",
@@ -1168,7 +1169,8 @@
     "unsubscribeBtn": "Se désinscrire",
     "classMismatch": "La classe de cette équipe ({entryClass}) ne correspond pas à vos préférences ({preferred}).",
     "carMismatch": "La voiture de cette équipe ({entryCar}) ne correspond pas à vos préférences ({preferred}). La classe correspond ({entryClass}).",
-    "alreadySignedUp": "Vous êtes déjà inscrit pour cette équipe."
+    "alreadySignedUp": "Vous êtes déjà inscrit pour cette équipe.",
+    "unauthorized": "Action non autorisée."
   },
   "championshipEdit": {
     "confirm": "Confirmer",
@@ -1194,7 +1196,7 @@
     "archiveBtn": "📦 Archiver",
     "unarchiveBtn": "↩ Désarchiver",
     "deleteTitle": "Supprimer le championnat",
-    "deleteMsg": "Ce championnat et toutes ses manches seront supprimés définitivement. Cette action est irréversible.",
+    "deleteMsg": "Ce championnat, toutes ses manches et toutes les données associées (équipages, inscriptions, relais, disponibilités) seront supprimés définitivement. Cette action est irréversible.",
     "deleteConfirm": "Supprimer définitivement",
     "deleteBtn": "Supprimer",
     "titleNew": "Nouveau championnat",
@@ -1227,6 +1229,7 @@
     "carsGroupedUnder": "Groupé sous :",
     "carsTypePlaceholder": "ex: gt3, gte, gtp, lmp2…",
     "carsDeleteTitle": "Supprimer la voiture",
+    "carsBlockedByEvents": "Cette voiture est utilisée dans {count, plural, one {un événement actif} other {{count} événements actifs}} et ne peut pas être supprimée :",
     "carsAffectedCount": "{count, plural, one {{count} pilote} other {{count} pilotes}}",
     "carsAffectedVerb": "{count, plural, one {a cette voiture dans leurs préférences et perdra silencieusement cette préférence :} other {ont cette voiture dans leurs préférences et perdront silencieusement cette préférence :}}",
     "carsUpdatePrefsHint": "Ces pilotes devront mettre à jour leurs préférences lors de leur prochaine inscription.",
@@ -1392,6 +1395,7 @@
     "eventTypesToggle": "{expanded, select, true {▲ Voitures} other {▼ Voitures}}",
     "eventTypesNameLabel": "Nom",
     "eventTypesCarsHint": "Cochez les voitures autorisées pour ce type. Si aucune voiture n'est cochée, toutes sont autorisées.",
+    "eventTypesNoRestriction": "Aucune restriction configurée — toutes les voitures sont accessibles.",
     "eventTypesEmpty": "Aucun type d'événement.",
     "g61ConfirmedLabel": "✓ Lié",
     "g61ExactLabel": "→ Correspondance exacte",
@@ -1451,7 +1455,15 @@
     "settingsTagsPlaceholder": "ex : chill, compet, solo…",
     "settingsTagsAddBtn": "+ Ajouter un tag",
     "settingsColTag": "Tag",
-    "settingsTagsEmpty": "Aucun tag configuré."
+    "settingsTagsEmpty": "Aucun tag configuré.",
+    "errorNameRequired": "Le nom est obligatoire.",
+    "errorNameExists": "Ce nom existe déjà.",
+    "errorTagRequired": "Nom de tag requis.",
+    "errorTagExists": "Ce tag existe déjà.",
+    "errorDurationInvalid": "Durée invalide.",
+    "errorDurationExists": "Cette durée existe déjà.",
+    "errorTimeInvalid": "Heure invalide.",
+    "errorMinutesInvalid": "Minutes invalides."
   },
   "guide": {
     "header": "Guide d’utilisation — Pilotes",

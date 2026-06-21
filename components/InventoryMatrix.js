@@ -202,6 +202,7 @@ export default function InventoryMatrix({
         ]);
 
         if (iracingCarsRes.error) throw iracingCarsRes.error;
+        if (iracingTracksFreeRes.error) throw iracingTracksFreeRes.error;
 
         // ── Build allCars — unique cars from ownership data ──────────────────
         const carMap = new Map();
@@ -274,7 +275,7 @@ export default function InventoryMatrix({
             .map((c) => c.iracing_car_id),
         );
         setFreeTrackNamesArr(
-          (iracingTracksFreeRes.data || []).map((t) => t.track_name),
+          (iracingTracksFreeRes.data || []).map((track) => track.track_name),
         );
       } catch (err) {
         console.error("InventoryMatrix fetch error:", err);
