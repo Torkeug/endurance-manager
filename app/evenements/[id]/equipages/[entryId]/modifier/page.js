@@ -201,6 +201,7 @@ export default function ModifierEquipage({ params }) {
     );
   }, [entryId]);
 
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => {
     if (!form?.car_id || cars.length === 0) {
       setSelectedCar(null);

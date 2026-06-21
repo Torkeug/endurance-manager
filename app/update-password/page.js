@@ -13,11 +13,9 @@ export default function UpdatePasswordPage() {
   const router = useRouter();
   const t = useTranslations("updatePassword");
 
-  const [theme, setTheme] = useState("dark");
-  useEffect(() => {
-    const saved = localStorage.getItem("theme") || "dark";
-    setTheme(saved);
-  }, []);
+  const [theme] = useState(() =>
+    typeof window !== "undefined" ? localStorage.getItem("theme") || "dark" : "dark"
+  );
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -35,8 +33,13 @@ export default function UpdatePasswordPage() {
     if (err) { setError(err.message); setLoading(false); return; }
 
     setSuccess(true);
-    setTimeout(() => router.push("/"), 2000);
   };
+
+  useEffect(() => {
+    if (!success) return;
+    const timer = setTimeout(() => router.push("/"), 2000);
+    return () => clearTimeout(timer);
+  }, [success, router]);
 
   const logoSrc = theme === "dark" ? "/kronos-logo-text.png" : "/kronos-logo-light.png";
 

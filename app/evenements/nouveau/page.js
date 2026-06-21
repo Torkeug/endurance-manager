@@ -27,10 +27,8 @@ function isValidTime(str) {
 
 // Auto-generate a label from date + time in the event timezone.
 // Mirrors the same function in StartTimesManager to keep labels consistent.
-function generateLabel(date, time, tz) {
-  const dt = DateTime.fromISO(`${date}T${time}:00`, { zone: tz }).setLocale(
-    "fr",
-  );
+function generateLabel(date, time, tz, locale = "fr") {
+  const dt = DateTime.fromISO(`${date}T${time}:00`, { zone: tz }).setLocale(locale);
   const dayName = dt.toFormat("EEEE");
   const dayNum = dt.toFormat("d");
   const month = dt.toFormat("MMMM yyyy");
@@ -123,6 +121,7 @@ export default function NouvelEvenement() {
 
   // Auto-fill pit lane time when circuit changes — read from circuits reference data.
   // Displayed as read-only so the user knows it's sourced from the circuit, not manual.
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => {
     if (!form.circuit_id) {
       setPitTime(null);
@@ -179,6 +178,13 @@ export default function NouvelEvenement() {
       .order("minute")
       .then(({ data }) => setSpecialStartTimes(data || []));
   }, []);
+
+  // Sync circuit_id when a direct (unlinked) circuit is selected via __direct__ prefix.
+  useEffect(() => {
+    if (!selectedBaseTrack?.startsWith("__direct__")) return;
+    const directId = selectedBaseTrack.replace("__direct__", "");
+    setForm((prev) => prev.circuit_id === directId ? prev : { ...prev, circuit_id: directId });
+  }, [selectedBaseTrack]);
 
   const set = (field) => (e) =>
     setForm((prev) => ({ ...prev, [field]: e.target.value }));
@@ -336,7 +342,7 @@ export default function NouvelEvenement() {
     if (!isSpecial && startTimeEntries.length > 0) {
       const rows = startTimeEntries.map((entry) => ({
         event_id: data.id,
-        label: generateLabel(entry.date, entry.time, form.timezone),
+        label: generateLabel(entry.date, entry.time, form.timezone, locale),
         irl_start: localToUTC(entry.date, entry.time, form.timezone),
       }));
       await supabase.from("event_start_times").insert(rows);
@@ -679,7 +685,16 @@ export default function NouvelEvenement() {
                 <select
                   value={selectedBaseTrack}
                   onChange={(e) => {
-                    setSelectedBaseTrack(e.target.value);
+                    const newBase = e.target.value;
+                    setSelectedBaseTrack(newBase);
+                    if (newBase && !newBase.startsWith("__direct__")) {
+                      const layouts =
+                        circuitGroups.sorted.find(([name]) => name === newBase)?.[1] || [];
+                      if (layouts.length === 1) {
+                        setForm((prev) => ({ ...prev, circuit_id: layouts[0].id }));
+                        return;
+                      }
+                    }
                     setForm((prev) => ({ ...prev, circuit_id: "" }));
                   }}
                 >
@@ -708,15 +723,6 @@ export default function NouvelEvenement() {
                       circuitGroups.sorted.find(
                         ([name]) => name === selectedBaseTrack,
                       )?.[1] || [];
-                    if (
-                      layouts.length === 1 &&
-                      form.circuit_id !== layouts[0].id
-                    ) {
-                      setForm((prev) => ({
-                        ...prev,
-                        circuit_id: layouts[0].id,
-                      }));
-                    }
                     if (layouts.length <= 1) return null;
                     return (
                       <select
@@ -733,18 +739,7 @@ export default function NouvelEvenement() {
                     );
                   })()}
 
-                {/* Direct unlinked circuit — set circuit_id immediately */}
-                {selectedBaseTrack.startsWith("__direct__") &&
-                  (() => {
-                    const directId = selectedBaseTrack.replace(
-                      "__direct__",
-                      "",
-                    );
-                    if (form.circuit_id !== directId) {
-                      setForm((prev) => ({ ...prev, circuit_id: directId }));
-                    }
-                    return null;
-                  })()}
+                {/* Direct unlinked circuit — circuit_id synced via useEffect */}
               </div>
             </div>
             <div className="form-group">
@@ -801,6 +796,7 @@ export default function NouvelEvenement() {
                               entry.date,
                               entry.time,
                               form.timezone,
+                              locale,
                             )}
                           </div>
                           <div

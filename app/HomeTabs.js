@@ -13,7 +13,9 @@ export default function HomeTabs({
   const [activeTab, setActiveTab] = useState("planning");
   const t = useTranslations("homeTabs");
 
-  // Read persisted tab in useEffect — never in useState to avoid hydration mismatch
+  // Read persisted tab after mount — lazy initializer would cause a hydration
+  // mismatch if the stored tab differs from the default (server has no localStorage).
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => {
     const saved = localStorage.getItem("home-tab");
     if (saved === "planning" || saved === "incomplete") setActiveTab(saved);

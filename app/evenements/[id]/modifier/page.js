@@ -216,6 +216,13 @@ export default function ModifierEvenement({ params }) {
       .then(({ data }) => setDurations(data || []));
   }, []);
 
+  // Sync circuit_id when a direct (unlinked) circuit is selected via __direct__ prefix.
+  useEffect(() => {
+    if (!selectedBaseTrack?.startsWith("__direct__")) return;
+    const directId = selectedBaseTrack.replace("__direct__", "");
+    setForm((prev) => prev.circuit_id === directId ? prev : { ...prev, circuit_id: directId });
+  }, [selectedBaseTrack]);
+
   const set = (field) => (e) =>
     setForm((prev) => ({ ...prev, [field]: e.target.value }));
 
@@ -848,7 +855,16 @@ export default function ModifierEvenement({ params }) {
                 <select
                   value={selectedBaseTrack}
                   onChange={(e) => {
-                    setSelectedBaseTrack(e.target.value);
+                    const newBase = e.target.value;
+                    setSelectedBaseTrack(newBase);
+                    if (newBase && !newBase.startsWith("__direct__")) {
+                      const layouts =
+                        circuitGroups.sorted.find(([name]) => name === newBase)?.[1] || [];
+                      if (layouts.length === 1) {
+                        setForm((prev) => ({ ...prev, circuit_id: layouts[0].id }));
+                        return;
+                      }
+                    }
                     // Reset layout selection when base track changes
                     setForm((prev) => ({ ...prev, circuit_id: "" }));
                   }}
@@ -878,16 +894,6 @@ export default function ModifierEvenement({ params }) {
                       circuitGroups.sorted.find(
                         ([name]) => name === selectedBaseTrack,
                       )?.[1] || [];
-                    // Single layout — auto-select it
-                    if (
-                      layouts.length === 1 &&
-                      form.circuit_id !== layouts[0].id
-                    ) {
-                      setForm((prev) => ({
-                        ...prev,
-                        circuit_id: layouts[0].id,
-                      }));
-                    }
                     if (layouts.length <= 1) return null;
                     return (
                       <select
@@ -904,18 +910,7 @@ export default function ModifierEvenement({ params }) {
                     );
                   })()}
 
-                {/* Direct unlinked circuit — set circuit_id immediately */}
-                {selectedBaseTrack.startsWith("__direct__") &&
-                  (() => {
-                    const directId = selectedBaseTrack.replace(
-                      "__direct__",
-                      "",
-                    );
-                    if (form.circuit_id !== directId) {
-                      setForm((prev) => ({ ...prev, circuit_id: directId }));
-                    }
-                    return null;
-                  })()}
+                {/* Direct unlinked circuit — circuit_id synced via useEffect */}
               </div>
             </div>
           </div>

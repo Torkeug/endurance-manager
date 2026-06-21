@@ -12,14 +12,11 @@ export default function ChangePasswordPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(false);
-  const [theme, setTheme] = useState("dark");
+  const [theme] = useState(() =>
+    typeof window !== "undefined" ? localStorage.getItem("theme") || "dark" : "dark"
+  );
   const router = useRouter();
   const t = useTranslations("changePassword");
-
-  useEffect(() => {
-    const saved = localStorage.getItem("theme") || "dark";
-    setTheme(saved);
-  }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -48,8 +45,13 @@ export default function ChangePasswordPage() {
 
     setSuccess(true);
     setLoading(false);
-    setTimeout(() => router.back(), 2000);
   };
+
+  useEffect(() => {
+    if (!success) return;
+    const timer = setTimeout(() => router.back(), 2000);
+    return () => clearTimeout(timer);
+  }, [success, router]);
 
   const logoSrc = theme === "dark" ? "/kronos-logo-text.png" : "/kronos-logo-light.png";
 

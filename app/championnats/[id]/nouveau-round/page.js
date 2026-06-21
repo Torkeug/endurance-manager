@@ -75,7 +75,7 @@ export default function NouveauRound({ params }) {
   const [newStartDate, setNewStartDate] = useState("");
   const [newStartTime, setNewStartTime] = useState("");
   const [startTimeError, setStartTimeError] = useState(null);
-  const [roundCount, setRoundCount] = useState(0);
+
   const [championship, setChampionship] = useState(null);
 
   // Auth checked client-side because this is a client component (needs form interactivity).
@@ -123,6 +123,7 @@ export default function NouveauRound({ params }) {
 
   // Auto-fill pit lane time when circuit changes — read from circuits reference data.
   // Displayed as read-only so the user knows it's sourced from the circuit, not manual.
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => {
     if (!form.circuit_id) {
       setPitTime(null);
@@ -187,8 +188,6 @@ export default function NouveauRound({ params }) {
         ...(roundsData || []).map((r) => r.round_number || 0),
       );
 
-      setRoundCount(maxRound);
-
       // auto-name
       setForm((prev) => ({
         ...prev,
@@ -196,6 +195,14 @@ export default function NouveauRound({ params }) {
       }));
     });
   }, [id]);
+
+  // Sync circuit_id when a direct (unlinked) circuit is selected via __direct__ prefix.
+  // Moved out of JSX to avoid setState-during-render React invariant violation.
+  useEffect(() => {
+    if (!selectedBaseTrack?.startsWith("__direct__")) return;
+    const directId = selectedBaseTrack.replace("__direct__", "");
+    setForm((prev) => prev.circuit_id === directId ? prev : { ...prev, circuit_id: directId });
+  }, [selectedBaseTrack]);
 
   const set = (field) => (e) =>
     setForm((prev) => ({ ...prev, [field]: e.target.value }));
@@ -235,7 +242,7 @@ export default function NouveauRound({ params }) {
       setStartTimeError(t("errorDate"));
       return;
     }
-    if (!newStartTime) {
+    if (!newStartTime || !isValidTime(newStartTime)) {
       setStartTimeError(t("errorTime"));
       return;
     }
@@ -289,6 +296,15 @@ export default function NouveauRound({ params }) {
     setLoading(true);
     setError(null);
 
+    // Re-fetch max round_number at submit time to avoid TOCTOU with concurrent creates.
+    // The unique index (championship_id, round_number) will catch any race.
+    const { data: latestRounds } = await supabase
+      .from("events")
+      .select("round_number")
+      .eq("championship_id", id)
+      .not("round_number", "is", null);
+    const latestMax = Math.max(0, ...(latestRounds || []).map((r) => r.round_number || 0));
+
     const payload = {
       name: form.name.trim(),
       duration_minutes: parseInt(form.duration_minutes),
@@ -300,7 +316,7 @@ export default function NouveauRound({ params }) {
       ig_sunset: form.ig_sunset || null,
       notes: form.notes.trim() || null,
       championship_id: id,
-      round_number: roundCount + 1,
+      round_number: latestMax + 1,
       green_flag_offset_minutes: parseInt(form.green_flag_offset_minutes) || 0,
     };
 
@@ -323,7 +339,14 @@ export default function NouveauRound({ params }) {
         label: generateLabel(entry.date, entry.time, form.timezone, locale),
         irl_start: localToUTC(entry.date, entry.time, form.timezone),
       }));
-      await supabase.from("event_start_times").insert(rows);
+      const { error: stErr } = await supabase
+        .from("event_start_times")
+        .insert(rows);
+      if (stErr) {
+        setError(stErr.message);
+        setLoading(false);
+        return;
+      }
     }
 
     router.push(`/evenements/${data.id}`);
@@ -582,7 +605,16 @@ export default function NouveauRound({ params }) {
                 <select
                   value={selectedBaseTrack}
                   onChange={(e) => {
-                    setSelectedBaseTrack(e.target.value);
+                    const newBase = e.target.value;
+                    setSelectedBaseTrack(newBase);
+                    if (newBase && !newBase.startsWith("__direct__")) {
+                      const layouts =
+                        circuitGroups.sorted.find(([name]) => name === newBase)?.[1] || [];
+                      if (layouts.length === 1) {
+                        setForm((prev) => ({ ...prev, circuit_id: layouts[0].id }));
+                        return;
+                      }
+                    }
                     setForm((prev) => ({ ...prev, circuit_id: "" }));
                   }}
                 >
@@ -611,15 +643,6 @@ export default function NouveauRound({ params }) {
                       circuitGroups.sorted.find(
                         ([name]) => name === selectedBaseTrack,
                       )?.[1] || [];
-                    if (
-                      layouts.length === 1 &&
-                      form.circuit_id !== layouts[0].id
-                    ) {
-                      setForm((prev) => ({
-                        ...prev,
-                        circuit_id: layouts[0].id,
-                      }));
-                    }
                     if (layouts.length <= 1) return null;
                     return (
                       <select
@@ -636,18 +659,7 @@ export default function NouveauRound({ params }) {
                     );
                   })()}
 
-                {/* Direct unlinked circuit — set circuit_id immediately */}
-                {selectedBaseTrack.startsWith("__direct__") &&
-                  (() => {
-                    const directId = selectedBaseTrack.replace(
-                      "__direct__",
-                      "",
-                    );
-                    if (form.circuit_id !== directId) {
-                      setForm((prev) => ({ ...prev, circuit_id: directId }));
-                    }
-                    return null;
-                  })()}
+                {/* Direct unlinked circuit — circuit_id synced via useEffect below */}
               </div>
             </div>
             <div className="form-group">
