@@ -474,7 +474,10 @@ function calculateAllStints(
       : null;
   }
   if (result.length > 0 && raceEnd) {
-    const coveringStint = result.find((s) => s._irlEnd && s._irlEnd >= raceEnd);
+    const coveringStint = result.findLast((s) => {
+      const end = s._irlEnd ?? (s.irl_end_actual ? new Date(s.irl_end_actual) : null);
+      return end && end >= raceEnd;
+    });
     if (coveringStint) {
       coveringStint._isLastStint = true;
       if (coveringStint._irlStart && coveringStint._lapTimeSec) {
@@ -730,7 +733,8 @@ function ActivateBeforeDeleteModal({ modal, strategies, onConfirm, onCancel }) {
   const t = useTranslations("stintGrid");
   const [chosenId, setChosenId] = useState(modal?.defaultId || "");
 
-  // Reset selection if modal changes (e.g. re-opened for a different strategy)
+  // Reset selection when modal reopens for a different strategy.
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => {
     setChosenId(modal?.defaultId || "");
   }, [modal?.defaultId]);
@@ -1149,7 +1153,10 @@ export default function StintGrid({
   const igStartTime = event?.ig_start_time;
   const igSunrise = event?.ig_sunrise;
   const igSunset = event?.ig_sunset;
-  const driverIds = assignedDrivers.map((d) => d.drivers?.id).filter(Boolean);
+  const driverIds = useMemo(
+    () => assignedDrivers.map((d) => d.drivers?.id).filter(Boolean),
+    [assignedDrivers],
+  );
   // The strategy object for the currently selected tab
   const currentStrategy =
     strategies.find((s) => s.id === selectedStrategyId) ||
@@ -1409,8 +1416,11 @@ export default function StintGrid({
         }
         hasLoadedOnce.current = true;
       },
-    );
-  }, [teamEntryId, JSON.stringify(driverIds), isActive]);
+    ).catch((err) => {
+      console.error("[StintGrid] fetch failed:", err);
+      setLoading(false);
+    });
+  }, [teamEntryId, driverIds, isActive]);
 
   // Sync local edit fields when the selected strategy changes
   useEffect(() => {
@@ -1435,7 +1445,7 @@ export default function StintGrid({
   // Cancellation token prevents a slow response for a previous strategy from
   // overwriting the stints for the strategy the user actually switched to.
   useEffect(() => {
-    if (!selectedStrategyId || !teamEntryId || loading) return;
+    if (!isActive || !selectedStrategyId || !teamEntryId || loading) return;
     let cancelled = false;
     supabase
       .from("stints")
@@ -1446,9 +1456,7 @@ export default function StintGrid({
         if (!cancelled) setStints(data || []);
       });
     return () => { cancelled = true; };
-  // Only re-fetch stints when the tab is active — avoids unnecessary DB calls
-  // when switching strategies while the Relais tab is hidden.
-  }, [selectedStrategyId, isActive]);
+  }, [selectedStrategyId, isActive, teamEntryId]);
 
   // Memoized — only reruns when stints, perf data, or strategy offset actually change.
   // Prevents the full chain recalculation (fuel, lap time, team averages) on every render,
@@ -1547,6 +1555,9 @@ export default function StintGrid({
       openRecalcModal();
       onAutoOpenHandled?.();
     }
+  // openRecalcModal intentionally omitted: adding it would re-trigger on every
+  // stint/perf change (it captures calculated). The flag transition is the signal.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [autoOpenRecalc, loading]);
 
   // Detect touch device on mount — pointer: coarse = touchscreen.
@@ -1670,55 +1681,58 @@ export default function StintGrid({
   const handleCreateStrategy = async () => {
     if (strategies.length >= 5 || archived || creatingStrategy.current) return;
     creatingStrategy.current = true;
-    const nextSort =
-      strategies.length > 0
-        ? Math.max(...strategies.map((s) => s.sort_order)) + 1
-        : 1;
+    try {
+      const nextSort =
+        strategies.length > 0
+          ? Math.max(...strategies.map((s) => s.sort_order)) + 1
+          : 1;
 
-    // Insert the new strategy row first
-    const { data: newStrat } = await supabase
-      .from("strategies")
-      .insert({
-        team_entry_id: teamEntryId,
-        name: t("newStrategyName", { number: nextSort }),
-        sort_order: nextSort,
-        is_active: false,
-        // Inherit offset from current strategy — driver can adjust per strategy
-        actual_start_offset_minutes:
-          currentStrategy?.actual_start_offset_minutes || 0,
-      })
-      .select()
-      .single();
+      // Insert the new strategy row first
+      const { data: newStrat } = await supabase
+        .from("strategies")
+        .insert({
+          team_entry_id: teamEntryId,
+          name: t("newStrategyName", { number: nextSort }),
+          sort_order: nextSort,
+          is_active: false,
+          // Inherit offset from current strategy — driver can adjust per strategy
+          actual_start_offset_minutes:
+            currentStrategy?.actual_start_offset_minutes || 0,
+        })
+        .select()
+        .single();
 
-    if (!newStrat) return;
+      if (!newStrat) return;
 
-    // Clone stints from the currently viewed strategy into the new one.
-    // Copies planning fields only — runtime/calculated fields are left null
-    // so the engine recalculates them fresh for this strategy.
-    let clonedStints = [];
-    if (stints.length > 0) {
-      const rows = stints.map((s) => ({
-        team_entry_id: teamEntryId,
-        strategy_id: newStrat.id,
-        stint_number: s.stint_number,
-        driver_id: s.driver_id || null,
-        laps_planned: s.laps_planned || null,
-        rain: s.rain || false,
-        tyre_change: s.tyre_change || false,
-        // previous_driver_id, irl_end_actual, fuel_*_calc etc. intentionally omitted
-      }));
-      const { data: inserted } = await supabase
-        .from("stints")
-        .insert(rows)
-        .select();
-      clonedStints = inserted || [];
+      // Clone stints from the currently viewed strategy into the new one.
+      // Copies planning fields only — runtime/calculated fields are left null
+      // so the engine recalculates them fresh for this strategy.
+      let clonedStints = [];
+      if (stints.length > 0) {
+        const rows = stints.map((s) => ({
+          team_entry_id: teamEntryId,
+          strategy_id: newStrat.id,
+          stint_number: s.stint_number,
+          driver_id: s.driver_id || null,
+          laps_planned: s.laps_planned || null,
+          rain: s.rain || false,
+          tyre_change: s.tyre_change || false,
+          // previous_driver_id, irl_end_actual, fuel_*_calc etc. intentionally omitted
+        }));
+        const { data: inserted } = await supabase
+          .from("stints")
+          .insert(rows)
+          .select();
+        clonedStints = inserted || [];
+      }
+
+      // Update strategies list, switch to new tab, and load its stints
+      setStrategies((prev) => [...prev, newStrat]);
+      setSelectedStrategyId(newStrat.id);
+      setStints(clonedStints);
+    } finally {
+      creatingStrategy.current = false;
     }
-
-    // Update strategies list, switch to new tab, and load its stints
-    setStrategies((prev) => [...prev, newStrat]);
-    setSelectedStrategyId(newStrat.id);
-    setStints(clonedStints);
-    creatingStrategy.current = false;
   };
 
   const handleUpdateStrategy = async (id, fields) => {
@@ -1806,9 +1820,9 @@ export default function StintGrid({
           .from("strategies")
           .update({ is_active: true })
           .eq("id", id);
-        setStrategies((prev) =>
-          prev.map((s) => ({ ...s, is_active: s.id === id })),
-        );
+        const updated = strategies.map((s) => ({ ...s, is_active: s.id === id }));
+        setStrategies(updated);
+        onActiveStrategyChange?.(updated.find((s) => s.is_active) || null);
       },
     });
   };
@@ -1845,11 +1859,14 @@ export default function StintGrid({
     // now actively claimed and should no longer trigger the restore modal.
     const extraFields =
       field === "driver_id" && value ? { previous_driver_id: null } : {};
-    await supabase
-      .from("stints")
-      .update({ [field]: value, ...extraFields })
-      .eq("id", stintId);
-    setSaving(null);
+    try {
+      await supabase
+        .from("stints")
+        .update({ [field]: value, ...extraFields })
+        .eq("id", stintId);
+    } finally {
+      setSaving(null);
+    }
   };
 
   const updateActualEnd = async (stintId, isoString) => {
@@ -1860,11 +1877,14 @@ export default function StintGrid({
         s.id === stintId ? { ...s, irl_end_actual: isoString } : s,
       ),
     );
-    await supabase
-      .from("stints")
-      .update({ irl_end_actual: isoString })
-      .eq("id", stintId);
-    setSaving(null);
+    try {
+      await supabase
+        .from("stints")
+        .update({ irl_end_actual: isoString })
+        .eq("id", stintId);
+    } finally {
+      setSaving(null);
+    }
   };
 
   const deleteStint = (stintId) => {
@@ -1875,14 +1895,19 @@ export default function StintGrid({
       confirmLabel: t("deleteStrategy"),
       onConfirm: async () => {
         setConfirmModal(null);
-        await supabase.from("stints").delete().eq("id", stintId);
+        const { error: deleteErr } = await supabase.from("stints").delete().eq("id", stintId);
+        if (deleteErr) {
+          console.error("[deleteStint]", deleteErr.message);
+          return;
+        }
         // Renumber remaining stints to keep stint_number sequential
+        const snapshot = stints;
         const updated = stints
           .filter((s) => s.id !== stintId)
           .map((s, i) => ({ ...s, stint_number: i + 1 }));
         setStints(updated);
-        // Persist renumbered stint_number values to DB
-        await Promise.all(
+        // Persist renumbered stint_number values to DB — rollback on failure
+        const results = await Promise.all(
           updated.map((s) =>
             supabase
               .from("stints")
@@ -1890,6 +1915,11 @@ export default function StintGrid({
               .eq("id", s.id),
           ),
         );
+        const failed = results.find((r) => r.error);
+        if (failed) {
+          console.error("[deleteStint renumber]", failed.error.message);
+          setStints(snapshot);
+        }
       },
     });
   };
@@ -3311,6 +3341,7 @@ export default function StintGrid({
                         }
                         saving={saving === stint.id}
                         archived={archived}
+                        timezone={teamEntry?.events?.timezone || "Europe/Paris"}
                       />
                     </td>
                   )}

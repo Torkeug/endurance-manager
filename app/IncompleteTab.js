@@ -15,7 +15,9 @@ export default function IncompleteTab({
   const [activeTab, setActiveTab] = useState("noDrivers");
   const t = useTranslations("incompleteTab");
 
-  // Read persisted sub-tab in useEffect — never in useState to avoid hydration mismatch
+  // Read persisted sub-tab after mount — lazy initializer would cause a hydration
+  // mismatch if the stored tab differs from the default (server has no localStorage).
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => {
     const saved = localStorage.getItem("home-incomplete-tab");
     if (["noDrivers", "noStints", "unassigned"].includes(saved))

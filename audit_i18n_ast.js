@@ -10,10 +10,8 @@
 //
 // Usage:
 //   node audit_i18n_ast.js
-//   node audit_i18n_ast.js --include-admin    (also scan admin/ and guide/)
 //
 // Excludes: node_modules, .next, api/, auth/
-// Excluded by default: admin/, guide/  (use --include-admin to include them)
 
 const fs   = require('fs');
 const path = require('path');
@@ -28,11 +26,7 @@ try {
 
 // ── Config ───────────────────────────────────────────────────────────────────
 
-const includeAdmin = process.argv.includes('--include-admin');
-
-const ALWAYS_EXCLUDE = ['node_modules', '.next', 'api', 'auth'];
-const DEFAULT_EXCLUDE = [...ALWAYS_EXCLUDE, 'admin', 'guide'];
-const EXCLUDE_DIRS = includeAdmin ? ALWAYS_EXCLUDE : DEFAULT_EXCLUDE;
+const EXCLUDE_DIRS = ['node_modules', '.next', 'api', 'auth'];
 
 // JSX attributes whose string values are always user-facing
 const USER_FACING_ATTRS = new Set([
@@ -231,7 +225,6 @@ const files = [
 ].filter(f => {
   const p = f.replace(/\\/g, '/');
   if (p.includes('/api/') || p.includes('/auth/')) return false;
-  if (!includeAdmin && (p.includes('/admin/') || p.includes('/guide/'))) return false;
   return true;
 }).sort();
 
@@ -257,5 +250,3 @@ for (const file of files) {
 
 console.log(`\n${'─'.repeat(60)}`);
 console.log(`Total candidates: ${total}`);
-if (includeAdmin) console.log('(admin/ and guide/ included)');
-else console.log('(admin/ and guide/ excluded — run with --include-admin to include)');

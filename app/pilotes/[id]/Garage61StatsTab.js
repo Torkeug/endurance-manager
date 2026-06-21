@@ -46,7 +46,8 @@ export default function Garage61StatsTab({ slug }) {
   const [expandedTrack, setExpandedTrack] = useState(null);
   const [lapCache, setLapCache] = useState({}); // trackId → { status, lap }
 
-  // Restore sort from localStorage on mount
+  // Restore sort from localStorage after mount — intentional for hydration safety.
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => {
     try {
       const saved = localStorage.getItem("kronos_g61_sort");
@@ -65,6 +66,7 @@ export default function Garage61StatsTab({ slug }) {
     try { localStorage.setItem("kronos_g61_cats", JSON.stringify(selectedCats)); } catch {}
   }, [selectedCats, state]);
 
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => {
     if (!slug) return;
     setState("loading");

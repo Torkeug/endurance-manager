@@ -138,7 +138,7 @@ export default function EventTypesManager({
 
   const handleAdd = async () => {
     if (!newName.trim()) {
-      setError("Le nom est obligatoire.");
+      setError(t("errorNameRequired"));
       return;
     }
     setSaving(true);
@@ -151,7 +151,7 @@ export default function EventTypesManager({
       .single();
     if (err) {
       if (err.code === "23505") {
-        setError("Ce nom existe déjà.");
+        setError(t("errorNameExists"));
       } else {
         setError(err.message);
       }
@@ -166,7 +166,7 @@ export default function EventTypesManager({
 
   const handleEdit = async () => {
     if (!newName.trim()) {
-      setError("Le nom est obligatoire.");
+      setError(t("errorNameRequired"));
       return;
     }
     setSaving(true);
@@ -178,7 +178,7 @@ export default function EventTypesManager({
       .single();
     if (err) {
       if (err.code === "23505") {
-        setError("Ce nom existe déjà.");
+        setError(t("errorNameExists"));
       } else {
         setError(err.message);
       }
@@ -281,10 +281,11 @@ export default function EventTypesManager({
     setError(null);
   };
 
-  // Group cars by class for display
+  // Group cars by class for display — fall back to "Autre" for cars without a class
   const carsByClass = cars.reduce((acc, car) => {
-    if (!acc[car.class]) acc[car.class] = [];
-    acc[car.class].push(car);
+    const key = car.class || "Autre";
+    if (!acc[key]) acc[key] = [];
+    acc[key].push(car);
     return acc;
   }, {});
 
@@ -486,19 +487,51 @@ export default function EventTypesManager({
                       allowedCarIds.includes(car.id),
                     );
 
-                    // Toggles all cars in a class at once.
-                    // If all are checked → uncheck all. If any are unchecked → check all missing ones.
+                    // Toggles all cars in a class at once with batched DB ops + single state update.
+                    // If all are checked → remove all; if any are unchecked → add all missing ones.
                     const toggleClass = async () => {
-                      // Run all toggles in parallel instead of sequentially for better performance
-                      await Promise.all(
-                        carsInClass.map(async (car) => {
-                          const allowed = allowedCarIds.includes(car.id);
-                          if (allChecked && allowed)
-                            await toggleCar(et.id, car.id, true);
-                          if (!allChecked && !allowed)
-                            await toggleCar(et.id, car.id, false);
-                        }),
-                      );
+                      const toRemove = allChecked
+                        ? carsInClass.filter((car) => allowedCarIds.includes(car.id))
+                        : [];
+                      const toAdd = !allChecked
+                        ? carsInClass.filter((car) => !allowedCarIds.includes(car.id))
+                        : [];
+
+                      const ops = [];
+                      if (toRemove.length > 0)
+                        ops.push(
+                          supabase
+                            .from("event_type_cars")
+                            .delete()
+                            .eq("event_type_id", et.id)
+                            .in("car_id", toRemove.map((c) => c.id)),
+                        );
+                      if (toAdd.length > 0)
+                        ops.push(
+                          supabase
+                            .from("event_type_cars")
+                            .insert(toAdd.map((car) => ({ event_type_id: et.id, car_id: car.id }))),
+                        );
+
+                      const results = await Promise.all(ops);
+                      const failed = results.find((r) => r.error);
+                      if (failed) { setError(failed.error.message); return; }
+
+                      setEventTypeCars((prev) => {
+                        let next = prev.filter(
+                          (etc) =>
+                            !(
+                              etc.event_type_id === et.id &&
+                              toRemove.some((c) => c.id === etc.car_id)
+                            ),
+                        );
+                        next = [
+                          ...next,
+                          ...toAdd.map((car) => ({ event_type_id: et.id, car_id: car.id })),
+                        ];
+                        return next;
+                      });
+                      router.refresh();
                     };
 
                     return (

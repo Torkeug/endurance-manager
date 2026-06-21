@@ -162,7 +162,9 @@ export default function CircuitsManager({ initialCircuits, iracingTracks }) {
     };
   }, [circuits, trackNameById]);
 
-  // Load expanded groups from localStorage after mount
+  // Load expanded groups from localStorage after mount — intentional two-setState
+  // pattern for hydration safety; setGroupStateLoaded gates the persist effect.
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => {
     try {
       const saved = localStorage.getItem("kronos_circuits_expanded");
@@ -229,7 +231,7 @@ export default function CircuitsManager({ initialCircuits, iracingTracks }) {
 
   const validate = () => {
     if (!form.name.trim()) {
-      setError("Le nom est obligatoire.");
+      setError(t("errorNameRequired"));
       return false;
     }
     return true;

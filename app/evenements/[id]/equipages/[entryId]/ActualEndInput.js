@@ -1,6 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
-import { useTranslations, useLocale } from "next-intl";
+import { useTranslations } from "next-intl";
+import { formatTimeInZone, utcToInputValues, localToUTC } from "../../../../../lib/timezone";
 
 export default function ActualEndInput({
   plannedEnd,
@@ -8,24 +9,20 @@ export default function ActualEndInput({
   onSave,
   saving,
   archived = false,
+  timezone = "Europe/Paris",
 }) {
-  const locale = useLocale();
-  const planned = plannedEnd ? new Date(plannedEnd) : null;
-
   // Default date to planned end date so the user only needs to enter the time.
   // If an actual end is already saved, pre-fill both date and time from it.
+  // Use timezone-aware helpers so the date/time match the event's local timezone,
+  // not the browser's timezone (which would be wrong for cross-timezone users).
   const initDate = actualEnd
-    ? new Date(actualEnd).toISOString().slice(0, 10)
-    : planned
-      ? planned.toISOString().slice(0, 10)
+    ? utcToInputValues(actualEnd, timezone).date
+    : plannedEnd
+      ? utcToInputValues(plannedEnd, timezone).date
       : "";
 
   const initTime = actualEnd
-    ? new Date(actualEnd).toLocaleTimeString(locale, {
-        hour: "2-digit",
-        minute: "2-digit",
-        hour12: false,
-      })
+    ? formatTimeInZone(actualEnd, timezone)
     : "";
 
   const [time, setTime] = useState(initTime);
@@ -35,11 +32,12 @@ export default function ActualEndInput({
   const [showDate, setShowDate] = useState(false);
 
   // Reset inputs when plannedEnd changes (e.g. stint recalculated) and no actual end is set.
-  // Keeps the date default in sync with the new planned end.
+  // Resets form fields when actualEnd is cleared — prop-driven state sync.
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => {
     if (!actualEnd) {
       setTime("");
-      setDate(planned ? planned.toISOString().slice(0, 10) : "");
+      setDate(plannedEnd ? utcToInputValues(plannedEnd, timezone).date : "");
       setShowDate(false);
     }
   }, [plannedEnd]);
@@ -47,22 +45,22 @@ export default function ActualEndInput({
   const handleTimeChange = (val) => {
     setTime(val);
     if (val && date) {
-      const dt = new Date(`${date}T${val}:00`);
-      if (!isNaN(dt)) onSave(dt.toISOString());
+      const utc = localToUTC(date, val, timezone);
+      if (utc) onSave(utc);
     }
   };
 
   const handleDateChange = (val) => {
     setDate(val);
     if (val && time) {
-      const dt = new Date(`${val}T${time}:00`);
-      if (!isNaN(dt)) onSave(dt.toISOString());
+      const utc = localToUTC(val, time, timezone);
+      if (utc) onSave(utc);
     }
   };
 
   const handleClear = () => {
     setTime("");
-    setDate(planned ? planned.toISOString().slice(0, 10) : "");
+    setDate(plannedEnd ? utcToInputValues(plannedEnd, timezone).date : "");
     setShowDate(false);
     onSave(null);
   };

@@ -270,7 +270,8 @@
     "noModifier": "no modifier configured",
     "g61ErrorUnknown": "Unknown error",
     "g61ErrorNetwork": "Network error",
-    "g61ErrorPrefix": "Error: {error}"
+    "g61ErrorPrefix": "Error: {error}",
+    "g61LapCount": "{count, plural, one {lap} other {laps}}"
   },
   "raceMode": {
     "confirm": "Confirm",
@@ -335,6 +336,7 @@
     "statusFinished": "Finished",
     "unknownDriver": "Unknown driver",
     "stintTooltip": "Stint {number} — {driver}",
+    "stintNumber": "Stint {number}",
     "beforeStart": "Before start",
     "fuelPlanned": "/ {amount}L planned",
     "lapsCount": "{count} laps",
@@ -596,8 +598,7 @@
     "welcome": "Welcome,",
     "staleSyncWarning": "Your iRacing data hasn't been synced in over 100 days.",
     "myProfileArrow": "My profile →",
-    "pendingWarning_one": "# driver awaiting approval",
-    "pendingWarning_other": "# drivers awaiting approval",
+    "pendingWarning": "{count, plural, one {# driver awaiting approval} other {# drivers awaiting approval}}",
     "manageAccess": "Manage access →",
     "addDriver": "+ Add driver",
     "createEvent": "+ Create event",
@@ -1168,7 +1169,8 @@
     "unsubscribeBtn": "Unregister",
     "classMismatch": "This team's class ({entryClass}) does not match your preferences ({preferred}).",
     "carMismatch": "This team's car ({entryCar}) does not match your preferences ({preferred}). The class matches ({entryClass}).",
-    "alreadySignedUp": "You are already signed up for this team."
+    "alreadySignedUp": "You are already signed up for this team.",
+    "unauthorized": "Action not authorized."
   },
   "championshipEdit": {
     "confirm": "Confirm",
@@ -1194,7 +1196,7 @@
     "archiveBtn": "📦 Archive",
     "unarchiveBtn": "↩ Unarchive",
     "deleteTitle": "Delete championship",
-    "deleteMsg": "This championship and all its rounds will be permanently deleted. This action cannot be undone.",
+    "deleteMsg": "This championship, all its rounds, and all associated data (team entries, sign-ups, stints, availabilities) will be permanently deleted. This action cannot be undone.",
     "deleteConfirm": "Delete permanently",
     "deleteBtn": "Delete",
     "titleNew": "New championship",
@@ -1227,6 +1229,7 @@
     "carsGroupedUnder": "Grouped under:",
     "carsTypePlaceholder": "e.g. gt3, gte, gtp, lmp2…",
     "carsDeleteTitle": "Delete car",
+    "carsBlockedByEvents": "This car is used in {count, plural, one {one active event} other {{count} active events}} and cannot be deleted:",
     "carsAffectedCount": "{count, plural, one {{count} driver} other {{count} drivers}}",
     "carsAffectedVerb": "{count, plural, one {has this car in their preferences and will silently lose this preference:} other {have this car in their preferences and will silently lose this preference:}}",
     "carsUpdatePrefsHint": "These drivers will need to update their preferences at their next sign-up.",
@@ -1392,6 +1395,7 @@
     "eventTypesToggle": "{expanded, select, true {▲ Cars} other {▼ Cars}}",
     "eventTypesNameLabel": "Name",
     "eventTypesCarsHint": "Check the cars allowed for this type. If no cars are checked, all are allowed.",
+    "eventTypesNoRestriction": "No restriction configured — all cars are allowed.",
     "eventTypesEmpty": "No event types.",
     "g61ConfirmedLabel": "✓ Linked",
     "g61ExactLabel": "→ Exact match",
@@ -1451,7 +1455,15 @@
     "settingsTagsPlaceholder": "e.g. chill, competitive, solo…",
     "settingsTagsAddBtn": "+ Add a tag",
     "settingsColTag": "Tag",
-    "settingsTagsEmpty": "No tags configured."
+    "settingsTagsEmpty": "No tags configured.",
+    "errorNameRequired": "Name is required.",
+    "errorNameExists": "This name already exists.",
+    "errorTagRequired": "Tag name is required.",
+    "errorTagExists": "This tag already exists.",
+    "errorDurationInvalid": "Invalid duration.",
+    "errorDurationExists": "This duration already exists.",
+    "errorTimeInvalid": "Invalid time.",
+    "errorMinutesInvalid": "Invalid minutes."
   },
   "guide": {
     "header": "User Guide — Drivers",

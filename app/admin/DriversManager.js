@@ -344,17 +344,17 @@ export default function DriversManager({ initialDrivers, currentDriver }) {
   // Preview signups before deleting — shows affected events in a modal.
   // Drivers with stints are blocked by FK constraint at DB level.
   const deleteDriver = async (driverId, driverName) => {
-    // Fetch active signups for this driver to preview impact
-    const { data: signups } = await supabase
-      .from("signups")
-      .select("events(name)")
-      .eq("driver_id", driverId);
+    // Fetch signups (for impact preview) and stints (to warn + pre-delete) in parallel
+    const [{ data: signups }, { data: stints }] = await Promise.all([
+      supabase.from("signups").select("events(name)").eq("driver_id", driverId),
+      supabase.from("stints").select("id").eq("driver_id", driverId).limit(1),
+    ]);
 
     const affectedEvents = [
       ...new Set((signups || []).map((s) => s.events?.name).filter(Boolean)),
     ];
 
-    setDeleteModal({ driverId, driverName, affectedEvents });
+    setDeleteModal({ driverId, driverName, affectedEvents, hasStints: (stints?.length ?? 0) > 0 });
   };
 
   const commitDelete = async () => {
@@ -939,8 +939,7 @@ export default function DriversManager({ initialDrivers, currentDriver }) {
                             >
                               {d.discord_id || "—"}
                             </span>
-                            {/* Discord ID edit — available for all rows, not restricted to canAct */}
-                            <button
+                            {canAct && <button
                               onClick={() =>
                                 openDiscordEdit(d.id, d.discord_id)
                               }
@@ -956,7 +955,7 @@ export default function DriversManager({ initialDrivers, currentDriver }) {
                               }}
                             >
                               ✏️
-                            </button>
+                            </button>}
                           </div>
                         )}
                       </td>

@@ -63,7 +63,7 @@ export default function AdminEventTypesDemo() {
                     {t("eventTypesCarsHint")}
                   </p>
                   {et.cars.length === 0 ? (
-                    <p style={{ fontSize: "0.85rem", color: "var(--text-dim)" }}>Aucune restriction configurée — toutes les voitures sont accessibles.</p>
+                    <p style={{ fontSize: "0.85rem", color: "var(--text-dim)" }}>{t("eventTypesNoRestriction")}</p>
                   ) : (
                     Object.entries(byClass).map(([cls, cars]) => {
                       const allChecked = cars.every((c) => c.allowed);

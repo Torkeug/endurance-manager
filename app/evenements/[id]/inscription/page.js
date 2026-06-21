@@ -235,6 +235,14 @@ function SignupForm({
     e.preventDefault();
     setLoading(true);
     setError(null);
+
+    // Non-admins may only submit for themselves
+    if (currentUserId && driverId !== currentUserId && !currentUserIsAdmin) {
+      setError(t("unauthorized"));
+      setLoading(false);
+      return;
+    }
+
     const payload = {
       event_id: eventId,
       driver_id: driverId,
@@ -689,6 +697,7 @@ function InscriptionPage({ params }) {
   const isExternal = currentUserRole === "external";
   const [currentUserIsAdmin, setCurrentUserIsAdmin] = useState(false);
 
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => {
     Promise.all([
       supabase.from("signup_tags").select("*").order("sort_order").order("name"),

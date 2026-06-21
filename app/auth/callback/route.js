@@ -32,7 +32,7 @@ export async function GET(request) {
   if (token_hash && type === "recovery") {
     const supabase = await createClient();
     const { data, error: verifyErr } =
-      await supabase.auth.exchangeCodeForSession(token_hash);
+      await supabase.auth.verifyOtp({ token_hash, type });
     if (verifyErr) {
       return NextResponse.redirect(`${origin}/login?error=link_expired`);
     }

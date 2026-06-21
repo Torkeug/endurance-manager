@@ -8,11 +8,9 @@ export default function PendingPage() {
   const router = useRouter();
   const t = useTranslations("pending");
 
-  const [theme, setTheme] = useState("dark");
-  useEffect(() => {
-    const saved = localStorage.getItem("theme") || "dark";
-    setTheme(saved);
-  }, []);
+  const [theme] = useState(() =>
+    typeof window !== "undefined" ? localStorage.getItem("theme") || "dark" : "dark"
+  );
 
   const handleLogout = async () => {
     await supabase.auth.signOut();

@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { supabaseBrowser as supabase } from "../../lib/supabase-browser";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
@@ -9,13 +9,10 @@ export default function ResetPasswordPage() {
   const [sent, setSent] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [theme, setTheme] = useState("dark");
+  const [theme] = useState(() =>
+    typeof window !== "undefined" ? localStorage.getItem("theme") || "dark" : "dark"
+  );
   const t = useTranslations("resetPassword");
-
-  useEffect(() => {
-    const saved = localStorage.getItem("theme") || "dark";
-    setTheme(saved);
-  }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();

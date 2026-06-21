@@ -222,15 +222,18 @@ export default function AvailabilityGrid({
       .from("availabilities")
       .select("*")
       .eq("team_entry_id", teamEntryId)
-      .then(({ data }) => {
-        const map = {};
-        (data || []).forEach((a) => {
-          const key = `${a.driver_id}_${new Date(a.slot_start).toISOString()}`;
-          map[key] = a;
-        });
-        setAvailabilities(map);
+      .then(({ data, error }) => {
+        if (!error) {
+          const map = {};
+          (data || []).forEach((a) => {
+            const key = `${a.driver_id}_${new Date(a.slot_start).toISOString()}`;
+            map[key] = a;
+          });
+          setAvailabilities(map);
+        }
         setLoading(false);
-      });
+      })
+      .catch(() => setLoading(false));
   }, [teamEntryId]);
 
   // Realtime — keeps availability slots live for all concurrent users
@@ -257,7 +260,8 @@ export default function AvailabilityGrid({
     return () => supabase.removeChannel(channel);
   }, [teamEntryId]);
 
-  // Auto-select external drivers — they can only edit their own availability
+  // Auto-select external drivers — they can only edit their own availability.
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => {
     if (isExternalUser && currentDriverId) {
       setSelectedDriverId(currentDriverId);
@@ -318,6 +322,7 @@ export default function AvailabilityGrid({
     setDragPreview((prev) => ({ ...prev, [key]: dragValue.current }));
   };
 
+  // eslint-disable-next-line react-hooks/preserve-manual-memoization
   const commitDrag = useCallback(async () => {
     if (!isDragging.current) return;
     isDragging.current = false;
@@ -540,16 +545,22 @@ export default function AvailabilityGrid({
                     available: true,
                     updated_at: new Date().toISOString(),
                   }));
+                  let snapshot;
                   setAvailabilities((prev) => {
+                    snapshot = prev;
                     const next = { ...prev };
                     updates.forEach((u) => {
                       next[`${u.driver_id}_${u.slot_start}`] = u;
                     });
                     return next;
                   });
-                  await supabase.from("availabilities").upsert(updates, {
+                  const { error } = await supabase.from("availabilities").upsert(updates, {
                     onConflict: "team_entry_id,driver_id,slot_start",
                   });
+                  if (error) {
+                    console.error("[markAllAvailable]", error.message);
+                    setAvailabilities(snapshot);
+                  }
                 }}
                 className="btn btn-primary btn-sm"
               >
@@ -573,16 +584,22 @@ export default function AvailabilityGrid({
                           updated_at: new Date().toISOString(),
                         })),
                       );
+                      let snapshot;
                       setAvailabilities((prev) => {
+                        snapshot = prev;
                         const next = { ...prev };
                         updates.forEach((u) => {
                           next[`${u.driver_id}_${u.slot_start}`] = u;
                         });
                         return next;
                       });
-                      await supabase.from("availabilities").upsert(updates, {
+                      const { error } = await supabase.from("availabilities").upsert(updates, {
                         onConflict: "team_entry_id,driver_id,slot_start",
                       });
+                      if (error) {
+                        console.error("[wipeAll]", error.message);
+                        setAvailabilities(snapshot);
+                      }
                     }}
                     onCancel={() => setWipeModal(false)}
                   />
@@ -676,7 +693,17 @@ export default function AvailabilityGrid({
                   id="notif-minutes-override"
                   type="number"
                   value={notif.minutes}
-                  onChange={(e) => saveNotifOverride(mySignup.id, { minutes: e.target.value })}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setNotifOverrides((prev) => ({
+                      ...prev,
+                      [mySignup.id]: {
+                        ...(prev[mySignup.id] || { notifications: null }),
+                        minutes: val,
+                      },
+                    }));
+                  }}
+                  onBlur={(e) => saveNotifOverride(mySignup.id, { minutes: e.target.value })}
                   min="1"
                   max="60"
                   placeholder="5"

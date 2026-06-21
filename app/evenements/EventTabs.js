@@ -202,9 +202,7 @@ function ChampionshipSection({ championship, rounds, admin }) {
             </div>
           )}
           <div style={{ fontSize: "0.78rem", color: "var(--text-dim)", marginTop: "0.1rem" }}>
-            {activeRounds.length} {activeRounds.length !== 1
-              ? t("activeRounds", { count: activeRounds.length }).replace(/^\d+ /, "")
-              : t("activeRounds", { count: activeRounds.length }).replace(/^\d+ /, "")}
+            {t("activeRounds", { count: activeRounds.length })}
             {archivedRounds.length > 0 && ` · ${t("archivedRounds", { count: archivedRounds.length })}`}
           </div>
         </div>
@@ -257,6 +255,9 @@ export default function EventTabs({ allEvents, normalEvents, specialEvents, cham
     { id: "championnats", label: t("tabChampionships") },
   ];
 
+  // Read persisted tab after mount — lazy initializer would cause a hydration
+  // mismatch if the stored tab differs from the default (server has no localStorage).
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => {
     const saved = localStorage.getItem("events-active-tab");
     if (saved && TABS.some((tab) => tab.id === saved)) setActiveTab(saved);

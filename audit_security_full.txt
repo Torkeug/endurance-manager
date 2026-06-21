@@ -1,0 +1,220 @@
+================================================================================
+KRONOS TEAM ENDURANCE MANAGER — SECURITY AUDIT
+Scope: app/, components/, lib/ — all .js, .jsx, .ts, .tsx files
+Date: 2026-06-20
+Auditor: Claude Code (claude-sonnet-4-6)
+
+Already-documented issues excluded from this report:
+  SEC-1: register-driver accepts auth_user_id from body without session match
+  SEC-2: All notify-* API routes unauthenticated
+  SEC-3: Bearer auth fails open when env var unset (iracing/lap, iracing/event, cron)
+  SEC-4: garage61-sync IDOR on driver_id
+  SEC-5: iRacing OAuth syncall not admin-gated at initiation
+  SEC-6: Garage61 callback logs full token body on error
+  SEC-7: returnTo open redirect via // prefix (already in SEC list)
+  SEC-8: HTML injection in notify-admins email bodies
+  SEC-9: Unapproved users can call Garage61 API routes
+================================================================================
+
+────────────────────────────────────────────────────────────────────────────────
+SECTION 1 — CRITICAL
+────────────────────────────────────────────────────────────────────────────────
+
+app/auth/iracing/route.js:41 — CRITICAL — OAUTH-CSRF — PKCE verifier stored in
+  the `state` URL parameter instead of a server-side binding (e.g. httpOnly cookie).
+  The full state string is: `${verifier}|${mode}|${returnTo}`. Because the verifier
+  is transmitted in-band with the redirect, an attacker can forge a state string that
+  pairs any code with a crafted verifier, bypassing CSRF protection entirely. There is
+  no nonce or session-bound value that the server validates on callback.
+  FIX: Generate a short-lived random nonce as the state value; store
+  {nonce → verifier, mode, returnTo} in a SameSite=Strict httpOnly cookie set at
+  initiation time. In the callback, read the cookie, verify state === stored nonce,
+  and reject if missing or mismatched.
+
+app/auth/garage61/route.js:37 — CRITICAL — OAUTH-CSRF — Identical issue to above.
+  PKCE verifier embedded in state parameter: `${verifier}|${returnTo}`. No server-side
+  binding, no CSRF nonce validation in the callback.
+  FIX: Same as iRacing fix above — use a server-side nonce in state and a signed
+  httpOnly cookie for the verifier.
+
+────────────────────────────────────────────────────────────────────────────────
+SECTION 2 — HIGH
+────────────────────────────────────────────────────────────────────────────────
+
+app/auth/callback/iracing/route.js:283 — HIGH — OAUTH-CSRF — Callback parses state
+  as `const [verifier, mode = "driver", returnTo = "/pilotes"] = state.split("|")`
+  but never validates whether that state was issued by this server. Any request with a
+  crafted state string and a valid authorization code (or a replayed one) will be
+  accepted and processed. The syncall admin check (line ~310) is performed after the
+  code exchange has already completed, meaning an unauthenticated caller who manages to
+  replay the PKCE exchange can trigger partial sync logic.
+  FIX: Validate the nonce stored in the initiation cookie before processing the code.
+  Reject immediately if no cookie or state mismatch.
+
+app/auth/callback/garage61/route.js:16 — HIGH — OAUTH-CSRF — Same pattern: no state
+  nonce validation before processing the token exchange. `const [verifier = "", returnTo
+  = "/pilotes"] = (state || "").split("|")` — state is trusted without verification.
+  FIX: Same as iRacing callback fix.
+
+app/api/notify-stale-sync/route.js:9 — HIGH — UNAUTHENTICATED-ABUSE + HTML-INJECTION
+  — No authentication. `driver_name`, `driver_email`, and `profile_url` come entirely
+  from the caller's request body. `profileUrl` is embedded unescaped in the email HTML
+  as `<a href="${profileUrl}">`. Any external party can:
+  (a) send phishing emails to arbitrary addresses by supplying any `driver_email`,
+  (b) inject malicious href values (e.g. `javascript:` or external URLs) into the email.
+  This is a separate finding from SEC-2 (which covers the general lack of auth) and
+  SEC-8 (which covers notify-admins) because here the injection is in a href attribute
+  with caller-controlled content targeting arbitrary external recipients.
+  FIX: Require admin authentication. Validate `driver_email` against a real driver record.
+  Validate `profile_url` matches an allowlisted pattern (e.g. `^/pilotes/[0-9a-f-]{36}$`).
+
+app/api/notify-driver-approved/route.js:11 — HIGH — INFORMATION-DISCLOSURE — No
+  authentication. The caller supplies `driver_id` (a UUID); the route fetches the
+  driver's email from the DB and sends an approval email to that address. This enables:
+  (a) UUID→email enumeration: any caller can probe UUIDs to discover which ones are
+      valid drivers and obtain their email addresses,
+  (b) spam: any caller can trigger approval notification emails to any registered driver.
+  FIX: Require admin authentication. Derive the target driver_id from the admin's own
+  action context rather than accepting it from the request body.
+
+app/evenements/[id]/inscription/page.js:783,797 — HIGH — IDOR / PRIVILEGE-ESCALATION
+  — The inscription page reads `searchParams.get("driver")` and uses it directly to
+  initialise `driverId` state. The DB insert at line ~241 uses this `driverId`:
+    `{ driver_id: driverId, event_id: id, ... }`.
+  The admin-only UI guard that controls the driver selector (line ~783) is purely
+  cosmetic. A non-admin driver can navigate to `/evenements/[id]/inscription?driver=
+  <other-driver-uuid>` and create a signup record on behalf of any driver in the
+  system. The check `driver.role === "admin" || driver.role === "super_admin"` is
+  evaluated client-side and does not prevent the malicious insert.
+  FIX: Before executing the DB insert, compare `driverId` against the session driver's
+  own id. If different, verify admin role server-side. The safest fix is to move the
+  insert to a server action or API route that re-reads the session.
+
+────────────────────────────────────────────────────────────────────────────────
+SECTION 3 — MEDIUM
+────────────────────────────────────────────────────────────────────────────────
+
+app/api/notify-admins-approval/route.js:22 — MEDIUM — LOGIC-BUG — No authentication.
+  The route uses caller-supplied `approved_by_id` in a `.neq("id", approved_by_id)`
+  filter to exclude the approving admin from the notification list. An attacker who
+  knows any admin's UUID can supply that UUID as `approved_by_id`, causing that admin
+  to be silently excluded from all approval notifications. Combined with SEC-2, this
+  allows suppression of audit notifications for specific admins.
+  FIX: Require authentication; derive `approved_by_id` from the session rather than
+  accepting it from the request body.
+
+app/pilotes/[id]/page.js:25 — MEDIUM — DATA-LEAKAGE — `supabase.from("drivers")
+  .select("*")` returns all columns including `garage61_access_token` and
+  `garage61_refresh_token`. These OAuth tokens are loaded into the server component's
+  data and available to all child components receiving the `driver` prop. While Next.js
+  server components do not serialise this to the browser unless passed to a client
+  component, the tokens are unnecessarily in scope and could leak if a child component
+  is ever changed to a client component, or if the data is ever serialised in a
+  `JSON.stringify` debug path.
+  FIX: Use explicit column selection that excludes token fields:
+  `.select("id, name, role, irating, iracing_id, approved, ...")`.
+
+app/pilotes/[id]/page.js:39-57 — MEDIUM — UNAUTHORISED-SERVER-SIDE-FETCH — When a
+  driver has `garage61_access_token` set but no `garage61_slug`, the server component
+  performs a server-side fetch to `https://garage61.net/api/v1/me` using that driver's
+  stored OAuth token. This happens for any authenticated user who visits any driver's
+  profile page, not just the driver's own profile. An admin or engineer viewing another
+  driver's profile silently triggers a Garage61 API call using that driver's
+  credentials.
+  FIX: Condition the backfill on `currentDriver?.id === id` so only the credential
+  owner's own profile view triggers it.
+
+app/api/garage61-practice/route.js:8 — MEDIUM — IDOR — `driver_slug` is taken from
+  the query string (`searchParams.get("driver_slug")`) and used to filter lap
+  statistics fetched from the team's Garage61 account. Any authenticated driver with
+  a Garage61 token can supply an arbitrary `driver_slug` and receive that driver's
+  best laps and stats, as long as the slug belongs to any driver in the same Garage61
+  team. There is no check that the requester has authorisation to view the target
+  driver's personal performance data.
+  FIX: Validate that the requested `driver_slug` corresponds to the requesting user's
+  own driver record, or explicitly document and enforce which roles may query other
+  drivers' slugs.
+
+app/pilotes/[id]/modifier/page.js — MEDIUM — RACE-CONDITION / AUTH-BYPASS — The
+  page is a "use client" component. Auth is checked in a `useEffect` which runs after
+  initial render. The initial `supabaseBrowser.from("drivers").select("*").eq("id", id)`
+  fetch runs unconditionally before the auth check completes, returning all driver
+  fields (including those from `select("*")`) to an unauthenticated or low-privilege
+  user before the redirect fires. In practice the browser client is scoped by RLS, but
+  the pattern creates a window where data is fetched without confirmed authorisation.
+  FIX: Convert to a server component with server-side auth check, or move the data
+  fetch inside the auth check callback.
+
+────────────────────────────────────────────────────────────────────────────────
+SECTION 4 — LOW
+────────────────────────────────────────────────────────────────────────────────
+
+app/auth/callback/route.js:70-89 — LOW — ACCOUNT-LINKAGE-RACE — When a Supabase Auth
+  user signs in and has no linked driver record (no `auth_user_id` match), the callback
+  looks up a driver by email and links the auth account to it. If an attacker registers
+  a Supabase Auth account with a target driver's email address before the driver does
+  (possible when email confirmation is disabled or bypassed), the attacker's auth
+  session gets linked to the target's driver record. This grants access to all driver
+  data and team entry permissions of the victim.
+  FIX: Enforce email confirmation in Supabase Auth settings (confirm email required
+  before session is issued). Additionally, consider requiring the linking step to be
+  explicitly confirmed by the driver via an in-app flow rather than happening
+  automatically on first login.
+
+app/evenements/[id]/equipages/[entryId]/AvailabilityGrid.js — LOW — CLIENT-SIDE-ONLY
+  GUARD — The component allows any assigned driver to set another assigned driver's
+  availability slots. The `selectedDriverId` value is controlled by the client and is
+  used directly in the DB insert/update without server-side ownership verification.
+  In practice this relies on RLS on the `availabilities` table to block cross-driver
+  writes, but the client-side guard (checking role) should be backed by an explicit
+  RLS policy that restricts UPDATE/INSERT to `driver_id = auth.uid()` except for admins.
+  Note: mark LOW due to uncertainty about exact RLS policy in place; verify that the
+  RLS policy on `availabilities` prevents drivers writing to other drivers' rows.
+  FIX: Confirm RLS policy restricts availabilities writes to own `driver_id` or admin.
+  Add server-side validation if RLS is not enforcing this.
+
+app/evenements/nouveau/page.js, app/pilotes/nouveau/page.js,
+app/championnats/nouveau/page.js, app/evenements/[id]/modifier/page.js,
+app/championnats/[id]/modifier/page.js — LOW — CLIENT-SIDE-ONLY ADMIN CHECK —
+  These "use client" pages check admin role in a `useEffect` and redirect if not admin.
+  The actual DB operations go through the browser Supabase client and rely on RLS for
+  enforcement. If RLS policies correctly restrict these mutations to admin roles, there
+  is no exploitable bypass — but any RLS gap would be unprotected by the page-level guard.
+  FIX: Convert admin-only pages to server components with server-side auth guards as
+  defence-in-depth, or at minimum ensure every mutation has a corresponding RLS policy.
+
+app/admin/DriversManager.js:942 — LOW — OVER-BROAD WRITE — Discord ID edit is
+  available for all rows, not restricted to `canAct` rows (comment at line 942 confirms
+  this is intentional). Any admin can edit any driver's Discord ID regardless of
+  approval state. While this is intentional functionality, it means a freshly registered
+  and not-yet-approved driver's Discord ID can be modified before they are reviewed.
+  FIX: If this is intentional, document it. If not, gate Discord ID edit on `canAct`
+  or at minimum on `driver.approved === true`.
+
+components/Nav.js:35 — LOW — COUNT-DISCLOSURE — The nav component fetches the count
+  of unapproved drivers from the browser client and displays it as a badge. The filter
+  `.eq("approved", false).eq("refused", false)` uses the browser client which is bound
+  by RLS. If RLS on the `drivers` table does not restrict count queries to admins, any
+  authenticated user who inspects network traffic could learn how many pending drivers
+  exist. This is a minor information disclosure.
+  FIX: Verify that the RLS policy on `drivers` restricts count queries appropriately,
+  or move the badge count to a server component/API route with explicit admin check.
+
+================================================================================
+SUMMARY
+================================================================================
+
+CRITICAL  2  OAuth CSRF: PKCE verifier in state param, no server-side binding
+HIGH      5  (2x OAuth callback no-nonce, notify-stale-sync abuse+injection,
+              notify-driver-approved email enumeration, inscription IDOR)
+MEDIUM    4  (notify-admins-approval logic bug, driver page token leak,
+              server-side Garage61 fetch, garage61-practice IDOR,
+              modifier page race condition)
+LOW       5  (auth callback linkage race, availability grid client guard,
+              client-only admin checks, Discord ID over-broad, nav count)
+
+Note: Issues SEC-1 through SEC-9 were pre-documented and are not included above.
+The highest-priority new issues to address are the OAuth CSRF flaws (CRITICAL)
+and the inscription IDOR (HIGH) which allows any driver to sign up as any other
+driver without admin privileges.
+================================================================================

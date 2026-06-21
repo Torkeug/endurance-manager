@@ -12,8 +12,9 @@ export default function CollapsibleSummary({
   const t = useTranslations("collapsibleSummary");
   const [collapsed, setCollapsed] = useState(false);
 
-  // Persist collapsed state per team entry so each equipage remembers its own state.
-  // Key includes entryId to avoid collisions between different team entries.
+  // Persist collapsed state per team entry — intentionally in useEffect to avoid
+  // hydration mismatch (server has no localStorage).
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => {
     const saved = localStorage.getItem(`equipage-summary-collapsed-${entryId}`);
     if (saved !== null) setCollapsed(saved === "true");
@@ -172,7 +173,7 @@ export default function CollapsibleSummary({
           </div>
 
 {/* Streams */}
-{streamUrls.length > 0 && (
+{(streamUrls ?? []).length > 0 && (
   <div className="card" style={{ marginBottom: "1rem" }}>
     <div
       style={{

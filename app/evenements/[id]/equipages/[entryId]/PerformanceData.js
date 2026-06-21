@@ -1040,7 +1040,7 @@ function DriverRow({
                       ))}
                     </div>
                     <span style={{ fontSize: "0.72rem", color: "var(--text-dim)", marginLeft: "auto" }}>
-                      {filteredLaps.length}/{g61Laps.length} {t("colLapTime")}
+                      {filteredLaps.length}/{g61Laps.length} {t("g61LapCount", { count: g61Laps.length })}
                     </span>
                   </div>
                   <div style={{ display: "flex", gap: "0.4rem", alignItems: "center", flexWrap: "wrap" }}>
@@ -1247,38 +1247,49 @@ export default function PerformanceData({
   const [nightSaving, setNightSaving] = useState(false);
   const [dayWetAdd, setDayWetAdd] = useState(0);
 
+  // Stable key that changes when the set of assigned drivers changes (including swaps at same count)
+  const assignedDriverKey = assignedDrivers.map((d) => d.id).sort().join(",");
+
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => {
     if (!teamEntryId || assignedDrivers.length === 0) {
       setLoading(false);
       return;
     }
-    Promise.all([
-      supabase
-        .from("driver_performance")
-        .select("*")
-        .eq("team_entry_id", teamEntryId),
-      // Fetch night additive modifiers alongside performance data
-      supabase
-        .from("team_entries")
-        .select(
-          "night_dry_add_seconds, night_wet_add_seconds, day_wet_add_seconds",
-        )
-        .eq("id", teamEntryId)
-        .single(),
-    ]).then(([{ data: perfRows }, { data: entry }]) => {
-      const map = {};
-      (perfRows || []).forEach((d) => {
-        map[d.driver_id] = d;
-      });
-      setPerfData(map);
-      if (entry) {
-        setNightDryAdd(entry.night_dry_add_seconds || 0);
-        setNightWetAdd(entry.night_wet_add_seconds || 0);
-        setDayWetAdd(entry.day_wet_add_seconds || 0);
+    (async () => {
+      try {
+        const [{ data: perfRows }, { data: entry }] = await Promise.all([
+          supabase
+            .from("driver_performance")
+            .select("*")
+            .eq("team_entry_id", teamEntryId),
+          // Fetch night additive modifiers alongside performance data
+          supabase
+            .from("team_entries")
+            .select(
+              "night_dry_add_seconds, night_wet_add_seconds, day_wet_add_seconds",
+            )
+            .eq("id", teamEntryId)
+            .single(),
+        ]);
+        const map = {};
+        (perfRows || []).forEach((d) => {
+          map[d.driver_id] = d;
+        });
+        setPerfData(map);
+        if (entry) {
+          setNightDryAdd(entry.night_dry_add_seconds || 0);
+          setNightWetAdd(entry.night_wet_add_seconds || 0);
+          setDayWetAdd(entry.day_wet_add_seconds || 0);
+        }
+      } catch {
+        // non-critical — data visible on next navigation
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
-    });
-  }, [teamEntryId, assignedDrivers.length]); // length as stable dep proxy — avoids re-firing on every array reference change
+    })();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [teamEntryId, assignedDriverKey]);
 
   const handleSaved = (data) => {
     setPerfData((prev) => ({ ...prev, [data.driver_id]: data }));

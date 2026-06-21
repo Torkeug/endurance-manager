@@ -163,6 +163,7 @@ export default function EventPageTabs({
   ];
 
   // Persist tab state per event — read in useEffect to avoid hydration mismatch.
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => {
     // Query param takes priority over persisted tab (e.g. ?tab=horaires from a redirect)
     const paramTab = searchParams.get("tab");
@@ -174,7 +175,7 @@ export default function EventPageTabs({
     if (saved && tabs.some((t) => t.id === saved)) {
       setActiveTab(saved);
     }
-  }, [event.id]);
+  }, [event.id, isExternal]);
 
   const switchTab = (tabId) => {
     setActiveTab(tabId);
@@ -501,7 +502,7 @@ export default function EventPageTabs({
                       if (filterExcludeWithTeam && s.team_entries?.crew_name) return false;
                       const ir = s.drivers?.irating ?? null;
                       if (filterIrMin !== "" && (ir === null || ir < Number(filterIrMin))) return false;
-                      if (filterIrMax !== "" && ir !== null && ir > Number(filterIrMax)) return false;
+                      if (filterIrMax !== "" && (ir === null || ir > Number(filterIrMax))) return false;
                       if (filterCars.length > 0 || filterCategories.length > 0) {
                         const matchesCar = (s.preferred_car_ids || []).some((id) => filterCars.includes(id));
                         const matchesClass = (s.preferred_class || []).some((c) => filterCategories.includes(c));

@@ -108,9 +108,9 @@ export default function SettingsManager({
 
   const handleAddTag = async () => {
     const name = newTagName.trim();
-    if (!name) { setError("Nom de tag requis."); return; }
+    if (!name) { setError(t("errorTagRequired")); return; }
     if (signupTags.find((tag) => tag.name.toLowerCase() === name.toLowerCase())) {
-      setError("Ce tag existe déjà.");
+      setError(t("errorTagExists"));
       return;
     }
     setSavingTag("new");
@@ -160,11 +160,11 @@ export default function SettingsManager({
     const m = parseInt(newM) || 0;
     const total = h * 60 + m;
     if (total <= 0) {
-      setError("Durée invalide.");
+      setError(t("errorDurationInvalid"));
       return;
     }
     if (presets.find((p) => p.minutes === total)) {
-      setError("Cette durée existe déjà.");
+      setError(t("errorDurationExists"));
       return;
     }
 
@@ -176,7 +176,7 @@ export default function SettingsManager({
       .select()
       .single();
     if (err) {
-      if (err.code === "23505") setError("Cette durée existe déjà.");
+      if (err.code === "23505") setError(t("errorDurationExists"));
       else setError(err.message);
       setSaving(null);
       return;
@@ -238,11 +238,11 @@ export default function SettingsManager({
     const h = parseInt(newStH);
     const m = parseInt(newStM) || 0;
     if (isNaN(h) || h < 0 || h > 23) {
-      setError("Heure invalide.");
+      setError(t("errorTimeInvalid"));
       return;
     }
     if (m < 0 || m > 59) {
-      setError("Minutes invalides.");
+      setError(t("errorMinutesInvalid"));
       return;
     }
     setSavingSpecial("new");
@@ -277,9 +277,13 @@ export default function SettingsManager({
 
   const handleEditSpecialTime = async () => {
     const h = parseInt(editStH);
-    const m = parseInt(editStM) || 0;
+    const m = parseInt(editStM);
     if (isNaN(h) || h < 0 || h > 23) {
-      setError("Heure invalide.");
+      setError(t("errorTimeInvalid"));
+      return;
+    }
+    if (isNaN(m) || m < 0 || m > 59) {
+      setError(t("errorTimeInvalid"));
       return;
     }
     setSavingSpecial(editingSpecialId);

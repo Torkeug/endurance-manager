@@ -19,12 +19,21 @@ export async function GET(request) {
   // Get requesting user's driver + token
   const { data: requestingDriver } = await supabase
     .from("drivers")
-    .select("id, garage61_access_token, garage61_refresh_token")
+    .select("id, role, approved, garage61_slug, garage61_access_token, garage61_refresh_token")
     .eq("auth_user_id", user.id)
     .single();
 
+  if (!requestingDriver?.approved) {
+    return NextResponse.json({ error: "forbidden" }, { status: 403 });
+  }
   if (!requestingDriver?.garage61_access_token) {
     return NextResponse.json({ error: "not_linked" }, { status: 400 });
+  }
+
+  // Only the slug's owner or an admin may request this data
+  const isAdmin = requestingDriver.role === "admin" || requestingDriver.role === "super_admin";
+  if (!isAdmin && requestingDriver.garage61_slug !== driverSlug) {
+    return NextResponse.json({ error: "forbidden" }, { status: 403 });
   }
 
   const token = requestingDriver.garage61_access_token;

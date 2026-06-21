@@ -19,10 +19,13 @@ export async function GET(request) {
 
   const { data: requestingDriver } = await supabase
     .from("drivers")
-    .select("id, garage61_access_token, garage61_refresh_token")
+    .select("id, role, approved, garage61_access_token, garage61_refresh_token")
     .eq("auth_user_id", user.id)
     .single();
 
+  if (!requestingDriver?.approved) {
+    return NextResponse.json({ error: "forbidden" }, { status: 403 });
+  }
   if (!requestingDriver?.garage61_access_token) {
     return NextResponse.json({ error: "not_linked" }, { status: 400 });
   }
@@ -40,6 +43,27 @@ export async function GET(request) {
   let targetSlug = null;       // non-null → team approach, filter by slug
 
   if (targetDriverId && targetDriverId !== requestingDriver.id) {
+    // Verify requester is an admin or shares a team entry with the target driver
+    const isAdminRole = ["admin", "super_admin"].includes(requestingDriver.role);
+    if (!isAdminRole) {
+      const { data: mySignups } = await supabase
+        .from("signups")
+        .select("team_entry_id")
+        .eq("driver_id", requestingDriver.id);
+      const myEntryIds = (mySignups || []).map((s) => s.team_entry_id).filter(Boolean);
+      const { data: shared } = myEntryIds.length > 0
+        ? await supabase
+            .from("signups")
+            .select("id")
+            .eq("driver_id", targetDriverId)
+            .in("team_entry_id", myEntryIds)
+            .limit(1)
+        : { data: [] };
+      if (!shared?.length) {
+        return NextResponse.json({ error: "forbidden" }, { status: 403 });
+      }
+    }
+
     const { data: targetDriver } = await supabase
       .from("drivers")
       .select("id, garage61_slug, garage61_access_token, garage61_refresh_token")

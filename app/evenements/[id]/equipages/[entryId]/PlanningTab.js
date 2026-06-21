@@ -1,7 +1,8 @@
 "use client";
 import { useState, useEffect, useRef } from "react";
 import { supabaseBrowser as supabase } from "../../../../../lib/supabase-browser";
-import { useTranslations, useLocale } from "next-intl";
+import { useTranslations } from "next-intl";
+import { formatTimeInZone } from "../../../../../lib/timezone";
 
 // ─── Driver color palette ────────────────────────────────────────────────────
 // Cycles when there are more than 8 drivers.
@@ -17,15 +18,6 @@ const DRIVER_COLORS = [
 ];
 
 // ─── Display helpers ────────────────────────────────────────────────────────
-
-function _formatTime(date, locale) {
-  if (!date) return "—";
-  return new Date(date).toLocaleTimeString(locale, {
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: false,
-  });
-}
 
 function formatDuration(ms) {
   if (!ms || ms <= 0) return "—";
@@ -49,8 +41,12 @@ export default function PlanningTab({
   strategyId = null,
 }) {
   const t = useTranslations("planningTab");
-  const locale = useLocale();
-  const formatTime = (d) => _formatTime(d, locale);
+  const tz = teamEntry?.events?.timezone || "Europe/Paris";
+  const formatTime = (d) => {
+    if (!d) return "—";
+    const iso = d instanceof Date ? d.toISOString() : new Date(d).toISOString();
+    return formatTimeInZone(iso, tz);
+  };
   const [stints, setStints] = useState([]);
   const [availabilities, setAvailabilities] = useState([]);
   const [strategyLabel, setStrategyLabel] = useState(null);
@@ -72,14 +68,14 @@ export default function PlanningTab({
   // stays live for all concurrent users, not just the local user.
   useEffect(() => {
     if (!teamEntryId) return;
-    const tick = () => { if (hasLoadedOnce.current) setRefreshTick((t) => t + 1); };
+    const tick = () => { if (hasLoadedOnce.current) setRefreshTick((prev) => prev + 1); };
     const channel = supabase
       .channel(`planning-watch-${teamEntryId}${channelSuffix}`)
       .on("postgres_changes", { event: "*", schema: "public", table: "stints", filter: `team_entry_id=eq.${teamEntryId}` }, tick)
       .on("postgres_changes", { event: "*", schema: "public", table: "strategies", filter: `team_entry_id=eq.${teamEntryId}` }, tick)
       .subscribe();
     return () => supabase.removeChannel(channel);
-  }, [teamEntryId]);
+  }, [teamEntryId, channelSuffix]);
 
   // ── Fetch active strategy → stints with persisted IRL times ───────────────
   // StintGrid already writes irl_start and irl_end_planned to the DB on every

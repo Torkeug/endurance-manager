@@ -5,7 +5,7 @@ const API_KEY = process.env.IRACING_BRIDGE_API_KEY;
 
 export async function POST(request) {
   const authHeader = request.headers.get("authorization");
-  if (API_KEY && authHeader !== `Bearer ${API_KEY}`) {
+  if (!API_KEY || authHeader !== `Bearer ${API_KEY}`) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 

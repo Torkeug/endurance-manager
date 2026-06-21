@@ -99,7 +99,9 @@ function CarTypePicker({ carTypes, value, onChange }) {
 function DeleteCarModal({ modal, onConfirm, onCancel }) {
   const t = useTranslations("admin");
   if (!modal) return null;
-  const count = modal.affectedDrivers.length;
+  const eventCount = modal.affectedEvents.length;
+  const driverCount = modal.affectedDrivers.length;
+  const blocked = eventCount > 0;
   return (
     <div
       style={{
@@ -115,63 +117,46 @@ function DeleteCarModal({ modal, onConfirm, onCancel }) {
     >
       <div className="card" style={{ maxWidth: "480px", width: "100%" }}>
         <h3 style={{ marginBottom: "0.75rem" }}>{t("carsDeleteTitle")}</h3>
-        {count > 0 ? (
+        {blocked ? (
           <>
-            <p
-              style={{
-                fontSize: "0.9rem",
-                color: "var(--text-dim)",
-                marginBottom: "0.75rem",
-              }}
-            >
+            <p style={{ fontSize: "0.9rem", color: "var(--danger)", marginBottom: "0.75rem" }}>
+              🚫 {t("carsBlockedByEvents", { count: eventCount })}
+            </p>
+            <ul style={{ margin: "0 0 1.5rem", paddingLeft: "1.25rem", fontSize: "0.88rem", color: "var(--danger)", display: "flex", flexDirection: "column", gap: "0.2rem" }}>
+              {modal.affectedEvents.map((name, i) => (
+                <li key={i}>{name}</li>
+              ))}
+            </ul>
+          </>
+        ) : driverCount > 0 ? (
+          <>
+            <p style={{ fontSize: "0.9rem", color: "var(--text-dim)", marginBottom: "0.75rem" }}>
               ⚠️{" "}
               <strong style={{ color: "var(--text)" }}>
-                {t("carsAffectedCount", { count })}
+                {t("carsAffectedCount", { count: driverCount })}
               </strong>{" "}
-              {t("carsAffectedVerb", { count })}
+              {t("carsAffectedVerb", { count: driverCount })}
             </p>
-            <ul
-              style={{
-                margin: "0 0 1rem",
-                paddingLeft: "1.25rem",
-                fontSize: "0.88rem",
-                color: "var(--danger)",
-                display: "flex",
-                flexDirection: "column",
-                gap: "0.2rem",
-              }}
-            >
+            <ul style={{ margin: "0 0 1rem", paddingLeft: "1.25rem", fontSize: "0.88rem", color: "var(--danger)", display: "flex", flexDirection: "column", gap: "0.2rem" }}>
               {modal.affectedDrivers.map((name, i) => (
                 <li key={i}>{name}</li>
               ))}
             </ul>
-            <p
-              style={{
-                fontSize: "0.82rem",
-                color: "var(--text-dim)",
-                marginBottom: "1.5rem",
-              }}
-            >
+            <p style={{ fontSize: "0.82rem", color: "var(--text-dim)", marginBottom: "1.5rem" }}>
               {t("carsUpdatePrefsHint")}
             </p>
           </>
         ) : (
-          <p
-            style={{
-              fontSize: "0.9rem",
-              color: "var(--text-dim)",
-              marginBottom: "1.5rem",
-            }}
-          >
+          <p style={{ fontSize: "0.9rem", color: "var(--text-dim)", marginBottom: "1.5rem" }}>
             {t("carsConfirmDelete", { name: modal.carName })}
           </p>
         )}
-        <div
-          style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}
-        >
-          <button onClick={onConfirm} className="btn btn-danger">
-            {t("deleteForever")}
-          </button>
+        <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+          {!blocked && (
+            <button onClick={onConfirm} className="btn btn-danger">
+              {t("deleteForever")}
+            </button>
+          )}
           <button onClick={onCancel} className="btn btn-secondary">
             {t("cancel")}
           </button>

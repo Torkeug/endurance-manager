@@ -43,7 +43,7 @@ export default function AdminAccueilDemo() {
         display: "flex", alignItems: "center", justifyContent: "space-between", gap: "1rem", flexWrap: "wrap",
       }}>
         <span style={{ color: "var(--danger)", fontWeight: 600, fontSize: "0.9rem" }}>
-          ⚠️ {t("pendingWarning_other").replace("#", "2")}
+          ⚠️ {t("pendingWarning", { count: 2 })}
         </span>
         <button className="btn btn-danger btn-sm">{t("manageAccess")}</button>
       </div>
