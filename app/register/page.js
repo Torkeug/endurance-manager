@@ -1,5 +1,5 @@
 "use client";
-import { useState, Suspense, useEffect } from "react";
+import { useState, Suspense } from "react";
 import { supabaseBrowser as supabase } from "../../lib/supabase-browser";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
@@ -7,11 +7,9 @@ import { useTranslations } from "next-intl";
 function RegisterForm() {
   const t = useTranslations("register");
 
-  const [theme, setTheme] = useState("dark");
-  useEffect(() => {
-    const saved = localStorage.getItem("theme") || "dark";
-    setTheme(saved);
-  }, []);
+  const [theme] = useState(() =>
+    typeof window !== "undefined" ? localStorage.getItem("theme") || "dark" : "dark"
+  );
 
   const [form, setForm] = useState({
     name: "",
@@ -146,7 +144,7 @@ function RegisterForm() {
               </div>
               <div className="form-group">
                 <label>{t("passwordLabel")}</label>
-                <input type="password" value={form.password} onChange={set("password")} placeholder={t("passwordPlaceholder")} autoComplete="new-password" />
+                <input type="password" value={form.password} onChange={set("password")} placeholder={t("passwordPlaceholder")} required autoComplete="new-password" />
               </div>
               <div className="form-group">
                 <label>{t("confirmLabel")}</label>

@@ -49,10 +49,12 @@ function ConfirmModal({ modal, onConfirm, onCancel }) {
 export default function DeleteEventButton({ eventId }) {
   const t = useTranslations("deleteEvent");
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
   const [confirmModal, setConfirmModal] = useState(null);
   const router = useRouter();
 
   const handleDelete = () => {
+    setError(null);
     setConfirmModal({
       title: t("deleteTitle"),
       message: t("deleteMsg"),
@@ -60,11 +62,12 @@ export default function DeleteEventButton({ eventId }) {
       onConfirm: async () => {
         setConfirmModal(null);
         setLoading(true);
-        const { error } = await supabase
+        const { error: err } = await supabase
           .from("events")
           .delete()
           .eq("id", eventId);
-        if (error) {
+        if (err) {
+          setError(err.message);
           setLoading(false);
           return;
         }
@@ -81,6 +84,11 @@ export default function DeleteEventButton({ eventId }) {
         onConfirm={() => confirmModal?.onConfirm?.()}
         onCancel={() => setConfirmModal(null)}
       />
+      {error && (
+        <div className="alert alert-error" style={{ marginBottom: "0.5rem", fontSize: "0.85rem" }}>
+          {error}
+        </div>
+      )}
       <button
         onClick={handleDelete}
         disabled={loading}

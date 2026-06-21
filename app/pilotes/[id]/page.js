@@ -23,7 +23,9 @@ export default async function DriverDetail({ params, searchParams }) {
   // Fetch driver
   const { data: driver, error } = await supabase
     .from("drivers")
-    .select("*")
+    .select(
+      "id, name, email, discord, discord_alert_enabled, discord_alert_minutes, twitch, instagram, irating, iracing_id, active, last_driver_sync_at, iracing_synced_at, garage61_access_token, garage61_slug",
+    )
     .eq("id", id)
     .single();
 
@@ -35,11 +37,13 @@ export default async function DriverDetail({ params, searchParams }) {
   // Non-admins cannot view inactive driver profiles
   if (!admin && !driver.active && currentDriver?.id !== id) redirect("/pilotes");
 
-  // Backfill garage61_slug for drivers who linked before slug-saving was added
-  if (driver.garage61_access_token && !driver.garage61_slug) {
+  // Backfill garage61_slug for drivers who linked before slug-saving was added.
+  // Only runs when the driver views their own profile — avoids using another user's token.
+  if (currentDriver?.id === id && driver.garage61_access_token && !driver.garage61_slug) {
     try {
       const meRes = await fetch("https://garage61.net/api/v1/me", {
         headers: { Authorization: `Bearer ${driver.garage61_access_token}` },
+        signal: AbortSignal.timeout(5000),
       });
       if (meRes.ok) {
         const meData = await meRes.json();
@@ -176,18 +180,10 @@ export default async function DriverDetail({ params, searchParams }) {
   // Sort by earliest start time descending — uses Math.min across all start
   // times rather than [0] which is Supabase insertion order, not chronological.
   const sortedSignups = (signups || []).sort((a, b) => {
-    const aDate =
-      Math.min(
-        ...(a.events?.event_start_times || []).map(
-          (st) => new Date(st.irl_start),
-        ),
-      ) || 0;
-    const bDate =
-      Math.min(
-        ...(b.events?.event_start_times || []).map(
-          (st) => new Date(st.irl_start),
-        ),
-      ) || 0;
+    const aTimes = (a.events?.event_start_times || []).map((st) => new Date(st.irl_start).getTime());
+    const bTimes = (b.events?.event_start_times || []).map((st) => new Date(st.irl_start).getTime());
+    const aDate = aTimes.length ? Math.min(...aTimes) : 0;
+    const bDate = bTimes.length ? Math.min(...bTimes) : 0;
     return bDate - aDate;
   });
 

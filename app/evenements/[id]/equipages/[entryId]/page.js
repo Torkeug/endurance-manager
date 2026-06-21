@@ -101,7 +101,7 @@ export default async function EquipageDetail({ params }) {
   const startTimesMap = Object.fromEntries([
     ...(regularStartTimes || []).map((st) => [
       st.id,
-      t("labelAtTime", { label: formatDateLabelInZone(st.irl_start, tz, locale), time: formatTimeInZone(st.irl_start, tz, "HH:mm") }),
+      t("labelAtTime", { label: formatDateLabelInZone(st.irl_start, tz, locale), time: formatTimeInZone(st.irl_start, tz) }),
     ]),
     ...(specialStartTimes || []).map((st) => [
       st.id,

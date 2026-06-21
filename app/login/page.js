@@ -1,5 +1,5 @@
 "use client";
-import { useState, Suspense, useEffect } from "react";
+import { useState, Suspense } from "react";
 import { supabaseBrowser as supabase } from "../../lib/supabase-browser";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
@@ -12,13 +12,10 @@ function LoginForm() {
   const [error, setError] = useState(null);
   const searchParams = useSearchParams();
   const urlError = searchParams.get("error");
-  const [theme, setTheme] = useState("dark");
+  const [theme] = useState(() =>
+    typeof window !== "undefined" ? localStorage.getItem("theme") || "dark" : "dark"
+  );
   const t = useTranslations("login");
-
-  useEffect(() => {
-    const saved = localStorage.getItem("theme") || "dark";
-    setTheme(saved);
-  }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -154,7 +151,7 @@ function LoginForm() {
 
 export default function LoginPage() {
   return (
-    <Suspense>
+    <Suspense fallback={null}>
       <LoginForm />
     </Suspense>
   );

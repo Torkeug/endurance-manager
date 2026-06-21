@@ -91,8 +91,9 @@ export default function CollapsibleEventInfo({ eventId, items, notes }) {
   const [collapsed, setCollapsed] = useState(false);
   const [notesExpanded, setNotesExpanded] = useState(false);
 
-  // Read persisted state in useEffect — never in useState initializer
-  // to avoid hydration mismatch (server has no localStorage).
+  // Read persisted collapsed state after mount — intentionally in useEffect to avoid
+  // hydration mismatch (server has no localStorage). Re-reads on eventId change.
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => {
     const saved = localStorage.getItem(`event-info-${eventId}`);
     if (saved !== null) setCollapsed(saved === "true");
