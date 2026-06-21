@@ -11,6 +11,23 @@ export async function POST(req) {
       return NextResponse.json({ error: "Missing fields" }, { status: 400 });
     }
 
+    // Validate profile_url to prevent href injection in the email.
+    // Must be http(s) and path must match /pilotes/<uuid>.
+    if (profile_url) {
+      let parsed;
+      try {
+        parsed = new URL(profile_url);
+      } catch {
+        return NextResponse.json({ error: "Invalid profile_url" }, { status: 400 });
+      }
+      if (!["http:", "https:"].includes(parsed.protocol)) {
+        return NextResponse.json({ error: "Invalid profile_url" }, { status: 400 });
+      }
+      if (!/^\/pilotes\/[0-9a-f-]{36}$/.test(parsed.pathname)) {
+        return NextResponse.json({ error: "Invalid profile_url" }, { status: 400 });
+      }
+    }
+
     const res = await fetch("https://api.resend.com/emails", {
       method: "POST",
       headers: {

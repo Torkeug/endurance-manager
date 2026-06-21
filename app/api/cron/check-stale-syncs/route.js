@@ -6,7 +6,8 @@ const COOLDOWN_MS = 30 * 24 * 60 * 60 * 1000;
 
 export async function GET(request) {
   const authHeader = request.headers.get("authorization");
-  if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+  const CRON_SECRET = process.env.CRON_SECRET;
+  if (!CRON_SECRET || authHeader !== `Bearer ${CRON_SECRET}`) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -19,6 +20,7 @@ export async function GET(request) {
     .eq("active", true)
     .neq("role", "engineer")
     .eq("is_test_account", false)
+    .not("iracing_id", "is", null)
     .or(`last_driver_sync_at.is.null,last_driver_sync_at.lt.${staleThresholdDate}`);
 
   if (error) {
@@ -40,17 +42,26 @@ export async function GET(request) {
 
     const profileUrl = `${process.env.NEXT_PUBLIC_APP_URL}/pilotes/${driver.id}`;
 
-    fetch(`${process.env.NEXT_PUBLIC_APP_URL}/api/notify-stale-sync`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        driver_name: driver.name,
-        driver_email: driver.email,
-        profile_url: profileUrl,
-      }),
-    }).catch((e) =>
-      console.error(`[cron/check-stale-syncs] notify failed for ${driver.id}:`, e),
-    );
+    let res;
+    try {
+      res = await fetch(`${process.env.NEXT_PUBLIC_APP_URL}/api/notify-stale-sync`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          driver_name: driver.name,
+          driver_email: driver.email,
+          profile_url: profileUrl,
+        }),
+      });
+    } catch (e) {
+      console.error(`[cron/check-stale-syncs] notify failed for ${driver.id}:`, e);
+      continue;
+    }
+
+    if (!res.ok) {
+      console.error(`[cron/check-stale-syncs] notify returned ${res.status} for ${driver.id}`);
+      continue;
+    }
 
     await supabase
       .from("drivers")

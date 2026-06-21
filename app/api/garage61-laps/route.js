@@ -11,6 +11,9 @@ export async function GET(request) {
   if (!driverSlug || !trackId) {
     return NextResponse.json({ error: "driver_slug and track_id required" }, { status: 400 });
   }
+  if (!/^[\w-]{1,100}$/.test(driverSlug)) {
+    return NextResponse.json({ error: "invalid driver_slug" }, { status: 400 });
+  }
 
   // Auth
   const authClient = await createClient();
@@ -19,10 +22,13 @@ export async function GET(request) {
 
   const { data: requestingDriver } = await supabase
     .from("drivers")
-    .select("id, garage61_access_token, garage61_refresh_token")
+    .select("id, approved, garage61_access_token, garage61_refresh_token")
     .eq("auth_user_id", user.id)
     .single();
 
+  if (!requestingDriver?.approved) {
+    return NextResponse.json({ error: "forbidden" }, { status: 403 });
+  }
   if (!requestingDriver?.garage61_access_token) {
     return NextResponse.json({ error: "not_linked" }, { status: 400 });
   }

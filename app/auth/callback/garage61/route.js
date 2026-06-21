@@ -12,8 +12,15 @@ export async function GET(request) {
   const state = searchParams.get("state");
   const error = searchParams.get("error");
 
-  // Parse returnTo from state early so errors can redirect back to the right page.
-  const [verifier = "", returnTo = "/pilotes"] = (state || "").split("|");
+  // Read the PKCE cookie early so returnTo is available for error redirects.
+  const rawCookie = request.cookies.get("pkce_garage61_state")?.value;
+  let pkceData = null;
+  try {
+    pkceData = rawCookie ? JSON.parse(rawCookie) : null;
+  } catch {
+    pkceData = null;
+  }
+  const returnTo = pkceData?.returnTo || "/pilotes";
 
   if (error) {
     return NextResponse.redirect(`${origin}${returnTo}?error=garage61_denied`);
@@ -21,6 +28,12 @@ export async function GET(request) {
   if (!code || !state) {
     return NextResponse.redirect(`${origin}${returnTo}?error=garage61_no_code`);
   }
+
+  // Validate CSRF nonce
+  if (!pkceData?.nonce || pkceData.nonce !== state) {
+    return NextResponse.redirect(`${origin}${returnTo}?error=garage61_csrf`);
+  }
+  const { verifier = "" } = pkceData;
 
   try {
     const authClient = await createClient();
@@ -56,7 +69,7 @@ export async function GET(request) {
     const { access_token, refresh_token } = tokenData;
 
     if (!access_token) {
-      console.error("Garage61 token response missing access_token:", tokenData);
+      console.error("Garage61 token response missing access_token — keys:", Object.keys(tokenData), "error:", tokenData?.error);
       return NextResponse.redirect(`${origin}${returnTo}?error=garage61_token`);
     }
 

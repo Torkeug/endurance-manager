@@ -17,14 +17,12 @@ function generatePKCE() {
 
 export async function GET(request) {
   const { searchParams } = new URL(request.url);
-  // returnTo — path to redirect back to after linking (e.g. /pilotes/123)
-  // Pipe character sanitized because state uses | as separator.
-  const returnTo = (searchParams.get("returnTo") || "/pilotes").replace(
-    /\|/g,
-    "",
-  );
+  // returnTo — path to redirect back to after linking. Must be an absolute-path (no //host).
+  const rawReturnTo = searchParams.get("returnTo") || "/pilotes";
+  const returnTo = /^\/[^/]/.test(rawReturnTo) ? rawReturnTo : "/pilotes";
 
   const { verifier, challenge } = generatePKCE();
+  const nonce = crypto.randomBytes(16).toString("hex");
 
   const params = new URLSearchParams({
     response_type: "code",
@@ -33,10 +31,20 @@ export async function GET(request) {
     scope: SCOPE,
     code_challenge: challenge,
     code_challenge_method: "S256",
-    // State carries PKCE verifier and return path — pipe-separated.
-    // Verifier is base64url (no pipes), returnTo is sanitized above.
-    state: `${verifier}|${returnTo}`,
+    state: nonce,
   });
 
-  return NextResponse.redirect(`${GARAGE61_AUTH_URL}?${params}`);
+  const response = NextResponse.redirect(`${GARAGE61_AUTH_URL}?${params}`);
+  response.cookies.set(
+    "pkce_garage61_state",
+    JSON.stringify({ nonce, verifier, returnTo }),
+    {
+      httpOnly: true,
+      sameSite: "lax",
+      secure: process.env.NODE_ENV === "production",
+      maxAge: 600,
+      path: "/",
+    },
+  );
+  return response;
 }

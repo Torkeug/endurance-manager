@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { createClient } from "../../../lib/auth";
 import { supabaseServer as supabase } from "../../../lib/supabase-server";
 
 // POST /api/notify-admins
@@ -8,6 +9,10 @@ import { supabaseServer as supabase } from "../../../lib/supabase-server";
 // but never surfaced to the registering user.
 export async function POST(req) {
   try {
+    const authClient = await createClient();
+    const { data: { user } } = await authClient.auth.getUser();
+    if (!user) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+
     const { name, email } = await req.json();
 
     if (!name || !email) {
@@ -90,8 +95,19 @@ export async function POST(req) {
   }
 }
 
+function escHtml(str) {
+  return String(str ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
 // Builds a simple styled HTML email for the admin notification
 function buildEmail({ newDriverName, newDriverEmail, adminName, adminUrl }) {
+  newDriverName = escHtml(newDriverName);
+  newDriverEmail = escHtml(newDriverEmail);
   return `<!DOCTYPE html>
 <html lang="fr">
 <head>

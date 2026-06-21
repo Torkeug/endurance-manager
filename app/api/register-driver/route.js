@@ -46,6 +46,14 @@ export async function POST(req) {
     ]);
 
     if (driverErr) {
+      // Clean up the orphaned auth user so the person can re-register with the same email.
+      // Must happen before returning — otherwise the auth account exists but has no driver row.
+      try {
+        await supabase.auth.admin.deleteUser(auth_user_id);
+      } catch (cleanupErr) {
+        console.error("[register-driver] Auth user cleanup failed:", cleanupErr);
+      }
+
       // Map known Postgres error codes to explicit French messages
       if (driverErr.code === "23505") {
         // Unique constraint violation — which field?

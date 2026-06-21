@@ -280,7 +280,18 @@ export async function GET(request) {
     return NextResponse.redirect(`${origin}/login?error=iracing_no_code`);
   }
 
-  const [verifier, mode = "driver", returnTo = "/pilotes"] = state.split("|");
+  // Validate the PKCE state cookie — prevents OAuth CSRF.
+  const rawCookie = request.cookies.get("pkce_iracing_state")?.value;
+  let pkceData;
+  try {
+    pkceData = rawCookie ? JSON.parse(rawCookie) : null;
+  } catch {
+    pkceData = null;
+  }
+  if (!pkceData?.nonce || pkceData.nonce !== state) {
+    return NextResponse.redirect(`${origin}/login?error=iracing_csrf`);
+  }
+  const { verifier, mode = "driver", returnTo = "/pilotes" } = pkceData;
 
   try {
     const authClient = await createClient();
@@ -405,7 +416,11 @@ export async function GET(request) {
       const { data: linkedDrivers } = await supabase
         .from("drivers")
         .select("id, iracing_id")
-        .not("iracing_id", "is", null);
+        .not("iracing_id", "is", null)
+        .eq("approved", true)
+        .eq("active", true)
+        .eq("is_test_account", false)
+        .neq("role", "engineer");
 
       if (!linkedDrivers || linkedDrivers.length === 0) {
         return NextResponse.redirect(`${origin}/admin?iracing_synced=0`);
