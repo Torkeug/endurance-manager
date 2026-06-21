@@ -183,19 +183,26 @@ export default function Garage61Manager({ currentDriver }) {
     const toApply = matches.filter((m) => m.status === "exact" && m.dbDriver);
     if (toApply.length === 0) return;
     setSaving(true);
-    await Promise.all(
-      toApply.map((m) =>
-        supabase.from("drivers").update({ garage61_slug: m.g61.slug }).eq("id", m.dbDriver.id)
-      )
-    );
-    const { data } = await supabase.from("drivers").select("id, name, garage61_slug").eq("approved", true).order("name");
-    setDbDrivers(data || []);
-    setSavedCount(toApply.length);
-    setSaving(false);
+    try {
+      await Promise.all(
+        toApply.map((m) =>
+          supabase.from("drivers").update({ garage61_slug: m.g61.slug }).eq("id", m.dbDriver.id)
+        )
+      );
+      const { data } = await supabase.from("drivers").select("id, name, garage61_slug").eq("approved", true).order("name");
+      setDbDrivers(data || []);
+      setSavedCount(toApply.length);
+    } finally {
+      setSaving(false);
+    }
   };
 
   const applyOverride = async (dbDriverId, slug) => {
-    await supabase.from("drivers").update({ garage61_slug: slug }).eq("id", dbDriverId);
+    const { error } = await supabase.from("drivers").update({ garage61_slug: slug }).eq("id", dbDriverId);
+    if (error) {
+      setError(t("g61ErrNetwork"));
+      return;
+    }
     const { data } = await supabase.from("drivers").select("id, name, garage61_slug").eq("approved", true).order("name");
     setDbDrivers(data || []);
     setOverrides((prev) => {

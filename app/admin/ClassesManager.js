@@ -156,7 +156,7 @@ export default function ClassesManager({ initialClasses, initialCars }) {
       .single();
     if (err) {
       if (err.code === "23505") {
-        setError("Ce nom existe déjà.");
+        setError(t("errorNameExists"));
       } else {
         setError(err.message);
       }
@@ -183,7 +183,7 @@ export default function ClassesManager({ initialClasses, initialCars }) {
 
   const handleAdd = async () => {
     if (!newName.trim()) {
-      setError("Le nom est obligatoire.");
+      setError(t("errorNameRequired"));
       return;
     }
     setSaving(true);
@@ -200,7 +200,7 @@ export default function ClassesManager({ initialClasses, initialCars }) {
       .single();
     if (err) {
       if (err.code === "23505") {
-        setError("Ce nom existe déjà.");
+        setError(t("errorNameExists"));
       } else {
         setError(err.message);
       }
@@ -216,7 +216,7 @@ export default function ClassesManager({ initialClasses, initialCars }) {
 
   const handleEdit = async () => {
     if (!newName.trim()) {
-      setError("Le nom est obligatoire.");
+      setError(t("errorNameRequired"));
       return;
     }
     const oldClass = classes.find((c) => c.id === editingId);
@@ -229,7 +229,7 @@ export default function ClassesManager({ initialClasses, initialCars }) {
       .single();
     if (err) {
       if (err.code === "23505") {
-        setError("Ce nom existe déjà.");
+        setError(t("errorNameExists"));
       } else {
         setError(err.message);
       }
@@ -238,12 +238,23 @@ export default function ClassesManager({ initialClasses, initialCars }) {
     }
 
     // Class name is stored as a string on cars.class — if the class is renamed,
-    // we must update all cars referencing the old name to keep them consistent
+    // we must update all cars referencing the old name to keep them consistent.
+    // Not atomic: if car update fails the class_name is already changed. Surface error so admin can retry.
     if (oldClass && oldClass.name !== newName.trim()) {
-      await supabase
+      const { error: carsErr } = await supabase
         .from("cars")
         .update({ class: newName.trim() })
         .eq("class", oldClass.name);
+      if (carsErr) {
+        // Roll back the class rename so the DB stays consistent
+        await supabase
+          .from("car_classes")
+          .update({ name: oldClass.name })
+          .eq("id", editingId);
+        setError(`Erreur lors de la mise à jour des voitures. Renommage annulé : ${carsErr.message}`);
+        setSaving(false);
+        return;
+      }
       setCars((prev) =>
         prev.map((c) =>
           c.class === oldClass.name ? { ...c, class: newName.trim() } : c,
@@ -302,6 +313,7 @@ export default function ClassesManager({ initialClasses, initialCars }) {
           );
         }
         setClasses((prev) => prev.filter((c) => c.id !== id));
+        setRefuelRates((prev) => { const next = { ...prev }; delete next[id]; return next; });
         if (expandedId === id) setExpandedId(null);
         router.refresh();
       },

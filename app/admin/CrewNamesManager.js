@@ -143,7 +143,7 @@ export default function CrewNamesManager({ initialCrewNames }) {
 
   const handleAdd = async () => {
     if (!newName.trim()) {
-      setError("Le nom est obligatoire.");
+      setError(t("errorNameRequired"));
       return;
     }
     setSaving(true);
@@ -161,7 +161,7 @@ export default function CrewNamesManager({ initialCrewNames }) {
     if (err) {
       // 23505 = unique constraint violation — name already exists
       if (err.code === "23505") {
-        setError("Ce nom existe déjà.");
+        setError(t("errorNameExists"));
       } else {
         setError(err.message);
       }
@@ -178,7 +178,7 @@ export default function CrewNamesManager({ initialCrewNames }) {
 
   const handleEdit = async () => {
     if (!newName.trim()) {
-      setError("Le nom est obligatoire.");
+      setError(t("errorNameRequired"));
       return;
     }
     setSaving(true);
@@ -191,7 +191,7 @@ export default function CrewNamesManager({ initialCrewNames }) {
     if (err) {
       // 23505 = unique constraint violation — name already exists
       if (err.code === "23505") {
-        setError("Ce nom existe déjà.");
+        setError(t("errorNameExists"));
       } else {
         setError(err.message);
       }
@@ -208,11 +208,16 @@ export default function CrewNamesManager({ initialCrewNames }) {
     // Preview usage before showing the modal
     const { data: usedBy } = await supabase
       .from("team_entries")
-      .select("id, crew_name, events(name)")
+      .select("id, crew_name, events(name, archived)")
       .eq("crew_name", name);
 
     const affectedEvents = [
-      ...new Set((usedBy || []).map((te) => te.events?.name).filter(Boolean)),
+      ...new Set(
+        (usedBy || [])
+          .filter((te) => !te.events?.archived)
+          .map((te) => te.events?.name)
+          .filter(Boolean),
+      ),
     ];
 
     setConfirmModal({

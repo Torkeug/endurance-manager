@@ -37,6 +37,7 @@ function groupBy(arr, keyFn) {
 function CarNumberInput({ value, onSave }) {
   const [val, setVal] = useState(value ?? "");
 
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => setVal(value ?? ""), [value]);
 
   return (
@@ -537,6 +538,7 @@ export default function ChampionshipTeamsManager() {
   const [events, setEvents] = useState([]);
   const [entries, setEntries] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [fetchError, setFetchError] = useState(null);
   const [view, setView] = useState("team");
   const [expandedTop, setExpandedTop] = useState({});
   const [expandedRow, setExpandedRow] = useState({});
@@ -551,19 +553,18 @@ export default function ChampionshipTeamsManager() {
       .eq("archived", false)
       .order("season", { ascending: false });
 
-    if (champErr || !champs?.length) {
-      setLoading(false);
-      return;
-    }
+    if (champErr) { setFetchError(champErr.message); setLoading(false); return; }
+    if (!champs?.length) { setLoading(false); return; }
 
     const champIds = champs.map((c) => c.id);
 
-    const { data: evs } = await supabaseBrowser
+    const { data: evs, error: evsErr } = await supabaseBrowser
       .from("events")
       .select("id, name, weekend_start_date, round_number, championship_id")
       .in("championship_id", champIds)
       .order("weekend_start_date");
 
+    if (evsErr) { setFetchError(evsErr.message); setLoading(false); return; }
     if (!evs?.length) {
       setChampionships(champs);
       setLoading(false);
@@ -572,7 +573,7 @@ export default function ChampionshipTeamsManager() {
 
     const eventIds = evs.map((e) => e.id);
 
-    const { data: ents } = await supabaseBrowser
+    const { data: ents, error: entsErr } = await supabaseBrowser
       .from("team_entries")
       .select(
         "id, crew_name, car_number, class, car_name_snapshot, event_id, start_time_id, cars(name)",
@@ -580,12 +581,14 @@ export default function ChampionshipTeamsManager() {
       .in("event_id", eventIds)
       .order("crew_name");
 
+    if (entsErr) { setFetchError(entsErr.message); setLoading(false); return; }
     setChampionships(champs);
     setEvents(evs);
     setEntries(ents || []);
     setLoading(false);
   }, []);
 
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => {
     fetchData();
   }, [fetchData]);
@@ -598,6 +601,7 @@ export default function ChampionshipTeamsManager() {
     // exclude the current entry so it can keep its own number.
     if (number !== null) {
       const entry = entries.find((e) => e.id === entryId);
+      if (!entry) return;
       const query = supabaseBrowser
         .from("team_entries")
         .select("id, crew_name")
@@ -641,6 +645,10 @@ export default function ChampionshipTeamsManager() {
   if (loading)
     return (
       <p style={{ color: "var(--text-dim)", padding: "1rem" }}>{t("champLoading")}</p>
+    );
+  if (fetchError)
+    return (
+      <div className="alert alert-error" style={{ margin: "1rem" }}>{fetchError}</div>
     );
   if (!championships.length)
     return (
